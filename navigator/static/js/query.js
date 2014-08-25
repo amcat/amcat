@@ -225,15 +225,26 @@ $((function(){
                 area = $("<area>");
                 area.attr("shape", "rect");
                 area.attr("coords", coord.coords.join(","));
+                area.attr("article_id", coord.article_id);
                 area.data("article_id", coord.article_id);
                 map.append(area);
             });
 
-            // Register click event for each article
-            $("area", map).click(function(event){
-                log($(event.currentTarget).data("article_id"));
+            // Add query for cluster each article is in
+            $.each(data.clusters, function(_, cluster){
+                $.each(cluster.articles, function(_, article_id){
+                    map.find("[article_id=" + article_id + "]").data("query", cluster.query);
+                });
             });
 
+            // Register click event for each article
+            $("area", map).click(function(event){
+                articles_popup({term: {
+                    label: $(event.currentTarget).data("query")
+                }})
+            });
+
+            // Install tooltip (hover)
             $("area", map).each(function(_, e){
                 $(e).tooltip({
                     title: "Article #" + $(e).data("article_id")

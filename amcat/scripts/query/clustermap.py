@@ -18,57 +18,13 @@
 ###########################################################################
 from __future__ import unicode_literals, print_function
 import json
-import os
-
-from sh import java
-from lxml import html
-
 from base64 import b64encode, b64decode
-from StringIO import StringIO
-from functools import partial
-from tempfile import NamedTemporaryFile
-from itertools import chain
 
-from django.template import Context
-from django.template.loader import get_template
 from django.core.exceptions import ValidationError
-from django.conf import settings
 
 from amcat.scripts.query import QueryActionForm, QueryAction, QueryActionHandler
+from amcat.tools.clustermap import get_clustermap_image, clustermap_html_to_coords, get_clusters, get_cluster_queries
 from amcat.tools.keywordsearch import SelectionSearch
-
-
-# XML template given to Aduna binary
-XML_TEMPLATE = get_template("query/clustermap/cluster.xml")
-
-# Location of Aduna binaries
-ADUNA_JARS = ("aduna-clustermap-2006.1.jar", "aduna-clustermap-2006.1-resources.jar")
-ADUNA_PATH = os.path.join(settings.ROOT, "amcat/contrib/java")
-CLASS_PATH = ":".join(chain((ADUNA_PATH,), [
-    os.path.join(ADUNA_PATH, jar) for jar in ADUNA_JARS
-]))
-
-# Minimal memory allocated by JVM
-ADUNA_MEMORY = "1000m"
-
-# Template for interactive clustermap
-HTML_TEMPLATE = get_template("query/clustermap/clustermap.html")
-
-
-def aduna(xml_path, img_path):
-    stdout, stderr = StringIO(), StringIO()
-    _aduna = partial(java, "-classpath", CLASS_PATH, "-Xms%s" % ADUNA_MEMORY, "Cluster")
-    _aduna(xml_path, img_path, _err=stderr, _out=stdout).wait()
-    stdout, stderr = stdout.getvalue().strip(), stderr.getvalue().strip()
-
-    if not stdout:
-        raise AdunaException("Aduna clustermap proces generated error: %s" % stderr)
-
-    return open(img_path).read(), stdout, stderr
-
-
-class AdunaException(Exception):
-    pass
 
 
 class ClusterMapHandler(QueryActionHandler):
@@ -90,14 +46,6 @@ class ClusterMapForm(QueryActionForm):
         return super(ClusterMapForm, self).clean()
 
 
-def clustermap_html_to_coords(_html):
-    doc = html.fromstring(_html)
-    for area in doc.cssselect("area"):
-        coords = map(int, area.attrib["coords"].split(","))
-        article_id = int(area.attrib["href"])
-        yield {"coords": coords, "article_id": article_id}
-
-
 class ClusterMapAction(QueryAction):
     form_class = ClusterMapForm
     task_handler = ClusterMapHandler
@@ -110,17 +58,21 @@ class ClusterMapAction(QueryAction):
     def run(self, form):
         selection = SelectionSearch(form)
         queries = selection.get_article_ids_per_query()
-        all_article_ids = chain.from_iterable(queries.values())
-
-        with NamedTemporaryFile(suffix=".xml") as xml:
-            xml.write(XML_TEMPLATE.render(Context(locals())))
-            xml.flush()
-            with NamedTemporaryFile(suffix=".png") as png:
-                image, html, _ = aduna(xml.name, png.name)
+        image, html = get_clustermap_image(queries)
 
         if form.cleaned_data["output_type"] == "application/json+clustermap":
             coords = tuple(clustermap_html_to_coords(html))
-            return json.dumps({"coords": coords, "image": b64encode(image)})
+
+            clusters, articles = zip(*get_clusters(queries).items())
+            cluster_queries = get_cluster_queries(clusters)
+
+            return json.dumps(
+                {"coords": coords, "image": b64encode(image),
+                 "clusters": [
+                     {"query": q, "articles": tuple(a)}
+                     for q, a in zip(cluster_queries, articles)
+                 ]}
+            )
 
         # JSON can't encode bytes (celery)
         return b64encode(image)
