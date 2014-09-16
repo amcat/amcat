@@ -71,7 +71,8 @@ def get_article_dict(art, sets=None):
 
 def _get_hash(article_dict):
     c =hash_class()
-    keys = sorted(k for k in article_dict.keys() if k not in ('id', 'sets', 'hash', 'medium', 'projectid'))
+    keys = sorted(k for k in article_dict.keys()
+                  if k not in ('id', 'sets', 'hash', 'medium', 'projectid'))
     for k in keys:
         v = article_dict[k]
         if isinstance(v, int):
@@ -158,6 +159,19 @@ class Result(object):
                 result.date = datetime.strptime(result.date, '%Y-%m-%d')
             else:
                 result.date = datetime.strptime(result.date[:19], '%Y-%m-%dT%H:%M:%S')
+        return result
+
+    @classmethod
+    def from_stats(cls, stats, date=False, **kargs):
+        """Create a Result object from an ES statistics dict {u'count': 0, u'max': ...}"""
+        result = Result(**kargs)
+        result.count = stats['count']
+        if result.count == 0:
+            result.start_date, result.end_data = None, None
+        else:
+            f = get_date if date else int
+            result.min=f(stats['min'])
+            result.max=f(stats['max'])
         return result
 
     def __init__(self, **kwargs):
@@ -411,37 +425,37 @@ class ES(object):
         result = self.search(body, size=0, search_type="count")
         return result['aggregations']['aggregation']
 
-    def aggregate_query(self, query=None, filters=None, group_by=None, date_interval='month'):
+    def aggregate_query(self, query=None, filters=None, group_by=None, date_interval='month', stats=None):
         """
         Compute an aggregate query, e.g. select count(*) where <filters> group by <group_by>
         If date is used as a group_by variable, uses date_interval to bin it
         Currently, group by must be a single field as elastic doesn't support multiple group by
+        (Note: this should be possible in elastic now)
+        @param stats: if given, return stats objects for that field (min, max, count, sum) instead of count
         """
-        if group_by == 'date':
+        date = group_by == 'date'
+        if date:
             aggregation = {'date_histogram': {'field': group_by, 'interval': date_interval}}
         else:
             aggregation = {'terms': {'size': 999999, 'field': group_by}}
+        if stats:
+            aggregation['aggregations'] = {'statistics': {"stats": {"field": stats}}}
 
         result = self.search_aggregate(aggregation, query=query, filters=filters)
         for bucket in result['buckets']:
-            key, n = bucket['key'], bucket['doc_count']
-            if group_by == 'date':
+            key, val = bucket['key'], bucket['doc_count']
+            if date:
                 key = get_date(key)
-            yield key, n
+            if stats:
+                val = Result.from_stats(bucket['statistics'], date=date, ntotal=val)
+            yield key, val
 
     def statistics(self, query=None, filters=None):
         """
         Compute and return a Result object with n, start_date and end_date for the selection
         """
         stats = self.search_aggregate({'stats' : {'field' : 'date'}}, query=query, filters=filters)
-        result = Result()
-        result.n = stats['count']
-        if result.n == 0:
-            result.start_date, result.end_data = None, None
-        else:
-            result.start_date=get_date(stats['min'])
-            result.end_date=get_date(stats['max'])
-        return result
+        return Result.from_stats(stats, date=True)
 
 
     def list_media(self, query=None, filters=None):
@@ -633,9 +647,9 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
         # set statistics
         stats = ES().statistics(filters=dict(sets=s1.id))
-        self.assertEqual(stats.n, 4)
-        self.assertEqual(stats.start_date, datetime(2001,1,1))
-        self.assertEqual(stats.end_date, datetime(2002,1,1))
+        self.assertEqual(stats.count, 4)
+        self.assertEqual(stats.min, datetime(2001,1,1))
+        self.assertEqual(stats.max, datetime(2002,1,1))
 
         # media list
         self.assertEqual(set(ES().list_media(filters=dict(sets=s1.id))),

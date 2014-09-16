@@ -69,8 +69,8 @@ def filters_from_form(form_data):
         yield 'start_date', form_data.get('start_date')
     elif form_data.get('datetype') == 'before':
         yield 'end_date', form_data.get('end_date')
-        
-    
+
+
     for k in form_data.keys():
         if  k in FILTER_FIELDS:
             try:
@@ -83,20 +83,20 @@ def filters_from_form(form_data):
             vals = [_serialize(v) for v in vals if v]
             if vals:
                 yield FILTER_FIELDS[k], vals
-                
+
     if 'articlesets' not in form_data:
         # filter on all sets in project
         p = Project.objects.get(pk=form_data['projects'])
         sets = [s.id for s in p.all_articlesets()]
         yield "sets", sets
-        
+
 
 
 def getDatatable(form, rowlink='article/{id}', **kwargs):
     from api.rest.datatable import Datatable
     from api.rest.resources import SearchResource
     table = Datatable(SearchResource, rowlink=rowlink, **kwargs)
-    
+
     for field, val in filters_from_form(form):
         table = table.filter(**{field : val})
 
@@ -125,12 +125,12 @@ def get_ids(form):
         query = "\n".join("({q.query})".format(**locals()) for q in queries)
     else:
         query = None
-                         
+
     return ES().query_ids(query=query, filters=filters)
 
 def getArticles(form, **kargs):
     fields = ['mediumid', 'date', 'headline', 'medium']
-    
+
     sort = form.get('sortColumn', None)
 
     if 'keywordInContext' in form['columns']:
@@ -139,7 +139,7 @@ def getArticles(form, **kargs):
     query = query_from_form(form)
 
     kargs["highlight" if query else "lead"] = True
-        
+
     filters = dict(filters_from_form(form))
 
     log.info("Query: {query!r}, with filters: {filters}".format(**locals()))
@@ -153,16 +153,16 @@ def getArticles(form, **kargs):
         def add_hits_column(r):
             r.hits = {q.label : 0 for q in form['queries']}
             return r
-            
+
         result_dict = {r.id : add_hits_column(r) for r in result}
         f = dict(ids=list(result_dict.keys()))
-        
+
         for q in queries_from_form(form):
             for hit in ES().query(q.query, filters=f, fields=[]):
                 result_dict[hit.id].hits[q.label] = hit.score
 
     return result
-    
+
 def getTable(form, progress_monitor=NullMonitor):
     table = table3.DictTable(default=0)
     table.rowNamesRequired = True
@@ -180,7 +180,7 @@ def getTable(form, progress_monitor=NullMonitor):
         progress_monitor.update(90, "Got results")
     elif yAxis == 'medium':
         media = Medium.objects.filter(pk__in=ES().list_media(query, filters)).only("name")
-        
+
         for medium in sorted(media):
             filters['mediumid'] = medium.id
             name = u"{medium.id} - {}".format(medium.name.replace(",", " ").replace(".", " "), **locals())
@@ -204,27 +204,27 @@ def add_medium_names(result):
     for mid, n in result:
         label = "{mid} - {name}".format(name=media[mid], **locals())
         yield label, n
-    
-    
+
+
 def _add_column(table, column_name, query, filters, group_by, dateInterval):
     if group_by == "total":
         n = ES().count(query, filters)
         table.addValue("Total", column_name, n)
-    else:        
+    else:
         results = ES().aggregate_query(query, filters, group_by, dateInterval)
-        if group_by == "mediumid": 
+        if group_by == "mediumid":
             results = add_medium_names(results)
 
         for group, n in results:
             table.addValue(unicode(group), column_name, n)
     table.columnTypes[column_name] = int
-    
+
 
 def get_total_n(form):
     query = query_from_form(form)
     filters = dict(filters_from_form(form))
     return ES().count(query, filters)
-                                 
+
 def get_statistics(form):
     query = query_from_form(form)
     filters = dict(filters_from_form(form))
@@ -233,10 +233,10 @@ def get_statistics(form):
 class QueryError(Exception):
     pass
 
-    
+
 class QueryValidationError(ValidationError):
     # ugly hack inspired on https://github.com/django/django/commit/a8f4553aaecc7bc6775e0fd54f8c615c792b3d97
-    
+
     def __init__(self, message, code=None, params=None):
         """
         ValidationError can be passed any object that can be printed (usually
@@ -260,7 +260,7 @@ def _clean(s):
     s = re.sub("[<>+*]"," ", s)
     s = re.sub("\s+"," ", s)
     return s.strip()
-            
+
 class SearchQuery(object):
     """
     Represents a query object that contains both a query and
@@ -270,7 +270,7 @@ class SearchQuery(object):
         self.query = stripAccents(query)
         self.declared_label = _clean(label)
         self.label = self.declared_label or _clean(self.query)
-        
+
 
     @classmethod
     def _get_label_delimiter(cls, query_string, label_delimiters):
@@ -317,11 +317,11 @@ def queries_from_form(form):
         elif isinstance(cb, (int, unicode)):
             cb = Codebook.objects.get(pk=int(cb))
         if lbl and isinstance(lbl, (int, unicode)): lbl = Language.objects.get(pk=int(lbl))
-        if rep and isinstance(rep, (int, unicode)): rep = Language.objects.get(pk=int(rep)) 
+        if rep and isinstance(rep, (int, unicode)): rep = Language.objects.get(pk=int(rep))
         if cb: cb.cache_labels()
-        
+
         log.warn("X {cb}:{lbl}->{rep}".format(**locals()))
-        
+
         queries = [SearchQuery.from_string(line)
                    for line in form['query'].split("\n")
                    if line.strip()]
@@ -336,7 +336,7 @@ def query_from_form(form):
     queries = list(queries_from_form(form))
     if queries:
         return u' OR '.join(u'({q.query})'.format(**locals()) for q in queries)
-        
+
 def _resolve_recursive(codebook, tree_item, rlanguage):
     this = codebook.get_code(tree_item.code_id).get_label(rlanguage, fallback=False)
 
@@ -371,7 +371,7 @@ def resolve_reference(reference, recursive, queries, codebook=None, labels=None,
     try:
         log.warn("Finding {reference} in {rlanguage} in {labels}, rec={recursive}".format(**locals()))
         code = labels[reference]
-        
+
         if recursive:
             tree = codebook.get_tree(roots=[code])
             log.warn("Tree: {tree}".format(**locals()))
@@ -397,7 +397,7 @@ def resolve_reference(reference, recursive, queries, codebook=None, labels=None,
         unicode(labels[reference].id), recursive,
         queries, codebook, labels, rlanguage
     )
-    
+
 REFERENCE_RE = re.compile(r"<(?P<reference>.*?)(?P<recursive>\+?)>")
 
 def resolve_query(query, queries, codebook=None, labels=None, rlanguage=None):
@@ -407,7 +407,7 @@ def resolve_query(query, queries, codebook=None, labels=None, rlanguage=None):
 
       1) A reference to a previously defined subquery (<[a-zA-Z0-9]+>)
       2) A reference to a code in the given codebook
-    
+
     """
     for mo in REFERENCE_RE.finditer(query.query):
         recursive = bool(mo.group("recursive"))
@@ -441,7 +441,7 @@ def resolve_queries(queries, codebook=None, label_language=None, replacement_lan
         labels = { c.get_label(label_language, fallback=False) : c for c in codebook.get_codes() }
     else:
         labels = None
-        
+
     for query in queries:
         q = resolve_query(query, _queries, codebook, labels, replacement_language)
         if q:
@@ -455,7 +455,7 @@ def resolve_queries(queries, codebook=None, label_language=None, replacement_lan
 from amcat.tools import amcattest
 
 class TestKeywordSearch(amcattest.AmCATTestCase):
-        
+
     def test_get_label_delimiter(self):
         self.assertEquals(SearchQuery._get_label_delimiter("abc", "a"), "a")
         self.assertEquals(SearchQuery._get_label_delimiter("abc", "ab"), "a")
