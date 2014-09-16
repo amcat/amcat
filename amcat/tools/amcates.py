@@ -412,21 +412,27 @@ class ES(object):
         filters=dict(build_body(query, filters, query_as_filter=True))
 
         if group_by == 'date':
-            group = {'date_histogram' : {'field' : group_by, 'interval' : date_interval}}
+            aggregation = {'date_histogram': {'field': group_by, 'interval': date_interval}}
         else:
-            group = {'terms' : {'size' : 999999, 'field' : group_by}}
-        body = {"query" : {"constant_score" : filters},
-                "facets" : {"group" : group}}
+            aggregation = {'terms': {'size': 999999, 'field': group_by}}
+
+        body = {
+            "query": {
+                "filtered": filters
+            },
+            "aggregations": {
+                "aggregation": aggregation
+            }
+        }
+
         log.debug("es.search(body={body})".format(**locals()))
 
         result = self.search(body, size=0)
-        if group_by == 'date':
-            for row in result['facets']['group']['entries']:
-                yield get_date(row['time']), row['count']
-
-        else:
-            for row in result['facets']['group']['terms']:
-                yield row['term'], row['count']
+        for bucket in result['aggregations']['aggregation']['buckets']:
+            key, n = bucket['key'], bucket['doc_count']
+            if group_by == 'date':
+                key = get_date(key)
+            yield key, n
 
     def statistics(self, query=None, filters=None):
         """
@@ -891,6 +897,3 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(1, len(q("byline:bob")))
         self.assertEqual(0, len(q("byline:eve")))
         self.assertEqual(1, len(q("bob")))
-
-
-
