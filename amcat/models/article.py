@@ -272,13 +272,14 @@ class Article(AmcatModel):
         errors = []  # return errors
         for a in todo:
             dupe = dupes.get(a.es_dict['hash'], None)
-            if dupe:
-                a.duplicate_of = dupe.id
+            a.duplicate = bool(dupe)
+            if a.duplicate:
+                a.id = dupe.id
                 if articleset and not (dupe.sets and articleset.id in dupe.sets):
                     add_to_set.add(dupe.id)
             else:
                 if a.parent:
-                    a.parent_id = a.parent.duplicate_of if hasattr(a.parent, 'duplicate_of') else a.parent.id
+                    a.parent_id = a.parent.id
                 sid = transaction.savepoint()
                 try:
                     sid = transaction.savepoint()
@@ -431,8 +432,8 @@ class TestArticle(amcattest.AmCATTestCase):
 
         # duplicate articles should not be added
         a2 = amcattest.create_test_article(check_duplicate=True, **art)
-        self.assertFalse(Article.objects.filter(pk=a2.id).exists())
-        self.assertEqual(a2.duplicate_of, a1.id)
+        self.assertEqual(a2.id, a1.id)
+        self.assertTrue(a2.duplicate)
         self.assertEqual(q(mediumid=art['medium']), {a1.id})
 
         # however, if an articleset is given the 'existing' article
@@ -440,8 +441,7 @@ class TestArticle(amcattest.AmCATTestCase):
         s1 = amcattest.create_test_set()
         a3 = amcattest.create_test_article(check_duplicate=True, articleset=s1, **art)
 
-        self.assertFalse(Article.objects.filter(pk=a2.id).exists())
-        self.assertEqual(a3.duplicate_of, a1.id)
+        self.assertEqual(a3.id, a1.id)
         self.assertEqual(q(mediumid=art['medium']), {a1.id})
         self.assertEqual(set(s1.get_article_ids()), {a1.id})
         self.assertEqual(q(sets=s1.id), {a1.id})
@@ -449,7 +449,7 @@ class TestArticle(amcattest.AmCATTestCase):
         # can we suppress duplicate checking?
         a4 = amcattest.create_test_article(check_duplicate=False, **art)
         self.assertTrue(Article.objects.filter(pk=a4.id).exists())
-        self.assertFalse(hasattr(a4, 'duplicate_of'))
+        self.assertFalse(a4.duplicate)
         self.assertIn(a4.id, q(mediumid=art['medium']))
 
 
