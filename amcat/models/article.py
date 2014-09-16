@@ -188,9 +188,6 @@ class Article(AmcatModel):
         if self._highlighted:
             raise ValueError("Cannot save a highlighted article.")
 
-        if self.length is None:
-            self.length = word_len(self.text) + word_len(self.headline) + word_len(self.byline)
-
         super(Article, self).save(*args, **kwargs)
 
 
@@ -245,7 +242,9 @@ class Article(AmcatModel):
         """
         # TODO: test parent logic (esp. together with hash/dupes)
         es = amcates.ES()
-
+        for a in articles:
+            if a.length is None:
+                a.length = word_len(a.text) + word_len(a.headline) + word_len(a.byline)
         # existing / duplicate article ids to add to set
         add_to_set = set()
         # add dict (+hash) as property on articles so we know who is who
@@ -261,7 +260,7 @@ class Article(AmcatModel):
 
         if check_duplicate:
             hashes = [a.es_dict['hash'] for a in todo]
-            results = es.query(filters={'hashes': hashes}, fields=["hash", "sets"], score=False)
+            results = es.query_all(filters={'hashes': hashes}, fields=["hash", "sets"], score=False)
             dupes = {r.hash: r for r in results}
         else:
             dupes = {}
