@@ -401,6 +401,15 @@ class ES(object):
         result = self.es.count(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=body)
         return result["count"]
 
+    def search_aggregate(self, aggregation, query=None, filters=None):
+        """
+        Run an aggregate search query and return the aggregation results
+        @param aggregation: raw elastic query, e.g. {"terms" : {"field" : "medium"}}
+        """
+        body = dict(query={"filtered": dict(build_body(query, filters, query_as_filter=True))},
+                    aggregations={"aggregation": aggregation})
+        result = self.search(body, size=0, search_type="count")
+        return result['aggregations']['aggregation']
 
     def aggregate_query(self, query=None, filters=None, group_by=None, date_interval='month'):
         """
@@ -408,27 +417,13 @@ class ES(object):
         If date is used as a group_by variable, uses date_interval to bin it
         Currently, group by must be a single field as elastic doesn't support multiple group by
         """
-
-        filters=dict(build_body(query, filters, query_as_filter=True))
-
         if group_by == 'date':
             aggregation = {'date_histogram': {'field': group_by, 'interval': date_interval}}
         else:
             aggregation = {'terms': {'size': 999999, 'field': group_by}}
 
-        body = {
-            "query": {
-                "filtered": filters
-            },
-            "aggregations": {
-                "aggregation": aggregation
-            }
-        }
-
-        log.debug("es.search(body={body})".format(**locals()))
-
-        result = self.search(body, size=0)
-        for bucket in result['aggregations']['aggregation']['buckets']:
+        result = self.search_aggregate(aggregation, query=query, filters=filters)
+        for bucket in result['buckets']:
             key, n = bucket['key'], bucket['doc_count']
             if group_by == 'date':
                 key = get_date(key)
@@ -438,9 +433,7 @@ class ES(object):
         """
         Compute and return a Result object with n, start_date and end_date for the selection
         """
-        body = {"query" : {"constant_score" : dict(build_body(query, filters, query_as_filter=True))}}
-        body['facets'] = {'stats' : {'statistical' : {'field' : 'date'}}}
-        stats = self.search(body, size=0)['facets']['stats']
+        stats = self.search_aggregate({'stats' : {'field' : 'date'}}, query=query, filters=filters)
         result = Result()
         result.n = stats['count']
         if result.n == 0:
@@ -449,6 +442,7 @@ class ES(object):
             result.start_date=get_date(stats['min'])
             result.end_date=get_date(stats['max'])
         return result
+
 
     def list_media(self, query=None, filters=None):
         """
