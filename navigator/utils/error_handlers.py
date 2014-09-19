@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import HttpResponse
-    
+
 import urllib
 import sys
 import json
@@ -11,12 +11,12 @@ def _build_response(request, context):
     if 'comment' not in context:
         context['comment'] = ("\n\n------ Issue details -----\n{status} error on accessing:\n{uri}"
                               .format(**context))
-    if 'issue_query' not in context:
-        context['issue_query'] = urllib.urlencode(dict(comment=context['comment']))
-    
+    if 'issue_title' not in context:
+        context['issue_title'] = context['header']
+
     #TODO: should check http accept
     if request.path.startswith("/api"):
-        content = json.dumps({"error": True, 
+        content = json.dumps({"error": True,
                              "status" : context['status'],
                              "message" : context['header'],
                              "details" : context['subheader'],
@@ -25,7 +25,7 @@ def _build_response(request, context):
     else:
         content = render(request, "error.html", context)
         content_type = "text/html"
-    
+
     return HttpResponse(content, status=context['status'], content_type=content_type)
 
 def handler500(request):
@@ -35,12 +35,12 @@ def handler500(request):
     status = 500
     title = header = "500 : An Error has occurred"
     exc_type, exc_value, exc_tb = sys.exc_info()
-    subheader = "{exc_type.__name__}: {exc_value}".format(**locals())
+    subheader = issue_title = "{exc_type.__name__}: {exc_value}".format(**locals())
     description = """The server encountered an internal error or misconfiguration and
                      was unable to complete your request."""
 
     return _build_response(request, locals())
-    
+
 
 def handler404(request):
     """
@@ -49,8 +49,9 @@ def handler404(request):
     status = 404
     title = header = "404 : Page not Found"
     description = """The requested location could not be found"""
+    issue_title = """Page not found: {}""".format(request.path)
     return _build_response(request, locals())
-    
+
 
 def handler503(request):
     """
@@ -72,9 +73,10 @@ def handler403(request):
     exc_type, exc_value, exc_tb = sys.exc_info()
     if exc_value:
         subheader = "{request.path}: {exc_value}".format(**locals())
-
+    issue_title = "Forbidden: {request.path}".format(**locals())
     description = """You have insufficient rights to accesss the requested resource.
                      To gain rights, please contact an administrator of the project you
                      are trying to use (for project-related resources). For global
                      permissions, please contact the server administrator"""
+
     return _build_response(request, locals())
