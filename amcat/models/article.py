@@ -340,11 +340,12 @@ class Article(AmcatModel):
         @rtype: ArticleTree
         """
         # Do we need to render the complete tree?
-        if include_parents and self.parent:
+        if include_parents and self.parent and self.parent.id != self.id:
             return self.parent.get_tree(include_parents=True)
 
         children = self.children.order_by("id").only(*fields)
-        return ArticleTree(self, [c.get_tree(include_parents=False) for c in children])
+        return ArticleTree(self, [c.get_tree(include_parents=False) for c in children
+                                  if c.id != self.id])
 
 
 ###########################################################################
