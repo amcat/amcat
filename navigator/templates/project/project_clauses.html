@@ -1,0 +1,16 @@
+{% extends "project/base.html" %}
+{% block content %}
+
+<form action="" enctype="multipart/form-data" method="POST">
+   <table>
+    {{ form.as_table }}
+   </table>
+
+   <div class="form-actions">
+    <input class="btn btn-primary" type="submit" value="Save"></input>
+    <a href="{{ cancel_url }}" class="btn">Cancel</a>
+   </div>
+</form>
+<hr/>
+{{test}}
+{% endblock %}
