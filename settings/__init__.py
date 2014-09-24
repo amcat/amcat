@@ -21,10 +21,8 @@ from __future__ import absolute_import
 from .base import *
 from .misc import *
 from .elastic import *
-from .scraping_celery import *
 
 try:
     from .private import *
 except ImportError:
     pass
-
