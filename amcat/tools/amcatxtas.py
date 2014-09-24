@@ -39,17 +39,25 @@ class ANALYSES:
     sources_en = [{"module" : "xtas.tasks.single.corenlp"},
                   {"module" : "xtas.tasks.single.semafor"},
                   {"module" : "xtas.tasks.single.sources_en"}]
+    clauses_en = [{"module" : "xtas.tasks.single.corenlp"},
+                  {"module" : "xtas.tasks.single.sources_en"},
+                  {"module" : "xtas.tasks.single.clauses_en"}]
+
+def _get_analysis(analysis):
+    """Convert analysis name into list of actions"""
+    if isinstance(analysis, list):
+        return analysis
+    elif hasattr(ANALYSES, analysis):
+        return getattr(ANALYSES, analysis)
+    elif "." in analysis:
+        return [{"module" : m} for m in analysis.split('__')]
+    else:
+        raise ValueError("Unknown analysis: {analysis}".format(**locals()))
 
 def get_result(article, analysis, store_intermediate=True, block=True):
     from xtas.tasks.pipeline import pipeline
     if not isinstance(article, int): article = article.id
-    if not isinstance(analysis, list):
-        if hasattr(ANALYSES, analysis):
-            analysis = getattr(ANALYSES, analysis)
-        elif "." in analysis:
-            analysis = [{"module" : m} for m in analysis.split('__')]
-        else:
-            raise ValueError("Unknown analysis: {analysis}".format(**locals()))
+    analysis = _get_analysis(analysis)
 
     es = amcates.ES()
     doc = {'index': es.index, 'type': es.doc_type,
@@ -57,3 +65,14 @@ def get_result(article, analysis, store_intermediate=True, block=True):
     r = pipeline(doc, analysis,
                  store_intermediate=store_intermediate)
     return r
+
+def get_adhoc_result(analysis, text, store_intermediate=True):
+    from xtas.tasks.es import adhoc_document
+    from xtas.tasks.pipeline import pipeline
+
+    analysis = _get_analysis(analysis)
+    es = amcates.ES()
+    doc = adhoc_document('adhoc', es.doc_type, 'text', text=text)
+
+    print "Pipelining..."
+    return pipeline(doc, analysis, store_intermediate=store_intermediate)
