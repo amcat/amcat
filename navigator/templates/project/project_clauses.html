@@ -1,4 +1,36 @@
 {% extends "project/base.html" %}
+{% block css %}
+<style>
+sup {font-weight: bold}
+div.token {display: inline}
+.source_0 {background: #99f; border-bottom: solid 2px #99f}
+.quote_0 {border-top: solid 2px #99f}
+.source_1 {background: #c9c; border-bottom: solid 2px #c9c}
+.quote_1 {border-top: solid 2px #c9c}
+
+.subject_0 {background: #f99; border-bottom: solid 2px #f99}
+.predicate_0 {border-bottom: solid 2px #f99}
+
+.subject_1 {background: #9f9; border-bottom: solid 2px #9f9}
+.predicate_1 {border-bottom: solid 2px #9f9}
+
+.subject_2 {background: #cc9; border-bottom: solid 2px #cc9}
+.predicate_2 {border-bottom: solid 2px #cc9}
+
+.attack {color:red}
+.israel {color:blue}
+.palestine {color:green}
+.stop {color: #b0b}
+.not {color: #0bb}
+.civilian {color: #963}
+.withdraw {color: #96f}
+.terror {color: #c90}
+
+h3 {font-size: large; border-bottom: 1px dotted gray}
+</style>
+{% endblock %}
+
+
 {% block content %}
 
 <form action="" enctype="multipart/form-data" method="POST">
@@ -7,10 +39,57 @@
    </table>
 
    <div class="form-actions">
-    <input class="btn btn-primary" type="submit" value="Save"></input>
+    <input class="btn btn-primary" type="submit" value="Process"></input>
     <a href="{{ cancel_url }}" class="btn">Cancel</a>
    </div>
 </form>
-<hr/>
-{{test}}
+<h3>Sentence:</h3>
+{% for token in tokens %}
+<div class="token {% if token.role %}{{token.role.0}}_{{token.role.1}}{% endif %} {% if token.src_role %}{{token.src_role.0}}_{{token.src_role.1}}{% endif %}{% for code in token.codes%} {{code}}{%endfor%}">
+  {{ token.word }}{% if token.coref %}<sup>{{ token.coref }}</sup>{% endif %}
+</div>
+{% endfor %}
+<br/>
+<h3>Clauses:</h3>
+<table border=1>
+<tr><th>Clause</th><th>Source</th><th>Subject</ht><th>Predicate</th></tr>
+{% for clause in clauses %}
+<tr>
+<td class="subject_{{ forloop.counter0 }}">
+ {{ forloop.counter0 }}
+</td>
+<td>
+{% for token in clause.source %}
+<div class="token {% if token.src_role %}{{token.src_role.0}}_{{token.src_role.1}}{% endif %}{% for code in token.codes%}{{code}} {%endfor%}">{{ token.word }}</div>
+{% endfor %}
+</td>
+<td>
+{% for token in clause.subject %}
+<span class="{% for code in token.codes%}{{code}} {%endfor%}" title="{% for code in token.codes%}{{code}} {%endfor%}">{{ token.word }}</span>
+{% endfor %}
+
+</td>
+<td>
+{% for token in clause.predicate %}
+<span class="{% for code in token.codes%}{{code}} {%endfor%}" title="{% for code in token.codes%}{{code}} {%endfor%}">{{ token.word }}</span>
+{% endfor %}
+</td>
+</tr>
+{% endfor %}
+</table>
+
+<h3>Codes:</h3>
+<ul>
+{% for code in codes %}
+<li><span class="{{code}}">{{code}}</span>
+{% endfor %}
+</ul>
+
+<h3>Parse:</h3>
+<object type='image/png' data='data:image/png;base64,{{ tree | safe }}'></object>
+
+<h3>SAF:</h3>
+<pre>
+{{ saf }}
+</pre>
 {% endblock %}
