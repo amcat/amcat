@@ -42,10 +42,24 @@ def get_reduced_clauses(saf):
 
 class ClauseView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, FormView):
     class form_class(forms.Form):
-        sentence = forms.CharField(label='Sentence', max_length=255)
+        sentence = forms.CharField(label='Sentence')
 
     parent = ProjectDetailsView
     url_fragment = "clauses"
+
+
+    def get_form_kwargs(self):
+        kwargs = super(ClauseView, self).get_form_kwargs()
+        if self.request.method == 'GET' and 'sentence' in self.request.GET:
+            kwargs['data'] = self.request.GET
+
+        return kwargs
+
+    def get(self, request, *args, **kwargs):
+        if 'sentence' in self.request.GET:
+            return super(ClauseView, self).post(request, *args, **kwargs)
+        else:
+            return super(ClauseView, self).get(request, *args, **kwargs)
 
     def form_valid(self, form):
         # Get parse
@@ -73,7 +87,7 @@ class ClauseView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, FormVi
             t['role'] = roles.get(t['id'])
             t['src_role'] = src_roles.get(t['id'])
 
-       
+
         # add codebook
         codebook = Codebook.objects.get(pk=568)
         codebook_dict = {}
@@ -107,13 +121,13 @@ class ClauseView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, FormVi
                 print t
                 for code in t.get('codes', []):
                     codes_per_group[i] = codes_per_group.get(i, set()) | {code}
-                    
+
         for group, i in coref_groups.iteritems():
             if i in codes_per_group and len(codes_per_group[i]) == 1:
                 code = list(codes_per_group[i])[0]
                 for token in group:
                     saf.get_token(token)['codes'] = [code]
-                
+
         # make tree
         from syntaxrules.syntaxtree import SyntaxTree, VIS_IGNORE_PROPERTIES
         import base64
@@ -173,4 +187,4 @@ def get_coreferences(coreferences):
         coref_groups.append(nodes)
     for nodes in merge(coref_groups):
         for node in nodes:
-            yield node, nodes 
+            yield node, nodes
