@@ -74,6 +74,8 @@ class ArticleLemmataSerializer(ArticleXTasSerializer):
         rules = self.context['request'].GET.get('rules')
         if rules:
             return self.get_transformed(aid, saf, rules)
+        if self.context['request'].GET.get('clauses'):
+            return self.get_clauses(aid, saf)
         if self.context['request'].GET.get('sources'):
             return self.get_sources(aid, saf)
         else:
@@ -96,6 +98,11 @@ class ArticleLemmataSerializer(ArticleXTasSerializer):
             token["aid"] = aid
             if self.output_token(token):
                 yield token
+
+    def get_clauses(self, aid, saf):
+        if not 'tokens' in saf and 'clauses' in saf:
+            return
+
 
     def get_sources(self, aid, saf):
         if not 'tokens' in saf and 'sources' in saf:
