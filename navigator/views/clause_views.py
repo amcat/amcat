@@ -18,6 +18,7 @@ def flatten(listOfLists):
 class ClauseView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, FormView):
     class form_class(forms.Form):
         sentence = forms.CharField(label='Sentence')
+        codebook = forms.CharField(label='Codebook id', required=False)
 
     parent = ProjectDetailsView
     url_fragment = "clauses"
@@ -44,9 +45,9 @@ class ClauseView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, FormVi
         tokens  = saf._tokens
 
         # add codebook
-        codebook_id = 3
-        codebook = Codebook.objects.get(pk=codebook_id)
-        saf.saf['codes'] = list(match_codes(saf, codebook))
+        if 'codebook' in self.request.GET:
+            codebook = Codebook.objects.get(pk=int(self.request.GET['codebook']))
+            saf.saf['codes'] = list(match_codes(saf, codebook))
 
         # get tokens and clauses
         tokens = saf.resolve()
@@ -87,13 +88,41 @@ class ClauseView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, FormVi
         return self.render_to_response(self.get_context_data(**ctx))
 
 
-def get_frames(su, pr):
-    if "israel" in su and "attack" in pr:
-        yield "ISRAEL_MEANS"
-    if "palestine" in su and "attack" in pr:
+def get_frames(s, p):
+    """
+    >> * Israeli means (either of the patterns below)
+>>x subject: israel, predicate: attack
+>>x OR: predicate: attack AND palestine
+
+>> * Israeli goals
+>> subject: palestine, predicate: disarm OR (stop AND (attack or terror))
+
+>> * Israeli moral evaluation:
+>> subject: palestine, predicate: terror OR (attack AND citizens)
+>> (optionally OR: predicate: israel AND (terror OR (attack AND cititzens))
+
+>> * Israeli problem defition (mirror of israeli means)
+>> subject: palestine, predicate: attack
+>> OR: predicate: attack AND israel
+    """
+
+    if "terror" in p and palestine in (s|p):
+        yield "ISRAEL_MORAL"
+
+    if "stop" in p and "attack" in p and "palestine" in (s|p):
+        yield "ISRAEL_GOAL"
         yield "ISRAEL_PROBLEM"
-    if "israel" in pr and "attack" in pr:
-        yield "ISRAEL_PROBLEM"
+
+    if "attack" in p and "stop" not in p:
+        if "israel" in s and not "palestine" in s:
+            yield "ISRAEL_MEANS"
+        if not "israel" in s and "palestine" in s:
+            yield "ISRAEL_PROBLEM"
+        if "israel" not in s and "palestine" not in s:
+            if "israel" in p and not "palestine" in p:
+                yield "ISRAEL_PROBLEM"
+            if not "israel" in p and "palestine" in p:
+                yield "ISRAEL_MEANS"
 
 def add_frames(saf, clause):
     su_codes = set(flatten(saf.get_token(t).get('codes', []) for t in clause['subject']))
