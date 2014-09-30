@@ -1,4 +1,6 @@
 {% extends "project/base.html" %}
+{% load misc %}
+
 {% block css %}
 <style>
 
@@ -48,46 +50,99 @@ h3 {font-size: large; border-bottom: 1px dotted gray}
 </form>
 <h3>Sentence:</h3>
 {% for token in tokens %}
-<div class="token {% if token.role %}{{token.role.0}}_{{token.role.1}}{% endif %} {% if token.src_role %}{{token.src_role.0}}_{{token.src_role.1}}{% endif %}{% for code in token.codes%} {{code}}{%endfor%}">
-  {{ token.word }}{% if token.coref %}<sup>{{ token.coref }}</sup>{% endif %}
-</div>
-{% endfor %}
-<br/>
-<h3>Clauses:</h3>
-<table border=1>
-<tr><th>Clause</th><th>Source</th><th>Subject</ht><th>Predicate</th></tr>
-{% for clause in clauses %}
-<tr>
-<td class="subject_{{ forloop.counter0 }}">
- {{ forloop.counter0 }}
-</td>
-<td>
-{% for token in clause.source %}
-<div class="token {% if token.src_role %}{{token.src_role.0}}_{{token.src_role.1}}{% endif %}{% for code in token.codes%}{{code}} {%endfor%}">{{ token.word }}</div>
-{% endfor %}
-</td>
-<td>
-{% for token in clause.subject %}
-<span class="{% for code in token.codes%}{{code}} {%endfor%}" title="{% for code in token.codes%}{{code}} {%endfor%}">{{ token.word }}</span>
+  <div class="token {% if token.clause_role %}{{token.clause_role}}_{{token.clause_id}}{% endif %} {% if token.source_role %}{{token.source_role}}_{{token.source_id}}{% endif %}{% for code in token.codes%} {{code}}{%endfor%}">
+    {{ token.word }}{% if token.coref %}<sup>{{ token.coref }}</sup>{% endif %}
+  </div>
 {% endfor %}
 
-</td>
-<td>
-{% for token in clause.predicate %}
-<span class="{% for code in token.codes%}{{code}} {%endfor%}" title="{% for code in token.codes%}{{code}} {%endfor%}">{{ token.word }}</span>
-{% endfor %}
-</td>
-</tr>
-{% endfor %}
+<h3>Clauses:</h3>
+<table border=1>
+  <tr><th>Clause</th><th>Source</th><th>Subject</ht><th>Predicate</th><th>Subject codes</th><th>Predicate codes</th><<th>Frames</th></tr>
+  {% for clause in clauses %}
+  <tr>
+    <td class="subject_{{ forloop.counter0 }}">
+      {{ forloop.counter0 }}
+    </td>
+    <td>
+      {% for token in clause.source %}
+        <div class="token {% if token.source_role %}{{token.source_role}}_{{token.source_id}}{% endif %}{% for code in token.codes%}{{code}} {%endfor%}">
+          {{ token.word }}
+        </div>
+      {% endfor %}
+    </td>
+    <td>
+      {% for token in clause.subject %}
+        <span class="{% for code in token.codes%}{{code}} {%endfor%}" title="{% for code in token.codes%}{{code}} {%endfor%}">
+          {{ token.word }}
+        </span>
+      {% endfor %}
+    </td>
+    <td>
+      {% for token in clause.predicate %}
+        <span class="{% for code in token.codes%}{{code}} {%endfor%}" title="{% for code in token.codes%}{{code}} {%endfor%}">
+          {{ token.word }}
+        </span>
+      {% endfor %}
+    </td>
+    <td>
+      {% for code in clause.subject_codes %}
+      <span class="{{ code }}">{{ code }}</span>
+      {% endfor %}
+    </td>
+    <td>
+      {% for code in clause.predicate_codes %}
+      <span class="{{ code }}">{{ code }}</span>
+      {% endfor %}
+    </td>
+    <td>
+      {% for frame in clause.frames %}
+      <span class="{{ frame }}">{{ frame }}</span>
+      {% endfor %}
+    </td>
+  </tr>
+  {% endfor %}
 </table>
 
 <h3>Codes:</h3>
 <ul>
-{% for code in codes %}
-<li><span class="{{code}}">{{code}}</span>
-{% endfor %}
+  {% for code in codes %}
+    <li><span class="{{code}}">{{code}}</span>
+  {% endfor %}
 </ul>
 
+<h3>Tokens:</h3>
+{% with attrs="id sentence offset word lemma pos pos1 coref codes source_id source_role clause_id clause_role" %}
+
+<table border=1>
+  <tr>
+    {% for a in attrs.split %}<th>{{ a }}</th>{% endfor %}
+  </tr>
+  {% for t in tokens %}
+  <tr>
+    {% for a in attrs.split %}
+    <td>
+      {% with val=t|get_item:a %}
+      {% if val == None %}
+      -
+      {% else %}
+      <span
+	 {% if a == 'clause_id' %}
+	   class="subject_{{ val }}"
+	 {% elif a == 'source_id' %}
+	   class="source_{{ val }}"
+	 {% endif %}
+	 >
+         {{ val|join_list:"," }}
+      </span>
+      {% endif %}
+      {% endwith %}
+    </td>
+    {% endfor %}
+  </tr>
+  {% endfor %}
+</table>
+
+{% endwith %}
 <h3>Parse:</h3>
 <object type='image/png' data='data:image/png;base64,{{ tree | safe }}'></object>
 
