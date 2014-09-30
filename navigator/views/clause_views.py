@@ -109,7 +109,7 @@ def get_frames(s, p):
     if "terror" in p and "palestine" in (s|p):
         yield "ISRAEL_MORAL"
 
-    if "stop" in p and "attack" in p and "palestine" in (s|p):
+    if "stop" in p and "attack" in p and ("palestine" in (s|p) or "israel" in s):
         yield "ISRAEL_GOAL"
         yield "ISRAEL_PROBLEM"
 
