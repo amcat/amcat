@@ -9,6 +9,7 @@ from api.rest.mixins import DatatablesMixin
 from amcat.models import RuleSet
 from amcat.tools.amcatxtas import ANALYSES, get_result
 import json
+from saf.saf import SAF
 
 
 class XTasViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMixin, ViewSet):
@@ -71,12 +72,12 @@ class ArticleLemmataSerializer(ArticleXTasSerializer):
         return True
 
     def get_xtas_results(self, aid, saf):
-        rules = self.context['request'].GET.get('rules')
-        if rules:
-            return self.get_transformed(aid, saf, rules)
-        if self.context['request'].GET.get('clauses'):
+        #rules = self.context['request'].GET.get('rules')
+        #if rules:
+        #    return self.get_transformed(aid, saf, rules)
+        if 'clauses' in saf:
             return self.get_clauses(aid, saf)
-        if self.context['request'].GET.get('sources'):
+        elif 'sources' in saf:
             return self.get_sources(aid, saf)
         else:
             return self.get_tokens(aid, saf)
@@ -96,12 +97,16 @@ class ArticleLemmataSerializer(ArticleXTasSerializer):
     def get_tokens(self, aid, saf):
         for token in saf.get('tokens', []):
             token["aid"] = aid
-            if self.output_token(token):
-                yield token
+            #if self.output_token(token):
+            yield token
 
     def get_clauses(self, aid, saf):
         if not 'tokens' in saf and 'clauses' in saf:
             return
+
+        saf = SAF(saf)
+        tokens = saf.resolve()
+        return tokens
 
 
     def get_sources(self, aid, saf):
@@ -112,12 +117,11 @@ class ArticleLemmataSerializer(ArticleXTasSerializer):
             for place, tokens in source.iteritems():
                 for tid in tokens:
                     token = tokendict[tid]
-                    if self.output_token(token):
-                        token["aid"] = aid
-                        token["source_id"] = sid
-                        token["source_place"] = place
-                        yield token
-
+                    #if self.output_token(token):
+                    token["aid"] = aid
+                    token["source_id"] = sid
+                    token["source_place"] = place
+                    yield token
 
 class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
     model_key = "token"
@@ -129,3 +133,21 @@ class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatables
         # only(.) would be better on serializer, but meh
         queryset = queryset.filter(articlesets_set=self.articleset).only("pk")
         return queryset
+
+
+
+from rest_framework.response import Response
+from rest_framework.exceptions import APIException
+from rest_framework.decorators import api_view
+from amcat.tools.amcatxtas import get_adhoc_result
+@api_view(http_method_names=("GET",))
+def get_adhoc_tokens(request):
+    sentence = request.GET.get('sentence')
+    module = request.GET.get('module')
+    if not (sentence and module):
+        raise APIException("Please provide a 'sentence', 'module' and optional 'codebook' parameter")
+    saf = get_adhoc_result(module, sentence)
+    serializer = ArticleLemmataSerializer()
+    data = list(serializer.get_xtas_results(None, saf))
+
+    return Response(data)

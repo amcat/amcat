@@ -196,7 +196,7 @@ class XHTMLRenderer(TableRenderer):
         return result
 
 
-        
+
 EXPORTERS = [CSVRenderer, XLSXRenderer, SPSSRenderer, XHTMLRenderer]
 
 def set_response_content(response):

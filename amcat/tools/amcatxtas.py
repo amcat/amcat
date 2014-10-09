@@ -37,7 +37,6 @@ class ANALYSES:
     semafor = [{"module" : "xtas.tasks.single.corenlp"},
                {"module" : "xtas.tasks.single.semafor"}]
     sources_en = [{"module" : "xtas.tasks.single.corenlp"},
-                  {"module" : "xtas.tasks.single.semafor"},
                   {"module" : "xtas.tasks.single.sources_en"}]
     clauses_en = [{"module" : "xtas.tasks.single.corenlp"},
                   {"module" : "xtas.tasks.single.sources_en"},
