@@ -47,7 +47,6 @@ def coded_article_property(prop):
     """Returns property object fetches the given property on CodedArticle instaed of Coding."""
     def get_property(self):
         log.warning("Getting `{prop}` from Coding deprecated. Use CodedArticle.")
-        raise Exception("!")
         return getattr(self.coded_article, prop)
 
     def set_property(self, value):

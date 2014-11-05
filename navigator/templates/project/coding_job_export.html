@@ -3,8 +3,14 @@
 {% block title %}Project {{project.id}} - {{project.name}}{% endblock %}
 
 {% block content %}
+
 <div>
  <h1 class="noline">Select options for exporting below</h1>
+ <p>
+     Date formatting options are expanded upon
+     <a href="https://docs.python.org/2/library/datetime.html#id1">here</a>.
+     You can choose any of the available options.
+ </p>
  <form method="POST" class="form-horizontal">
     {% for hidden in form.hidden_fields %}
     {{ hidden }}

@@ -117,6 +117,7 @@ class CodingJobResultsForm(CodingjobListForm):
     """
     include_duplicates = forms.BooleanField(initial=False, required=False)
     export_format = forms.ChoiceField(tuple((c.label, c.label) for c in EXPORT_FORMATS))
+    date_format = forms.CharField(initial="%Y-%m-%d %H-%M-%S", required=False)
 
     def __init__(self, data=None, files=None, **kwargs):
         """
@@ -289,8 +290,20 @@ class MetaColumn(table3.ObjectColumn):
 
     def getCell(self, row):
         obj = getattr(row, self.field.object)
-        if obj:
+        if obj is not None:
             return unicode(getattr(obj, self.field.attr))
+
+
+class DateColumn(table3.ObjectColumn):
+    def __init__(self, field, format):
+        self.field = field
+        self.format = format
+        super(DateColumn, self).__init__(self.field.label)
+
+    def getCell(self, row):
+        obj = getattr(row, self.field.object)
+        if obj is not None:
+            return getattr(obj, self.field.attr).strftime(self.format)
 
 
 class SubSentenceColumn(table3.ObjectColumn):
@@ -344,6 +357,8 @@ class GetCodingJobResults(Script):
             if self.options.get("meta_{field.object}_{field.attr}".format(**locals())):
                 if field.object == "subsentence":
                     table.addColumn(SubSentenceColumn(field))
+                elif field.attr == "date":
+                    table.addColumn(DateColumn(field, kargs["date_format"]))
                 else:
                     table.addColumn(MetaColumn(field))
 
@@ -593,3 +608,4 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         script = self._get_results_script([job], {strf: {}, intf: {}, codef: dict(labels=True)})
         with self.checkMaxQueries(8):
             list(csv.reader(StringIO(script.run())))
+
