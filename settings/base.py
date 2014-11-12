@@ -192,7 +192,8 @@ INSTALLED_APPS = [
     'amcat',
     'django_extensions',
     'compressor',
-    'method_override'
+    'method_override',
+    'markdown_deux',
 ]
 
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"

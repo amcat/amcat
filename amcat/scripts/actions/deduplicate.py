@@ -26,23 +26,26 @@ import itertools
 import pprint
 
 from django import forms
-from django.forms import widgets
 from django.core.exceptions import ValidationError
 from amcat.scripts.script import Script
 
 from amcat.models import ArticleSet
 
-try:
-    import Levenshtein
-except ImportError:
-    Levenshtein = None
-    log.error("Levenshtein module not installed. Deduplicate cannot be used.")
+import Levenshtein
 
 class Deduplicate(Script):
     """
-    Deduplicate articles using two articlesets. For all duplicated articles
-    the articles in set 2 will be removed. 
+    Deduplicate articles using two articlesets. For all duplicated articles the articles in
+    set 2 will be removed. If you want to deduplicate one articleset, use it as both
+    articleset 1 and articleset 2 and make sure to *uncheck* 'delete same'. Dry run invokes
+    a test run which doesn't touch any data.
+
+    Differences are calculated using [Levenshtein distances](https://en.wikipedia.org/wiki/Levenshtein_distance).
+    A very simple algorithm based on article length is used to narrow the datasets Levenshtein
+    has to consider. This speeds up the process significantly, but might incur some inaccuracy. To
+    disable this bahaviour use 'skip simple'.
     """
+
     def __init__(self, *args, **kwargs):
         super(Deduplicate, self).__init__(*args, **kwargs)
         self._articles_cache_contains = None

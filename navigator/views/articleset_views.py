@@ -24,6 +24,7 @@ import datetime
 
 from django.core.urlresolvers import reverse
 from django.db.models import Q
+from amcat.scripts.actions.deduplicate import Deduplicate
 from amcat.tools.amcates import ES
 from api.rest.resources import PluginResource
 
@@ -250,6 +251,24 @@ class ArticleSetSampleView(ProjectScriptView):
                         "<a href='{oldurl}'>Return to original set {old.id} : {oldname}</a>"
                         .format(newname=escape(self.result.name), oldurl=reverse('article set-details', kwargs=self.kwargs),
                                 oldname=escape(old.name), **locals()))
+
+class ArticleSetDeduplicateView(ProjectScriptView):
+    parent = ArticleSetDetailsView
+    script = Deduplicate
+    url_fragment = 'deduplicate'
+
+    def get_form(self, form_class):
+        asets = self.project.articlesets_set
+        form = super(ArticleSetDeduplicateView, self).get_form(form_class)
+        form.fields["articleset_1"].queryset = form.fields["articleset_2"].queryset = asets
+
+        if "articleset_1" in self.request.GET:
+            form.fields["articleset_1"].initial = self.request.GET["articleset_1"]
+
+        if "articleset_2" in self.request.GET:
+            form.fields["articleset_2"].initial = self.request.GET["articleset_2"]
+
+        return form
 
 class ArticleSetEditView(ProjectEditView):
     parent = ArticleSetDetailsView
