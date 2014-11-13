@@ -116,7 +116,7 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
                                             "not be visible to non-members")
 
 class ProjectAddView(BreadCrumbMixin, ScriptView):
-    template_name = "project/script_base.html"
+    template_name = "script_base.html"
     script = AddProject
     model = Project
 
