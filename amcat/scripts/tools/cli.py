@@ -119,8 +119,8 @@ def add_argument_from_field(parser, name, field):
             helpfields.append("Possible values are %s" % "; ".join("%s (%s)" % (kv) for kv in field.choices))
     elif type(field) in _FIELD_HELP_MAP:
         helpfields.insert(0, _FIELD_HELP_MAP[type(field)])
-        
-    help = ". ".join(helpfields)
+
+    help = ". ".join(unicode(f) for f in helpfields)
 
     # set type OR action_const as extra arguments depending on type
     args = {} # flexible parameters to add_argument
