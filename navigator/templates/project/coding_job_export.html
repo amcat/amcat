@@ -3,6 +3,12 @@
 {% block title %}Project {{project.id}} - {{project.name}}{% endblock %}
 
 {% block content %}
+<style>
+    .form-group{ margin-bottom:0; }
+    .form-group.row:hover{ background-color: #f8f8f8; }
+    .form-group.row{ display:block; }
+    .form-horizontal .control-label{ text-align: left !important;}
+</style>
 
 <div>
  <h1 class="noline">Select options for exporting below</h1>
@@ -20,16 +26,16 @@
 {% for section, fields in sections.items %}
 <legend>{{section}}</legend>
   {% for id, field, subfields in fields %}
-  <div class="form-group">
-    <label class="col-sm-3 control-label">{{ field.label_tag }}</label>
-    <div class="col-sm-9">{{ field }}{{ field.errors }}</div>
-  </div>
+  <label for="{{ field.auto_id }}" class="form-group row">
+    <label for="{{ field.auto_id }}" class="col-sm-4 control-label">{{ field.label_tag }}</label>
+    <div class="col-sm-8">{{ field }}{{ field.errors }}</div>
+  </label>
     {% for id, subfield in subfields %}
-
-  <div class="form-group">
-    <label class="col-sm-4 control-label">{{ subfield.label_tag }}</label>
-    <div class="col-sm-8">{{ subfield }}{{ subfield.errors }}</div>
-  </div>
+        <label for="{{ subfield.auto_id }}" class="form-group row">
+            <div class="col-sm-1"></div>
+            <label for="{{ subfield.auto_id }}" class="col-sm-3 control-label">{{ subfield.label_tag }}</label>
+            <div class="col-sm-8">{{ subfield }}{{ subfield.errors }}</div>
+        </label>
     {% endfor %}
   {% endfor %}
 {% endfor %}
