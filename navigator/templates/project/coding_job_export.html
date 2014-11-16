@@ -8,6 +8,7 @@
     .form-group.row:hover{ background-color: #f8f8f8; }
     .form-group.row{ display:block; }
     .form-horizontal .control-label{ text-align: left !important;}
+    legend{ margin-top:15px; }
 </style>
 
 <div>
@@ -24,11 +25,17 @@
     {% endfor %}
 
 {% for section, fields in sections.items %}
-<legend>{{section}}</legend>
+<legend>{{section}}
+  {% if section == "Aggregation options" %}
+      <small>(<a data-toggle="modal" data-target="#aggregation_help" href="#">help</a>)</small>
+  {% endif %}
+</legend>
+
   {% for id, field, subfields in fields %}
   <label for="{{ field.auto_id }}" class="form-group row">
     <label for="{{ field.auto_id }}" class="col-sm-4 control-label">{{ field.label_tag }}</label>
     <div class="col-sm-8">{{ field }}{{ field.errors }}</div>
+    <div class="col-sm-8"><small style="color:grey;">{{ field.help_text }}</small></div>
   </label>
     {% for id, subfield in subfields %}
         <label for="{{ subfield.auto_id }}" class="form-group row">
@@ -40,9 +47,49 @@
   {% endfor %}
 {% endfor %}
 
-</table>
   <input type="submit"></input>
-  </form>
+</form>
+<br/>
 <pre>{{ results|safe }}</pre>
+</div>
+
+<div id="aggregation_help" class="modal fade">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title">Value aggregation</h4>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">You can ignore this functionality by leaving the codebook options
+        empty.</div>
+
+        <p>You can use value aggregation to control the granularity for a substantive analysis. For example, you might
+        want to aggregate all state supported media by creating a codebook in the following manner:</p>
+        <ul>
+            <li>State supported</li>
+            <ul>
+                <li>NOS</li>
+                <li>Russia Today</li>
+                <li>BBC</li>
+            </ul>
+            <li>Independent</li>
+            <ul>
+                <li>RTL</li>
+                <li>Fox News</li>
+                <li>Al Jazeera</li>
+            </ul>
+        </ul>
+
+        <p>All occurences of <i>Fox News</i> would be replaced by <i>Independent</i>, and likewise <i>NOS</i> would
+            be replaced by <i>State supported</i>. An extra column with aggregated values is made.</p>
+
+         <p>If you wish to leave out values not available in the used codebook, untick <i>include not found</i>.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

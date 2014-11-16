@@ -23,11 +23,12 @@ import datetime
 import logging
 
 from django import forms
+from django.forms import ModelChoiceField, BooleanField
 from django.utils.datastructures import MultiValueDict
 from django.db.models import Q
 
 from amcat.scripts.forms import ModelMultipleChoiceFieldWithIdLabel
-from amcat.models import CodingJob, CodingSchemaField, CodingSchema, Project
+from amcat.models import CodingJob, CodingSchemaField, CodingSchema, Project, Codebook, Language
 from amcat.models import Article, Sentence
 from amcat.scripts.script import Script
 from amcat.tools.table import table3
@@ -46,6 +47,8 @@ import base64
 from cStringIO import StringIO
 
 FIELD_LABEL = "{label} {schemafield.label}"
+
+AGGREGATABLE_FIELDS = {"medium"}
 
 CODING_LEVEL_ARTICLE, CODING_LEVEL_SENTENCE, CODING_LEVEL_BOTH = range(3)
 CODING_LEVELS = [
@@ -174,8 +177,26 @@ class CodingJobResultsForm(CodingjobListForm):
         # Include field-specific form fields
         for id, field in schemafield.serialiser.get_export_fields():
             field.label = FIELD_LABEL.format(label="Export " + field.label, **locals())
-            id = "{prefix}_{id}".format(**locals())
-            yield id, field
+            yield "{prefix}_{id}".format(**locals()), field
+
+        # Include aggregation options for some metadata fields
+        prefix = "aggregation"
+        for field_name in AGGREGATABLE_FIELDS:
+            # Aggregate field
+            label = "Aggregate {field_name}, codebook".format(field_name=field_name)
+            form_field = ModelChoiceField(queryset=Codebook.objects.all(), label=label, required=False)
+            yield "{prefix}_{field_name}".format(**locals()), form_field
+
+            # Aggregate language field
+            label = "Aggregate {field_name}, language".format(field_name=field_name)
+            form_field = ModelChoiceField(queryset=Language.objects.all(), label=label, required=True, initial=Language.objects.all()[0].id)
+            yield "{prefix}_{field_name}_language".format(**locals()), form_field
+
+            # Aggregate leave empty
+            help_text = "If value is not found in codebook, leave field empty."
+            label = "Aggregate {field_name}, include not found".format(field_name=field_name)
+            form_field = BooleanField(initial=True, label=label, help_text=help_text)
+            yield "{prefix}_{field_name}_default".format(**locals()), form_field
 
 
 def _get_field_prefix(schemafield):
@@ -294,6 +315,33 @@ class MetaColumn(table3.ObjectColumn):
             return unicode(getattr(obj, self.field.attr))
 
 
+class MappingMetaColumn(MetaColumn):
+    """
+    Mapping meta columns are meta columns, which subject their values to a mapping. Depending on
+    the options given, a value might be left out if not found in the mapping or left alone.
+    """
+    def __init__(self, field, mapping, include_not_found=False):
+        """
+        @param field: metacolumn for superclass
+        @type field: _MetaColum
+
+        @param mapping: mapping values of superclass are subjected to
+        @type mapping: dict
+
+        @param include_not_found: if a value is not found in mapping, use value itself
+        @type include_not_found: bool
+        """
+        self.mapping = mapping
+        self.include_not_found = include_not_found
+        super(MappingMetaColumn, self).__init__(field)
+
+    def getCell(self, row):
+        value = super(MappingMetaColumn, self).getCell(row)
+        if value is None:
+            return value
+        return self.mapping.get(value, value if self.include_not_found else None)
+
+
 class DateColumn(table3.ObjectColumn):
     def __init__(self, field, format):
         self.field = field
@@ -362,8 +410,23 @@ class GetCodingJobResults(Script):
                 else:
                     table.addColumn(MetaColumn(field))
 
+        for field_name in AGGREGATABLE_FIELDS:
+            codebook = self.options.get("aggregation_{field_name}".format(field_name=field_name))
+            language = self.options.get("aggregation_{field_name}_language".format(field_name=field_name))
+            not_found = self.options.get("aggregation_{field_name}_default".format(field_name=field_name))
+
+            if not codebook:
+                continue
+
+            codebook.cache_labels(language)
+            table.addColumn(MappingMetaColumn(
+                _MetaField("article", field_name, field_name + " aggregation"),
+                codebook.get_aggregation_mapping(language), not_found
+            ))
+
         # Build columns based on form schemafields
         for schemafield in self.bound_form.schemafields:
+            #print(schemafield)
             prefix = _get_field_prefix(schemafield)
             if self.options[prefix + "_included"]:
                 options = {k[len(prefix) + 1:]: v for (k, v) in self.options.iteritems() if k.startswith(prefix)}
@@ -384,13 +447,20 @@ class GetCodingJobResults(Script):
         if format.mimetype:
             if len(codingjobs) > 3:
                 codingjobs = codingjobs[:3] + ["etc"]
-            filename = "Codingjobs {j} {now}.{ext}".format(j=",".join(str(j) for j in codingjobs),
-                                                           now=datetime.datetime.now(), ext=format.label)
-            result = {"type": "download",
-                      "encoding": "base64",
-                      "content_type": format.mimetype,
-                      "filename": filename,
-                      "data": base64.b64encode(result)}
+
+            filename = "Codingjobs {jobs} {now}.{ext}".format(
+                jobs=",".join(str(j) for j in codingjobs),
+                now=datetime.datetime.now(), ext=format.label
+            )
+
+            result = {
+                "type": "download",
+                "encoding": "base64",
+                "content_type": format.mimetype,
+                "filename": filename,
+                "data": base64.b64encode(result)
+            }
+
         self.progress_monitor.update(5, "Results file ready")
 
         return result

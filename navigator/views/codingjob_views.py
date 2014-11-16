@@ -35,6 +35,12 @@ from amcat.forms.widgets import convert_to_jquery_select
 from amcat.scripts.actions.get_codingjob_results import CodingjobListForm, GetCodingJobResults
 from amcat.models import User
 
+SECTIONS = {
+    "schemafield": "Field options",
+    "aggregation": "Aggregation options",
+    "meta": "Metadata options"
+}
+
 class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = CodingJob
     parent = ProjectDetailsView
@@ -200,26 +206,32 @@ class CodingJobExportView(ProjectScriptView):
     def get_context_data(self, form, **kwargs):
         context = super(CodingJobExportView, self).get_context_data(form=form, **kwargs)
 
-        # add fields for schema fields
-        sections = SortedDict() # section : [(id, field, subfields) ..]
-        subfields = {} # fieldname -> subfields reference
+        # Add fields for schema fields
+        # section : [(id, field, subfields) ..]
+        sections = SortedDict()
+
+        # fieldname -> subfields reference
+        subfields = {}
 
         for name in form.fields:
             if form[name].is_hidden:
                 continue
+
             prefix = name.split("_")[0]
-            section = {"schemafield" : "Field options", "meta" : "Metadata options"}.get(prefix, "General options")
+            section = SECTIONS.get(prefix, "General options")
 
             if prefix == "schemafield" and not name.endswith("_included"):
                 continue
+
             subfields[name] = []
             sections.setdefault(section, []).append((name, form[name], subfields[name]))
 
-        # sort coding fields
+        # Sort coding fields
         if 'Field options' in sections:
             sections["Field options"].sort()
 
-        for name in form.fields: # add subordinate fields
+        # Add subordinate fields
+        for name in form.fields:
             prefix = name.split("_")[0]
             if prefix == "schemafield" and not name.endswith("_included"):
                 subfields[name.rsplit("_", 1)[0] + "_included"].append((name, form[name]))
