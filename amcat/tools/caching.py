@@ -61,10 +61,8 @@ def cached(func, cache_attr=CACHE_PREFIX):
         """Decorator inner function: Return the cached value or execute func and cache results"""
         cache = _get_cache(self, cache_attr)
         try:
-            #log.debug("Querying cache %r.%s" % (self, cache_attr))
             return cache[func.__name__]
         except KeyError:
-            log.debug("Not found, setting cache for %r.%s" % (self, cache_attr))
             return _set_cache_value(cache, func.__name__, func(self))
     return inner
 
@@ -108,11 +106,11 @@ def _set_cache_value(cache, name, value):
     """Set the cache to value for the func, returning value"""
     cache[name] = value
     return value
-    
+
 def set_cache(obj, name, value, cache_attr=""):
     """Set the value as the cached value for func"""
     _set_cache_value(_get_cache(obj, CACHE_PREFIX + cache_attr), name, value)
-    
+
 
 
 
@@ -162,7 +160,7 @@ def get_objects(model, pks):
     for obj in model.objects.filter(pk__in=todo):
         cache[obj.id] = obj
         yield obj
-    
+
 def clear_cache(model):
     """Clear the local codebook cache manually, ie in between test runs"""
     key = CACHE_PREFIX + model.__name__
@@ -177,7 +175,7 @@ def _get_cache_key(model, id):
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
 
 class TestCaching(amcattest.AmCATTestCase):
@@ -207,7 +205,7 @@ class TestCaching(amcattest.AmCATTestCase):
         def set_y(self, y):
             """Func for testing invalidate named cache"""
             self.y = y
-    
+
     def test_cached(self):
         """Does caching work"""
         t = TestCaching.TestClass(x=4)
@@ -241,8 +239,8 @@ class TestCaching(amcattest.AmCATTestCase):
         reset(t)
         self.assertEqual(t.xprop, 17)
         self.assertTrue(t.changed)
-        
-        
+
+
     def test_named(self):
         """Do named caches work?"""
         t = TestCaching.TestClass(x=4)
@@ -260,8 +258,8 @@ class TestCaching(amcattest.AmCATTestCase):
         t.set_y(1)
         self.assertEqual(x, t.xprop)
         self.assertFalse(t.changed)
-        
-        # ... but it should invalidate the cache for y        
+
+        # ... but it should invalidate the cache for y
         self.assertEqual(t.get_y(), 1)
         self.assertTrue(t.changed)
 
@@ -274,8 +272,8 @@ class TestCaching(amcattest.AmCATTestCase):
         self.assertEqual(t.get_y(), 9)
         self.assertTrue(t.changed)
 
-        
-        
+
+
     def test_set_cache(self):
         """Can we manually set the cache?"""
         t = TestCaching.TestClass(x=4, y=1)
@@ -312,18 +310,18 @@ class TestCaching(amcattest.AmCATTestCase):
             p3 = get_object(Project, pid)
         self.assertIsNot(p, p3)
         self.assertEqual(p, p3)
-        
+
     def test_get_objects(self):
         from amcat.models.project import Project
         pids = [amcattest.create_test_project().id for _x in range(10)]
-        
+
         with self.checkMaxQueries(1, "Get multiple projects"):
             ps = list(get_objects(Project, pids))
-        
+
         with self.checkMaxQueries(0, "Get multiple cached projects"):
             ps = list(get_objects(Project, pids))
-        
+
         with self.checkMaxQueries(0, "Get multiple cached projects one by one"):
             ps = [get_objects(Project, pid) for pid in pids]
-        
+
 #from amcat.tools import amcatlogging; amcatlogging.infoModule()
