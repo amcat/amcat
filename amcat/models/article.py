@@ -33,6 +33,7 @@ from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
 from amcat.tools import amcates
 from amcat.models.authorisation import Role
 from amcat.models.medium import Medium
+from amcat.tools.toolkit import splitlist
 
 from django.db import models, transaction
 from django.db.utils import IntegrityError, DatabaseError
@@ -224,6 +225,15 @@ class Article(AmcatModel):
 
     def __repr__(self):
         return "<Article %s: %r>" % (self.id, self.headline)
+
+    @classmethod
+    def exists(cls, article_ids, batch_size=500):
+        """
+        Filters the given articleids to remove non-existing ids
+        """
+        for batch in splitlist(article_ids, itemsperbatch=batch_size):
+            for aid in Article.objects.filter(pk__in=batch).values_list("pk", flat=True):
+                yield aid
 
     @classmethod
     def create_articles(cls, articles, articleset=None, check_duplicate=True, create_id=False):
