@@ -101,10 +101,12 @@ LEAD_SCRIPT_FIELD = {
 }
 
 UPDATE_SCRIPT_REMOVE_FROM_SET = 'ctx._source.sets = ($ in ctx._source.sets if $ != set)'
+
 UPDATE_SCRIPT_ADD_TO_SET = 'if (!(ctx._source.sets contains set)) {ctx._source.sets += set}'
 
 UPDATE_SCRIPT_ADD_TO_SET = ("if (ctx._source.sets == null) {ctx._source.sets = [set]} "
                             "else { if (!(ctx._source.sets contains set)) {ctx._source.sets += set}}")
+
 
 class SearchResult(object):
     """Iterable collection of results that also has total"""
@@ -261,7 +263,6 @@ class ES(object):
         Note that query and filters can be combined in a single call
         """
         body = dict(build_body(query, filters, query_as_filter=True))
-        log.debug("Query_ids body={body!r}".format(**locals()))
         options = dict(scroll="1m", size=1000, fields="")
         options.update(kwargs)
         res = self.search(body, search_type='scan', **options)
@@ -295,7 +296,6 @@ class ES(object):
                 body['highlight'] = HIGHLIGHT_OPTIONS
         if lead: body['script_fields'] = LEAD_SCRIPT_FIELD
 
-        log.debug("es.search(body={body}, **{kwargs})".format(**locals()))
         result = self.search(body, fields=fields, **kwargs)
         return SearchResult(result, fields, score, body)
 
@@ -342,7 +342,7 @@ class ES(object):
         batches = list(splitlist(article_ids, itemsperbatch=1000))
         nbatches = len(batches)
         for i, batch in enumerate(batches):
-            monitor.update(40/nbatches, "Added batch {i}/{nbatches}".format(**locals()))
+            monitor.update(40/nbatches, "Added batch {iplus}/{nbatches}".format(iplus=i+1, **locals()))
             self.bulk_update(article_ids, UPDATE_SCRIPT_ADD_TO_SET, params={'set' : setid})
 
     def bulk_insert(self, dicts):

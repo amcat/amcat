@@ -37,7 +37,7 @@ from amcat.models.amcat import AmCAT
 from amcat.tools.model import AmcatModel
 from amcat.tools import amcates
 from amcat.models.article import Article
-from amcat.tools.progress import NullMonitor
+from amcat.tools.progress import NullMonitor, ProgressMonitor
 from amcat.tools.amcates import ES
 
 log = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ stats_log = logging.getLogger("statistics:" + __name__)
 def create_new_articleset(name, project):
     """Create a new articleset based on name. If articleset exists add postfix number to make articleset name unique."""
     name=ArticleSet.get_unique_name(project, name)
-    return ArticleSet.objects.create(project=project, name=name) 
+    return ArticleSet.objects.create(project=project, name=name)
 
 class ArticleSet(AmcatModel):
     """
@@ -63,7 +63,7 @@ class ArticleSet(AmcatModel):
     articles = models.ManyToManyField("amcat.Article", related_name="articlesets_set")
 
     provenance = models.TextField(null=True)
-    
+
     class Meta():
         app_label = 'amcat'
         db_table = 'articlesets'
@@ -76,6 +76,13 @@ class ArticleSet(AmcatModel):
         from amcat.tools.amcates import ES
         medium_ids = ES().list_media(filters=dict(sets=self.id))
         return Medium.objects.filter(id__in=medium_ids)
+
+    def get_count(self):
+        """
+        Return the number of articles according to elastic search
+        """
+        from amcat.tools.amcates import ES
+        return ES().count(filters={"sets": self.id})
 
     def add_articles(self, articles, add_to_index=True, monitor=NullMonitor()):
         """
@@ -93,26 +100,27 @@ class ArticleSet(AmcatModel):
         """
         articles = {(art if type(art) is int else art.id) for art in articles}
         to_add = articles - self.get_article_ids()
-        to_add = Article.objects.filter(pk__in=to_add).values_list("pk", flat=True)
+        # Only use articles that exist
+        to_add = list(Article.exists(to_add))
 
         monitor.update(10, "{n} articles need to be added".format(n=len(to_add)))
         ArticleSetArticle.objects.bulk_create(
-            [ArticleSetArticle(articleset=self, article_id=artid) for artid in to_add]
+            [ArticleSetArticle(articleset=self, article_id=artid) for artid in to_add],
+            batch_size=100,
         )
 
-        monitor.update(20, "{n} articles added to articlesets, adding to codingjobs".format(n=len(to_add)))
-        CodedArticle.objects.bulk_create(
-            [CodedArticle(codingjob=c, article_id=a) for c, a in itertools.product(self.codingjob_set.all(), to_add)]
-        )
+        monitor.update(20, "{n} articleset articles added to database, adding to codingjobs".format(n=len(to_add)))
+        cjarts = [CodedArticle(codingjob=c, article_id=a) for c, a in itertools.product(self.codingjob_set.all(), to_add)]
+        CodedArticle.objects.bulk_create(cjarts)
 
-        monitor.update(30, "{n} articles added to codingjobs, adding to index".format(n=len(to_add)))
+        monitor.update(30, "{n} articles added to codingjobs, adding to index".format(n=len(cjarts)))
         if add_to_index:
             amcates.ES().add_to_set(self.id, to_add, monitor=monitor)
 
     def add(self, *articles):
         """add(*a) is an alias for add_articles(a)"""
         self.add_articles(articles)
-            
+
     def remove_articles(self, articles, remove_from_index=True):
         """
         Remove article from this articleset. Also removes CodedArticles (from codingjobs) and updates
@@ -207,23 +215,23 @@ ArticleSetArticle = ArticleSet.articles.through
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
 
 
 class TestArticleSet(amcattest.AmCATTestCase):
-        
+
     def test_create(self):
-        """Can we create a set with some articles and retrieve the articles?"""       
+        """Can we create a set with some articles and retrieve the articles?"""
         s = amcattest.create_test_set()
         i = 7
         for _x in range(i):
             s.add(amcattest.create_test_article())
         self.assertEqual(i, len(s.articles.all()))
-        
+
     @amcattest.use_elastic
     def test_add(self):
-        """Can we create a set with some articles and retrieve the articles?"""       
+        """Can we create a set with some articles and retrieve the articles?"""
         s = amcattest.create_test_set()
         arts = [amcattest.create_test_article() for _x in range(10)]
         s.add_articles(arts[:5])
@@ -231,10 +239,27 @@ class TestArticleSet(amcattest.AmCATTestCase):
         s.add_articles(arts)
         self.assertEqual(set(arts), set(s.articles.all()))
 
-        
+
         # Are mediums cached?
         s.refresh_index()
         self.assertEqual(set(s.get_mediums()), {a.medium for a in arts})
+
+    @amcattest.use_elastic
+    def test_add_many(self):
+        """Can we add a large number of articles from one set to another?"""
+        s = amcattest.create_test_set()
+        s2 = amcattest.create_test_set()
+        m = amcattest.create_test_medium()
+        p = amcattest.create_test_project()
+
+        arts = [amcattest.create_test_article(project=p, medium=m, create=False) for _x in range(1213)]
+        Article.create_articles(arts, s, create_id=True)
+        ES().flush()
+        self.assertEqual(len(arts), s.get_count())
+        s2.add_articles(arts, monitor=ProgressMonitor())
+        ES().flush()
+        self.assertEqual(len(arts), s2.get_count())
+        print(s2.get_count())
 
     @amcattest.use_elastic
     def test_add_codedarticles(self):
@@ -260,7 +285,7 @@ class TestArticleSet(amcattest.AmCATTestCase):
         for m in media:
             aset.add(amcattest.create_test_article(medium=m))
         aset.refresh_index()
-            
+
         # Test if medium really added
         self.assertEqual(set(aset.get_mediums()), set(media))
 
@@ -272,6 +297,3 @@ class TestArticleSet(amcattest.AmCATTestCase):
 
         self.assertEqual(set(aset.articles.all().values_list("id", flat=True)), aset.get_article_ids())
         self.assertEqual(set(aset.articles.all().values_list("id", flat=True)), aset.get_article_ids(use_elastic=True))
-
-
-
