@@ -195,7 +195,7 @@ class CodingJobResultsForm(CodingjobListForm):
             # Aggregate leave empty
             help_text = "If value is not found in codebook, leave field empty."
             label = "Aggregate {field_name}, include not found".format(field_name=field_name)
-            form_field = BooleanField(initial=True, label=label, help_text=help_text)
+            form_field = BooleanField(initial=True, label=label, required=False, help_text=help_text)
             yield "{prefix}_{field_name}_default".format(**locals()), form_field
 
 
