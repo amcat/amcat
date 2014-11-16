@@ -105,4 +105,3 @@ class TestAddJob(amcattest.AmCATTestCase):
         self.assertEqual(len(jobs), 3)
         self.assertEqual(sorted(j.articleset.articles.count() for j in jobs), sorted([4, 4, 2]))
         self.assertEqual({j.name for j in jobs}, {"test - 1", "test - 2", "test - 3"})
-        

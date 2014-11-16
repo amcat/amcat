@@ -50,6 +50,14 @@ FIELD_LABEL = "{label} {schemafield.label}"
 
 AGGREGATABLE_FIELDS = {"medium"}
 
+_DateFormatField = collections.namedtuple("_DateFormatField", ["id", "label", "strftime"])
+
+DATE_FORMATS = (
+    _DateFormatField("yearweekw", "yearweek (monday start of week)", "%Y%W"),
+    _DateFormatField("yearweeku", "yearweek (sunday start of week)", "%Y%U"),
+    _DateFormatField("yearmonth", "yearmonth", "%Y%m"),
+)
+
 CODING_LEVEL_ARTICLE, CODING_LEVEL_SENTENCE, CODING_LEVEL_BOTH = range(3)
 CODING_LEVELS = [
     (CODING_LEVEL_ARTICLE, "Article Codings"),
@@ -143,7 +151,6 @@ class CodingJobResultsForm(CodingjobListForm):
 
         subsentences = CodingSchema.objects.filter(codingjobs_unit__in=codingjobs, subsentences=True).exists()
 
-
         # Add meta fields
         for field in _METAFIELDS:
             if field.object == "sentence" and export_level == CODING_LEVEL_ARTICLE: continue
@@ -155,6 +162,33 @@ class CodingJobResultsForm(CodingjobListForm):
         # Insert dynamic fields based on schemafields
         self.schemafields = _get_schemafields(codingjobs, export_level)
         self.fields.update(self.get_form_fields(self.schemafields))
+        self.fields.update(dict(self.get_aggregation_fields()))
+        self.fields.update(dict(self.get_date_fields()))
+
+    def get_date_fields(self):
+        # Add date format fields
+        for id, label, strftime in DATE_FORMATS:
+            form_field = BooleanField(initial=False, label="Include {}".format(label), required=False)
+            yield "meta_{}".format(id), form_field
+
+    def get_aggregation_fields(self):
+        prefix = "aggregation"
+        for field_name in AGGREGATABLE_FIELDS:
+            # Aggregate field
+            label = "Aggregate {field_name}, codebook".format(field_name=field_name)
+            form_field = ModelChoiceField(queryset=Codebook.objects.all(), label=label, required=False)
+            yield "{prefix}_{field_name}".format(**locals()), form_field
+
+            # Aggregate language field
+            label = "Aggregate {field_name}, language".format(field_name=field_name)
+            form_field = ModelChoiceField(queryset=Language.objects.all(), label=label, required=True, initial=Language.objects.all()[0].id)
+            yield "{prefix}_{field_name}_language".format(**locals()), form_field
+
+            # Aggregate leave empty
+            help_text = "If value is not found in codebook, leave field empty."
+            label = "Aggregate {field_name}, include not found".format(field_name=field_name)
+            form_field = BooleanField(initial=True, label=label, required=False, help_text=help_text)
+            yield "{prefix}_{field_name}_default".format(**locals()), form_field
 
     def get_form_fields(self, schemafields):
         """Returns a dict with all the fields needed to export this codingjob"""
@@ -179,24 +213,6 @@ class CodingJobResultsForm(CodingjobListForm):
             field.label = FIELD_LABEL.format(label="Export " + field.label, **locals())
             yield "{prefix}_{id}".format(**locals()), field
 
-        # Include aggregation options for some metadata fields
-        prefix = "aggregation"
-        for field_name in AGGREGATABLE_FIELDS:
-            # Aggregate field
-            label = "Aggregate {field_name}, codebook".format(field_name=field_name)
-            form_field = ModelChoiceField(queryset=Codebook.objects.all(), label=label, required=False)
-            yield "{prefix}_{field_name}".format(**locals()), form_field
-
-            # Aggregate language field
-            label = "Aggregate {field_name}, language".format(field_name=field_name)
-            form_field = ModelChoiceField(queryset=Language.objects.all(), label=label, required=True, initial=Language.objects.all()[0].id)
-            yield "{prefix}_{field_name}_language".format(**locals()), form_field
-
-            # Aggregate leave empty
-            help_text = "If value is not found in codebook, leave field empty."
-            label = "Aggregate {field_name}, include not found".format(field_name=field_name)
-            form_field = BooleanField(initial=True, label=label, required=False, help_text=help_text)
-            yield "{prefix}_{field_name}_default".format(**locals()), form_field
 
 
 def _get_field_prefix(schemafield):
@@ -343,15 +359,12 @@ class MappingMetaColumn(MetaColumn):
 
 
 class DateColumn(table3.ObjectColumn):
-    def __init__(self, field, format):
-        self.field = field
+    def __init__(self, label, format):
         self.format = format
-        super(DateColumn, self).__init__(self.field.label)
+        super(DateColumn, self).__init__(label)
 
     def getCell(self, row):
-        obj = getattr(row, self.field.object)
-        if obj is not None:
-            return getattr(obj, self.field.attr).strftime(self.format)
+        return row.article.date.strftime(self.format)
 
 
 class SubSentenceColumn(table3.ObjectColumn):
@@ -406,9 +419,14 @@ class GetCodingJobResults(Script):
                 if field.object == "subsentence":
                     table.addColumn(SubSentenceColumn(field))
                 elif field.attr == "date":
-                    table.addColumn(DateColumn(field, kargs["date_format"]))
+                    table.addColumn(DateColumn(field.label, kargs["date_format"]))
                 else:
                     table.addColumn(MetaColumn(field))
+
+        # Date formatting (also belongs to meta)
+        for id, label, strftime in DATE_FORMATS:
+            if self.options.get("meta_{id}".format(id=id)):
+                table.addColumn(DateColumn(label, strftime))
 
         for field_name in AGGREGATABLE_FIELDS:
             codebook = self.options.get("aggregation_{field_name}".format(field_name=field_name))
