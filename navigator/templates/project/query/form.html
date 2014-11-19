@@ -1,3 +1,6 @@
+{% include "project/query/syntax_help.html" %}
+
+
 <p class="btn-group">
     <a class="btn btn-default">
         <i class="glyphicon glyphicon-open"></i> Load
@@ -49,7 +52,10 @@
     </div>
     <div class="col-md-8 query-tab">
         <div class="panel panel-default">
-            <div class="panel-heading">Query</div>
+            <div class="panel-heading">Query  <a class="syntax-help" data-toggle="modal" data-target="#syntax-help">
+            <i class="glyphicon glyphicon-info-sign"></i> Syntax help
+        </a>
+        </div>
             <div class="panel-body">
                 {% include "project/query/query_tab.html" %}
             </div>

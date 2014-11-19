@@ -104,3 +104,7 @@ textarea.error{
 map area:hover{
     cursor:pointer;
 }
+
+textarea.query {
+  height: 15em;
+}

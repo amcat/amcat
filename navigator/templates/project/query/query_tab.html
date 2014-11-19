@@ -1,6 +1,7 @@
-{% include "project/query/syntax_help.html" %}
-
 <div class="row">
+    <div class="col-md-12">
+        <textarea class="query" placeholder="Query" name="query" type="query"></textarea>
+    </div>
     <div class="col-md-12 codebook-options">
         <select>
             <option value="">-- codebook --</option>
@@ -11,19 +12,12 @@
         <select>
             <option value="">-- replacement language --</option>
         </select>
-
-        <a class="codebook-help" data-toggle="modal" data-target="#codebook-help">
+<a class="codebook-help" data-toggle="modal" data-target="#codebook-help">
             <i class="glyphicon glyphicon-info-sign"></i>
         </a>
 
         {% include "project/query/codebook_help.html" %}
     </div>
 
-    <div class="col-md-12">
-        <textarea placeholder="Query" name="query" type="query"></textarea>
-        <a class="syntax-help" data-toggle="modal" data-target="#syntax-help">
-            <i class="glyphicon glyphicon-info-sign"></i> Syntax help
-        </a>
-    </div>
 </div>
 
