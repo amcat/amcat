@@ -72,10 +72,6 @@ form > .row{
     flex:1 0 auto;
 }
 
-.panel-heading{
-    display: none;
-}
-
 .codebook-options select{
     width:calc(33% - 9px);
 }

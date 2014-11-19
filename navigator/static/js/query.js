@@ -434,9 +434,13 @@ $((function(){
         });
     }
 
-    function script_changed(){
+    function script_changed(event){
         $(".query-submit .btn").addClass("disabled");
-        var url = get_api_url($("select", scripts_container).val());
+
+	$(event.target).parent().children().removeClass("active");
+	$(event.target).addClass("active");
+
+        var url = get_api_url($(event.target).text());
         $.ajax({
             "type": "OPTIONS", url: url, dateType: "json"
         }).done(script_form_loaded).error(function(){
@@ -448,19 +452,22 @@ $((function(){
     }
 
     function script_form_loaded(data){
-        script_form.html("");
-
+	$("#script-line").show();
         if (data.help_text) {
-            script_form.append($("<div class='well'>").text(data.help_text));
-        }
+            $("#script-help").text(data.help_text);
+            $("#script-help").show();
+        } else {
+	    $("#script-help").hide();
+	}
 
         // Determine fields which are *NOT* in the normal selection form.
-        // Btw: who the hell thought it would be a good idea to let inArray
+        // Btw: who the hello thought it would be a good idea to let inArray
         // return an *index*?!
         var fields = $.map(data.form, function(_, key){
             return $.inArray(key, SELECTION_FORM_FIELDS) === -1 ? key : undefined;
         });
 
+        script_form.html("");
         $.each(fields, function(i, field_name){
             var row = $("<div>").addClass("row");
             var label = $("<label class='col-md-3'>").text(data.labels[field_name]);
@@ -627,21 +634,14 @@ $((function(){
                 + "administrators."
             );
         }).done(function(data){
-            var select = $("<select>");
+            var buttons = $("<div class='btn-group'>");
 
             $.each(data, function(name, url){
-                var option = $("<option>").text(name).val(name);
-
-                //if (name === DEFAULT_SCRIPT){
-                //    option.attr("selected", "selected");
-                //}
-
-                select.append(option);
+                buttons.append($("<span class='btn btn-sm btn-default'>").text(name));
             });
 
-            scripts_container.html(select);
-            select.change(script_changed)
-                .keyup(script_changed).trigger("change");
+            scripts_container.html(buttons);
+	    buttons.click(script_changed);
         });
     }
 
