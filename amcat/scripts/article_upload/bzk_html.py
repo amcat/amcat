@@ -91,19 +91,27 @@ class BZK(UploadScript):
 
     def scrape_2(self, _html):
         """New format as of 2014 and a few days before"""
-        docdate = readDate(_html.cssselect("h1")[0].text.split("-")[1])
+        title = _html.cssselect("h1")[0]
+        if not title.text:
+            title = title.cssselect("span")[0]
+        docdate = readDate(title.text.split("-")[1])
 
         # split body by <hr>
         items = []
         item = []
-        if len(_html.cssselect("body > *")) == 1:
-            # extra div wrapper as of 2014-04-08
-            tags = _html.cssselect("body > div > *")
+        
+
+        if len(_html.cssselect("body > hr")) == 0:
+            #if len(_html.cssselect("body > div > hr")) == 0:
+                # extra extra div  and span wrapper as of 2014-11-20
+            #    tags = _html.cssselect("body > div > div > span > *")
+            #else: # extra div wrapper as of 2014-04-08
+                tags = _html.cssselect("body > div > *")
         else:
             tags = _html.cssselect("body > *")
 
         for child in tags:
-            if child.tag == "hr":
+            if child.tag == "hr" or (child.tag == "div" and child.cssselect("span > hr")):
                 items.append(item)
                 item = []
             else:
@@ -161,13 +169,16 @@ class BZK(UploadScript):
         #item: a list of html tags
         article = Article(metastring={})
         article.text = self._parse_text(item)
-
         for tag in item:
             if tag.tag == "h2":
-                article.headline = tag.text
-            elif tag.tag == "i":
+                if tag.text:
+                    article.headline = tag.text
+                else:
+                    article.headline = tag.cssselect("span")[0].text_content()
+            elif tag.tag == "i" or (tag.tag == "p" and tag.cssselect("i")):
                 article = self.parse_dateline(tag.text_content(), article)
-
+        if not article.headline:
+            raise Exception("Article has no headline")
         return article
 
     def get_medium(self, text):
