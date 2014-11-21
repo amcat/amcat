@@ -184,9 +184,9 @@ class Result(object):
         return "{}({})".format(type(self).__name__, ", ".join(items))
 
 class ES(object):
-    def __init__(self, index=None, doc_type=None, **args):
+    def __init__(self, index=None, doc_type=None, timeout=60, **args):
         elhost = {"host":settings.ES_HOST, "port":settings.ES_PORT}
-        self.es = Elasticsearch(hosts=[elhost, ], **args)
+        self.es = Elasticsearch(hosts=[elhost, ], timeout=timeout, **args)
         self.index = settings.ES_INDEX if index is None else index
         self.doc_type = settings.ES_ARTICLE_DOCTYPE if doc_type is None else doc_type
 
