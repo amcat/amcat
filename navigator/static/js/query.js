@@ -555,9 +555,11 @@ $((function(){
         form_data = $("form").serializeObject();
         $(".result .panel-body").html("<i>No results yet</i>");
 
+	script = scripts_container.find(".active")[0].id.replace("script_","")
+
         $.ajax({
             type: "POST", dataType: "json",
-            url: get_api_url(scripts_container.find("select").val()),
+            url: get_api_url(script),
             data: $("form").serialize(),
             headers: {
                 "X-Available-Renderers": get_accepted_mimetypes().join(",")
@@ -637,7 +639,7 @@ $((function(){
             var buttons = $("<div class='btn-group'>");
 
             $.each(data, function(name, url){
-                buttons.append($("<span class='btn btn-sm btn-default'>").text(name));
+                buttons.append($("<span class='btn btn-sm btn-default' id='script_"+name+"'>").text(name));
             });
 
             scripts_container.html(buttons);
@@ -653,3 +655,4 @@ $((function(){
     });
 }).bind({}));
 
+1
