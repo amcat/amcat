@@ -28,9 +28,11 @@ from django.utils.datastructures import MultiValueDict
 from django.db.models import Q
 
 from amcat.scripts.forms import ModelMultipleChoiceFieldWithIdLabel
-from amcat.models import CodingJob, CodingSchemaField, CodingSchema, Project, Codebook, Language
+from amcat.models import CodingJob, CodingSchemaField, CodingSchema, Project, Codebook, Language, CodedArticle
 from amcat.models import Article, Sentence
 from amcat.scripts.script import Script
+from amcat.tools.amcattest import create_test_coding
+from amcat.tools.sbd import get_or_create_sentences
 from amcat.tools.table import table3
 from amcat.scripts.output.xlsx import table_to_xlsx
 from amcat.scripts.output.csv_output import table_to_csv
@@ -264,11 +266,14 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
     for i, job in enumerate(jobs):
         # Get all codings in dicts for later lookup
         coded_articles = set()
-        article_codings = {}  # {ca : coding}
-        sentence_codings = collections.defaultdict(
-            lambda: collections.defaultdict(list))  # {ca : {sentence_id : [codings]}}
 
-        for ca in job.coded_articles.order_by('id').prefetch_related("codings"):
+        # {ca: coding}
+        article_codings = {}
+
+        # {ca: {sentence_id : [codings]}}
+        sentence_codings = collections.defaultdict(lambda: collections.defaultdict(list))
+
+        for ca in job.coded_articles.order_by('id').prefetch_related("codings__values"):
             coded_articles.add(ca)
             for c in ca.codings.all():
                 if c.sentence_id is None:
@@ -276,6 +281,7 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
                         article_codings[ca.id] = c
                 else:
                     sentence_codings[ca.id][c.sentence_id].append(c)
+
         # output the rows for this job
         for ca in coded_articles:
             a = job_articles[ca.article_id]
@@ -284,6 +290,7 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
 
             article_coding = article_codings.get(ca.id)
             sentence_ids = sentence_codings[ca.id]
+
             if include_sentences and sentence_ids:
                 seen_articles.add(a)
                 for sid in sentence_ids:
@@ -659,6 +666,24 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         s = self._get_results_script([job], {f: {}}, export_format='xlsx')
         self.assertTrue(s.run())
 
+    def test_nqueries_sentence_codings(self):
+        aschema, acodebook, astrf, aintf, acodef = amcattest.create_test_schema_with_fields(isarticleschema=True)
+        sschema, scodebook, sstrf, sintf, scodef = amcattest.create_test_schema_with_fields(isarticleschema=False)
+        cjob = amcattest.create_test_job(10, articleschema=aschema, unitschema=sschema)
+
+        for article in cjob.articleset.articles.all():
+            coding = create_test_coding(codingjob=cjob, article=article)
+            coding.update_values({astrf: "blas", aintf: 20})
+            for sentence in get_or_create_sentences(article):
+                coding = create_test_coding(codingjob=cjob, article=article, sentence=sentence)
+                coding.update_values({sstrf: "bla", sintf: 10})
+
+        fields = {sstrf: {}, sintf: {}, astrf: {}, aintf: {}}
+        script = self._get_results_script([cjob], fields, export_level=CODING_LEVEL_BOTH)
+
+        with self.checkMaxQueries(9):
+            list(csv.reader(StringIO(script.run())))
+
     def test_nqueries(self):
         from amcat.tools import amcatlogging
 
@@ -686,14 +711,14 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         amcatlogging.debug_module('django.db.backends')
 
         script = self._get_results_script([job], {strf: {}, intf: {}})
-        with self.checkMaxQueries(8):
+        with self.checkMaxQueries(9):
             list(csv.reader(StringIO(script.run())))
 
         script = self._get_results_script([job], {strf: {}, intf: {}, codef: dict(ids=True)})
-        with self.checkMaxQueries(8):
+        with self.checkMaxQueries(9):
             list(csv.reader(StringIO(script.run())))
 
         script = self._get_results_script([job], {strf: {}, intf: {}, codef: dict(labels=True)})
-        with self.checkMaxQueries(8):
+        with self.checkMaxQueries(9):
             list(csv.reader(StringIO(script.run())))
 
