@@ -142,6 +142,7 @@ def create_test_article(create=True, articleset=None, check_duplicate=False, **k
     if "medium" not in kargs: kargs["medium"] = create_test_medium()
     if "id" not in kargs: kargs["id"] = _get_next_id()
     if 'headline' not in kargs: kargs['headline'] = 'test headline'
+    if 'text' not in kargs: kargs["text"] = "\n\n".join(map(str, range(5)))
 
     a = Article(**kargs)
     if create:
