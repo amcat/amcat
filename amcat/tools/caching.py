@@ -59,10 +59,8 @@ def cached(func, cache_attr=CACHE_PREFIX):
         """Decorator inner function: Return the cached value or execute func and cache results"""
         cache = _get_cache(self, cache_attr)
         try:
-            #log.debug("Querying cache %r.%s" % (self, cache_attr))
             return cache[func.__name__]
         except KeyError:
-            log.debug("Not found, setting cache for %r.%s" % (self, cache_attr))
             return _set_cache_value(cache, func.__name__, func(self))
 
     return inner
@@ -276,7 +274,7 @@ class TestCaching(amcattest.AmCATTestCase):
         self.assertEqual(x, t.xprop)
         self.assertFalse(t.changed)
 
-        # ... but it should invalidate the cache for y        
+        # ... but it should invalidate the cache for y
         self.assertEqual(t.get_y(), 1)
         self.assertTrue(t.changed)
 
