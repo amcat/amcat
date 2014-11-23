@@ -550,6 +550,8 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
     for singular, plural in [("mediumid", "mediumids"),
                              ("id", "ids"),
                              ("set", "sets"),
+                             ("section", "sections"),
+                             ("page", "pages"),
                              ("hash", "hashes")]:
         if plural in filters:
             if singular in filters:
@@ -563,6 +565,8 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
 
     if 'set' in f: yield dict(terms={'sets' : _list(f['set'])})
     if 'mediumid' in f: yield dict(terms={'mediumid' : _list(f['mediumid'])})
+    if 'section' in f: yield dict(terms={'section' : _list(f['section'])})
+    if 'page' in f: yield dict(terms={'page' : _list(f['page'])})
     if 'id' in f: yield dict(ids={'values' : _list(f['id'])})
 
     date_range = {}

@@ -30,7 +30,7 @@ from api.rest.resources.amcatresource import AmCATResource
 from amcat.tools.caching import cached
 from amcat.models import Project, authorisation
 
-FILTER_FIELDS = "start_date","end_date","mediumid","ids","sets"
+FILTER_FIELDS = "start_date","end_date","mediumid","ids","sets","section","page"
 RE_KWIC = re.compile("(?P<left>.*?)<em>(?P<keyword>.*?)</em>(?P<right>.*)", re.DOTALL)
 
 class LazyES(object):
