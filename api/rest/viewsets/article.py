@@ -213,3 +213,26 @@ class TestArticleViewSet(ApiTestCase):
         headlines = {a['headline'] : a for a in res}
         self.assertEqual(set(headlines), {'Test parent', 'Test child'})
         self.assertEqual(headlines['Test child']['parent'], headlines['Test parent']['id'])
+
+    @amcattest.use_elastic
+    def test_parent_attribute(self):
+        """Can we add an article as a child to a specific existing article?"""
+        s = amcattest.create_test_set()
+        a = amcattest.create_test_article(articleset=s, project=s.project, headline="parent")
+        b = {
+            'date': '2001-01-01',
+            'headline': 'child',
+            'medium': 'My Imagination',
+            'text': 'Hello World',
+            'parent' : a.id
+        }
+        
+        url = "/api/v4/projects/{a.project_id}/articlesets/{s.id}/articles/".format(**locals())
+        self.post(url, b, as_user=self.user)
+        
+        articles = {a.headline : a for a in s.articles.all()}
+        self.assertEqual(articles['child'].parent, articles['parent'])
+
+        
+
+        
