@@ -29,17 +29,37 @@ class TestAggregate(amcattest.AmCATTestCase):
         aset = amcattest.create_test_set()
 
         m1 = amcattest.create_test_medium()
+        m2 = amcattest.create_test_medium()
         a1 = amcattest.create_test_article(text="Foo", medium=m1, articleset=aset, date=datetime(2014, 4, 3))
         a2 = amcattest.create_test_article(text="Bar", medium=m1, articleset=aset, date=datetime(2015, 4, 3))
-        a3 = amcattest.create_test_article(text="FooBar", medium=amcattest.create_test_medium(), articleset=aset)
+        a3 = amcattest.create_test_article(text="FooBar", medium=m2, articleset=aset)
+        a4 = amcattest.create_test_article(text="BarFoo", medium=m2, articleset=aset, date=datetime(2014, 1, 3))
 
         ES().flush()
-        return aset, m1, a1, a2, a3
+        return aset, m1, m2, a1, a2, a3, a4
 
 
     @amcattest.use_elastic
+    def test_sort(self):
+        aset, m1, m2, a1, a2, a3, a4 = self.set_up()
+        
+        aggr = aggregate(None, [], {"sets": aset.id}, "medium", "date", "year")
+
+        self.assertEqual(list(sort(aggr)),
+                         [(m1.id, [(datetime(2014, 1, 1, 0, 0), 1),
+                                   (datetime(2015, 1, 1, 0, 0), 1)]),
+                          (m2.id, [(datetime(2000, 1, 1, 0, 0), 1),
+                                   (datetime(2014, 1, 1, 0, 0), 1)])])
+
+        self.assertEqual(list(sort(aggr, reverse=True)),
+                         [(m2.id, [(datetime(2014, 1, 1, 0, 0), 1),
+                                   (datetime(2000, 1, 1, 0, 0), 1)]),
+                          (m1.id, [(datetime(2015, 1, 1, 0, 0), 1),
+                                   (datetime(2014, 1, 1, 0, 0), 1)])])
+        
+    @amcattest.use_elastic
     def test_aggregate(self):
-        aset, m1, a1, a2, a3 = self.set_up()
+        aset, m1, m2, a1, a2, a3, a4 = self.set_up()
 
         from amcat.tools.keywordsearch import SearchQuery
         query = "a# Foo* \n b# Bar"
@@ -60,18 +80,18 @@ class TestAggregate(amcattest.AmCATTestCase):
         json = aggregate(query, [q1, q2], {}, "date", "medium", "year")
         self.assertEqual(set(json), {(datetime(2014, 1, 1, 0, 0), ((m1.id, 1),)),
                                      (datetime(2015, 1, 1, 0, 0), ((m1.id, 1),)),
-                                     (datetime(2000, 1, 1, 0, 0), ((a3.medium_id, 1),))})
+                                     (datetime(2000, 1, 1, 0, 0), ((m2.id, 1),))})
         
         
         json = aggregate(query, [q1, q2], {}, "medium", "date", "year")
         self.assertEqual(set(json), {(m1.id, ((datetime(2014, 1, 1, 0, 0), 1),
                                               (datetime(2015, 1, 1, 0, 0), 1))),
-                                    (a3.medium_id, ((datetime(2000, 1, 1, 0, 0), 1),))})
+                                     (m2.id, ((datetime(2000, 1, 1, 0, 0), 1),))})
 
 
     @amcattest.use_elastic
     def test_aggregate_by_term(self):
-        aset, _, _, _, _ = self.set_up()
+        aset, m1, m2, a1, a2, a3, a4 = self.set_up()
 
         from amcat.tools.keywordsearch import SearchQuery
         q1 = SearchQuery.from_string("a# Foo*")
@@ -82,24 +102,24 @@ class TestAggregate(amcattest.AmCATTestCase):
 
     @amcattest.use_elastic
     def test_aggregate_by_medium(self):
-        aset, m1, a1, a2, a3 = self.set_up()
-        m2 = a3.medium
+        aset, m1, m2, a1, a2, a3, a4 = self.set_up()
 
         self.assertEqual(
-            {(m1.id, (('#', 2),)), (a3.medium_id, (('#', 1),))},
+            {(m1.id, (('#', 2),)), (m2.id, (('#', 2),))},
             set(aggregate_by_medium(None, filters={"sets": [aset.id]}).to_json())
         )
 
         self.assertEqual(
             {(m1.id, ((datetime(2014, 1, 1, 0, 0), 1),
                       (datetime(2015, 1, 1, 0, 0), 1))),
-             (m2.id, ((datetime(2000, 1, 1, 0, 0), 1),))},
+             (m2.id, ((datetime(2014, 1, 1, 0, 0), 1),
+                      (datetime(2000, 1, 1, 0, 0), 1)))},
             set(aggregate_by_medium(None, filters={"sets": [aset.id]}, group_by="date", interval="year").to_json())
         )
 
     @amcattest.use_elastic
     def test_get_table(self):
-        aset, m1, a1, a2, a3 = self.set_up()
+        aset, m1, m2, a1, a2, a3, a4 = self.set_up()
         m2 = a3.medium
 
         aggr = aggregate_by_medium(
@@ -109,7 +129,7 @@ class TestAggregate(amcattest.AmCATTestCase):
 
         self.assertEqual([
             ('', m1.id, m2.id),
-            (datetime(2014, 1, 1, 0, 0), 1, 0),
+            (datetime(2014, 1, 1, 0, 0), 1, 1),
             (datetime(2015, 1, 1, 0, 0), 1, 0),
             (datetime(2000, 1, 1, 0, 0), 0, 1)
         ], list(aggr.to_table()))
