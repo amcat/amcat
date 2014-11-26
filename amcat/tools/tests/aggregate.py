@@ -36,27 +36,6 @@ class TestAggregate(amcattest.AmCATTestCase):
         ES().flush()
         return aset, m1, a1, a2, a3
 
-    def test_set_labels(self):
-        m1 = amcattest.create_test_medium()
-        m2 = amcattest.create_test_medium()
-
-        # Test converting x-axis
-        aggregate = [(m1.id, ((2, 3),)), (m2.id, ((4, 5),))]
-        self.assertEqual(
-            [({"id": m1.id, "label": m1.name}, ((2, 3),)),
-             ({"id": m2.id, "label": m2.name}, ((4, 5),))],
-            set_labels(aggregate, [], "medium", None)
-        )
-
-        # Test converting y-axis
-        aggregate = [(1, ((m1.id, 5), (m2.id, 6))), (2, ((m1.id, 9),))]
-        self.assertEqual(
-            [(1, (
-                ({"id": m1.id, "label": m1.name}, 5),
-                ({"id": m2.id, "label": m2.name}, 6))),
-             (2, (({"id": m1.id, "label": m1.name}, 9),))],
-            set_labels(aggregate, [], None, "medium")
-        )
 
     @amcattest.use_elastic
     def test_aggregate(self):
@@ -68,9 +47,9 @@ class TestAggregate(amcattest.AmCATTestCase):
         q2 = SearchQuery.from_string("b# Bar")
 
         json = aggregate(query, [q1, q2], {}, "date", "total", "day")
-        self.assertEqual(json, [('#', ((datetime(2000, 1, 1, 0, 0), 1),
+        self.assertEqual(set(json), {('#', ((datetime(2000, 1, 1, 0, 0), 1),
                                        (datetime(2014, 4, 3, 0, 0), 1),
-                                       (datetime(2015, 4, 3, 0, 0), 1)))])
+                                       (datetime(2015, 4, 3, 0, 0), 1)))})
         
         json = aggregate(query, [q1, q2], {}, "total", "date", "day")
         self.assertEqual(set(json), {(datetime(2000, 1, 1, 0, 0), (('#', 1),)),
@@ -145,7 +124,7 @@ class TestAggregate(amcattest.AmCATTestCase):
             for (col, val) in vals:
                 t[row, col] = val
 
-        self.assertEqual(set(transpose_table(t).to_json()),
+        self.assertEqual(set(transpose(t).to_json()),
                          {
                              ("a", ((1, 5), (2, 6))),
                              ("b", ((1, 7), (2, 4))),
