@@ -60,18 +60,34 @@ class TestAggregate(amcattest.AmCATTestCase):
 
     @amcattest.use_elastic
     def test_aggregate(self):
-        #WvA: does not work yet
-        self.set_up()
+        aset, m1, a1, a2, a3 = self.set_up()
 
         from amcat.tools.keywordsearch import SearchQuery
         query = "a# Foo* \n b# Bar"
         q1 = SearchQuery.from_string("a# Foo*")
         q2 = SearchQuery.from_string("b# Bar")
 
-        print(aggregate(query, [q1, q2], {}, "date", "total", "day"))
-        print(aggregate(query, [q1, q2], {}, "total", "date", "day"))
-        print(aggregate(query, [q1, q2], {}, "date", "medium", "day"))
-        print(aggregate(query, [q1, q2], {}, "medium", "date", "day"))
+        json = aggregate(query, [q1, q2], {}, "date", "total", "day")
+        self.assertEqual(json, [('#', ((datetime(2000, 1, 1, 0, 0), 1),
+                                       (datetime(2014, 4, 3, 0, 0), 1),
+                                       (datetime(2015, 4, 3, 0, 0), 1)))])
+        
+        json = aggregate(query, [q1, q2], {}, "total", "date", "day")
+        self.assertEqual(set(json), {(datetime(2000, 1, 1, 0, 0), (('#', 1),)),
+                                     (datetime(2014, 4, 3, 0, 0), (('#', 1),)),
+                                     (datetime(2015, 4, 3, 0, 0), (('#', 1),)),
+                                     })
+
+        json = aggregate(query, [q1, q2], {}, "date", "medium", "year")
+        self.assertEqual(set(json), {(datetime(2014, 1, 1, 0, 0), ((m1.id, 1),)),
+                                     (datetime(2015, 1, 1, 0, 0), ((m1.id, 1),)),
+                                     (datetime(2000, 1, 1, 0, 0), ((a3.medium_id, 1),))})
+        
+        
+        json = aggregate(query, [q1, q2], {}, "medium", "date", "year")
+        self.assertEqual(set(json), {(m1.id, ((datetime(2014, 1, 1, 0, 0), 1),
+                                              (datetime(2015, 1, 1, 0, 0), 1))),
+                                    (a3.medium_id, ((datetime(2000, 1, 1, 0, 0), 1),))})
 
 
     @amcattest.use_elastic
