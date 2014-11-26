@@ -43,19 +43,19 @@ class TestAggregate(amcattest.AmCATTestCase):
     def test_sort(self):
         aset, m1, m2, a1, a2, a3, a4 = self.set_up()
         
-        aggr = aggregate(None, [], {"sets": aset.id}, "medium", "date", "year")
+        aggr = aggregate_by_medium(None, {"sets": aset.id}, "date", "year")
+        
+        self.assertEqual(list(sort(aggr).to_json()),
+                         [(m1.id, ((datetime(2014, 1, 1, 0, 0), 1),
+                                   (datetime(2015, 1, 1, 0, 0), 1))),
+                          (m2.id, ((datetime(2000, 1, 1, 0, 0), 1),
+                                   (datetime(2014, 1, 1, 0, 0), 1)))])
 
-        self.assertEqual(list(sort(aggr)),
-                         [(m1.id, [(datetime(2014, 1, 1, 0, 0), 1),
-                                   (datetime(2015, 1, 1, 0, 0), 1)]),
-                          (m2.id, [(datetime(2000, 1, 1, 0, 0), 1),
-                                   (datetime(2014, 1, 1, 0, 0), 1)])])
-
-        self.assertEqual(list(sort(aggr, reverse=True)),
-                         [(m2.id, [(datetime(2014, 1, 1, 0, 0), 1),
-                                   (datetime(2000, 1, 1, 0, 0), 1)]),
-                          (m1.id, [(datetime(2015, 1, 1, 0, 0), 1),
-                                   (datetime(2014, 1, 1, 0, 0), 1)])])
+        self.assertEqual(list(sort(aggr, reverse=True).to_json()),
+                         [(m2.id, ((datetime(2014, 1, 1, 0, 0), 1),
+                                   (datetime(2000, 1, 1, 0, 0), 1))),
+                          (m1.id, ((datetime(2015, 1, 1, 0, 0), 1),
+                                   (datetime(2014, 1, 1, 0, 0), 1)))])
         
     @amcattest.use_elastic
     def test_aggregate(self):

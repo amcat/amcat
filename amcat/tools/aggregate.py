@@ -44,7 +44,10 @@ VALID_AXES = VALID_X_AXES | VALID_Y_AXES
 VALID_INTERVALS = {'year', 'quarter', 'month', 'week', 'day'}
 
 class OrderedSet(OrderedDict):
-    # Sorry!
+    def __init__(self, *args, **kargs):
+        if len(args) == 1 and isinstance(args[0], (list, tuple)):
+            args = ([(k, None) for k in args[0]], )
+        super(OrderedSet, self).__init__(*args, **kargs)
     def add(self, key):
         if key not in self:
             self[key] = None
@@ -55,8 +58,8 @@ class DataTable(dict):
     """
     def __init__(self, *args, **kargs):
         self.es = ES()
-        self.rows = kargs.pop("rows", OrderedSet())
-        self.columns = kargs.pop("columns", OrderedSet())
+        self.rows = OrderedSet(kargs.pop("rows", []))
+        self.columns = OrderedSet(kargs.pop("columns", []))
         super(DataTable, self).__init__(*args, **kargs)
 
     def __setitem__(self, index, value):
@@ -89,6 +92,12 @@ def transpose(table):
     d = {(col, row): val for ((row, col), val) in table.iteritems()}
     return DataTable(d, rows=table.columns, columns=table.rows)
 
+
+def sort(table, reverse=False):
+    # TODO: add support for 'key'?
+    rows = sorted(table.rows, reverse=reverse)
+    columns = sorted(table.columns, reverse=reverse)
+    return  DataTable(table, rows=rows, columns=columns)
 
 def aggregate_by_medium(query, filters, group_by=None, interval="month"):
     """
