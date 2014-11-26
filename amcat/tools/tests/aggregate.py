@@ -19,8 +19,7 @@
 
 from datetime import datetime
 from amcat.tools import amcattest
-from amcat.tools.aggregate import transpose, to_table, aggregate_by_medium, aggregate_by_term, aggregate, set_labels, \
-    sort
+from amcat.tools.aggregate import *
 from amcat.tools.amcates import ES
 
 
@@ -61,6 +60,7 @@ class TestAggregate(amcattest.AmCATTestCase):
 
     @amcattest.use_elastic
     def test_aggregate(self):
+        #WvA: does not work yet
         self.set_up()
 
         from amcat.tools.keywordsearch import SearchQuery
@@ -83,7 +83,7 @@ class TestAggregate(amcattest.AmCATTestCase):
         q2 = SearchQuery.from_string("b# Bar")
 
         aggr = aggregate_by_term([q1, q2], filters={"sets": [aset.id]})
-        self.assertEqual(set(aggr), {(u'a', (('#', 2),)), (u'b', (('#', 1),))})
+        self.assertEqual(set(aggr.to_json()), {(u'a', (('#', 2),)), (u'b', (('#', 1),))})
 
     @amcattest.use_elastic
     def test_aggregate_by_medium(self):
@@ -92,14 +92,14 @@ class TestAggregate(amcattest.AmCATTestCase):
 
         self.assertEqual(
             {(m1.id, (('#', 2),)), (a3.medium_id, (('#', 1),))},
-            set(aggregate_by_medium(None, filters={"sets": [aset.id]}))
+            set(aggregate_by_medium(None, filters={"sets": [aset.id]}).to_json())
         )
 
         self.assertEqual(
             {(m1.id, ((datetime(2014, 1, 1, 0, 0), 1),
                       (datetime(2015, 1, 1, 0, 0), 1))),
              (m2.id, ((datetime(2000, 1, 1, 0, 0), 1),))},
-            set(aggregate_by_medium(None, filters={"sets": [aset.id]}, group_by="date", interval="year"))
+            set(aggregate_by_medium(None, filters={"sets": [aset.id]}, group_by="date", interval="year").to_json())
         )
 
     @amcattest.use_elastic
@@ -107,28 +107,31 @@ class TestAggregate(amcattest.AmCATTestCase):
         aset, m1, a1, a2, a3 = self.set_up()
         m2 = a3.medium
 
-        aggr = list(aggregate_by_medium(
+        aggr = aggregate_by_medium(
             query=None, filters={"sets": [aset.id]},
             group_by="date", interval="year"
-        ))
+        )
 
         self.assertEqual([
             ('', m1.id, m2.id),
             (datetime(2014, 1, 1, 0, 0), 1, 0),
             (datetime(2015, 1, 1, 0, 0), 1, 0),
             (datetime(2000, 1, 1, 0, 0), 0, 1)
-        ], list(to_table(aggr)))
+        ], list(aggr.to_table()))
 
     def test_transpose(self):
-        self.assertEqual(
-            (
+        t = DataTable()
+        for row, vals in (
                 (1, (('a', 5), ('b', 7),)),
                 (2, (('a', 6), ('b', 4),)),
                 (8, (('c', 9),          ))
-            ),
-            transpose((
-                ("a", ((1, 5), (2, 6))),
-                ("b", ((1, 7), (2, 4))),
-                ("c", ((8, 9),       )),
-            ))
-        )
+        ):
+            for (col, val) in vals:
+                t[row, col] = val
+
+        self.assertEqual(set(transpose_table(t).to_json()),
+                         {
+                             ("a", ((1, 5), (2, 6))),
+                             ("b", ((1, 7), (2, 4))),
+                             ("c", ((8, 9),       )),
+                             })

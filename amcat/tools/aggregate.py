@@ -28,6 +28,7 @@ from operator import itemgetter
 from amcat.models import Medium
 from amcat.tools.amcates import ES
 from amcat.tools.toolkit import DefaultOrderedDict
+from collections import OrderedDict
 
 import logging
 log = logging.getLogger(__name__)
@@ -41,6 +42,52 @@ VALID_AXES = VALID_X_AXES | VALID_Y_AXES
 
 # Natively supported by elasticsearch.
 VALID_INTERVALS = {'year', 'quarter', 'month', 'week', 'day'}
+
+class OrderedSet(OrderedDict):
+    # Sorry!
+    def add(self, key):
+        if key not in self:
+            self[key] = None
+
+class DataTable(dict):
+    """
+    Class that represents a x-by-y table, ie a matrix with column and row headers
+    """
+    def __init__(self, *args, **kargs):
+        self.es = ES()
+        self.rows = kargs.pop("rows", OrderedSet())
+        self.columns = kargs.pop("columns", OrderedSet())
+        super(DataTable, self).__init__(*args, **kargs)
+
+    def __setitem__(self, index, value):
+        row, column = index
+        self.rows.add(row)
+        self.columns.add(column)
+        super(DataTable, self).__setitem__(index, value)
+
+    def query_row(self, row, query, filters, group_by=None, interval="month"):
+        if group_by is None:
+            self[row, "#"] = self.es.count(query, filters)
+        else:
+            for col, val in self.es.aggregate_query(query, filters, group_by, interval):
+                self[row, col] = val
+
+    def to_json(self):
+        """Render to json format expected by js/highcharts"""
+        for row in self.rows:
+            yield row, tuple((col, self[row, col]) for col in self.columns if (row, col) in self)
+
+    def to_table(self, default=0):
+        """Render a two dimensional (non-sparse) table as a sequence-of-tuples"""
+        t = transpose_table(self) # WvA: why should to_table always transpose?
+        yield ("",) + tuple(t.columns)
+        for row in t.rows:
+            yield (row,) + tuple(t.get((row, col), default) for col in t.columns)
+
+
+def transpose_table(table):
+    d = {(col, row): val for ((row, col), val) in table.iteritems()}
+    return DataTable(d, rows=table.columns, columns=table.rows)
 
 
 class _HashDict(dict):
@@ -97,36 +144,6 @@ def transpose(aggregate):
     return tuple((k, tuple(v)) for k, v in transposed.items())
 
 
-def _get_columns(aggregate):
-    for _, row_values in aggregate:
-        for column, _ in row_values:
-            yield column
-
-
-def _get_row(columns, row, default):
-    return tuple(row.get(c, default) for c in columns)
-
-
-def _to_table(aggregate, default):
-    columns = tuple(sorted(set(_get_columns(aggregate))))
-
-    yield ("",) + columns
-    for row_name, row_values in aggregate:
-        yield (row_name,) + _get_row(columns, dict(row_values), default)
-
-
-def to_table(aggregate, default=0):
-    """
-    Returns sorted, 2D table for given aggregate. If a value is not found for a
-    particular cell, use `default` to fill it. This function does not make any
-    promises about column / row order.
-
-    :param aggregate: aggregate
-    :return: list of lists, representing a table
-    """
-    return _to_table(transpose(aggregate), default)
-
-
 def _aggregate_query(es, query, filters, group_by=None, interval="month"):
     if group_by is None:
         return (("#", es.count(query, filters)),)
@@ -135,18 +152,17 @@ def _aggregate_query(es, query, filters, group_by=None, interval="month"):
 
 def aggregate_by_medium(query, filters, group_by=None, interval="month"):
     """
-
     :param query:
     :param filters:
     :param group_by:
     :param interval:
     :return:
     """
-    es = ES()
-
-    for medium_id in sorted(es.list_media(query, filters)):
+    result = DataTable()
+    for medium_id in sorted(result.es.list_media(query, filters)):
         filters["mediumid"] = [medium_id]
-        yield medium_id, _aggregate_query(es, query, filters, group_by, interval)
+        result.query_row(medium_id, query, filters, group_by, interval)
+    return result
 
 
 def aggregate_by_term(queries, filters, group_by=None, interval="month"):
@@ -158,13 +174,12 @@ def aggregate_by_term(queries, filters, group_by=None, interval="month"):
     :param interval:
     :return:
     """
-    es = ES()
-
+    result = DataTable()
     queries = (q for q in queries if q.declared_label is not None)
     queries = ((q.label, q.query) for q in queries)
-
     for term, query in queries:
-        yield term, _aggregate_query(es, query, filters, group_by, interval)
+        result.query_row(term, query, filters, group_by, interval)
+    return result
 
 
 def _aggregate(query, queries, filters, x_axis, y_axis, interval="month"):
