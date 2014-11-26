@@ -90,34 +90,6 @@ def transpose(table):
     return DataTable(d, rows=table.columns, columns=table.rows)
 
 
-class _HashDict(dict):
-    def __hash__(self):
-        return hash(frozenset(self.iteritems()))
-
-
-def _get_pivot(row, column):
-    for c, value in row:
-        if c == column:
-            return float(value)
-    return 0.0
-
-
-def make_relative(aggregation, column):
-    # TODO: We should probably make aggregation an ordered dict of ordered
-    # TODO: dicts, thus making this algorithm run more cheaply.
-    pivots = (_get_pivot(row[1], column) for row in aggregation)
-    for pivot, (row, row_values) in zip(pivots, aggregation):
-        if not pivot:
-            continue
-
-        yield row, tuple((col, value / pivot) for col, value in row_values)
-
-
-def sort(aggregate, func=itemgetter(0), reverse=False):
-    for x, y_values in sorted(aggregate, key=func, reverse=reverse):
-        yield x, sorted(y_values, key=func, reverse=reverse)
-
-
 def aggregate_by_medium(query, filters, group_by=None, interval="month"):
     """
     :param query:
@@ -166,43 +138,7 @@ def _aggregate(query, queries, filters, x_axis, y_axis, interval="month"):
         result.query_row("#", query, filters, x_axis, interval)
         return result
 
-    raise ValueError("Invalid x_axis '{x_axis}'".format(**locals()))
-
-
-def _set_medium_labels(aggregate):
-    mediums = Medium.objects.filter(id__in=[a[0] for a in aggregate])
-    mediums = dict(mediums.values_list("id", "name"))
-    return [(_HashDict({'id': mid, 'label': mediums[mid]}), rest)
-            for mid, rest in aggregate]
-
-
-def _set_term_labels(aggregate, queries):
-    queries = {q.label: q.query for q in queries}
-    return [(_HashDict({'id': label, 'label': queries[label]}), rest)
-            for label, rest in aggregate]
-
-
-def _set_labels(aggregate, queries, axis):
-    if axis == "medium":
-        return _set_medium_labels(aggregate)
-
-    if axis == "term":
-        return _set_term_labels(aggregate, queries)
-
-    return aggregate
-
-
-def set_labels(aggregate, queries, x_axis, y_axis):
-    """
-    Replace id's in aggregation with labels.
-
-    :param aggregate:
-    :param x_axis:
-    :param y_axis:
-    """
-    x_axis = _set_labels(aggregate, queries, x_axis)
-    y_axis = transpose(_set_labels(transpose(aggregate), queries, y_axis))
-    return [(x[0], y[1]) for x, y in zip(x_axis, y_axis)]
+    raise ValueError("Invalid axes {x_axis!r}/{y_axis!r}".format(**locals()))
 
 
 def aggregate(query, queries, filters, x_axis, y_axis, interval="month"):
@@ -235,15 +171,8 @@ def aggregate(query, queries, filters, x_axis, y_axis, interval="month"):
     if x_axis == y_axis:
         raise ValueError("y_axis and x_axis cannot be the same")
 
-    # We need to transpose the result matrix if given x_axis is a valid
-    needs_transposing = False
-    if x_axis == "total":
-        # Total can only be aggregated on y_axis. Transpose!
-        needs_transposing = True
-    elif y_axis != "total":
-        # If we do not aggregate on total, we have to check x/y for validity
-        needs_transposing = x_axis not in VALID_X_AXES and y_axis in VALID_X_AXES
-
+    # We need to transpose the result matrix if x/y is invalid but y/x is valid 
+    needs_transposing = (x_axis == "total") or (x_axis not in VALID_X_AXES and y_axis in VALID_X_AXES)
 
     if needs_transposing:
         aggr = transpose(_aggregate(query, queries, filters, y_axis, x_axis, interval))
