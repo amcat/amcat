@@ -260,6 +260,7 @@ def aggregate(query, queries, filters, x_axis, y_axis, interval="month"):
         # If we do not aggregate on total, we have to check x/y for validity
         needs_transposing = x_axis not in VALID_X_AXES and y_axis in VALID_X_AXES
 
+
     if needs_transposing:
         aggr = transpose(_aggregate(query, queries, filters, y_axis, x_axis, interval))
     else:
