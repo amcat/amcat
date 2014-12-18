@@ -148,6 +148,14 @@ class AggregateResource(AmCATResource):
         # allow for POST requests
         return self.list(request, *args, **kwargs)
 
+    def list(self, request, *args, **kwargs):
+        try:
+            return super(AggregateResource, self).list(request, *args, **kwargs)
+        except Exception, e:
+            from rest_framework.exceptions import APIException
+            raise APIException(str(e))
+
+        
     class serializer_class(Serializer):
         count = IntegerField()
 
