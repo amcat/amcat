@@ -151,27 +151,24 @@ class TestAggregate(amcattest.AmCATTestCase):
 
     def test_labels(self):
         aset, m1, m2, a1, a2, a3, a4 = self.set_up()
-        aggr = list(aggregate_by_medium(
+        aggr = aggregate_by_medium(
             query=None, filters={"sets": [aset.id]},
             group_by="date", interval="year"
-        ))
-        aggr = set_labels(aggr, None, "medium", "date")
-        self.assertEqual(list(sort(aggr)),
+        )
+        self.assertEqual(list(sort(aggr).to_json(labels=True)),
                          [({'id':m1.id, 'label': 'krantje'},
-                           [(datetime(2014, 1, 1, 0, 0), 1),
-                            (datetime(2015, 1, 1, 0, 0), 1)]),
+                           ((datetime(2014, 1, 1, 0, 0), 1),
+                            (datetime(2015, 1, 1, 0, 0), 1))),
                           ({'id': m2.id, 'label': 'krant2'},
-                           [(datetime(2000, 1, 1, 0, 0), 1),
-                            (datetime(2014, 1, 1, 0, 0), 1)])])
+                           ((datetime(2000, 1, 1, 0, 0), 1),
+                            (datetime(2014, 1, 1, 0, 0), 1)))])
 
         from amcat.tools.keywordsearch import SearchQuery
         q1 = SearchQuery.from_string("a# Foo*")
         q2 = SearchQuery.from_string("b# Bar")
 
-        aggr = list(aggregate_by_term([q1, q2], filters={"sets": [aset.id]}))
-        print aggr
-        aggr = set_labels(aggr, [q1, q2], "term", "total")
-        self.assertEqual(list(sort(aggr)),
-                         [({'id': 'a', 'label': 'Foo*'}, [('#', 2)]),
-                          ({'id': 'b', 'label': 'Bar'}, [('#', 1)])])
+        aggr = aggregate_by_term([q1, q2], filters={"sets": [aset.id]})
+        self.assertEqual(list(sort(aggr).to_json(labels=True)),
+                         [({'id': 'a', 'label': 'Foo*'}, (('#', 2),)),
+                          ({'id': 'b', 'label': 'Bar'}, (('#', 1),))])
 

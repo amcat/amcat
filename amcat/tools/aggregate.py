@@ -90,7 +90,9 @@ class DataTable(dict):
 
 def _serialize(v, labels=False):
     if isinstance(v, Medium):
-        return {'id': v.id, 'label': v.label} if labels else v.id
+        return {'id': v.id, 'label': v.name} if labels else v.id
+    if hasattr(v, 'query'):
+        return {'id': v.label, 'label': v.query} if labels else v.label
     return v
 
             
@@ -132,9 +134,8 @@ def aggregate_by_term(queries, filters, group_by=None, interval="month"):
     """
     result = DataTable()
     queries = (q for q in queries if q.declared_label is not None)
-    queries = ((q.label, q.query) for q in queries)
-    for term, query in queries:
-        result.query_row(term, query, filters, group_by, interval)
+    for query in queries:
+        result.query_row(query, query.query, filters, group_by, interval)
     return result
 
 
