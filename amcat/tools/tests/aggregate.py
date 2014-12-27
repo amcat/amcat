@@ -28,8 +28,8 @@ class TestAggregate(amcattest.AmCATTestCase):
         # We cannot use setUp, as use_elastic deletes indices
         aset = amcattest.create_test_set()
 
-        m1 = amcattest.create_test_medium()
-        m2 = amcattest.create_test_medium()
+        m1 = amcattest.create_test_medium(name="krantje")
+        m2 = amcattest.create_test_medium(name="krant2")
         a1 = amcattest.create_test_article(text="Foo", medium=m1, articleset=aset, date=datetime(2014, 4, 3))
         a2 = amcattest.create_test_article(text="Bar", medium=m1, articleset=aset, date=datetime(2015, 4, 3))
         a3 = amcattest.create_test_article(text="FooBar", medium=m2, articleset=aset)
@@ -120,8 +120,6 @@ class TestAggregate(amcattest.AmCATTestCase):
     @amcattest.use_elastic
     def test_get_table(self):
         aset, m1, m2, a1, a2, a3, a4 = self.set_up()
-        m2 = a3.medium
-
         aggr = aggregate_by_medium(
             query=None, filters={"sets": [aset.id]},
             group_by="date", interval="year"
@@ -150,3 +148,30 @@ class TestAggregate(amcattest.AmCATTestCase):
                              ("b", ((1, 7), (2, 4))),
                              ("c", ((8, 9),       )),
                              })
+
+    def test_labels(self):
+        aset, m1, m2, a1, a2, a3, a4 = self.set_up()
+        aggr = list(aggregate_by_medium(
+            query=None, filters={"sets": [aset.id]},
+            group_by="date", interval="year"
+        ))
+        aggr = set_labels(aggr, None, "medium", "date")
+        self.assertEqual(list(sort(aggr)),
+                         [({'id':m1.id, 'label': 'krantje'},
+                           [(datetime(2014, 1, 1, 0, 0), 1),
+                            (datetime(2015, 1, 1, 0, 0), 1)]),
+                          ({'id': m2.id, 'label': 'krant2'},
+                           [(datetime(2000, 1, 1, 0, 0), 1),
+                            (datetime(2014, 1, 1, 0, 0), 1)])])
+
+        from amcat.tools.keywordsearch import SearchQuery
+        q1 = SearchQuery.from_string("a# Foo*")
+        q2 = SearchQuery.from_string("b# Bar")
+
+        aggr = list(aggregate_by_term([q1, q2], filters={"sets": [aset.id]}))
+        print aggr
+        aggr = set_labels(aggr, [q1, q2], "term", "total")
+        self.assertEqual(list(sort(aggr)),
+                         [({'id': 'a', 'label': 'Foo*'}, [('#', 2)]),
+                          ({'id': 'b', 'label': 'Bar'}, [('#', 1)])])
+
