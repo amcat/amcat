@@ -77,15 +77,23 @@ class DataTable(dict):
 
     def to_json(self):
         """Render to json format expected by js/highcharts"""
+        def serialize(v):
+            if isinstance(v, Medium):
+                return v.id
+            return v
         for row in self.rows:
-            yield row, tuple((col, self[row, col]) for col in self.columns if (row, col) in self)
+            yield serialize(row), tuple((serialize(col), self[row, col]) for col in self.columns if (row, col) in self)
 
     def to_table(self, default=0):
         """Render a two dimensional (non-sparse) table as a sequence-of-tuples"""
+        def serialize(v):
+            if isinstance(v, Medium):
+                return v.id
+            return v
         t = transpose(self) # WvA: why should to_table always transpose?
-        yield ("",) + tuple(t.columns)
+        yield ("",) + tuple(serialize(c) for c in t.columns)
         for row in t.rows:
-            yield (row,) + tuple(t.get((row, col), default) for col in t.columns)
+            yield (serialize(row),) + tuple(t.get((row, col), default) for col in t.columns)
 
 
 def transpose(table):
@@ -108,9 +116,10 @@ def aggregate_by_medium(query, filters, group_by=None, interval="month"):
     :return:
     """
     result = DataTable()
-    for medium_id in sorted(result.es.list_media(query, filters)):
-        filters["mediumid"] = [medium_id]
-        result.query_row(medium_id, query, filters, group_by, interval)
+    media = Medium.objects.filter(pk__in=result.es.list_media(query, filters)).only("pk")
+    for medium in sorted(media, key=lambda m: m.id):
+        filters["mediumid"] = [medium.id]
+        result.query_row(medium, query, filters, group_by, interval)
     return result
 
 
