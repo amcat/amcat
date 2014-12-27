@@ -23,7 +23,7 @@ from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.forms import ChoiceField, CharField
 from amcat.models import Medium
 from amcat.scripts.query import QueryAction, QueryActionForm
-from amcat.tools.aggregate import sort, transpose, set_labels, make_relative
+from amcat.tools.aggregate import sort, transpose, set_labels
 from amcat.tools.djangotoolkit import parse_date
 from amcat.tools.keywordsearch import SelectionSearch
 
@@ -61,43 +61,6 @@ class AggregationActionForm(QueryActionForm):
     x_axis = ChoiceField(label="X-axis (rows)", choices=AXES, initial="date")
     y_axis = ChoiceField(label="Y-axis (columns)", choices=AXES, initial="medium")
     interval = ChoiceField(choices=INTERVALS, required=False, initial="day")
-    relative_to = CharField(required=False, help_text=(
-        "Enter medium, term or date for which to make the counts "
-        "relative to. Accepted: medium id, medium label, DD-MM-YYYY, term. "))
-
-    def clean_relative_to(self):
-        column = self.cleaned_data['relative_to']
-        y_axis = self.cleaned_data['y_axis']
-
-        if not column:
-            return None
-
-        if y_axis == "medium":
-            medium = _get_medium(column)
-            if medium not in self.cleaned_data["mediums"]:
-                raise ValidationError(MEDIUM_ERR.format(column=column))
-            return medium.id
-
-        if y_axis == "date":
-            try:
-                date = parse_date(column)
-            except ValueError:
-                raise ValidationError("Not a valid date.")
-
-            if date is None:
-                raise ValidationError("Not a valid date.")
-
-            # TODO: We should check whether date is within bounds, but it is not certain
-            # TODO: those values are in cleaned_data yet. Just error upon rendering..?
-            return datetime.combine(date, datetime.min.time())
-
-        if y_axis == "term":
-            queries = SelectionSearch(self).get_queries()
-            if column not in (q.label for q in queries):
-                raise ValidationError("Term '{column}' not found in search terms.".format(column=column))
-            return column
-
-        raise ValidationError("Not a valid column name.")
 
 
 class AggregationAction(QueryAction):
@@ -124,13 +87,6 @@ class AggregationAction(QueryAction):
             form.cleaned_data['y_axis'],
             form.cleaned_data['interval']
         )
-
-        #
-        self.monitor.update(20, "Calculating relative values..".format(**locals()))
-        column = form.cleaned_data['relative_to']
-        print(aggregation)
-        if column is not None:
-            aggregation = list(make_relative(aggregation, column))
 
         # Convert id values to dicts -> {id: x, label: y}
         self.monitor.update(30, "Setting labels..".format(**locals()))
