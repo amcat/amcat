@@ -66,24 +66,24 @@ class TestAggregate(amcattest.AmCATTestCase):
         q1 = SearchQuery.from_string("a# Foo*")
         q2 = SearchQuery.from_string("b# Bar")
 
-        json = aggregate(query, [q1, q2], {}, "date", "total", "day")
+        json = aggregate(query, [q1, q2], {}, "date", "total", "day").to_json()
         self.assertEqual(set(json), {('#', ((datetime(2000, 1, 1, 0, 0), 1),
                                        (datetime(2014, 4, 3, 0, 0), 1),
                                        (datetime(2015, 4, 3, 0, 0), 1)))})
         
-        json = aggregate(query, [q1, q2], {}, "total", "date", "day")
+        json = aggregate(query, [q1, q2], {}, "total", "date", "day").to_json()
         self.assertEqual(set(json), {(datetime(2000, 1, 1, 0, 0), (('#', 1),)),
                                      (datetime(2014, 4, 3, 0, 0), (('#', 1),)),
                                      (datetime(2015, 4, 3, 0, 0), (('#', 1),)),
                                      })
 
-        json = aggregate(query, [q1, q2], {}, "date", "medium", "year")
+        json = aggregate(query, [q1, q2], {}, "date", "medium", "year").to_json()
         self.assertEqual(set(json), {(datetime(2014, 1, 1, 0, 0), ((m1.id, 1),)),
                                      (datetime(2015, 1, 1, 0, 0), ((m1.id, 1),)),
                                      (datetime(2000, 1, 1, 0, 0), ((m2.id, 1),))})
         
         
-        json = aggregate(query, [q1, q2], {}, "medium", "date", "year")
+        json = aggregate(query, [q1, q2], {}, "medium", "date", "year").to_json()
         self.assertEqual(set(json), {(m1.id, ((datetime(2014, 1, 1, 0, 0), 1),
                                               (datetime(2015, 1, 1, 0, 0), 1))),
                                      (m2.id, ((datetime(2000, 1, 1, 0, 0), 1),))})

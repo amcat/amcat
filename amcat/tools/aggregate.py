@@ -75,27 +75,25 @@ class DataTable(dict):
             for col, val in self.es.aggregate_query(query, filters, group_by, interval):
                 self[row, col] = val
 
-    def to_json(self):
+    def to_json(self, labels=False):
         """Render to json format expected by js/highcharts"""
-        def serialize(v):
-            if isinstance(v, Medium):
-                return v.id
-            return v
         for row in self.rows:
-            yield serialize(row), tuple((serialize(col), self[row, col]) for col in self.columns if (row, col) in self)
+            yield _serialize(row, labels=labels), tuple((_serialize(col, labels=labels), self[row, col]) for col in self.columns if (row, col) in self)
 
     def to_table(self, default=0):
         """Render a two dimensional (non-sparse) table as a sequence-of-tuples"""
-        def serialize(v):
-            if isinstance(v, Medium):
-                return v.id
-            return v
         t = transpose(self) # WvA: why should to_table always transpose?
-        yield ("",) + tuple(serialize(c) for c in t.columns)
+        yield ("",) + tuple(_serialize(c) for c in t.columns)
         for row in t.rows:
-            yield (serialize(row),) + tuple(t.get((row, col), default) for col in t.columns)
+            yield (_serialize(row),) + tuple(t.get((row, col), default) for col in t.columns)
 
 
+def _serialize(v, labels=False):
+    if isinstance(v, Medium):
+        return {'id': v.id, 'label': v.label} if labels else v.id
+    return v
+
+            
 def transpose(table):
     d = {(col, row): val for ((row, col), val) in table.iteritems()}
     return DataTable(d, rows=table.columns, columns=table.rows)
@@ -103,8 +101,8 @@ def transpose(table):
 
 def sort(table, reverse=False):
     # TODO: add support for 'key'?
-    rows = sorted(table.rows, reverse=reverse)
-    columns = sorted(table.columns, reverse=reverse)
+    rows = sorted(table.rows, reverse=reverse, key=_serialize)
+    columns = sorted(table.columns, reverse=reverse, key=_serialize)
     return  DataTable(table, rows=rows, columns=columns)
 
 def aggregate_by_medium(query, filters, group_by=None, interval="month"):
@@ -197,6 +195,6 @@ def aggregate(query, queries, filters, x_axis, y_axis, interval="month"):
     else:
         aggr = _aggregate(query, queries, filters, x_axis, y_axis, interval)
 
-    return aggr.to_json()
+    return aggr
 
 # Unittests: amcat.tools.tests.aggregate

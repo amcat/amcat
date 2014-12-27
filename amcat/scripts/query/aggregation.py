@@ -23,7 +23,7 @@ from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.forms import ChoiceField, CharField
 from amcat.models import Medium
 from amcat.scripts.query import QueryAction, QueryActionForm
-from amcat.tools.aggregate import sort, transpose, set_labels
+from amcat.tools.aggregate import sort, transpose
 from amcat.tools.djangotoolkit import parse_date
 from amcat.tools.keywordsearch import SelectionSearch
 
@@ -88,16 +88,9 @@ class AggregationAction(QueryAction):
             form.cleaned_data['interval']
         )
 
-        # Convert id values to dicts -> {id: x, label: y}
-        self.monitor.update(30, "Setting labels..".format(**locals()))
-        aggregation = set_labels(
-            aggregation, selection.get_queries(),
-            form.cleaned_data['x_axis'], form.cleaned_data['y_axis'],
-        )
-
         if form.cleaned_data["output_type"] in TRANSPOSE:
             aggregation = transpose(aggregation)
 
         self.monitor.update(60, "Serialising..".format(**locals()))
-        return json.dumps(list(sort(aggregation)), cls=DatetimeEncoder, check_circular=False)
+        return json.dumps(list(sort(aggregation).to_json(labels=True)), cls=DatetimeEncoder, check_circular=False)
 
