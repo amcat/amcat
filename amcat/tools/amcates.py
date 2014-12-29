@@ -533,6 +533,11 @@ class ES(object):
                     yield offset, token
                 offset += len(token)
 
+    def purge_orphans(self):
+        """Remove all articles without set from the index"""
+        query =  {"query": {"constant_score": {"filter": {"missing": {"field": "sets"}}}}}
+        self.es.delete_by_query(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=query)
+
 def get_date(timestamp):
     d = datetime.fromtimestamp(timestamp/1000)
     return datetime(d.year, d.month, d.day)
