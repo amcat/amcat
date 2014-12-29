@@ -33,6 +33,7 @@ from amcat.tools import queryparser, toolkit
 from amcat.tools.toolkit import multidict, splitlist
 from elasticsearch import Elasticsearch, connection
 from elasticsearch.client import indices, cluster
+from elasticsearch.helpers import scan
 from django.conf import settings
 from amcat.tools.caching import cached
 from amcat.tools.progress import NullMonitor
@@ -263,17 +264,9 @@ class ES(object):
         Note that query and filters can be combined in a single call
         """
         body = dict(build_body(query, filters, query_as_filter=True))
-        options = dict(scroll="1m", size=1000, fields="")
-        options.update(kwargs)
-        res = self.search(body, search_type='scan', **options)
-        sid = res['_scroll_id']
-        while True:
-            res = self.es.scroll(scroll_id=sid, scroll="1m")
-            if not res['hits']['hits']:
-                break
-            for row in res['hits']['hits']:
-                yield int(row['_id'])
-            sid = res['_scroll_id']
+        for a in scan(self.es, query=body, index=self.index, doc_type=self.doc_type,
+                      size=1000, fields=""):
+            yield int(a['_id'])
 
     def query(self, query=None, filters={}, highlight=False, lead=False, fields=[], score=True, **kwargs):
         """
