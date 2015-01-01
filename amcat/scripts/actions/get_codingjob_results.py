@@ -178,7 +178,9 @@ class CodingJobResultsForm(CodingjobListForm):
         for field_name in AGGREGATABLE_FIELDS:
             # Aggregate field
             label = "Aggregate {field_name}, codebook".format(field_name=field_name)
-            form_field = ModelChoiceField(queryset=Codebook.objects.all(), label=label, required=False)
+            cbs = self.project.get_codebooks().values_list("pk", flat=True)
+            form_field = ModelChoiceField(queryset=Codebook.objects.filter(pk__in=cbs),
+                                          label=label, required=False)
             yield "{prefix}_{field_name}".format(**locals()), form_field
 
             # Aggregate language field
@@ -721,4 +723,3 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         script = self._get_results_script([job], {strf: {}, intf: {}, codef: dict(labels=True)})
         with self.checkMaxQueries(9):
             list(csv.reader(StringIO(script.run())))
-
