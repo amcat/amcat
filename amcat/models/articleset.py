@@ -35,7 +35,7 @@ from amcat.models.medium import Medium
 from amcat.models.coding.codedarticle import CodedArticle
 from amcat.models.amcat import AmCAT
 from amcat.tools.model import AmcatModel
-from amcat.tools import amcates
+from amcat.tools import amcates, toolkit
 from amcat.models.article import Article
 from amcat.tools.progress import NullMonitor, ProgressMonitor
 from amcat.tools.amcates import ES
@@ -209,6 +209,23 @@ class ArticleSet(AmcatModel):
             project.favourite_articlesets.remove(aset)
         return aset
 
+    def delete(self, purge_orphans=True):
+        "Delete the articleset and all articles from index and db"
+        # which articles are only in this set?
+        # check per N articles
+        for aids in toolkit.splitlist(self.articles.values_list("pk", flat=True)):
+            x = set(ArticleSetArticle.objects.filter(article_id__in=aids).exclude(articleset=self)
+                    .values_list("article_id", flat=True))
+            todelete = set(aids) - x
+            Article.objects.filter(pk__in=todelete).delete()
+            amcates.ES().remove_from_set(self.id, aids)
+
+        if purge_orphans:
+            amcates.ES().purge_orphans()
+            
+        super(ArticleSet, self).delete() # cascade deletes all article references
+
+
 # Legacy
 ArticleSetArticle = ArticleSet.articles.through
 
@@ -217,6 +234,7 @@ ArticleSetArticle = ArticleSet.articles.through
 ###########################################################################
 
 from amcat.tools import amcattest
+import elasticsearch
 
 
 class TestArticleSet(amcattest.AmCATTestCase):
@@ -297,3 +315,28 @@ class TestArticleSet(amcattest.AmCATTestCase):
 
         self.assertEqual(set(aset.articles.all().values_list("id", flat=True)), aset.get_article_ids())
         self.assertEqual(set(aset.articles.all().values_list("id", flat=True)), aset.get_article_ids(use_elastic=True))
+
+    @amcattest.use_elastic
+    def test_delete(self):
+        s = amcattest.create_test_set()
+        sid = s.id
+        s2 = amcattest.create_test_set()
+        arts = [amcattest.create_test_article() for _x in range(10)]
+        s.add_articles(arts[:8])
+        s2.add_articles(arts[6:])
+        ES().flush()
+        s.delete()
+        ES().flush()
+        # articleset and articles only in that set are deleted
+        self.assertRaises(ArticleSet.DoesNotExist, ArticleSet.objects.get, pk=sid)
+        self.assertRaises(Article.DoesNotExist, Article.objects.get, pk=arts[0].id)
+        # shared articles are not deleted
+        self.assertEqual(Article.objects.get(pk=arts[6].id).id, arts[6].id)
+        self.assertEqual(set(s2.articles.values_list("pk", flat=True)),
+                         {a.id for a in arts[6:]})
+        # index is updated
+        self.assertEqual(ES().count(filters={"sets": sid}), 0)
+        self.assertEqual(ES().count(filters={"sets": s2.id}), 4)
+        self.assertRaises(elasticsearch.NotFoundError, ES().get, arts[0].id)
+        self.assertEqual(ES().get(arts[6].id)['id'], arts[6].id)
+        
