@@ -9,7 +9,6 @@ from api.rest.mixins import DatatablesMixin
 from amcat.models import RuleSet
 from amcat.tools.amcatxtas import ANALYSES, get_result
 import json
-from saf.saf import SAF
 
 
 class XTasViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMixin, ViewSet):
@@ -103,7 +102,7 @@ class ArticleLemmataSerializer(ArticleXTasSerializer):
     def get_clauses(self, aid, saf):
         if not 'tokens' in saf and 'clauses' in saf:
             return
-
+        from saf.saf import SAF
         saf = SAF(saf)
         tokens = saf.resolve()
         return tokens
