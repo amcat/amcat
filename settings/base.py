@@ -341,10 +341,6 @@ LOGGING = {
             'level': 'WARN',
             'propagate': False,
         },
-        'amcat': {
-            'handlers': ['console'],
-            'level': LOG_LEVEL,
-        },
         '': {
             'handlers': ['console'],
             'level': LOG_LEVEL,

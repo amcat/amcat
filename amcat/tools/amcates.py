@@ -457,6 +457,12 @@ class ES(object):
         """
         for medium_id, count in self.aggregate_query(query, filters, group_by="mediumid"):
             yield medium_id
+            
+    def list_dates(self, query=None, filters=None, interval="day"):
+        agg = {"date_histogram": {"field": "date", "interval": interval}}
+        for bucket in self.search_aggregate(agg, query=query, filters=filters)['buckets']:
+            yield get_date(bucket['key'])
+            
 
     def in_index(self, ids):
         """
@@ -570,6 +576,8 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
     date_range = {}
     if start_date: date_range['gte'] = parse_date(start_date)
     if end_date: date_range['lt'] = parse_date(end_date)
+    if on_date: date_range={"gte": parse_date(on_date),
+                            "lt": parse_date(on_date)+"||+1d"}
     if date_range: yield dict(range={'date' : date_range})
 
     if 'hash' in f:
