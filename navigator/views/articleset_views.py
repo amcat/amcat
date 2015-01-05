@@ -257,16 +257,16 @@ class ArticleSetDeduplicateView(ProjectScriptView):
     script = Deduplicate
     url_fragment = 'deduplicate'
 
-    def get_form(self, form_class):
-        asets = self.project.articlesets_set
+    def xget_form(self, form_class):
+        #asets = self.project.articlesets_set
         form = super(ArticleSetDeduplicateView, self).get_form(form_class)
-        form.fields["articleset_1"].queryset = form.fields["articleset_2"].queryset = asets
+        #form.fields["articleset"].queryset = form.fields["articleset_2"].queryset = asets
 
-        if "articleset_1" in self.request.GET:
-            form.fields["articleset_1"].initial = self.request.GET["articleset_1"]
+        #if "articleset_1" in self.request.GET:
+        #    form.fields["articleset_1"].initial = self.request.GET["articleset_1"]
 
-        if "articleset_2" in self.request.GET:
-            form.fields["articleset_2"].initial = self.request.GET["articleset_2"]
+        #if "articleset_2" in self.request.GET:
+        #    form.fields["articleset_2"].initial = self.request.GET["articleset_2"]
 
         return form
 

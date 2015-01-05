@@ -62,7 +62,6 @@ class Deduplicate(Script):
         ignore_headline = forms.BooleanField(initial=False, required=False)
         ignore_byline = forms.BooleanField(initial=False, required=False)
         ignore_date = forms.BooleanField(initial=False, required=False)
-        
         text_ratio = forms.IntegerField(required=False, initial=0, min_value=0, max_value=100,
                                         help_text="Percentage of (fuzzy) text overlap to be considered duplicate, e.g. 80")
         headline_ratio = forms.IntegerField(required=False, initial=0, min_value=0, max_value=100,
@@ -98,7 +97,7 @@ class Deduplicate(Script):
         return self._articles_cache
 
     def _get_deduplicates(self, articleset_1, articleset_2, text_ratio, headline_ratio, skip_simple, delete_same):
-        log.info("Start deduplicating ({articleset_1}, {articleset_2})..".format(**locals()))
+        log.warn("Start deduplicating ({articleset_1}, {articleset_2})..".format(**locals()))
         all_articles = articleset_1.articles.only("id", "date", "medium", "text", "headline")
         n_articles = all_articles.count()
         articles = all_articles.order_by("medium", "date")
@@ -130,7 +129,7 @@ class Deduplicate(Script):
 
         return [f for f in all_fields
                 if not self.options['ignore_'+f]]
-        
+
     def get_duplicates(self, date):
         fields = list(self.get_fields())
         dupes = collections.defaultdict(set)
@@ -141,21 +140,22 @@ class Deduplicate(Script):
 
         for aids in dupes.values():
             if len(aids) > 1:
-                for aid in sorted(aids)[1:]:
-                    yield aid
-                
+                log.debug("Article {} had dupes {}".format(aids[0], aids[1:]))
+                yield aids[0], aids[1:]
+
     def _run(self, articleset, dry_run, **kwargs):
-        nn = 0
+        log.debug("Deduplicating {articleset.id}".format(**locals()))
         for date in ES().list_dates(filters={"sets": articleset}):
-            log.info("Getting duplicates for {date}".format(**locals()))
-            dupes = list(self.get_duplicates(date))
+            log.debug("Getting duplicates for {date}".format(**locals()))
+            dupes = dict(self.get_duplicates(date))
             if dupes:
-                log.info("Deleting duplicates: {dupes}".format(**locals()))
-                nn += len(dupes)
+                all_dupes.update(dupes)
+                todelete = list(itertools.chain(*dupes.values()))
                 if not dry_run:
                     articleset.remove_articles(dupes)
-        log.info("Deleted {nn} dupes".format(**locals()))
-        
+        log.debug("Deleted dupes for {} articles".format(len(all_dupes)))
+        return all_dupes
+
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     cli.run_cli()
@@ -168,22 +168,21 @@ if __name__ == '__main__':
 from amcat.tools import amcattest
 
 class TestDedup(amcattest.AmCATTestCase):
-        
-
     def do_test(self, articles, **options):
         s = amcattest.create_test_set(articles=articles)
         ES().flush()
         Deduplicate(articleset=s.id, **options).run()
         ES().flush()
         return sorted(s.articles.values_list("pk", flat=True))
-        
-        
+
+
     def test_fields(self):
         s = amcattest.create_test_set()
         self.assertEqual(set(Deduplicate(articleset=s.id).get_fields()), {'hash'})
         self.assertEqual(set(Deduplicate(articleset=s.id, ignore_medium=True).get_fields()),
                          {'text', 'headline', 'byline', 'section', 'page', 'date'})
-    
+
+
     @amcattest.use_elastic
     def test_dedup(self):
         s = amcattest.create_test_set()
