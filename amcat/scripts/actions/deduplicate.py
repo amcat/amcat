@@ -122,9 +122,24 @@ class Deduplicate(Script):
             if compare_with:
                 yield (article, compare_with)
 
+    def is_fuzzy_dupe(self, a, b):
+        for field in 'headline', 'text':
+            ratio = self.options[field+'_ratio']
+            if ratio:
+                similarity =  Levenshtein.ratio(getattr(a, field), getattr(b, field))
+                if similarity < (ratio / 100.):
+                    return False
+        return True
+                
     def fuzzy_dedup(self, arts):
         """Do fuzzy deduplication on the given articles"""
-        return arts
+        arts = sorted(arts, key=lambda a:a.id)
+        while len(arts) > 1:
+            a = arts.pop(0)
+            dupes = [b for b in arts if self.is_fuzzy_dupe(a,b)]
+            if dupes:
+                arts = [a for a in arts if a not in dupes]
+                yield a, dupes
 
     def get_fields(self, ignore_fuzzy=False):
         """
@@ -141,8 +156,6 @@ class Deduplicate(Script):
                 if ignore_fuzzy and self.options.get(f+'_ratio'): continue
                 yield f
 
-
-
     def get_duplicates(self, date):
         fields = list(self.get_fields())
         compare_fields = list(self.get_fields(ignore_fuzzy=True))
@@ -156,15 +169,15 @@ class Deduplicate(Script):
         for arts in dupes.values():
             if len(arts) > 1:
                 if self.options['headline_ratio'] or self.options['text_ratio']:
-                    arts = self.fuzzy_dedup(arts)
-
-                aids = sorted(a.id for a in arts)
-                log.debug("Article {} had dupes {}".format(aids[0], aids[1:]))
-                yield aids[0], aids[1:]
-
+                    for a, arts in self.fuzzy_dedup(arts):
+                        yield a.id, [b.id for b in arts]
+                else:
+                    aids = sorted(a.id for a in arts)
+                    yield aids[0], aids[1:]
+                
     def _run(self, articleset, dry_run, **kwargs):
-        log.debug("Deduplicating {articleset.id}".format(**locals()))
         all_dupes = {}
+        log.debug("Deduplicating {articleset.id}".format(**locals()))
         for date in ES().list_dates(filters={"sets": articleset}):
             log.debug("Getting duplicates for {date}".format(**locals()))
             dupes = dict(self.get_duplicates(date))
@@ -252,7 +265,11 @@ class TestDedup(amcattest.AmCATTestCase):
         arts = [
             amcattest.create_test_article(id=1, articleset=s, medium=m, headline="Dit is een test"),
             amcattest.create_test_article(id=2, articleset=s, medium=m, headline="Dit is ook een test"),
+            amcattest.create_test_article(id=3, articleset=s, medium=m, headline="Dit is ook een tesdt"),
+            amcattest.create_test_article(id=4, articleset=s, medium=m, headline="Is dit een test?"),
+
             ]
-        self.assertEqual(self.do_test(arts, ignore_medium=True), {1,2})
+        self.assertEqual(self.do_test(arts, ignore_medium=True), {1,2,3,4})
+        self.assertEqual(self.do_test(arts, ignore_medium=True, headline_ratio=90), {1,2,4})
+        self.assertEqual(self.do_test(arts, ignore_medium=True, headline_ratio=80), {1,4})
         self.assertEqual(self.do_test(arts, ignore_medium=True, headline_ratio=50), {1})
-        self.assertEqual(self.do_test(arts, ignore_medium=True, headline_ratio=90), {1,2})
