@@ -31,6 +31,7 @@ from openpyxl.writer.dump_worksheet import ExcelDumpWriter
 import re
 
 # Used in _get_value()
+INT_RE = re.compile('^[0-9]+$')
 FLOAT_RE = re.compile('^(\+|-)?[0-9]*\.[0-9]+$')
 
 
@@ -52,7 +53,7 @@ class TableExporter():
 
     def export(self, table, stream=None, encoding="utf-8", **kargs):
         """
-        Export the table to the given stream. 
+        Export the table to the given stream.
         @return: str if stream is None, otherwise undefined
         """
         if hasattr(self, "to_stream"):
@@ -99,6 +100,9 @@ class CSV_semicolon(CSV):
 def _convert_value(value):
     if not isinstance(value, basestring):
         return value
+
+    if INT_RE.match(value) is not None:
+        return int(value)
 
     if FLOAT_RE.match(value) is not None:
         return float(value)
