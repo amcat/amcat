@@ -19,7 +19,9 @@
 
 
 from __future__ import unicode_literals, print_function, absolute_import
+from collections import namedtuple
 import logging
+import itertools
 
 log = logging.getLogger(__name__)
 import re
@@ -40,6 +42,41 @@ from amcat.tools.progress import NullMonitor
 def _clean(s):
     if s:
         return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', s)
+
+
+def _get_medium_ids(aggregation, group_by):
+    """Fetch all medium ids nested in given aggregation."""
+    ids = set()
+    if group_by.pop(0) == "mediumid":
+        ids = set(medium_id for medium_id, _ in aggregation)
+
+    if not group_by:
+        return ids
+
+    aggregations = [a.buckets for a in aggregation]
+    nested_ids = [_get_medium_ids(b, list(group_by)) for b in aggregations]
+    nested_ids = set(itertools.chain.from_iterable(nested_ids))
+    return ids | nested_ids
+
+
+def _get_mediums(aggregation, group_by, mediums):
+    ntuple = aggregation[0].__class__
+
+    if group_by.pop(0) == "mediumid":
+        aggregation = [(mediums.get(medium_id), aggr) for medium_id, aggr in aggregation]
+
+    if group_by:
+        aggregation = [(key, _get_mediums(aggr, list(group_by), mediums)) for key, aggr in aggregation]
+
+    return [ntuple(*aggr) for aggr in aggregation]
+
+
+def get_mediums(aggregation, group_by, only=("name",), select_related=None):
+    """Given an aggregation, replace all medium ids with Medium objects"""
+    from amcat.models import Medium
+    mediums = Medium.objects.only(only).select_related(select_related)
+    mediums = mediums.in_bulk(_get_medium_ids(aggregation, list(group_by)))
+    return _get_mediums(aggregation, group_by, mediums)
 
 
 def get_article_dict(art, sets=None):
@@ -432,39 +469,85 @@ class ES(object):
         result = self.es.count(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=body)
         return result["count"]
 
-    def aggregate_query(self, query=None, filters=None, group_by=None, date_interval='month'):
+    def _parse_aggregate(self, aggregate, group_by):
+        """Parse a aggregation result to (nested) namedtuples."""
+        group = group_by.pop(0)
+        buckets = aggregate[group]["buckets"]
+
+        if not group_by:
+            # Last step, extract values
+            result = [(b['key'], b['doc_count']) for b in buckets]
+        else:
+            result = [(b['key'], self._parse_aggregate(b, list(group_by))) for b in buckets]
+
+        # Parse timestamps as datetime objects
+        if group == "date":
+            result = [(get_date(stamp), aggr) for stamp, aggr in result]
+
+        # Return results as namedtuples
+        ntuple = namedtuple("Aggr", [group, "buckets" if group_by else "count"])
+        return [ntuple(*r) for r in result]
+
+    def _build_aggregate(self, group_by, date_interval):
+        """Build nested aggregation query for list of groups"""
+        group = group_by.pop(0)
+
+        if group == 'date':
+            aggregation = {
+                group: {
+                    'date_histogram': {
+                        'field': group,
+                        'interval': date_interval
+                    }
+                }
+            }
+        else:
+            aggregation = {
+                group: {
+                    'terms': {
+                        # Default size is too small, we want to return all results
+                        'size': 999999,
+                        'field': group
+                    }
+                }
+            }
+
+        # We need to nest the other aggregations, see:
+        # http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-aggregations.html
+        if group_by:
+            aggregation[group]["aggregations"] = self._build_aggregate(group_by, date_interval)
+
+        return aggregation
+
+    def aggregate_query(self, query=None, filters=None, group_by=None, date_interval='month', mediums=False):
         """
-        Compute an aggregate query, e.g. select count(*) where <filters> group by <group_by>
-        If date is used as a group_by variable, uses date_interval to bin it
-        Currently, group by must be a single field as elastic doesn't support multiple group by
+        Compute an aggregate query, e.g. select count(*) where <filters> group by <group_by>. If
+        date is used as a group_by variable, uses date_interval to bin it. It does support multiple
+        values for group_by.
+
+        @type group_by: list / tuple
+        @type mediums: bool
+        @param mediums: return Medium objects, instead of ids
         """
+        if isinstance(group_by, basestring):
+            log.warning("Passing strings to aggregate_query(group_by) is deprecated.")
+            group_by = [group_by]
 
         filters = dict(build_body(query, filters, query_as_filter=True))
-
-        if group_by == 'date':
-            group = {'date_histogram': {'field': group_by, 'interval': date_interval}}
-        else:
-            group = {'terms': {'size': 999999, 'field': group_by}}
+        aggregations = self._build_aggregate(list(group_by), date_interval)
 
         body = {
-            "query": {
-                "constant_score": filters
-            },
-            "facets": {
-                "group": group
-            }
+            "query": {"constant_score": filters},
+            "aggregations": aggregations
         }
 
         log.debug("es.search(body={body})".format(**locals()))
+        result = self.search(body)
+        result = self._parse_aggregate(result["aggregations"], list(group_by))
 
-        result = self.search(body, size=0)
-        if group_by == 'date':
-            for row in result['facets']['group']['entries']:
-                yield get_date(row['time']), row['count']
-
-        else:
-            for row in result['facets']['group']['terms']:
-                yield row['term'], row['count']
+        if mediums:
+            return get_mediums(result, group_by)
+        return result
 
     def statistics(self, query=None, filters=None):
         """Compute and return a Result object with n, start_date and end_date for the selection"""
