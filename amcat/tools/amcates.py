@@ -469,16 +469,29 @@ class ES(object):
         result = self.es.count(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=body)
         return result["count"]
 
-    def _parse_aggregate(self, aggregate, group_by):
+    def _parse_terms_aggregate(self, aggregate, group_by, terms):
+        if not group_by:
+            for term in terms:
+                yield term.label, aggregate[term.label]['doc_count']
+        else:
+            for term in terms:
+                yield term, self._parse_aggregate(aggregate[term.label], list(group_by), terms)
+
+    def _parse_other_aggregate(self, aggregate, group_by, group, terms):
+        buckets = aggregate[group]["buckets"]
+        if not group_by:
+            return [(b['key'], b['doc_count']) for b in buckets]
+        return [(b['key'], self._parse_aggregate(b, list(group_by), terms)) for b in buckets]
+
+
+    def _parse_aggregate(self, aggregate, group_by, terms):
         """Parse a aggregation result to (nested) namedtuples."""
         group = group_by.pop(0)
-        buckets = aggregate[group]["buckets"]
 
-        if not group_by:
-            # Last step, extract values
-            result = [(b['key'], b['doc_count']) for b in buckets]
+        if group == "terms":
+            result = list(self._parse_terms_aggregate(aggregate, group_by, terms))
         else:
-            result = [(b['key'], self._parse_aggregate(b, list(group_by))) for b in buckets]
+            result = list(self._parse_other_aggregate(aggregate, group_by, group, terms))
 
         # Parse timestamps as datetime objects
         if group == "date":
@@ -488,7 +501,7 @@ class ES(object):
         ntuple = namedtuple("Aggr", [group, "buckets" if group_by else "count"])
         return [ntuple(*r) for r in result]
 
-    def _build_aggregate(self, group_by, date_interval):
+    def _build_aggregate(self, group_by, date_interval, terms):
         """Build nested aggregation query for list of groups"""
         group = group_by.pop(0)
 
@@ -500,6 +513,12 @@ class ES(object):
                         'interval': date_interval
                     }
                 }
+            }
+        elif group == 'terms':
+            aggregation = {
+                term.label: {
+                    'filter': dict(build_body(term.query))
+                } for term in terms
             }
         else:
             aggregation = {
@@ -515,16 +534,23 @@ class ES(object):
         # We need to nest the other aggregations, see:
         # http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-aggregations.html
         if group_by:
-            aggregation[group]["aggregations"] = self._build_aggregate(group_by, date_interval)
+            nested = self._build_aggregate(group_by, date_interval, terms)
+            for aggr in aggregation.values():
+                aggr["aggregations"] = nested
 
         return aggregation
 
-    def aggregate_query(self, query=None, filters=None, group_by=None, date_interval='month', mediums=False):
+    def aggregate_query(self, query=None, filters=None, group_by=None, terms=None, date_interval='month', mediums=False):
         """
         Compute an aggregate query, e.g. select count(*) where <filters> group by <group_by>. If
         date is used as a group_by variable, uses date_interval to bin it. It does support multiple
         values for group_by.
 
+        You can group_by on terms by supplying "terms" to group_by. In addition, you will need to
+        supply terms as a parameter, which consists of a list of SearchQuery's. Query is then used
+        as a global filter, while terms are 'local'.
+
+        @param query: an elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
         @type group_by: list / tuple
         @type mediums: bool
         @param mediums: return Medium objects, instead of ids
@@ -534,7 +560,7 @@ class ES(object):
             group_by = [group_by]
 
         filters = dict(build_body(query, filters, query_as_filter=True))
-        aggregations = self._build_aggregate(list(group_by), date_interval)
+        aggregations = self._build_aggregate(list(group_by), date_interval, terms)
 
         body = {
             "query": {"constant_score": filters},
@@ -543,7 +569,7 @@ class ES(object):
 
         log.debug("es.search(body={body})".format(**locals()))
         result = self.search(body)
-        result = self._parse_aggregate(result["aggregations"], list(group_by))
+        result = self._parse_aggregate(result["aggregations"], list(group_by), terms)
 
         if mediums:
             return get_mediums(result, group_by)

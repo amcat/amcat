@@ -208,6 +208,9 @@ class SearchQuery(object):
 
         return SearchQuery(q.strip(), label=lbl.strip())
 
+    def __repr__(self):
+        return "SearchQuery(label=%s)" % self.label
+
 
 class QueryValidationError(ValidationError):
     # ugly hack inspired on https://github.com/django/django/commit/a8f4553aaecc7bc6775e0fd54f8c615c792b3d97
