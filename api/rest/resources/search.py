@@ -20,6 +20,7 @@
 from __future__ import unicode_literals, print_function, absolute_import
 
 import re
+import itertools
 
 from rest_framework.fields import DateField, CharField, IntegerField
 from rest_framework.serializers import Serializer
@@ -30,8 +31,12 @@ from api.rest.resources.amcatresource import AmCATResource
 from amcat.tools.caching import cached
 from amcat.models import Project, authorisation
 
-FILTER_FIELDS = "start_date","end_date","mediumid","ids","sets","section","page"
+
+# NOTE: Adding 'page' to filter fields introduces ambiguity (article-page vs. API page)
+FILTER_FIELDS = {"start_date", "end_date", "mediumid", "sets", "section"}
+FILTER_ID_FIELDS = {"ids", "pk"}
 RE_KWIC = re.compile("(?P<left>.*?)<em>(?P<keyword>.*?)</em>(?P<right>.*)", re.DOTALL)
+
 
 class LazyES(object):
     def __init__(self, user=None, queries=None, filters=None, fields=None, hits=False):
@@ -126,10 +131,12 @@ class KWICField(CharField):
             if m:
                 return m.groupdict()[self.kwic]
 
+
 class ScoreField(IntegerField):
     def field_to_native(self, obj, field_name):
         source = self.source or field_name
         return obj and obj.hits.get(source, 0)
+
 
 class SearchResource(AmCATResource):
 
@@ -160,9 +167,17 @@ class SearchResource(AmCATResource):
 
     def filter_queryset(self, queryset):
         params = self.request.QUERY_PARAMS
+
+        # Allow for both 'ids' and 'pk' filtering
+        ids = [params.getlist(field_name) for field_name in FILTER_ID_FIELDS]
+        ids = list(itertools.chain.from_iterable(ids))
+        if ids:
+            queryset.filter("ids", ids)
+
         for k in FILTER_FIELDS:
             if k in params:
                 queryset.filter(k, params.getlist(k))
+
         return queryset
 
     @classmethod
