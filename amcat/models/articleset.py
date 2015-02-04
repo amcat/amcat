@@ -84,7 +84,7 @@ class ArticleSet(AmcatModel):
         from amcat.tools.amcates import ES
         return ES().count(filters={"sets": self.id})
 
-    def add_articles(self, articles, add_to_index=True, monitor=NullMonitor()):
+    def add_articles(self, articles, add_to_index=True, monitor=ProgressMonitor()):
         """
         Add the given articles to this article set. Implementation is exists of three parts:
 
@@ -222,7 +222,7 @@ class ArticleSet(AmcatModel):
 
         if purge_orphans:
             amcates.ES().purge_orphans()
-            
+
         super(ArticleSet, self).delete() # cascade deletes all article references
 
 
@@ -339,4 +339,3 @@ class TestArticleSet(amcattest.AmCATTestCase):
         self.assertEqual(ES().count(filters={"sets": s2.id}), 4)
         self.assertRaises(elasticsearch.NotFoundError, ES().get, arts[0].id)
         self.assertEqual(ES().get(arts[6].id)['id'], arts[6].id)
-        

@@ -457,12 +457,12 @@ class ES(object):
         """
         for medium_id, count in self.aggregate_query(query, filters, group_by="mediumid"):
             yield medium_id
-            
+
     def list_dates(self, query=None, filters=None, interval="day"):
         agg = {"date_histogram": {"field": "date", "interval": interval}}
         for bucket in self.search_aggregate(agg, query=query, filters=filters)['buckets']:
             yield get_date(bucket['key'])
-            
+
 
     def in_index(self, ids):
         """
@@ -701,6 +701,20 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(len(list(r)), len(arts))
 
 
+    @amcattest.use_elastic
+    def test_add_to_set(self):
+        """Can we add articles to a set?"""
+        arts = [amcattest.create_test_article(create=True).id for _ in range(20)]
+
+        s1 = amcattest.create_test_set()
+        ES().flush()
+        self.assertEqual(set(ES().query_ids(filters={"sets": s1.id})), set())
+        ES().add_to_set(s1.id, arts[:1])
+        ES().flush()
+        self.assertEqual(set(ES().query_ids(filters={"sets": s1.id})), {arts[0]})
+        ES().add_to_set(s1.id, arts[:10])
+        ES().flush()
+        self.assertEqual(set(ES().query_ids(filters={"sets": s1.id})), set(arts[:10]))
 
 
     @amcattest.use_elastic
@@ -721,6 +735,10 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
         # MEDIUM FILTER
         self.assertEqual(q(mediumid=m2.id), {b.id, c.id})
+
+        # SET FILTER
+        self.assertEqual(q(sets=s1.id), {a.id, b.id, c.id})
+        self.assertEqual(q(sets=s2.id), {a.id, b.id})
 
         #### DATE FILTERS
         self.assertEqual(q(sets=s1.id, start_date='2001-06-01'), {b.id, c.id})
