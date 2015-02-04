@@ -94,12 +94,8 @@ HIGHLIGHT_OPTIONS = {
     }
 }
 
-LEAD_SCRIPT_FIELD = {
-    "lead": {
-        'lang': 'python',
-        "script": r'_source["text"].replace("\r", "").split("\n\n")[0]'
-    }
-}
+LEAD_SCRIPT = r'if (_source["text"]) _source["text"].replace("\r", "").split("\n\n")[0]'
+LEAD_SCRIPT_FIELD = {"lead": {"script": LEAD_SCRIPT}}
 
 UPDATE_SCRIPT_REMOVE_FROM_SET = ("s=ctx._source; "
                                  "if (s.sets) {s.sets -= set}")
@@ -965,3 +961,18 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(1, len(q("byline:bob")))
         self.assertEqual(0, len(q("byline:eve")))
         self.assertEqual(1, len(q("bob")))
+
+    @amcattest.use_elastic
+    def test_lead(self):
+        def _test(lead, text):
+            a = amcattest.create_test_article(headline="test", text=text)
+            s1 = amcattest.create_test_set(articles=[a])
+            ES().flush()
+            r = ES().query(filters={'sets': s1.id}, lead=True)
+            self.assertEqual(r.hits[0]['fields']['lead'], [lead])
+
+        lead = "Dit is de lead van de text. Tweede zin."
+        _test(lead, text=lead + "\n\nEn nu komt de  volgende alinea. Die willen we dus niet")
+        _test(lead, text = lead + "\r\n\r\nEn nu komt de  volgende alinea. Die willen we dus niet")
+        _test(lead, text=lead)
+        _test(lead=None, text="")
