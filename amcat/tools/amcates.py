@@ -103,11 +103,9 @@ LEAD_SCRIPT_FIELD = {
 
 UPDATE_SCRIPT_REMOVE_FROM_SET = 'ctx._source.sets = ($ in ctx._source.sets if $ != set)'
 
-UPDATE_SCRIPT_ADD_TO_SET = 'if (!(ctx._source.sets contains set)) {ctx._source.sets += set}'
-
-UPDATE_SCRIPT_ADD_TO_SET = ("if (ctx._source.sets == null) {ctx._source.sets = [set]} "
-                            "else { if (!(ctx._source.sets contains set)) {ctx._source.sets += set}}")
-
+UPDATE_SCRIPT_ADD_TO_SET = ("s=ctx._source; "
+                            "if (s.sets) {if (!set in s.sets) s.sets += set} "
+                            "else {s.sets = [set]}")
 
 class SearchResult(object):
     """Iterable collection of results that also has total"""
@@ -360,6 +358,8 @@ class ES(object):
                 yield payload
         body = ("\n".join(get_bulk_body(article_ids, payload))) + "\n"
         r = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
+        if r['errors']:
+            log.warning(r)
 
     def synchronize_articleset(self, aset, full_refresh=False):
         """
@@ -712,6 +712,11 @@ class TestAmcatES(amcattest.AmCATTestCase):
         ES().add_to_set(s1.id, arts[:1])
         ES().flush()
         self.assertEqual(set(ES().query_ids(filters={"sets": s1.id})), {arts[0]})
+        # check against double entry
+        ES().add_to_set(s1.id, arts[:1])
+        ES().add_to_set(s1.id, arts[:1])
+        ES().flush()
+        self.assertEqual(ES().get(arts[0])['sets'], [s1.id])
         ES().add_to_set(s1.id, arts[:10])
         ES().flush()
         self.assertEqual(set(ES().query_ids(filters={"sets": s1.id})), set(arts[:10]))
