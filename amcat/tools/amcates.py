@@ -101,10 +101,11 @@ LEAD_SCRIPT_FIELD = {
     }
 }
 
-UPDATE_SCRIPT_REMOVE_FROM_SET = 'ctx._source.sets = ($ in ctx._source.sets if $ != set)'
+UPDATE_SCRIPT_REMOVE_FROM_SET = ("s=ctx._source; "
+                                 "if (s.sets) {s.sets -= set}")
 
 UPDATE_SCRIPT_ADD_TO_SET = ("s=ctx._source; "
-                            "if (s.sets) {if (!set in s.sets) s.sets += set} "
+                            "if (s.sets) {if (!(set in s.sets)) s.sets += set} "
                             "else {s.sets = [set]}")
 
 class SearchResult(object):
@@ -703,10 +704,10 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
     @amcattest.use_elastic
     def test_add_to_set(self):
-        """Can we add articles to a set?"""
-        arts = [amcattest.create_test_article(create=True).id for _ in range(20)]
+        """Can we add and remove articles to a set?"""
+        arts = [amcattest.create_test_article(create=True, id=100+i).id for i in range(20)]
+        s1, s2 = [amcattest.create_test_set() for _ in range(2)]
 
-        s1 = amcattest.create_test_set()
         ES().flush()
         self.assertEqual(set(ES().query_ids(filters={"sets": s1.id})), set())
         ES().add_to_set(s1.id, arts[:1])
@@ -720,6 +721,33 @@ class TestAmcatES(amcattest.AmCATTestCase):
         ES().add_to_set(s1.id, arts[:10])
         ES().flush()
         self.assertEqual(set(ES().query_ids(filters={"sets": s1.id})), set(arts[:10]))
+
+        ES().remove_from_set(s1.id, arts[:5])
+        ES().flush()
+        self.assertEqual(set(ES().query_ids(filters={"sets": s1.id})), set(arts[5:10]))
+
+        # test delete from new article (ie without .sets)
+        ES().remove_from_set(s1.id, [arts[-1]])
+
+        # no error if we delete nonexistent as well?
+        ES().remove_from_set(s1.id, arts)
+        ES().flush()
+        self.assertEqual(set(ES().query_ids(filters={"sets": s1.id})), set())
+
+        # does adding to a second set work?
+        ES().add_to_set(s1.id, arts[:10])
+        ES().add_to_set(s2.id, arts[5:15])
+        ES().flush()
+        self.assertEqual(sorted(ES().query_ids(filters={"sets": s1.id})), arts[:10])
+        self.assertEqual(sorted(ES().query_ids(filters={"sets": s2.id})), arts[5:15])
+
+        # does removing from the first set leave the second in place?
+        ES().remove_from_set(s1.id, arts)
+        ES().flush()
+        self.assertEqual(sorted(ES().query_ids(filters={"sets": s1.id})), [])
+        self.assertEqual(sorted(ES().query_ids(filters={"sets": s2.id})), arts[5:15])
+
+
 
 
     @amcattest.use_elastic
@@ -761,7 +789,6 @@ class TestAmcatES(amcattest.AmCATTestCase):
         "Do query and query_ids work properly?"
         a = amcattest.create_test_article(headline="bla", text="artikel artikel een", date="2001-01-01")
         ES().flush()
-        print(list(ES().query("een", fields=["date", "headline"])))
         es_a, = ES().query("een", fields=["date", "headline"])
         self.assertEqual(es_a.headline, "bla")
         self.assertEqual(es_a.id, a.id)
