@@ -194,9 +194,9 @@ def handle_split(form, project, article, sentences):
 
     # We won't use bulk_create yet, as it bypasses save() and doesn't
     # insert ids
+    Article.create_articles(articles)
     for art in articles:
-        art.save()
-        sbd.create_sentences(art)
+        sbd.get_or_create_sentences(art)
 
     if not form.is_valid():
         raise ValueError("Form invalid: {form.errors}".format(**locals()))
@@ -480,7 +480,7 @@ class TestArticleViews(amcattest.AmCATTestCase):
 
         # Should return a "copy", with byline in "text" property
         arts = _get_articles(article, Sentence.objects.none())
-        map(lambda a : a.save(), arts)
+        Article.create_articles(arts)
 
         self.assertEquals(len(arts), 1)
         sbd.create_sentences(arts[0])
@@ -499,5 +499,3 @@ class TestArticleViews(amcattest.AmCATTestCase):
         # Check if text on splitted articles contains expected
         self.assertTrue("Einde" not in a.text)
         self.assertTrue("Einde" in b.text)
-
-

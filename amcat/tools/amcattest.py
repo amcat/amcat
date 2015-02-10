@@ -141,6 +141,7 @@ def create_test_article(create=True, articleset=None, check_duplicate=False, **k
     if "medium" not in kargs: kargs["medium"] = create_test_medium()
     if "id" not in kargs: kargs["id"] = _get_next_id()
     if 'headline' not in kargs: kargs['headline'] = 'test headline'
+    if 'text' not in kargs: kargs["text"] = "\n\n".join(map(str, range(5)))
 
     a = Article(**kargs)
     if create:
@@ -166,8 +167,9 @@ def create_test_set(articles=0, **kargs):
     if "id" not in kargs: kargs["id"] = _get_next_id()
     s = ArticleSet.objects.create(**kargs)
     if type(articles) == int:
-        articles = [create_test_article(create=False) for _x in range(articles)]
-        Article.create_articles(articles, articleset=s, check_duplicate=False, create_id=True)
+        if articles > 0:
+            articles = [create_test_article(create=False) for _x in range(articles)]
+            Article.create_articles(articles, articleset=s, check_duplicate=False, create_id=True)
     elif articles:
         s.add_articles(articles)
     return s
@@ -308,4 +310,3 @@ class TestRunner(DiscoverRunner):
         # Force runner to look for tests in all Python files. File must start with and
         # alphabetical character, as unittest breaks when trying to test __init__ files.
         super(TestRunner, self).__init__(pattern="[a-zA-Z][a-zA-Z0-9_]*.py", **kwargs)
-

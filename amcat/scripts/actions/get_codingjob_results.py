@@ -23,13 +23,16 @@ import datetime
 import logging
 
 from django import forms
+from django.forms import ModelChoiceField, BooleanField
 from django.utils.datastructures import MultiValueDict
 from django.db.models import Q
 
 from amcat.scripts.forms import ModelMultipleChoiceFieldWithIdLabel
-from amcat.models import CodingJob, CodingSchemaField, CodingSchema, Project
+from amcat.models import CodingJob, CodingSchemaField, CodingSchema, Project, Codebook, Language, CodedArticle
 from amcat.models import Article, Sentence
 from amcat.scripts.script import Script
+from amcat.tools.amcattest import create_test_coding
+from amcat.tools.sbd import get_or_create_sentences
 from amcat.tools.table import table3
 from amcat.scripts.output.csv_output import table_to_csv
 from amcat.tools.progress import NullMonitor
@@ -45,6 +48,16 @@ import base64
 from cStringIO import StringIO
 
 FIELD_LABEL = "{label} {schemafield.label}"
+
+AGGREGATABLE_FIELDS = {"medium"}
+
+_DateFormatField = collections.namedtuple("_DateFormatField", ["id", "label", "strftime"])
+
+DATE_FORMATS = (
+    _DateFormatField("yearweekw", "yearweek (monday start of week)", "%Y%W"),
+    _DateFormatField("yearweeku", "yearweek (sunday start of week)", "%Y%U"),
+    _DateFormatField("yearmonth", "yearmonth", "%Y%m"),
+)
 
 CODING_LEVEL_ARTICLE, CODING_LEVEL_SENTENCE, CODING_LEVEL_BOTH = range(3)
 CODING_LEVELS = [
@@ -116,6 +129,7 @@ class CodingJobResultsForm(CodingjobListForm):
     """
     include_duplicates = forms.BooleanField(initial=False, required=False)
     export_format = forms.ChoiceField(tuple((c.label, c.label) for c in EXPORT_FORMATS))
+    date_format = forms.CharField(initial="%Y-%m-%d %H-%M-%S", required=False)
 
     def __init__(self, data=None, files=None, **kwargs):
         """
@@ -138,7 +152,6 @@ class CodingJobResultsForm(CodingjobListForm):
 
         subsentences = CodingSchema.objects.filter(codingjobs_unit__in=codingjobs, subsentences=True).exists()
 
-
         # Add meta fields
         for field in _METAFIELDS:
             if field.object == "sentence" and export_level == CODING_LEVEL_ARTICLE: continue
@@ -150,6 +163,35 @@ class CodingJobResultsForm(CodingjobListForm):
         # Insert dynamic fields based on schemafields
         self.schemafields = _get_schemafields(codingjobs, export_level)
         self.fields.update(self.get_form_fields(self.schemafields))
+        self.fields.update(dict(self.get_aggregation_fields()))
+        self.fields.update(dict(self.get_date_fields()))
+
+    def get_date_fields(self):
+        # Add date format fields
+        for id, label, strftime in DATE_FORMATS:
+            form_field = BooleanField(initial=False, label="Include {}".format(label), required=False)
+            yield "meta_{}".format(id), form_field
+
+    def get_aggregation_fields(self):
+        prefix = "aggregation"
+        for field_name in AGGREGATABLE_FIELDS:
+            # Aggregate field
+            label = "Aggregate {field_name}, codebook".format(field_name=field_name)
+            cbs = self.project.get_codebooks().values_list("pk", flat=True)
+            form_field = ModelChoiceField(queryset=Codebook.objects.filter(pk__in=cbs),
+                                          label=label, required=False)
+            yield "{prefix}_{field_name}".format(**locals()), form_field
+
+            # Aggregate language field
+            label = "Aggregate {field_name}, language".format(field_name=field_name)
+            form_field = ModelChoiceField(queryset=Language.objects.all(), label=label, required=True, initial=Language.objects.all()[0].id)
+            yield "{prefix}_{field_name}_language".format(**locals()), form_field
+
+            # Aggregate leave empty
+            help_text = "If value is not found in codebook, leave field empty."
+            label = "Aggregate {field_name}, include not found".format(field_name=field_name)
+            form_field = BooleanField(initial=True, label=label, required=False, help_text=help_text)
+            yield "{prefix}_{field_name}_default".format(**locals()), form_field
 
     def get_form_fields(self, schemafields):
         """Returns a dict with all the fields needed to export this codingjob"""
@@ -172,8 +214,8 @@ class CodingJobResultsForm(CodingjobListForm):
         # Include field-specific form fields
         for id, field in schemafield.serialiser.get_export_fields():
             field.label = FIELD_LABEL.format(label="Export " + field.label, **locals())
-            id = "{prefix}_{id}".format(**locals())
-            yield id, field
+            yield "{prefix}_{id}".format(**locals()), field
+
 
 
 def _get_field_prefix(schemafield):
@@ -225,11 +267,14 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
     for i, job in enumerate(jobs):
         # Get all codings in dicts for later lookup
         coded_articles = set()
-        article_codings = {}  # {ca : coding}
-        sentence_codings = collections.defaultdict(
-            lambda: collections.defaultdict(list))  # {ca : {sentence_id : [codings]}}
 
-        for ca in job.coded_articles.order_by('id').prefetch_related("codings"):
+        # {ca: coding}
+        article_codings = {}
+
+        # {ca: {sentence_id : [codings]}}
+        sentence_codings = collections.defaultdict(lambda: collections.defaultdict(list))
+
+        for ca in job.coded_articles.order_by('id').prefetch_related("codings__values"):
             coded_articles.add(ca)
             for c in ca.codings.all():
                 if c.sentence_id is None:
@@ -237,6 +282,7 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
                         article_codings[ca.id] = c
                 else:
                     sentence_codings[ca.id][c.sentence_id].append(c)
+
         # output the rows for this job
         for ca in coded_articles:
             a = job_articles[ca.article_id]
@@ -245,6 +291,7 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
 
             article_coding = article_codings.get(ca.id)
             sentence_ids = sentence_codings[ca.id]
+
             if include_sentences and sentence_ids:
                 seen_articles.add(a)
                 for sid in sentence_ids:
@@ -288,8 +335,44 @@ class MetaColumn(table3.ObjectColumn):
 
     def getCell(self, row):
         obj = getattr(row, self.field.object)
-        if obj:
+        if obj is not None:
             return unicode(getattr(obj, self.field.attr))
+
+
+class MappingMetaColumn(MetaColumn):
+    """
+    Mapping meta columns are meta columns, which subject their values to a mapping. Depending on
+    the options given, a value might be left out if not found in the mapping or left alone.
+    """
+    def __init__(self, field, mapping, include_not_found=False):
+        """
+        @param field: metacolumn for superclass
+        @type field: _MetaColum
+
+        @param mapping: mapping values of superclass are subjected to
+        @type mapping: dict
+
+        @param include_not_found: if a value is not found in mapping, use value itself
+        @type include_not_found: bool
+        """
+        self.mapping = mapping
+        self.include_not_found = include_not_found
+        super(MappingMetaColumn, self).__init__(field)
+
+    def getCell(self, row):
+        value = super(MappingMetaColumn, self).getCell(row)
+        if value is None:
+            return value
+        return self.mapping.get(value, value if self.include_not_found else None)
+
+
+class DateColumn(table3.ObjectColumn):
+    def __init__(self, label, format):
+        self.format = format
+        super(DateColumn, self).__init__(label)
+
+    def getCell(self, row):
+        return row.article.date.strftime(self.format)
 
 
 class SubSentenceColumn(table3.ObjectColumn):
@@ -343,11 +426,33 @@ class GetCodingJobResults(Script):
             if self.options.get("meta_{field.object}_{field.attr}".format(**locals())):
                 if field.object == "subsentence":
                     table.addColumn(SubSentenceColumn(field))
+                elif field.attr == "date":
+                    table.addColumn(DateColumn(field.label, kargs["date_format"]))
                 else:
                     table.addColumn(MetaColumn(field))
 
+        # Date formatting (also belongs to meta)
+        for id, label, strftime in DATE_FORMATS:
+            if self.options.get("meta_{id}".format(id=id)):
+                table.addColumn(DateColumn(label, strftime))
+
+        for field_name in AGGREGATABLE_FIELDS:
+            codebook = self.options.get("aggregation_{field_name}".format(field_name=field_name))
+            language = self.options.get("aggregation_{field_name}_language".format(field_name=field_name))
+            not_found = self.options.get("aggregation_{field_name}_default".format(field_name=field_name))
+
+            if not codebook:
+                continue
+
+            codebook.cache_labels(language)
+            table.addColumn(MappingMetaColumn(
+                _MetaField("article", field_name, field_name + " aggregation"),
+                codebook.get_aggregation_mapping(language), not_found
+            ))
+
         # Build columns based on form schemafields
         for schemafield in self.bound_form.schemafields:
+            #print(schemafield)
             prefix = _get_field_prefix(schemafield)
             if self.options[prefix + "_included"]:
                 options = {k[len(prefix) + 1:]: v for (k, v) in self.options.iteritems() if k.startswith(prefix)}
@@ -368,13 +473,20 @@ class GetCodingJobResults(Script):
         if format.mimetype:
             if len(codingjobs) > 3:
                 codingjobs = codingjobs[:3] + ["etc"]
-            filename = "Codingjobs {j} {now}.{ext}".format(j=",".join(str(j) for j in codingjobs),
-                                                           now=datetime.datetime.now(), ext=format.label)
-            result = {"type": "download",
-                      "encoding": "base64",
-                      "content_type": format.mimetype,
-                      "filename": filename,
-                      "data": base64.b64encode(result)}
+
+            filename = "Codingjobs {jobs} {now}.{ext}".format(
+                jobs=",".join(str(j) for j in codingjobs),
+                now=datetime.datetime.now(), ext=format.label
+            )
+
+            result = {
+                "type": "download",
+                "encoding": "base64",
+                "content_type": format.mimetype,
+                "filename": filename,
+                "data": base64.b64encode(result)
+            }
+
         self.progress_monitor.update(5, "Results file ready")
 
         return result
@@ -555,6 +667,24 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         s = self._get_results_script([job], {f: {}}, export_format='xlsx')
         self.assertTrue(s.run())
 
+    def test_nqueries_sentence_codings(self):
+        aschema, acodebook, astrf, aintf, acodef = amcattest.create_test_schema_with_fields(isarticleschema=True)
+        sschema, scodebook, sstrf, sintf, scodef = amcattest.create_test_schema_with_fields(isarticleschema=False)
+        cjob = amcattest.create_test_job(10, articleschema=aschema, unitschema=sschema)
+
+        for article in cjob.articleset.articles.all():
+            coding = create_test_coding(codingjob=cjob, article=article)
+            coding.update_values({astrf: "blas", aintf: 20})
+            for sentence in get_or_create_sentences(article):
+                coding = create_test_coding(codingjob=cjob, article=article, sentence=sentence)
+                coding.update_values({sstrf: "bla", sintf: 10})
+
+        fields = {sstrf: {}, sintf: {}, astrf: {}, aintf: {}}
+        script = self._get_results_script([cjob], fields, export_level=CODING_LEVEL_BOTH)
+
+        with self.checkMaxQueries(9):
+            list(csv.reader(StringIO(script.run())))
+
     def test_nqueries(self):
         from amcat.tools import amcatlogging
 
@@ -582,13 +712,13 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         amcatlogging.debug_module('django.db.backends')
 
         script = self._get_results_script([job], {strf: {}, intf: {}})
-        with self.checkMaxQueries(8):
+        with self.checkMaxQueries(9):
             list(csv.reader(StringIO(script.run())))
 
         script = self._get_results_script([job], {strf: {}, intf: {}, codef: dict(ids=True)})
-        with self.checkMaxQueries(8):
+        with self.checkMaxQueries(9):
             list(csv.reader(StringIO(script.run())))
 
         script = self._get_results_script([job], {strf: {}, intf: {}, codef: dict(labels=True)})
-        with self.checkMaxQueries(8):
+        with self.checkMaxQueries(9):
             list(csv.reader(StringIO(script.run())))

@@ -248,7 +248,6 @@ amcat.datatables.truncate_row = function(row, limit){
 
     $.each($("td", row), function(i, cell){
         txt = $(cell).text();
-
 	// HACK: treat kwic 'left' context differently, better would be to specify this as an option/class somehow
 
 	th = $('table.datatable').find('th').eq($(cell).index());
@@ -489,6 +488,21 @@ amcat.datatables.fetch_needed_labels = function(callback, dummy){
     return fetching;
 };
 
+var entityMap = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': '&quot;',
+    "'": '&#39;',
+    "/": '&#x2F;'
+  };
+/* from http://stackoverflow.com/a/12034334, does js really not have an escape function??? */
+function escapeHtml(string) {
+    return String(string).replace(/[&<>"'\/]/g, function (s) {
+	return entityMap[s];
+    });
+}
+
 /*
  * Handles new objects which are received. It tries to determine if all
  * labels are already available. If they are, it calls the correct funtions
@@ -528,7 +542,14 @@ amcat.datatables.table_objects_received = function(data, textStatus, jqXHR){
             amcat.datatables.put_labels(this, data.results, fieldname);
         }
     }
-
+    // Escape strings as needed
+    for (var row in data.results) {
+	for (var field in data.results[row]) {
+	    if (typeof data.results[row][field] == "string") {
+		data.results[row][field] = escapeHtml(data.results[row][field]);
+	    }
+	}
+    }
     this.callbacks[data.echo].fnCallback(data);
 };
 

@@ -33,6 +33,7 @@ from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
 from amcat.tools import amcates
 from amcat.models.authorisation import Role
 from amcat.models.medium import Medium
+from amcat.tools.toolkit import splitlist
 
 from django.db import models, transaction
 from django.db.utils import IntegrityError, DatabaseError
@@ -188,9 +189,6 @@ class Article(AmcatModel):
         if self._highlighted:
             raise ValueError("Cannot save a highlighted article.")
 
-        if self.length is None:
-            self.length = word_len(self.text) + word_len(self.headline) + word_len(self.byline)
-
         super(Article, self).save(*args, **kwargs)
 
 
@@ -229,6 +227,15 @@ class Article(AmcatModel):
         return "<Article %s: %r>" % (self.id, self.headline)
 
     @classmethod
+    def exists(cls, article_ids, batch_size=500):
+        """
+        Filters the given articleids to remove non-existing ids
+        """
+        for batch in splitlist(article_ids, itemsperbatch=batch_size):
+            for aid in Article.objects.filter(pk__in=batch).values_list("pk", flat=True):
+                yield aid
+
+    @classmethod
     def create_articles(cls, articles, articleset=None, check_duplicate=True, create_id=False):
         """
         Add the given articles to the database, the index, and the given set
@@ -245,7 +252,9 @@ class Article(AmcatModel):
         """
         # TODO: test parent logic (esp. together with hash/dupes)
         es = amcates.ES()
-
+        for a in articles:
+            if a.length is None:
+                a.length = word_len(a.text) + word_len(a.headline) + word_len(a.byline)
         # existing / duplicate article ids to add to set
         add_to_set = set()
         # add dict (+hash) as property on articles so we know who is who
@@ -261,7 +270,7 @@ class Article(AmcatModel):
 
         if check_duplicate:
             hashes = [a.es_dict['hash'] for a in todo]
-            results = es.query(filters={'hashes': hashes}, fields=["hash", "sets"], score=False)
+            results = es.query_all(filters={'hashes': hashes}, fields=["hash", "sets"], score=False)
             dupes = {r.hash: r for r in results}
         else:
             dupes = {}
@@ -273,13 +282,14 @@ class Article(AmcatModel):
         errors = []  # return errors
         for a in todo:
             dupe = dupes.get(a.es_dict['hash'], None)
-            if dupe:
-                a.duplicate_of = dupe.id
+            a.duplicate = bool(dupe)
+            if a.duplicate:
+                a.id = dupe.id
                 if articleset and not (dupe.sets and articleset.id in dupe.sets):
                     add_to_set.add(dupe.id)
             else:
                 if a.parent:
-                    a.parent_id = a.parent.duplicate_of if hasattr(a.parent, 'duplicate_of') else a.parent.id
+                    a.parent_id = a.parent.id
                 sid = transaction.savepoint()
                 try:
                     sid = transaction.savepoint()
@@ -340,11 +350,12 @@ class Article(AmcatModel):
         @rtype: ArticleTree
         """
         # Do we need to render the complete tree?
-        if include_parents and self.parent:
+        if include_parents and self.parent and self.parent.id != self.id:
             return self.parent.get_tree(include_parents=True)
 
         children = self.children.order_by("id").only(*fields)
-        return ArticleTree(self, [c.get_tree(include_parents=False) for c in children])
+        return ArticleTree(self, [c.get_tree(include_parents=False) for c in children
+                                  if c.id != self.id])
 
 
 ###########################################################################
@@ -432,8 +443,8 @@ class TestArticle(amcattest.AmCATTestCase):
 
         # duplicate articles should not be added
         a2 = amcattest.create_test_article(check_duplicate=True, **art)
-        self.assertFalse(Article.objects.filter(pk=a2.id).exists())
-        self.assertEqual(a2.duplicate_of, a1.id)
+        self.assertEqual(a2.id, a1.id)
+        self.assertTrue(a2.duplicate)
         self.assertEqual(q(mediumid=art['medium']), {a1.id})
 
         # however, if an articleset is given the 'existing' article
@@ -441,8 +452,7 @@ class TestArticle(amcattest.AmCATTestCase):
         s1 = amcattest.create_test_set()
         a3 = amcattest.create_test_article(check_duplicate=True, articleset=s1, **art)
 
-        self.assertFalse(Article.objects.filter(pk=a2.id).exists())
-        self.assertEqual(a3.duplicate_of, a1.id)
+        self.assertEqual(a3.id, a1.id)
         self.assertEqual(q(mediumid=art['medium']), {a1.id})
         self.assertEqual(set(s1.get_article_ids()), {a1.id})
         self.assertEqual(q(sets=s1.id), {a1.id})
@@ -450,7 +460,7 @@ class TestArticle(amcattest.AmCATTestCase):
         # can we suppress duplicate checking?
         a4 = amcattest.create_test_article(check_duplicate=False, **art)
         self.assertTrue(Article.objects.filter(pk=a4.id).exists())
-        self.assertFalse(hasattr(a4, 'duplicate_of'))
+        self.assertFalse(a4.duplicate)
         self.assertIn(a4.id, q(mediumid=art['medium']))
 
 

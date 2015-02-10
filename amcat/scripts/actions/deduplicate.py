@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# ##########################################################################
+###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -19,9 +19,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-import logging;
-
-log = logging.getLogger(__name__)
+import logging; log = logging.getLogger(__name__)
 
 import collections
 import itertools
@@ -32,18 +30,21 @@ from django.core.exceptions import ValidationError
 from amcat.scripts.script import Script
 
 from amcat.models import ArticleSet
+from amcat.tools.amcates import ES
 
-try:
-    import Levenshtein
-except ImportError:
-    Levenshtein = None
-    log.error("Levenshtein module not installed. Deduplicate cannot be used.")
-
+import Levenshtein
 
 class Deduplicate(Script):
     """
-    Deduplicate articles using two articlesets. For all duplicated articles
-    the articles in set 2 will be removed. 
+    Deduplicate articles using two articlesets. For all duplicated articles the articles in
+    set 2 will be removed. If you want to deduplicate one articleset, use it as both
+    articleset 1 and articleset 2 and make sure to *uncheck* 'delete same'. Dry run invokes
+    a test run which doesn't touch any data.
+
+    Differences are calculated using [Levenshtein distances](https://en.wikipedia.org/wiki/Levenshtein_distance).
+    A very simple algorithm based on article length is used to narrow the datasets Levenshtein
+    has to consider. This speeds up the process significantly, but might incur some inaccuracy. To
+    disable this bahaviour use 'skip simple'.
     """
 
     def __init__(self, *args, **kwargs):
@@ -52,29 +53,27 @@ class Deduplicate(Script):
         self._articles_cache = None
 
     class options_form(forms.Form):
-        articleset_1 = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
-        articleset_2 = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
+        articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
+
+        ignore_medium = forms.BooleanField(initial=False, required=False)
+        ignore_page = forms.BooleanField(initial=False, required=False)
+        ignore_text = forms.BooleanField(initial=False, required=False)
+        ignore_section = forms.BooleanField(initial=False, required=False)
+        ignore_headline = forms.BooleanField(initial=False, required=False)
+        ignore_byline = forms.BooleanField(initial=False, required=False)
+        ignore_date = forms.BooleanField(initial=False, required=False)
+        text_ratio = forms.IntegerField(required=False, initial=0, min_value=0, max_value=100,
+                                        help_text="Percentage of (fuzzy) text overlap to be considered duplicate, e.g. 80")
+        headline_ratio = forms.IntegerField(required=False, initial=0, min_value=0, max_value=100,
+                                            help_text="Percentage of (fuzzy) headline overlap to be considered duplicate, e.g. 99")
+
         dry_run = forms.BooleanField(initial=False, required=False)
-        text_ratio = forms.IntegerField(initial=99, help_text="Match articles which text match ..%%")
-        headline_ratio = forms.IntegerField(initial=80, help_text="Compare articles which headlines match ..%%")
-        delete_same = forms.BooleanField(initial=False, required=False, help_text="Remove articles with same id's")
-        skip_simple = forms.BooleanField(initial=False, required=False,
-                                         help_text="Do not use an approximation of levenhstein ratio")
+        skip_simple = forms.BooleanField(initial=False, required=False, help_text="Do not use an approximation of levenhstein ratio using article length (if using fuzzy text or headline")
 
-        def clean_ratio(self, ratio):
-            if not (0 <= self.cleaned_data[ratio] <= 100):
-                raise ValidationError("{}: give a percentage. For example: 20.".format(ratio))
-            return self.cleaned_data[ratio] / 100.0
-
-        def clean_text_ratio(self):
-            return self.clean_ratio("text_ratio")
-
-        def clean_headline_ratio(self):
-            return self.clean_ratio("headline_ratio")
 
     def get_matching(self, compare_with, article, ratio, prop):
         return (ca for ca in compare_with if Levenshtein.ratio(
-            getattr(article, prop), getattr(ca, prop)) >= ratio)
+                    getattr(article, prop), getattr(ca, prop)) >= ratio)
 
     def get_simple_levenhstein(self, articles, article, text_ratio):
         text_length = len(article.text)
@@ -98,7 +97,7 @@ class Deduplicate(Script):
         return self._articles_cache
 
     def _get_deduplicates(self, articleset_1, articleset_2, text_ratio, headline_ratio, skip_simple, delete_same):
-        log.info("Start deduplicating ({articleset_1}, {articleset_2})..".format(**locals()))
+        log.warn("Start deduplicating ({articleset_1}, {articleset_2})..".format(**locals()))
         all_articles = articleset_1.articles.only("id", "date", "medium", "text", "headline")
         n_articles = all_articles.count()
         articles = all_articles.order_by("medium", "date")
@@ -123,25 +122,154 @@ class Deduplicate(Script):
             if compare_with:
                 yield (article, compare_with)
 
-    def _run(self, dry_run, articleset_2, **kwargs):
-        duplicates = collections.defaultdict(list)
+    def is_fuzzy_dupe(self, a, b):
+        for field in 'headline', 'text':
+            ratio = self.options[field+'_ratio']
+            if ratio:
+                similarity =  Levenshtein.ratio(getattr(a, field), getattr(b, field))
+                if similarity < (ratio / 100.):
+                    return False
+        return True
+                
+    def fuzzy_dedup(self, arts):
+        """Do fuzzy deduplication on the given articles"""
+        arts = sorted(arts, key=lambda a:a.id)
+        while len(arts) > 1:
+            a = arts.pop(0)
+            dupes = [b for b in arts if self.is_fuzzy_dupe(a,b)]
+            if dupes:
+                arts = [a for a in arts if a not in dupes]
+                yield a, dupes
 
-        for art, dupes in self._get_deduplicates(articleset_2=articleset_2, **kwargs):
-            for dupe in dupes:
-                duplicates[art].append(dupe)
-
-        if not dry_run:
-            articleset_2.articles.through.objects.filter(articleset=articleset_2,
-                                                         article__in=itertools.chain.from_iterable(duplicates.values())
-            ).delete()
+    def get_fields(self, ignore_fuzzy=False):
+        """
+        Get the fields to retrieve/compare on.
+        If ignore_fuzzy, ignore text if text_ratio is given
+        """
+        all_fields = ['medium', 'page', 'date', 'section', 'headline', 'byline', 'text']
+        if not (any(self.options['ignore_'+f] for f in all_fields) or
+                (ignore_fuzzy and any(self.options.get(f+'_ratio') for f in all_fields))):
+            yield 'hash'
         else:
-            pprint.pprint(dict(duplicates))
+            for f in all_fields:
+                if self.options['ignore_'+f]: continue
+                if ignore_fuzzy and self.options.get(f+'_ratio'): continue
+                yield f
 
-        return duplicates
+    def get_duplicates(self, date):
+        fields = list(self.get_fields())
+        compare_fields = list(self.get_fields(ignore_fuzzy=True))
 
+        dupes = collections.defaultdict(set)
+        for a in ES().query_all(filters={"sets": self.options['articleset'],
+                                         "on_date": date}, fields=fields):
+            key = tuple(getattr(a, f) for f in compare_fields)
+            dupes[key].add(a)
+
+        for arts in dupes.values():
+            if len(arts) > 1:
+                if self.options['headline_ratio'] or self.options['text_ratio']:
+                    for a, arts in self.fuzzy_dedup(arts):
+                        yield a.id, [b.id for b in arts]
+                else:
+                    aids = sorted(a.id for a in arts)
+                    yield aids[0], aids[1:]
+                
+    def _run(self, articleset, dry_run, **kwargs):
+        all_dupes = {}
+        log.debug("Deduplicating {articleset.id}".format(**locals()))
+        for date in ES().list_dates(filters={"sets": articleset}):
+            log.debug("Getting duplicates for {date}".format(**locals()))
+            dupes = dict(self.get_duplicates(date))
+            if dupes:
+                all_dupes.update(dupes)
+                todelete = list(itertools.chain(*dupes.values()))
+                if not dry_run:
+                    articleset.remove_articles(todelete)
+        log.debug("Deleted dupes for {} articles".format(len(all_dupes)))
+        return all_dupes
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
-
     cli.run_cli()
 
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+class TestDedup(amcattest.AmCATTestCase):
+    def do_test(self, articles, **options):
+        s = amcattest.create_test_set(articles=articles)
+        ES().flush()
+        Deduplicate(articleset=s.id, **options).run()
+        ES().flush()
+        return set(s.articles.values_list("pk", flat=True))
+
+
+    def test_fields(self):
+        s = amcattest.create_test_set()
+        self.assertEqual(set(Deduplicate(articleset=s.id).get_fields()), {'hash'})
+        self.assertEqual(set(Deduplicate(articleset=s.id, ignore_medium=True).get_fields()),
+                         {'text', 'headline', 'byline', 'section', 'page', 'date'})
+        self.assertEqual(set(Deduplicate(articleset=s.id, headline_ratio=50).get_fields()),
+                         {'hash'})
+        self.assertEqual(set(Deduplicate(articleset=s.id, headline_ratio=50, ignore_medium=True)
+                             .get_fields()),
+                         {'text', 'headline', 'byline', 'section', 'page', 'date'})
+
+        self.assertEqual(set(Deduplicate(articleset=s.id, headline_ratio=50)
+                             .get_fields(ignore_fuzzy=True)),
+                         {'text', 'medium', 'byline', 'section', 'page', 'date'})
+        self.assertEqual(set(Deduplicate(articleset=s.id, headline_ratio=50, ignore_medium=True)
+                             .get_fields(ignore_fuzzy=True)),
+                         {'text', 'byline', 'section', 'page', 'date'})
+
+
+    @amcattest.use_elastic
+    def test_dedup(self):
+        s = amcattest.create_test_set()
+        m1, m2 = [amcattest.create_test_medium() for _x in range(2)]
+        arts = [
+            amcattest.create_test_article(articleset=s, medium=m1, pagenr=1, id=1),
+            amcattest.create_test_article(articleset=s, medium=m1, pagenr=2, id=2),
+            amcattest.create_test_article(articleset=s, medium=m2, pagenr=1, id=3),
+            amcattest.create_test_article(articleset=s, medium=m2, pagenr=2, id=4),
+            amcattest.create_test_article(articleset=s, medium=m2, pagenr=2, id=5)
+            ]
+        self.assertEqual(self.do_test(arts), {1,2,3,4})
+        self.assertEqual(self.do_test(arts, dry_run=True), {1,2,3,4,5})
+        self.assertEqual(self.do_test(arts, ignore_medium=True), {1,2})
+        self.assertEqual(self.do_test(arts, ignore_page=True), {1,3})
+
+    @amcattest.use_elastic
+    def test_date(self):
+        s = amcattest.create_test_set()
+        m = amcattest.create_test_medium()
+        arts = [
+            amcattest.create_test_article(id=1, articleset=s, medium=m, date="2001-01-01"),
+            amcattest.create_test_article(id=2, articleset=s, medium=m, date="2001-01-01 02:00"),
+            amcattest.create_test_article(id=3, articleset=s, medium=m, date="2001-01-02"),
+            ]
+        aids = [a.id for a in arts]
+
+        self.assertEqual(self.do_test(arts), {1,2,3})
+        self.assertEqual(self.do_test(arts, ignore_date=True), {1,3})
+
+    @amcattest.use_elastic
+    def test_fuzzy(self):
+        s = amcattest.create_test_set()
+        m = amcattest.create_test_medium()
+        arts = [
+            amcattest.create_test_article(id=1, articleset=s, medium=m, headline="Dit is een test"),
+            amcattest.create_test_article(id=2, articleset=s, medium=m, headline="Dit is ook een test"),
+            amcattest.create_test_article(id=3, articleset=s, medium=m, headline="Dit is ook een tesdt"),
+            amcattest.create_test_article(id=4, articleset=s, medium=m, headline="Is dit een test?"),
+
+            ]
+        self.assertEqual(self.do_test(arts, ignore_medium=True), {1,2,3,4})
+        self.assertEqual(self.do_test(arts, ignore_medium=True, headline_ratio=90), {1,2,4})
+        self.assertEqual(self.do_test(arts, ignore_medium=True, headline_ratio=80), {1,4})
+        self.assertEqual(self.do_test(arts, ignore_medium=True, headline_ratio=50), {1})

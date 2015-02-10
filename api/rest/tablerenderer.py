@@ -40,10 +40,16 @@ class TableRenderer(BaseRenderer):
         """
         raise NotImplementedError
 
+    def render_exception(self, data, context):
+        raise NotImplementedError
+        
     def render(self, data, media_type=None, renderer_context=None):
         """
         Renders serialized *data* into target format
         """
+        if 'response' in renderer_context and renderer_context['response'].exception:
+            return self.render_exception(data, renderer_context)
+            
         if data is None:
             return ''
         if 'results' in data:
@@ -155,6 +161,9 @@ class CSVRenderer(TableRenderer):
     def render_table(self, table):
         return table.to_csv()
 
+    def render_exception(self, data, context):
+        return data['detail']
+
 class CSVRendererWithUnderscores (CSVRenderer):
     level_sep = '_'
 
@@ -196,7 +205,7 @@ class XHTMLRenderer(TableRenderer):
         return result
 
 
-        
+
 EXPORTERS = [CSVRenderer, XLSXRenderer, SPSSRenderer, XHTMLRenderer]
 
 def set_response_content(response):

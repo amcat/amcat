@@ -19,10 +19,7 @@ from __future__ import absolute_import
 ###########################################################################
 
 from celery import Celery
-import settings.scraping_celery
 
 scraping_app = Celery('scraping')
-scraping_app.config_from_object(settings.scraping_celery)
+scraping_app.config_from_object('settings.scraping_celery')
 scraping_app.autodiscover_tasks(lambda : settings.base.INSTALLED_APPS)
-
-

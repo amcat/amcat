@@ -27,6 +27,8 @@ from navigator.views.article_views import *  # noqa
 from navigator.views.query import *  # noqa
 from navigator.views.project_views import *  # noqa
 from navigator.views.codebook_views import *  # noqa
+from navigator.views.clause_views import *  # noqa
+
 from navigator.views.task import TaskDetailsView, TaskListView, clean_ready, clean_stuck, uuid_redirect
 from navigator.views.user_views import *  # noqa
 from navigator.views.codingjob_views import *  # noqa
@@ -71,7 +73,7 @@ for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              ArticleSetArticleDetailsView, ProjectArticleDetailsView, ArticleRemoveFromSetView,
              ArticleSetUploadView,ArticleSetUploadListView,
              QueryView, ArticleSetSampleView, ArticleSetEditView,ArticleSetImportView,ArticleSetRefreshView,
-             ArticleSetDeleteView,ArticleSetUnlinkView,
+             ArticleSetDeleteView,ArticleSetUnlinkView,ArticleSetDeduplicateView,
              ArticleSplitView,
              CodebookListView, CodebookDetailsView, CodebookImportView, CodebookLinkView, ExportCodebook,
              CodebookUnlinkView, CodebookDeleteView, CodebookAddView,
@@ -84,7 +86,8 @@ for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              ProjectUserListView, ProjectUserAddView,
              ArticleRuleListView, ArticleRuleDetailsView,
              ProjectUserListView, ProjectUserAddView,
-             TaskDetailsView, TaskListView, MultipleArticleSetDestinationView
+             TaskDetailsView, TaskListView, MultipleArticleSetDestinationView,
+             ClauseView
              ]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',

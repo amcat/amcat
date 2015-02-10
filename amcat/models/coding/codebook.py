@@ -309,6 +309,33 @@ class Codebook(AmcatModel):
             for cid, pid in hierarchy.iteritems()
         )
 
+    def _get_aggregation_mapping(self, language):
+        for root in self.get_tree(get_labels=[language]):
+            for child in root.children:
+                yield (child.label, root.label)
+
+    def get_aggregation_mapping(self, language):
+        """Returns a mapping from label to label, to allow substantive analysis in codingjob
+        export options. That is, with the codebook:
+
+            A
+            - B
+            - C
+            D
+            - F
+
+        This function would result in a dictionary:
+
+            {B.label: A.label, C.label: A.label, F.label: D.label}
+
+        Only nodes which descend directly from the root nodes will be considerd.
+
+        Note: make sure labels are cached with cache_labels; this method will perform very
+        poorly without the cache ready.
+        """
+        if not self.cached: raise ValueError("Codebook not cached. Use .cache().")
+        return dict(self._get_aggregation_mapping(language))
+
     def get_code_ids(self, include_hidden=False, include_parents=False):
         """Returns a set of code_ids that are in this hierarchy
         @param include_hidden: if True, include codes hidden by *this* codebook
@@ -900,12 +927,31 @@ class TestCodebook(amcattest.AmCATTestCase):
         roots = [ti.code_id for ti in cb.get_tree()]
         self.assertEquals(roots, [code_a.id, code_c.id, code_b.id])
 
+    def test_get_aggregation_mapping(self):
+        a, b, c, d, e, f,g = [amcattest.create_test_code(label=l) for l in "abcdefg"]
+        language = a.labels.all()[0].language
 
-if __name__ == '__main__':
-    cb = get_codebook(-5001)
-    from amcat.tools.djangotoolkit import list_queries
+        # D: d
+        #    +e
+        #    +f
+        #    ++g
+        #    a
+        #    b
+        #    +c
+        D = amcattest.create_test_codebook(name="D")
+        D.add_code(d)
+        D.add_code(e, d)
+        D.add_code(f, d)
+        D.add_code(g, f)
+        D.add_code(a)
+        D.add_code(b)
+        D.add_code(c, b)
 
-    with list_queries(output=print, printtime=True):
-        set(cb.codes)
-    with list_queries(output=print, printtime=True):
-        set(cb.codes)
+        # Codebook not cached
+        self.assertRaises(ValueError, D.get_aggregation_mapping, language)
+        D.cache()
+
+        # Codebook cached
+        self.assertEqual({u'c': u'b', u'e': u'd', u'f': u'd'}, D.get_aggregation_mapping(language))
+
+

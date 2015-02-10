@@ -284,8 +284,7 @@ class ProjectScriptView(BaseMixin, ScriptView):
 
     def get_context_data(self, **kwargs):
         context = super(ProjectScriptView, self).get_context_data(**kwargs)
-        context["script_doc"] = (self.script.__doc__
-                                 and self.script.__doc__.strip())
+        context["script_doc"] = (self.script.__doc__ and self.script.__doc__.replace("   ", ""))
         context["cancel_url"] = self.get_cancel_url()
         return context
 

@@ -29,9 +29,12 @@ from django.template import Context, Template
 from openpyxl import Workbook
 from openpyxl.writer.dump_worksheet import ExcelDumpWriter
 import re
+import datetime
 
 # Used in _get_value()
+INT_RE = re.compile('^[0-9]+$')
 FLOAT_RE = re.compile('^(\+|-)?[0-9]*\.[0-9]+$')
+DATE_RE = re.compile(r'^(\d{4})-(\d{2})-(\d{2}) (\d{2})-(\d{2})-(\d{2})$')
 
 
 class TableExporter:
@@ -52,7 +55,7 @@ class TableExporter:
 
     def export(self, table, stream=None, encoding="utf-8", **kargs):
         """
-        Export the table to the given stream. 
+        Export the table to the given stream.
         @return: str if stream is None, otherwise undefined
         """
         if hasattr(self, "to_stream"):
@@ -100,8 +103,15 @@ def _convert_value(value):
     if not isinstance(value, basestring):
         return value
 
+    if INT_RE.match(value) is not None:
+        return int(value)
+
     if FLOAT_RE.match(value) is not None:
         return float(value)
+
+    m = DATE_RE.match(value)
+    if m:
+        return datetime.datetime(*map(int, m.groups()))
 
     return value
 

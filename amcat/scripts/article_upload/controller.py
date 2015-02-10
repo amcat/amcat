@@ -60,7 +60,7 @@ class Controller(object):
 
         try:
             articles, errors = Article.create_articles(self.articles, scraper.articleset)
-            self.saved_article_ids = {getattr(a, "duplicate_of", a.id) for a in self.articles}
+            self.saved_article_ids = {a.id for a in self.articles}
             for e in errors:
                 self.errors.append(ScrapeError(None, None, e))
 

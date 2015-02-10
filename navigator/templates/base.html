@@ -2,6 +2,7 @@
 {% load misc %}
 {% load compress %}
 {% load staticfiles %}
+{% load markdown_deux_tags %}
 <!DOCTYPE html>
 <html>
   <head>
@@ -108,7 +109,7 @@
 	{% block notification %}
 	{% if notification %}
 	<div class="alert alert-success">
-	  {{ notification }}
+	  {{ notification|markdown }}
 	</div>
 	{% endif %}
 	{% endblock %}

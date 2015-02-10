@@ -1,8 +1,8 @@
-# ##########################################################################
-# (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
-# #
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
-# #
+#                                                                         #
 # AmCAT is free software: you can redistribute it and/or modify it under  #
 # the terms of the GNU Affero General Public License as published by the  #
 # Free Software Foundation, either version 3 of the License, or (at your  #
@@ -25,6 +25,8 @@ import itertools
 
 log = logging.getLogger(__name__)
 import re
+import requests
+import collections
 from datetime import datetime
 
 from hashlib import sha224 as hash_class
@@ -34,6 +36,7 @@ from amcat.tools import queryparser, toolkit
 from amcat.tools.toolkit import multidict, splitlist
 from elasticsearch import Elasticsearch
 from elasticsearch.client import indices, cluster
+from elasticsearch.helpers import scan
 from django.conf import settings
 from amcat.tools.caching import cached
 from amcat.tools.progress import NullMonitor
@@ -131,18 +134,15 @@ HIGHLIGHT_OPTIONS = {
     }
 }
 
-LEAD_SCRIPT_FIELD = {
-    "lead": {
-        'lang': 'python',
-        "script": r'_source["text"].replace("\r", "").split("\n\n")[0]'
-    }
-}
+LEAD_SCRIPT = r'if (_source["text"]) _source["text"].replace("\r", "").split("\n\n")[0]'
+LEAD_SCRIPT_FIELD = {"lead": {"script": LEAD_SCRIPT}}
 
-UPDATE_SCRIPT_REMOVE_FROM_SET = 'ctx._source.sets = ($ in ctx._source.sets if $ != set)'
-UPDATE_SCRIPT_ADD_TO_SET = 'if (!(ctx._source.sets contains set)) {ctx._source.sets += set}'
+UPDATE_SCRIPT_REMOVE_FROM_SET = ("s=ctx._source; "
+                                 "if (s.sets) {s.sets -= set}")
 
-UPDATE_SCRIPT_ADD_TO_SET = ("if (ctx._source.sets == null) {ctx._source.sets = [set]} "
-                            "else { if (!(ctx._source.sets contains set)) {ctx._source.sets += set}}")
+UPDATE_SCRIPT_ADD_TO_SET = ("s=ctx._source; "
+                            "if (s.sets) {if (!(set in s.sets)) s.sets += set} "
+                            "else {s.sets = [set]}")
 
 
 class SearchResult(object):
@@ -202,6 +202,19 @@ class Result(object):
                 result.date = datetime.strptime(result.date[:19], '%Y-%m-%dT%H:%M:%S')
         return result
 
+    @classmethod
+    def from_stats(cls, stats, date=False, **kargs):
+        """Create a Result object from an ES statistics dict {u'count': 0, u'max': ...}"""
+        result = Result(**kargs)
+        result.count = stats['count']
+        if result.count == 0:
+            result.start_date, result.end_data = None, None
+        else:
+            f = get_date if date else int
+            result.min=f(stats['min'])
+            result.max=f(stats['max'])
+        return result
+
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
@@ -212,9 +225,9 @@ class Result(object):
 
 
 class ES(object):
-    def __init__(self, index=None, doc_type=None, **args):
-        elhost = {"host": settings.ES_HOST, "port": settings.ES_PORT}
-        self.es = Elasticsearch(hosts=[elhost, ], **args)
+    def __init__(self, index=None, doc_type=None, timeout=60, **args):
+        elhost = {"host":settings.ES_HOST, "port":settings.ES_PORT}
+        self.es = Elasticsearch(hosts=[elhost, ], timeout=timeout, **args)
         self.index = settings.ES_INDEX if index is None else index
         self.doc_type = settings.ES_ARTICLE_DOCTYPE if doc_type is None else doc_type
 
@@ -305,18 +318,9 @@ class ES(object):
         Note that query and filters can be combined in a single call
         """
         body = dict(build_body(query, filters, query_as_filter=True))
-        log.debug("Query_ids body={body!r}".format(**locals()))
-        options = dict(scroll="1m", size=1000, fields="")
-        options.update(kwargs)
-        res = self.search(body, search_type='scan', **options)
-        sid = res['_scroll_id']
-        while True:
-            res = self.es.scroll(scroll_id=sid, scroll="1m")
-            if not res['hits']['hits']:
-                break
-            for row in res['hits']['hits']:
-                yield int(row['_id'])
-            sid = res['_scroll_id']
+        for a in scan(self.es, query=body, index=self.index, doc_type=self.doc_type,
+                      size=1000, fields=""):
+            yield int(a['_id'])
 
     def query(self, query=None, filters={}, highlight=False, lead=False, fields=[], score=True, **kwargs):
         """
@@ -338,11 +342,8 @@ class ES(object):
                 body['highlight'] = highlight
             else:
                 body['highlight'] = HIGHLIGHT_OPTIONS
+        if lead: body['script_fields'] = LEAD_SCRIPT_FIELD
 
-        if lead:
-            body['script_fields'] = LEAD_SCRIPT_FIELD
-
-        log.debug("es.search(body={body}, **{kwargs})".format(**locals()))
         result = self.search(body, fields=fields, **kwargs)
         return SearchResult(result, fields, score, body)
 
@@ -351,7 +352,6 @@ class ES(object):
         size = kargs.setdefault('size', 10000)
         result = self.query(*args, **kargs)
         total = result.total
-
         for offset in range(size, total, size):
             kargs['from_'] = offset
             result2 = self.query(*args, **kargs)
@@ -390,8 +390,8 @@ class ES(object):
         batches = list(splitlist(article_ids, itemsperbatch=1000))
         nbatches = len(batches)
         for i, batch in enumerate(batches):
-            monitor.update(40 / nbatches, "Added batch {i}/{nbatches}".format(**locals()))
-            self.bulk_update(article_ids, UPDATE_SCRIPT_ADD_TO_SET, params={'set': setid})
+            monitor.update(40/nbatches, "Added batch {iplus}/{nbatches}".format(iplus=i+1, **locals()))
+            self.bulk_update(article_ids, UPDATE_SCRIPT_ADD_TO_SET, params={'set' : setid})
 
     def bulk_insert(self, dicts):
         """
@@ -420,7 +420,9 @@ class ES(object):
                 yield payload
 
         body = ("\n".join(get_bulk_body(article_ids, payload))) + "\n"
-        self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
+        r = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
+        if r['errors']:
+            log.warning(r)
 
     def synchronize_articleset(self, aset, full_refresh=False):
         """
@@ -476,6 +478,15 @@ class ES(object):
         else:
             for term in terms:
                 yield term, self._parse_aggregate(aggregate[term.label], list(group_by), terms)
+    def search_aggregate(self, aggregation, query=None, filters=None):
+        """
+        Run an aggregate search query and return the aggregation results
+        @param aggregation: raw elastic query, e.g. {"terms" : {"field" : "medium"}}
+        """
+        body = dict(query={"filtered": dict(build_body(query, filters, query_as_filter=True))},
+                    aggregations={"aggregation": aggregation})
+        result = self.search(body, size=0, search_type="count")
+        return result['aggregations']['aggregation']
 
     def _parse_other_aggregate(self, aggregate, group_by, group, terms):
         buckets = aggregate[group]["buckets"]
@@ -605,6 +616,12 @@ class ES(object):
         for medium_id, count in self.aggregate_query(query, filters, group_by="mediumid"):
             yield medium_id
 
+    def list_dates(self, query=None, filters=None, interval="day"):
+        agg = {"date_histogram": {"field": "date", "interval": interval}}
+        for bucket in self.search_aggregate(agg, query=query, filters=filters)['buckets']:
+            yield get_date(bucket['key'])
+
+
     def in_index(self, ids):
         """
         Check whether the given ids are already indexed.
@@ -662,6 +679,11 @@ class ES(object):
                 offset += len(token)
 
 
+    def purge_orphans(self):
+        """Remove all articles without set from the index"""
+        query =  {"query": {"constant_score": {"filter": {"missing": {"field": "sets"}}}}}
+        self.es.delete_by_query(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=query)
+
 def get_date(timestamp):
     d = datetime.fromtimestamp(timestamp / 1000)
     return datetime(d.year, d.month, d.day)
@@ -692,6 +714,8 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
     for singular, plural in [("mediumid", "mediumids"),
                              ("id", "ids"),
                              ("set", "sets"),
+                             ("section", "sections"),
+                             ("page", "pages"),
                              ("hash", "hashes")]:
         if plural in filters:
             if singular in filters:
@@ -706,11 +730,16 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
     if 'set' in f: yield dict(terms={'sets': _list(f['set'])})
     if 'mediumid' in f: yield dict(terms={'mediumid': _list(f['mediumid'])})
     if 'id' in f: yield dict(ids={'values': _list(f['id'])})
+    if 'section' in f: yield dict(terms={'section' : _list(f['section'])})
+    if 'page' in f: yield dict(terms={'page' : _list(f['page'])})
 
     date_range = {}
     if start_date: date_range['gte'] = parse_date(start_date)
     if end_date: date_range['lt'] = parse_date(end_date)
     if date_range: yield dict(range={'date': date_range})
+    if on_date: date_range={"gte": parse_date(on_date),
+                            "lt": parse_date(on_date)+"||+1d"}
+    if date_range: yield dict(range={'date' : date_range})
 
     if 'hash' in f:
         hashes = f['hash']
@@ -776,8 +805,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         unused = amcattest.create_test_article(text='aap noot mies', medium=m3, articleset=s2)
         a = amcattest.create_test_article(text='aap noot mies', medium=m1, date='2001-01-01', create=False)
         b = amcattest.create_test_article(text='noot mies wim zus', medium=m2, date='2001-02-01', create=False)
-        c = amcattest.create_test_article(text='mies bla bla bla wim zus jet', medium=m2, date='2002-01-01',
-                                          create=False)
+        c = amcattest.create_test_article(text='mies bla bla bla wim zus jet', medium=m2, date='2002-01-01', create=False)
         d = amcattest.create_test_article(text='noot mies wim zus', medium=m2, date='2001-02-03', create=False)
 
         Article.create_articles([a, b, c, d], articleset=s1, check_duplicate=False, create_id=True)
@@ -827,7 +855,6 @@ class TestAmcatES(amcattest.AmCATTestCase):
     def test_query_all(self):
         """Test that query_all works"""
         from amcat.models import Article
-
         arts = [amcattest.create_test_article(create=False) for _ in range(20)]
         s = amcattest.create_test_set()
         Article.create_articles(arts, articleset=s, check_duplicate=False, create_id=True)
