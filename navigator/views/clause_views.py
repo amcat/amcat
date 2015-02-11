@@ -1,5 +1,3 @@
-from saf.clause import *
-from saf.saf import SAF
 import json
 
 from django.views.generic.edit import FormView
@@ -38,6 +36,8 @@ class ClauseView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, FormVi
             return super(ClauseView, self).get(request, *args, **kwargs)
 
     def form_valid(self, form):
+        from saf.saf import SAF
+        from saf.clause import match_codes
         # Get parse
         sent = form.cleaned_data['sentence']
         parse = get_adhoc_result('clauses_en', sent)
