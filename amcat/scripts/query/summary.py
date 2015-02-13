@@ -23,7 +23,6 @@ from django.template.loader import get_template
 
 from amcat.forms.forms import order_fields
 from amcat.scripts.query import QueryAction, QueryActionForm
-from amcat.tools.aggregate import transpose, sort
 from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.toolkit import Timer
 

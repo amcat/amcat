@@ -19,8 +19,6 @@
 
 from datetime import datetime
 from amcat.tools import amcattest
-from amcat.tools.aggregate import transpose, to_table, aggregate_by_medium, aggregate_by_term, aggregate, set_labels, \
-    sort
 from amcat.tools.amcates import ES
 
 
@@ -138,23 +136,6 @@ class TestAggregate(amcattest.AmCATTestCase):
                       (datetime(2014, 1, 1, 0, 0), 1)))},
             set(aggregate_by_medium(None, filters={"sets": [aset.id]}, group_by="date", interval="year"))
         )
-
-    @amcattest.use_elastic
-    def test_get_table(self):
-        aset, m1, m2, a1, a2, a3, a4 = self.set_up()
-        m2 = a3.medium
-
-        aggr = list(aggregate_by_medium(
-            query=None, filters={"sets": [aset.id]},
-            group_by="date", interval="year"
-        ))
-
-        self.assertEqual([
-            ('', m1.id, m2.id),
-            (datetime(2014, 1, 1, 0, 0), 1, 1),
-            (datetime(2015, 1, 1, 0, 0), 1, 0),
-            (datetime(2000, 1, 1, 0, 0), 0, 1)
-        ], list(to_table(aggr)))
 
     def test_transpose(self):
         self.assertEqual(

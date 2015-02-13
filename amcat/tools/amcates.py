@@ -63,6 +63,9 @@ def _get_medium_ids(aggregation, group_by):
 
 
 def _get_mediums(aggregation, group_by, mediums):
+    if not aggregation:
+        return ()
+
     ntuple = aggregation[0].__class__
 
     if group_by.pop(0) == "mediumid":
@@ -74,10 +77,10 @@ def _get_mediums(aggregation, group_by, mediums):
     return [ntuple(*aggr) for aggr in aggregation]
 
 
-def get_mediums(aggregation, group_by, only=("name",), select_related=None):
+def get_mediums(aggregation, group_by, only=("name",), select_related=()):
     """Given an aggregation, replace all medium ids with Medium objects"""
     from amcat.models import Medium
-    mediums = Medium.objects.only(only).select_related(select_related)
+    mediums = Medium.objects.only(*only).select_related(*select_related)
     mediums = mediums.in_bulk(_get_medium_ids(aggregation, list(group_by)))
     return _get_mediums(aggregation, group_by, mediums)
 
@@ -471,13 +474,6 @@ class ES(object):
         result = self.es.count(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=body)
         return result["count"]
 
-    def _parse_terms_aggregate(self, aggregate, group_by, terms):
-        if not group_by:
-            for term in terms:
-                yield term.label, aggregate[term.label]['doc_count']
-        else:
-            for term in terms:
-                yield term, self._parse_aggregate(aggregate[term.label], list(group_by), terms)
     def search_aggregate(self, aggregation, query=None, filters=None):
         """
         Run an aggregate search query and return the aggregation results
@@ -488,12 +484,19 @@ class ES(object):
         result = self.search(body, size=0, search_type="count")
         return result['aggregations']['aggregation']
 
+    def _parse_terms_aggregate(self, aggregate, group_by, terms):
+        if not group_by:
+            for term in terms:
+                yield term, aggregate[term.label]['doc_count']
+        else:
+            for term in terms:
+                yield term, self._parse_aggregate(aggregate[term.label], list(group_by), terms)
+
     def _parse_other_aggregate(self, aggregate, group_by, group, terms):
         buckets = aggregate[group]["buckets"]
         if not group_by:
             return [(b['key'], b['doc_count']) for b in buckets]
         return [(b['key'], self._parse_aggregate(b, list(group_by), terms)) for b in buckets]
-
 
     def _parse_aggregate(self, aggregate, group_by, terms):
         """Parse a aggregation result to (nested) namedtuples."""

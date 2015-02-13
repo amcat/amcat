@@ -23,20 +23,24 @@ from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.forms import ChoiceField, CharField
 from amcat.models import Medium
 from amcat.scripts.query import QueryAction, QueryActionForm
-from amcat.tools.aggregate import sort, transpose, set_labels, make_relative
 from amcat.tools.djangotoolkit import parse_date
-from amcat.tools.keywordsearch import SelectionSearch
+from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
 
 AXES = tuple((c, c.title()) for c in ("date", "medium", "total", "term"))
 INTERVALS = tuple((c, c.title()) for c in ("day", "week", "month", "quarter", "year"))
 TRANSPOSE = {"text/json+aggregation+graph"}
 
 
-class DatetimeEncoder(json.JSONEncoder):
+class AggregationEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime):
             return int(mktime(obj.timetuple())) * 1000
-        return super(DatetimeEncoder, self).default(obj)
+        if isinstance(obj, Medium):
+            return {"id": obj.id, "label": obj.name}
+        if isinstance(obj, SearchQuery):
+            return {"id": obj.label, "label": obj.query}
+            pass
+        return super(AggregationEncoder, self).default(obj)
 
 
 MEDIUM_ERR = "Could not find medium with id={column} or name={column}"
@@ -128,20 +132,10 @@ class AggregationAction(QueryAction):
         #
         self.monitor.update(20, "Calculating relative values..".format(**locals()))
         column = form.cleaned_data['relative_to']
-        print(aggregation)
-        if column is not None:
-            aggregation = list(make_relative(aggregation, column))
 
-        # Convert id values to dicts -> {id: x, label: y}
-        self.monitor.update(30, "Setting labels..".format(**locals()))
-        aggregation = set_labels(
-            aggregation, selection.get_queries(),
-            form.cleaned_data['x_axis'], form.cleaned_data['y_axis'],
-        )
-
-        if form.cleaned_data["output_type"] in TRANSPOSE:
-            aggregation = transpose(aggregation)
+        #if column is not None:
+        #    aggregation = list(make_relative(aggregation, column))
 
         self.monitor.update(60, "Serialising..".format(**locals()))
-        return json.dumps(list(sort(aggregation)), cls=DatetimeEncoder, check_circular=False)
+        return json.dumps(list(aggregation), cls=AggregationEncoder, check_circular=False)
 

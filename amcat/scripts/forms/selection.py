@@ -21,7 +21,6 @@
 from itertools import ifilterfalse
 import datetime
 import logging
-from operator import itemgetter
 
 from django import forms
 from django.core.exceptions import ValidationError

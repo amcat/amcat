@@ -29,7 +29,6 @@ import re
 
 from django.core.exceptions import ValidationError
 from dateutil.relativedelta import relativedelta
-from amcat.tools.aggregate import aggregate
 
 from amcat.tools.amcates import ES
 from amcat.tools.caching import cached
@@ -40,6 +39,8 @@ from amcat.tools.toolkit import stripAccents
 REFERENCE_RE = re.compile(r"<(?P<reference>.*?)(?P<recursive>\+?)>")
 
 log = logging.getLogger(__name__)
+
+FIELD_MAP = {"medium": "mediumid", "term": "terms"}
 
 
 class SelectionData:
@@ -130,10 +131,16 @@ class SelectionSearch:
         return Medium.objects.filter(id__in=self.get_medium_ids())
 
     def get_aggregate(self, x_axis, y_axis, interval="month"):
-        return aggregate(
-            query=self.get_query(), queries=self.get_queries(),
-            filters=self.get_filters(), x_axis=x_axis, y_axis=y_axis,
-            interval=interval
+        x_axis = FIELD_MAP.get(x_axis, x_axis)
+        y_axis = FIELD_MAP.get(y_axis, y_axis)
+
+        print(x_axis, y_axis)
+        query = None if "term" in (x_axis, y_axis) else self.get_query()
+
+        return ES().aggregate_query(
+            query=query, terms=self.get_queries(),
+            filters=self.get_filters(), group_by=[x_axis, y_axis],
+            date_interval=interval, mediums=True
         )
 
     def get_medium_ids(self):
