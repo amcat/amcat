@@ -57,13 +57,10 @@ class SummaryAction(QueryAction):
             articles = selection.get_articles(size=size, offset=offset)
             self.monitor.update(69, "Aggregating..".format(**locals()))
             date_aggr = selection.get_aggregate(x_axis="date", y_axis="total", interval="day")
-            medium_aggr = selection.get_aggregate(x_axis="date", y_axis="medium", interval="day")
+            medium_aggr = selection.get_aggregate(x_axis="medium", y_axis="date", interval="day")
             self.monitor.update(79, "Rendering results..".format(**locals()))
 
 
-        # Highcharts needs series -> (date, count), instead of
-        date_aggr = tuple(sort(date_aggr))[0][1]
-        medium_aggr = sort(transpose(medium_aggr))
 
         return TEMPLATE.render(Context(dict(locals(), **{
             "project": self.project, "user": self.user

@@ -134,11 +134,16 @@ class SelectionSearch:
         x_axis = FIELD_MAP.get(x_axis, x_axis)
         y_axis = FIELD_MAP.get(y_axis, y_axis)
 
+        if y_axis == "total":
+            group_by = [x_axis]
+        else:
+            group_by = [x_axis, y_axis]
+
         query = None if "term" in (x_axis, y_axis) else self.get_query()
 
         return ES().aggregate_query(
             query=query, terms=self.get_queries(),
-            filters=self.get_filters(), group_by=[x_axis, y_axis],
+            filters=self.get_filters(), group_by=group_by,
             date_interval=interval, mediums=True
         )
 

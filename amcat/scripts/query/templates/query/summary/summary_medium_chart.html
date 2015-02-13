@@ -23,10 +23,10 @@
         }
       },
       series: [
-        {% for serie, data in medium_aggr %}
+        {% for medium, data in medium_aggr %}
           {
             type: 'column',
-            name: {{ serie|jsonify }},
+            name: '{{ medium.name }}',
             data: [
               {% for date, count in data %}
                 [Date.UTC({{ date.year }}, {{ date.month }}, {{ date.day }}), {{ count }}],
