@@ -134,7 +134,6 @@ class SelectionSearch:
         x_axis = FIELD_MAP.get(x_axis, x_axis)
         y_axis = FIELD_MAP.get(y_axis, y_axis)
 
-        print(x_axis, y_axis)
         query = None if "term" in (x_axis, y_axis) else self.get_query()
 
         return ES().aggregate_query(
@@ -217,6 +216,9 @@ class SearchQuery(object):
 
     def __repr__(self):
         return "SearchQuery(label=%s)" % self.label
+
+    def __str__(self):
+        return self.label
 
 
 class QueryValidationError(ValidationError):

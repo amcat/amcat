@@ -23,12 +23,12 @@ log = logging.getLogger(__name__)
 
 def _get_pivot(row, column):
     for c, value in row:
-        if c == column:
+        if str(c) == column:
             return float(value)
     return 0.0
 
 
-def make_relative(aggregation, column):
+def get_relative(aggregation, column):
     # TODO: We should probably make aggregation an ordered dict of ordered
     # TODO: dicts, thus making this algorithm run more cheaply.
     pivots = (_get_pivot(row[1], column) for row in aggregation)

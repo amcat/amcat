@@ -23,6 +23,7 @@ from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.forms import ChoiceField, CharField
 from amcat.models import Medium
 from amcat.scripts.query import QueryAction, QueryActionForm
+from amcat.tools.aggregate import get_relative
 from amcat.tools.djangotoolkit import parse_date
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
 
@@ -133,8 +134,8 @@ class AggregationAction(QueryAction):
         self.monitor.update(20, "Calculating relative values..".format(**locals()))
         column = form.cleaned_data['relative_to']
 
-        #if column is not None:
-        #    aggregation = list(make_relative(aggregation, column))
+        if column is not None:
+            aggregation = list(get_relative(aggregation, column))
 
         self.monitor.update(60, "Serialising..".format(**locals()))
         return json.dumps(list(aggregation), cls=AggregationEncoder, check_circular=False)
