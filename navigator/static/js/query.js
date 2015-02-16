@@ -357,9 +357,26 @@ $((function(){
                     return {
                         type: 'column',
                         name: value_renderer[form_data["y_axis"]](serie[0]),
-                        data: serie[1]
+                        data: serie[1],
+                        obj: serie[0]
                     }
-                })
+                }),
+                plotOptions: {
+                    series: {
+                        events:{
+                            click: function(event){
+                                var x_type = form_data["x_axis"];
+                                var y_type = form_data["y_axis"];
+
+                                var filters = {};
+                                filters[y_type] = event.point.series.options.obj;
+                                filters[x_type] = event.point.x;
+
+                                articles_popup(filters);
+                            }
+                        }
+                    }
+                }
             };
 
             // We need category labels if x_axis is not of type datetime
@@ -368,8 +385,9 @@ $((function(){
                 chart.xAxis.categories = $.map(Aggregation(data).getColumns(), renderer);
             }
 
-            // Show render warning
             container.highcharts(chart);
+
+            // Show render warning
             var context_menu = $("g.highcharts-button > title:contains('context')", container).parent();
             var close = false;
             var notification = {
