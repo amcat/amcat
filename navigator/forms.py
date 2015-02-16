@@ -91,8 +91,8 @@ def gen_coding_choices(user, model):
         # User in project
         Q(project__projectrole__user=user)|
         # User has access to project through guestrole
-        Q(project__guest_role__id__gte=user.get_profile().role.id)
-    ).distinct() if not user.get_profile().role.id >= get_admin_id() else model.objects.all()
+        Q(project__guest_role__id__gte=user.userprofile.role.id)
+    ).distinct() if not user.userprofile.role.id >= get_admin_id() else model.objects.all()
 
     objects.select_related("project__name").only("name")
     objects = toolkit.multidict(((cb.project, cb) for cb in objects), ltype=list)
@@ -133,7 +133,7 @@ class UserForm(forms.ModelForm):
         super(UserForm, self).__init__(*args, **kwargs)
 
         if not request.user.is_anonymous():
-            uprofile = request.user.get_profile()
+            uprofile = request.user.userprofile
 
             # Only show roles lesser or equal to the current role of the user
             self.fields['role'].queryset = Role.objects.filter(
@@ -141,7 +141,7 @@ class UserForm(forms.ModelForm):
             )
 
             # Set initial values for this user
-            self.fields['role'].initial = uprofile.role if not editing else kwargs['instance'].get_profile().role
+            self.fields['role'].initial = uprofile.role if not editing else kwargs['instance'].userprofile.role
             self.fields['affiliation'].initial = uprofile.affiliation
             self.fields['language'].initial = uprofile.language
             self.fields['theme'].initial = uprofile.theme
@@ -157,7 +157,7 @@ class UserForm(forms.ModelForm):
     def save(self, commit=True):
         u = super(UserForm, self).save(commit)
 
-        up = u.get_profile()
+        up = u.userprofile
         up.affiliation = self.cleaned_data['affiliation']
         up.role = self.cleaned_data['role']
         up.language = self.cleaned_data['language']

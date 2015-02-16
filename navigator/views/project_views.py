@@ -39,7 +39,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
         favaction = self.request.GET.get('favaction')
         if (favaction is not None):
             ids = {int(id) for id in self.request.GET.getlist('ids')}
-            favs = self.request.user.get_profile().favourite_projects
+            favs = self.request.user.userprofile.favourite_projects
             favids = set(favs.values_list("pk", flat=True))
             if favaction == "setfav":
                 ids -= favids
@@ -74,7 +74,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
         # ugly solution - get project ids that are favourite and use that to filter, otherwise would have to add many to many to api?
         # (or use api request.user to add only current user's favourite status). But good enough for now...
         table = table.hide('favourite', 'active')
-        favids = self.request.user.get_profile().favourite_projects.all()
+        favids = self.request.user.userprofile.favourite_projects.all()
         favids = favids.values_list("id", flat=True)
         if what == 'favourites':
             ids = favids

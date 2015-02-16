@@ -114,7 +114,7 @@ class check_perm(object):
                     return HttpResponse("Project not found", status=404)
 
             # Implementation of haspriv allows project=None
-            if not request.user.get_profile().haspriv(self.priv, project):
+            if not request.user.userprofile.haspriv(self.priv, project):
                 raise PermissionDenied()
 
             return func(request, *args, **kwargs)
@@ -255,7 +255,7 @@ class check(object):
             # class, no can_* methods exist. UserProfile does, however.
             if isinstance(obj, User):
                 # Get a users profile
-                _obj = obj.get_profile()
+                _obj = obj.userprofile
             elif inspect.isclass(obj) and issubclass(User, obj):
                 # Not an instance, but a class (probably checking on can_create)
                 _obj = UserProfile

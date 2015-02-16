@@ -108,7 +108,7 @@ class WebScript(object):
 
     def getActions(self):
         from amcat.models import authorisation
-        can_edit = self.user.get_profile().has_role(authorisation.ROLE_PROJECT_WRITER, self.project)
+        can_edit = self.user.userprofile.has_role(authorisation.ROLE_PROJECT_WRITER, self.project)
         for ws in api.webscripts.actionScripts:
             if (self.__class__.__name__ in ws.displayLocation
                 and ((not ws.solrOnly) or self.data.get('query'))

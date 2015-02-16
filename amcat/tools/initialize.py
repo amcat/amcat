@@ -46,7 +46,7 @@ def create_admin():
         auth_models.User.objects.get(username='amcat')
     except auth_models.User.DoesNotExist:
         su = auth_models.User.objects.create_superuser('amcat', 'amcat@example.com', 'amcat')
-        sup = su.get_profile()
+        sup = su.userprofile
         sup.role = Role.objects.get(label="superadmin", projectlevel=False)
         sup.save()
 

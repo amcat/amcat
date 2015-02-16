@@ -40,7 +40,7 @@ class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
 
     def can_view_text(self):
         """Checks if the user has the right to edit this project"""
-        return self.request.user.get_profile().has_role(authorisation.ROLE_PROJECT_READER, self.object.project)
+        return self.request.user.userprofile.has_role(authorisation.ROLE_PROJECT_READER, self.object.project)
 
     def highlight(self):
         if not self.last_query:
@@ -106,7 +106,7 @@ class ArticleRemoveFromSetView(ProjectActionRedirectView):
         remove_set = int(self.request.GET["remove_set"])
         # user needs to have writer+ on the project of the articleset
         project = ArticleSet.objects.get(pk=remove_set).project
-        if not self.request.user.get_profile().has_role(authorisation.ROLE_PROJECT_WRITER, project):
+        if not self.request.user.userprofile.has_role(authorisation.ROLE_PROJECT_WRITER, project):
             raise PermissionDenied("User {self.request.user} has insufficient rights on project {project}".format(**locals()))
 
 
