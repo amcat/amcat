@@ -539,13 +539,16 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
 
         data = dict(codingjobs=[job.id for job in jobs],
                     export_format=[export_format],
-                    export_level=[str(export_level)],
-        )
+                    export_level=[str(export_level)])
+
         for field, opts in options.items():
             prefix = _get_field_prefix(field)
             data["{prefix}_included".format(**locals())] = [True]
             for k, v in opts.items():
                 data["{prefix}_{k}".format(**locals())] = [v]
+
+        # Set default language for medium aggregation
+        data["aggregation_medium_language"] = [Language.objects.all()[0].id]
 
         f = CodingJobResultsForm(data=MultiValueDict(data), project=jobs[0].project)
         validate(f)
