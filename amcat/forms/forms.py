@@ -23,10 +23,7 @@ of the default behaviour of Django Forms.
 """
 
 from django.forms import *
-from django.forms.widgets import HiddenInput
 from django.forms.util import ErrorList
-
-from operator import attrgetter, itemgetter
 
 
 def _remove_duplicates(seq):
@@ -34,6 +31,32 @@ def _remove_duplicates(seq):
     seen = set()
     seen_add = seen.add
     return [x for x in seq if x not in seen and not seen_add(x)]
+
+
+def move_element(ordered_dict, key, new_position):
+    """
+    This is a really quick and (f)ugly way to reorder an OrderedDict. Since it is
+    only used in order_fields(), which runs at warm-up I suppose it's justified.
+    """
+    unordered_dict = dict(ordered_dict)
+    sorted_keys = list(ordered_dict)
+    sorted_keys.remove(key)
+
+    for _key in sorted_keys:
+        del ordered_dict[_key]
+
+    i = 0
+    while i != new_position:
+        _key = sorted_keys.pop(0)
+        ordered_dict[_key] = unordered_dict[_key]
+
+    # Insert element at right place
+    ordered_dict[key] = unordered_dict[key]
+
+    # Inset rest of elements
+    while sorted_keys:
+        _key = sorted_keys.pop(0)
+        ordered_dict[_key] = unordered_dict[_key]
 
 
 def order_fields(fields=(), classes=()):
@@ -72,21 +95,22 @@ def order_fields(fields=(), classes=()):
         def init(self, *args, **kwargs):
             original_init(self, *args, **kwargs)
 
-            # keyOrder will be a list with the fields of each class sorted
-            keyOrder = []
+            # key_order will be a list with the fields of each class sorted
+            key_order = []
             for cls in classes + (self.__class__,):
                 # Sort according to creation_counter
-                keyOrder += [field[0] for field in sorted(
+                key_order += [field[0] for field in sorted(
                     cls.base_fields.iteritems(), key=(
                         lambda f: f[1].creation_counter
                     )
                 )]
 
-            self.fields.keyOrder = _remove_duplicates(keyOrder)
+            for field_name in key_order[::-1]:
+                move_element(self.fields, field_name, 0)
 
-            # Force ordering of passed fields
-            for field in fields[::-1]:
-                self.fields.insert(0, field, self.fields.pop(field))
+            for field_name in fields[::-1]:
+                move_element(self.fields, field_name, 0)
+                key_order.remove(field_name)
 
         form.__init__ = init
         return form
