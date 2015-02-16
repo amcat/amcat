@@ -344,18 +344,29 @@ $((function(){
             });
         },
 
-        "text/json+aggregation+graph": function(container, data){
+        "text/json+aggregation+line": function(container, data){
+            return renderers["text/json+aggregation+barplot"](container, data, "line");
+        },
+
+
+        "text/json+aggregation+scatter": function(container, data){
+            return renderers["text/json+aggregation+barplot"](container, data, "scatter");
+        },
+
+        "text/json+aggregation+barplot": function(container, data, type){
             var x_type = getType(form_data["x_axis"]);
             var data = Aggregation(data).transpose();
 
+            type = (type === undefined) ? "column" : type;
+
             var chart = {
                 title: "",
-                chart: { type: 'column', zoomType: 'xy' },
+                chart: { zoomType: 'xy' },
                 xAxis: { allowDecimals: false, type: x_type },
                 yAxis: { allowDecimals: false, title: "total" },
                 series: $.map(data, function(serie){
                     return {
-                        type: 'column',
+                        type: type,
                         name: value_renderer[form_data["y_axis"]](serie[0]),
                         data: serie[1],
                         obj: serie[0]
@@ -374,8 +385,8 @@ $((function(){
 
                                 articles_popup(filters);
                             }
-                        }
-                    }
+                        },
+                    },
                 }
             };
 

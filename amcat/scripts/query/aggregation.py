@@ -111,7 +111,9 @@ class AggregationAction(QueryAction):
     """
     output_types = (
         ("text/json+aggregation+table", "Table"),
-        ("text/json+aggregation+graph", "Graph"),
+        ("text/json+aggregation+barplot", "Bar plot"),
+        ("text/json+aggregation+scatter", "Scatter plot"),
+        ("text/json+aggregation+line", "Line plot"),
         ("text/json+aggregation+heatmap", "Heatmap"),
         ("text/csv", "CSV (Download)"),
     )
