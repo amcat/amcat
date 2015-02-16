@@ -444,8 +444,8 @@ $((function(){
         $.ajax({
             "type": "OPTIONS", url: url, dateType: "json"
         }).done(script_form_loaded).error(function(){
-            // TODO: fill in error
-            show_error("Hallo =D");
+            show_error("Could not load form due to unkown server error. Try again after " +
+            "refreshing this page (F5).");
         });
 
         script_form.text("Loading script form..");
