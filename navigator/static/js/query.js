@@ -40,12 +40,52 @@ $.fn.serializeObject = function()
     return o;
 };
 
+
+
 /**
  * Provides convience functions for aggregation-data returned by server
  * @param data returned by server (json)
  * @param form_data form data at the time of submitting query
  */
 function _Aggregation(data){
+    /**
+     * Checks for equality on a 'serie' / 'cell'
+     * @param a aggregation
+     * @param b aggregation
+     * @returns {boolean}
+     */
+    this.equals = function(a, b){
+        return (a.id === undefined) ? (a === b) : (a.id === b.id && a.label === b.label);
+    }
+
+    this.hashCode = function(aggr){
+        return (aggr.id === undefined) ? aggr.toString() : (aggr.id + "_" + aggr.label);
+    }
+
+    this.transpose = function(){
+        var aggr_dict = new Hashtable(this.hashCode, this.equals);
+
+        $.map(data, function(aggr){
+            var x_value = aggr[0];
+            var y_values = aggr[1];
+
+            $.map(y_values, function(aggr){
+                var y_value = aggr[0];
+                var article_count = aggr[1];
+
+                if (!aggr_dict.containsKey(y_value)){
+                    aggr_dict.put(y_value, [])
+                }
+
+                aggr_dict.get(y_value).push([x_value, article_count]);
+            })
+        });
+
+        var aggr_list = [];
+        aggr_dict.each(function(k, v){ aggr_list.push([k, v]); })
+        return aggr_list;
+    }
+
     /**
      * Get column names from aggregation data. Can be used as 'categories'
      * on a heapmap.
@@ -306,6 +346,8 @@ $((function(){
 
         "text/json+aggregation+graph": function(container, data){
             var x_type = getType(form_data["x_axis"]);
+            var data = Aggregation(data).transpose();
+
             var chart = {
                 title: "",
                 chart: { type: 'column', zoomType: 'xy' },
