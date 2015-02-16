@@ -227,7 +227,7 @@ class ArticleSetImportView(ProjectScriptView):
         form = super(ArticleSetImportView, self).get_form(form_class)
         if self.request.method == 'GET':
             # list current users favourite projects but exclude already imported and currect project
-            qs = Project.objects.filter(favourite_users=self.request.user.get_profile())
+            qs = Project.objects.filter(favourite_users=self.request.user.userprofile)
             qs = qs.exclude(articlesets=self.kwargs["articleset_id"])
             qs = qs.exclude(pk=self.project.id)
             form.fields['target_project'].queryset = qs

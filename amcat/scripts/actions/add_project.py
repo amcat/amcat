@@ -72,7 +72,7 @@ class AddProject(Script):
         pr.role = Role.objects.get(projectlevel=True, label='admin')
         pr.save()
         # Make project favourite for creating user
-        self.options['owner'].get_profile().favourite_projects.add(p)
+        self.options['owner'].userprofile.favourite_projects.add(p)
 
         return p
 

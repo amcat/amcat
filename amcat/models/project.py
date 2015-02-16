@@ -91,8 +91,8 @@ class Project(AmcatModel):
         return Codebook.objects.filter(Q(projects_set=self)|Q(project=self)).distinct()
 
     def can_read(self, user):
-        return (self in user.get_profile().projects
-                or user.get_profile().haspriv('view_all_projects')
+        return (self in user.userprofile.projects
+                or user.userprofile.haspriv('view_all_projects')
                 or self.guest_role is not None)
 
     @property

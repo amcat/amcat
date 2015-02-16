@@ -93,7 +93,7 @@ class LazyES(object):
                 try:
                     is_reader = cache[row.projectid]
                 except KeyError:
-                    is_reader = user.get_profile().has_role(authorisation.ROLE_PROJECT_READER,
+                    is_reader = user.userprofile.has_role(authorisation.ROLE_PROJECT_READER,
                                                             Project.objects.get(pk=row.projectid))
                     cache[row.projectid] = is_reader
             if not is_reader:

@@ -68,8 +68,8 @@ sudo dpkg -i elasticsearch-1.3.2.deb
 
 # Install plugins
 cd /usr/share/elasticsearch
-sudo bin/plugin -install elasticsearch/elasticsearch-lang-python/2.3.0
-sudo bin/plugin -install elasticsearch/elasticsearch-analysis-icu/2.3.0
+sudo bin/plugin -install elasticsearch/elasticsearch-lang-python/2.4.1
+sudo bin/plugin -install elasticsearch/elasticsearch-analysis-icu/2.4.2
 sudo bin/plugin -install mobz/elasticsearch-head
 sudo wget http://hmbastiaan.nl/martijn/amcat/hitcount.jar
 

@@ -38,9 +38,11 @@ from amcat.scripts.article_upload.bzk_aliases import BZK_ALIASES as MEDIUM_ALIAS
 
 class BZK(UploadScript):
     def _scrape_unit(self, _file):
-        if type(_file) == unicode:  #command line
+        if isinstance(_file, unicode):
+            # command line
             etree = html.fromstring(_file)
-        else:  #web interface
+        else:
+            # web interface
             try:
                 etree = html.parse(_file).getroot()
             except IOError as e:
@@ -100,13 +102,15 @@ class BZK(UploadScript):
         items = []
         item = []
         
-
         if len(_html.cssselect("body > hr")) == 0:
-            #if len(_html.cssselect("body > div > hr")) == 0:
+            if len(_html.cssselect("body > div > hr")) == 0:
                 # extra extra div  and span wrapper as of 2014-11-20
-            #    tags = _html.cssselect("body > div > div > span > *")
-            #else: # extra div wrapper as of 2014-04-08
-                tags = _html.cssselect("body > div > *")
+                #tags = _html.cssselect("body > div > div > span > *")
+                pass
+            else:
+                # extra div wrapper as of 2014-04-08
+                #tags = _html.cssselect("body > div > *")
+                pass
         else:
             tags = _html.cssselect("body > *")
 
@@ -117,7 +121,7 @@ class BZK(UploadScript):
             else:
                 item.append(child)
 
-        #first item is the index
+        # first item is the index
         items = items[1:]
         for item in items:
             article = self.parse_item(item)
@@ -146,7 +150,6 @@ class BZK(UploadScript):
             article.metastring = {'html': html_str}
 
             yield article
-
 
     def parse_dateline(self, text, article):
         bits = text.split()
@@ -209,8 +212,10 @@ if __name__ == "__main__":
 ###########################################################################
 
 from amcat.tools import amcattest
+import unittest
 
 
+@unittest.skip("BZK needs more test-files.")
 class TestBZK(amcattest.AmCATTestCase):
     def setUp(self):
         from django.core.files import File

@@ -45,7 +45,7 @@ class AccessDenied(EnvironmentError):
     def __init__(self, user, privilege, project=None):
         projectstr = " on %s" % project if project else ""
         msg = "Access denied for privilege %s%s to %s\nRequired role %s, has role %s" % (
-            privilege, projectstr, user, privilege.role, user.get_profile().role)
+            privilege, projectstr, user, privilege.role, user.userprofile.role)
         EnvironmentError.__init__(self, msg)
 
 def check(user, privilege, project=None):
@@ -73,7 +73,7 @@ def check(user, privilege, project=None):
 
         try:
             role = (Role.objects.get(projectrole__user=user, projectrole__project=project)
-                    if privilege.role.projectlevel else user.get_profile().role)
+                    if privilege.role.projectlevel else user.userprofile.role)
         except Role.DoesNotExist:
             # User has no role on this project!
             raise AccessDenied(user, privilege, project)
@@ -85,7 +85,7 @@ def check(user, privilege, project=None):
 class Role(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='role_id')
     label = models.CharField(max_length=50)
-    projectlevel = models.BooleanField()
+    projectlevel = models.BooleanField(default=False)
 
     class Meta():
         db_table = 'roles'
@@ -106,10 +106,10 @@ class ProjectRole(AmcatModel):
         app_label = 'amcat'
 
     def can_update(self, user):
-        return user.get_profile().haspriv('manage_project_users', self.project)
+        return user.userprofile.haspriv('manage_project_users', self.project)
 
     def can_delete(self, user):
-        return user.get_profile().haspriv('manage_project_users', self.project)
+        return user.userprofile.haspriv('manage_project_users', self.project)
 
 class Privilege(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='privilege_id')

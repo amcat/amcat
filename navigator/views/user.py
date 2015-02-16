@@ -45,12 +45,12 @@ def _list_users(request, selected, **filters):
 @check_perm("view_users_same_affiliation")
 def my_affiliated_active(request):
     return _list_users(request, "active affiliated users", is_active=True,
-                       userprofile__affiliation=request.user.get_profile().affiliation)
+                       userprofile__affiliation=request.user.userprofile.affiliation)
 
 @check_perm("view_users_same_affiliation")
 def my_affiliated_all(request):
     return _list_users(request, "all affiliated users",
-                       affiliation=request.user.get_profile().affiliation)
+                       affiliation=request.user.userprofile.affiliation)
 
 @check_perm("view_users")
 def all(request):

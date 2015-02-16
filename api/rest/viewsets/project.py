@@ -139,6 +139,6 @@ class ProjectViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
             return qs.filter(guest_role__id__gte=role.id)
 
         else:
-            return qs.filter(id__in=self.request.user.get_profile().get_projects(role))
+            return qs.filter(id__in=self.request.user.userprofile.get_projects(role))
 
 

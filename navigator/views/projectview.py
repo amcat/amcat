@@ -95,7 +95,7 @@ class ProjectViewMixin(object):
             request, *args, **kwargs)
 
     def has_permission(self, perm):
-        return self.request.user.get_profile().has_role(perm, self.project)
+        return self.request.user.userprofile.has_role(perm, self.project)
 
     def check_permission(self):
         if not self.has_permission(self.required_project_permission):

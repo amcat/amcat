@@ -43,7 +43,7 @@ CURRENT_DB_VERSION = 27
 
 
 class AmCAT(AmcatModel):
-    id = models.BooleanField(primary_key=True, db_column="singleton_pk")
+    id = models.BooleanField(primary_key=True, db_column="singleton_pk", default=False)
 
     global_announcement = models.TextField(blank=True, null=True)
     db_version = models.IntegerField()

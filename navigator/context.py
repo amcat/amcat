@@ -38,5 +38,5 @@ def extra(request):
     if request.user.is_anonymous():
         theme = 'amcat'
     else:
-        theme = getattr(request.user.get_profile(), 'theme', 'amcat').lower().replace(" ", "_")
+        theme = getattr(request.user.userprofile, 'theme', 'amcat').lower().replace(" ", "_")
     return locals()

@@ -143,7 +143,7 @@ class UserProfile(AmcatModel):
         return True
 
     def can_read(self, user):
-        profile = user.get_profile()
+        profile = user.userprofile
 
         return (self == profile) or \
                (profile.affiliation == self.affiliation and
@@ -151,7 +151,7 @@ class UserProfile(AmcatModel):
                (profile.haspriv("view_users"))
 
     def can_update(self, user):
-        profile = user.get_profile()
+        profile = user.userprofile
 
         return (self == profile) or \
                (profile.affiliation == self.affiliation and
@@ -197,7 +197,7 @@ def create_user(username, first_name, last_name, email, affiliation, language, r
     u.save()
 
     # Correct profile
-    prof = u.get_profile()
+    prof = u.userprofile
     prof.role = role
     prof.affiliation = affiliation
     prof.language = language
