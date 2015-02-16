@@ -368,7 +368,35 @@ $((function(){
                 chart.xAxis.categories = $.map(Aggregation(data).getColumns(), renderer);
             }
 
+            // Show render warning
             container.highcharts(chart);
+            var context_menu = $("g.highcharts-button > title:contains('context')", container).parent();
+            var close = false;
+            var notification = {
+                text: 'If you decide to export an image, keep in mind the data is sent to highcharts.com' +
+                ' for rendering purposes. ',
+                type: 'info',
+                icon: 'ui-icon ui-icon-locked',
+                auto_display: false,
+                history: false,
+                stack: false,
+                animate_speed: 0,
+                opacity: 0.9,
+                hide: false
+            };
+
+            $("title", context_menu).text("");
+            var pnotify = new PNotify(notification);
+
+            $(context_menu).mouseenter(function(event){
+                pnotify.get().css({
+                    'top': event.clientY + 12,
+                    'left': event.clientX + 12 - 320
+                });
+
+                pnotify.open();
+            }).mouseleave(function(){pnotify.remove()})
+              .click(function(){pnotify.remove});
         },
 
         /**
