@@ -7,7 +7,7 @@ celery==3.1.13
 chardet==2.2.1
 colorlog==2.3.1
 cssselect==0.9.1
-Django==1.6.5
+Django==1.7.4
 django-appconf==0.6
 django-boolean-sum==0.1
 django-compressor==1.4
