@@ -85,7 +85,7 @@ def check(user, privilege, project=None):
 class Role(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='role_id')
     label = models.CharField(max_length=50)
-    projectlevel = models.BooleanField()
+    projectlevel = models.BooleanField(default=False)
 
     class Meta():
         db_table = 'roles'
