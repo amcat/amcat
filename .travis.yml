@@ -26,7 +26,7 @@ install:
  - wget https://hmbastiaan.nl/martijn/amcat/hitcount.jar
  - wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.4.3.tar.gz -O - | tar xvz
  - cd elasticsearch-1*
- - bin/plugin -install elasticsearch/elasticsearch-lang-python/2.4.4
+ - bin/plugin -install elasticsearch/elasticsearch-lang-python/2.4.1
  - bin/plugin -install elasticsearch/elasticsearch-analysis-icu/2.4.2
  - bin/plugin -install mobz/elasticsearch-head
  # I'm absolutely, thorougly annoyed by the syntax below.
