@@ -68,10 +68,6 @@ function _Aggregation(data){
             row_data.each(function(column, article_count){
                 temp_column = aggr_dict.get(column);
 
-                console.log(column)
-                console.log(temp_column)
-                console.log(aggr_dict.containsKey(column));
-
                 if (temp_column === null){
                     aggr_dict.put(column, [[row, article_count]]);
                 } else {
@@ -82,7 +78,6 @@ function _Aggregation(data){
 
         var aggr_list = [];
         aggr_dict.each(function(k, v){ aggr_list.push([k, v]); });
-        console.log(aggr_list)
         return Aggregation(aggr_list);
     };
 
@@ -387,7 +382,7 @@ $((function(){
                         type: type,
                         name: value_renderer[form_data["y_axis"]](x_key),
                         data: $.map(columns, function(column){
-                            return aggregation.get(x_key).get(column);
+                            return aggregation.get(x_key).get(column) || 0;
                         }),
                         obj: x_key
                     }
