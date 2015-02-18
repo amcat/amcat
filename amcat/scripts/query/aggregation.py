@@ -21,13 +21,13 @@ from datetime import datetime
 from time import mktime
 from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.forms import ChoiceField, CharField
-from amcat.models import Medium
+from amcat.models import Medium, ArticleSet
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools.aggregate import get_relative
 from amcat.tools.djangotoolkit import parse_date
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
 
-AXES = tuple((c, c.title()) for c in ("date", "medium", "total", "term"))
+AXES = tuple((c, c.title()) for c in ("date", "medium", "total", "term", "set"))
 INTERVALS = tuple((c, c.title()) for c in ("day", "week", "month", "quarter", "year"))
 TRANSPOSE = {"text/json+aggregation+graph"}
 
@@ -36,11 +36,10 @@ class AggregationEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime):
             return int(mktime(obj.timetuple())) * 1000
-        if isinstance(obj, Medium):
+        if isinstance(obj, Medium) or isinstance(obj, ArticleSet):
             return {"id": obj.id, "label": obj.name}
         if isinstance(obj, SearchQuery):
             return {"id": obj.label, "label": obj.query}
-            pass
         return super(AggregationEncoder, self).default(obj)
 
 

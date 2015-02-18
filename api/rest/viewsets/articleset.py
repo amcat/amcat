@@ -53,7 +53,7 @@ class ArticleSetSerializer(AmCATModelSerializer):
             sets = list(view.object_list.values_list("id", flat=True))
         else:
             sets = [view.object.id]
-        return dict(amcates.ES().aggregate_query(filters={'sets' : sets}, group_by='sets'))
+        return dict(amcates.ES().aggregate_query(filters={'sets': sets}, group_by='sets'))
 
     def n_articles(self, articleset):
         if not articleset: return None

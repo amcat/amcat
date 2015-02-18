@@ -18,6 +18,9 @@
 ###########################################################################
 
 import logging
+import itertools
+from amcat.models import ArticleSet
+
 log = logging.getLogger(__name__)
 
 
@@ -37,6 +40,55 @@ def get_relative(aggregation, column):
             continue
 
         yield row, tuple((col, value / pivot) for col, value in row_values)
+
+
+def _get_ids(aggregation, group_by, id_type):
+    ids = set()
+    if group_by.pop(0) == id_type:
+        ids = set(medium_id for medium_id, _ in aggregation)
+
+    if not group_by:
+        return ids
+
+    aggregations = [a.buckets for a in aggregation]
+    nested_ids = [_get_ids(b, list(group_by), id_type) for b in aggregations]
+    nested_ids = set(map(int, itertools.chain.from_iterable(nested_ids)))
+    return ids | nested_ids
+
+
+def _get_objects(aggregation, group_by, id_type, objects):
+    if not aggregation:
+        return ()
+
+    ntuple = aggregation[0].__class__
+
+    if group_by.pop(0) == id_type:
+        aggregation = [(objects.get(int(id)), aggr) for id, aggr in aggregation]
+
+    if group_by:
+        aggregation = [
+            (key, _get_objects(aggr, list(group_by), id_type, objects))
+            for key, aggr in aggregation
+        ]
+
+    return [ntuple(*aggr) for aggr in aggregation]
+
+
+def get_objects(aggregation, group_by, only, klass, id_type, select_related=()):
+    objects = klass.objects.only(*only).select_related(*select_related)
+    objects = objects.in_bulk(_get_ids(aggregation, list(group_by), id_type))
+    return _get_objects(aggregation, group_by, id_type, objects)
+
+
+def get_mediums(aggregation, group_by, only=("name",), select_related=()):
+    """Given an aggregation, replace all medium ids with Medium objects"""
+    from amcat.models import Medium
+    return get_objects(aggregation, group_by, only, Medium, "mediumid", select_related)
+
+
+def get_articlesets(aggregation, group_by, only=("name",), select_related=()):
+    """Given an aggregation, replace all articleset ids with Articleset objects"""
+    return get_objects(aggregation, group_by, only, ArticleSet, "sets", select_related)
 
 
 # Unittests: amcat.tools.tests.aggregate

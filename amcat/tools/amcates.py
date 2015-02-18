@@ -25,8 +25,6 @@ import itertools
 
 log = logging.getLogger(__name__)
 import re
-import requests
-import collections
 from datetime import datetime
 
 from hashlib import sha224 as hash_class
@@ -45,44 +43,6 @@ from amcat.tools.progress import NullMonitor
 def _clean(s):
     if s:
         return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', s)
-
-
-def _get_medium_ids(aggregation, group_by):
-    """Fetch all medium ids nested in given aggregation."""
-    ids = set()
-    if group_by.pop(0) == "mediumid":
-        ids = set(medium_id for medium_id, _ in aggregation)
-
-    if not group_by:
-        return ids
-
-    aggregations = [a.buckets for a in aggregation]
-    nested_ids = [_get_medium_ids(b, list(group_by)) for b in aggregations]
-    nested_ids = set(itertools.chain.from_iterable(nested_ids))
-    return ids | nested_ids
-
-
-def _get_mediums(aggregation, group_by, mediums):
-    if not aggregation:
-        return ()
-
-    ntuple = aggregation[0].__class__
-
-    if group_by.pop(0) == "mediumid":
-        aggregation = [(mediums.get(medium_id), aggr) for medium_id, aggr in aggregation]
-
-    if group_by:
-        aggregation = [(key, _get_mediums(aggr, list(group_by), mediums)) for key, aggr in aggregation]
-
-    return [ntuple(*aggr) for aggr in aggregation]
-
-
-def get_mediums(aggregation, group_by, only=("name",), select_related=()):
-    """Given an aggregation, replace all medium ids with Medium objects"""
-    from amcat.models import Medium
-    mediums = Medium.objects.only(*only).select_related(*select_related)
-    mediums = mediums.in_bulk(_get_medium_ids(aggregation, list(group_by)))
-    return _get_mediums(aggregation, group_by, mediums)
 
 
 def get_article_dict(art, sets=None):
@@ -484,38 +444,41 @@ class ES(object):
         result = self.search(body, size=0, search_type="count")
         return result['aggregations']['aggregation']
 
-    def _parse_terms_aggregate(self, aggregate, group_by, terms):
+    def _parse_terms_aggregate(self, aggregate, group_by, terms, sets):
         if not group_by:
             for term in terms:
                 yield term, aggregate[term.label]['doc_count']
         else:
             for term in terms:
-                yield term, self._parse_aggregate(aggregate[term.label], list(group_by), terms)
+                yield term, self._parse_aggregate(aggregate[term.label], list(group_by), terms, sets)
 
-    def _parse_other_aggregate(self, aggregate, group_by, group, terms):
+    def _parse_other_aggregate(self, aggregate, group_by, group, terms, sets):
         buckets = aggregate[group]["buckets"]
         if not group_by:
-            return [(b['key'], b['doc_count']) for b in buckets]
-        return [(b['key'], self._parse_aggregate(b, list(group_by), terms)) for b in buckets]
+            return ((b['key'], b['doc_count']) for b in buckets)
+        return ((b['key'], self._parse_aggregate(b, list(group_by), terms, sets)) for b in buckets)
 
-    def _parse_aggregate(self, aggregate, group_by, terms):
+    def _parse_aggregate(self, aggregate, group_by, terms, sets):
         """Parse a aggregation result to (nested) namedtuples."""
         group = group_by.pop(0)
 
-        if group == "terms":
-            result = list(self._parse_terms_aggregate(aggregate, group_by, terms))
-        else:
-            result = list(self._parse_other_aggregate(aggregate, group_by, group, terms))
+        # Default (lazy)
+        result = self._parse_other_aggregate(aggregate, group_by, group, terms, sets)
 
-        # Parse timestamps as datetime objects
-        if group == "date":
-            result = [(get_date(stamp), aggr) for stamp, aggr in result]
+        if group == "terms":
+            result = self._parse_terms_aggregate(aggregate, group_by, terms, sets)
+        elif group == "sets" and sets is not None:
+            # Filter sets if 'sets' is given
+            result = ((aset_id, res) for aset_id, res in result if aset_id in set(sets))
+        elif group == "date":
+            # Parse timestamps as datetime objects
+            result = ((get_date(stamp), aggr) for stamp, aggr in result)
 
         # Return results as namedtuples
         ntuple = namedtuple("Aggr", [group, "buckets" if group_by else "count"])
         return [ntuple(*r) for r in result]
 
-    def _build_aggregate(self, group_by, date_interval, terms):
+    def _build_aggregate(self, group_by, date_interval, terms, sets):
         """Build nested aggregation query for list of groups"""
         group = group_by.pop(0)
 
@@ -548,13 +511,13 @@ class ES(object):
         # We need to nest the other aggregations, see:
         # http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-aggregations.html
         if group_by:
-            nested = self._build_aggregate(group_by, date_interval, terms)
+            nested = self._build_aggregate(group_by, date_interval, terms, sets)
             for aggr in aggregation.values():
                 aggr["aggregations"] = nested
 
         return aggregation
 
-    def aggregate_query(self, query=None, filters=None, group_by=None, terms=None, date_interval='month', mediums=False):
+    def aggregate_query(self, query=None, filters=None, group_by=None, terms=None, sets=None, date_interval='month'):
         """
         Compute an aggregate query, e.g. select count(*) where <filters> group by <group_by>. If
         date is used as a group_by variable, uses date_interval to bin it. It does support multiple
@@ -573,8 +536,11 @@ class ES(object):
             log.warning("Passing strings to aggregate_query(group_by) is deprecated.")
             group_by = [group_by]
 
+        if "terms" in group_by and sets is None:
+            raise ValueError("You should pass a list of terms if aggregating on it.")
+
         filters = dict(build_body(query, filters, query_as_filter=True))
-        aggregations = self._build_aggregate(list(group_by), date_interval, terms)
+        aggregations = self._build_aggregate(list(group_by), date_interval, terms, sets)
 
         body = {
             "query": {"constant_score": filters},
@@ -583,10 +549,7 @@ class ES(object):
 
         log.debug("es.search(body={body})".format(**locals()))
         result = self.search(body)
-        result = self._parse_aggregate(result["aggregations"], list(group_by), terms)
-
-        if mediums:
-            return get_mediums(result, group_by)
+        result = self._parse_aggregate(result["aggregations"], list(group_by), terms, sets)
         return result
 
     def statistics(self, query=None, filters=None):
@@ -623,7 +586,6 @@ class ES(object):
         agg = {"date_histogram": {"field": "date", "interval": interval}}
         for bucket in self.search_aggregate(agg, query=query, filters=filters)['buckets']:
             yield get_date(bucket['key'])
-
 
     def in_index(self, ids):
         """

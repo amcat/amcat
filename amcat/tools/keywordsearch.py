@@ -25,10 +25,13 @@ move it to 'queryparser'?
 from __future__ import unicode_literals, print_function, absolute_import
 from itertools import chain, islice
 import logging
+from operator import attrgetter
 import re
 
 from django.core.exceptions import ValidationError
 from dateutil.relativedelta import relativedelta
+from amcat.tools.aggregate import get_mediums
+from amcat.tools.aggregate import get_articlesets
 
 from amcat.tools.amcates import ES
 from amcat.tools.caching import cached
@@ -40,7 +43,11 @@ REFERENCE_RE = re.compile(r"<(?P<reference>.*?)(?P<recursive>\+?)>")
 
 log = logging.getLogger(__name__)
 
-FIELD_MAP = {"medium": "mediumid", "term": "terms"}
+FIELD_MAP = {
+    "medium": "mediumid",
+    "term": "terms",
+    "set": "sets"
+}
 
 
 class SelectionData:
@@ -141,11 +148,16 @@ class SelectionSearch:
 
         query = None if "term" in (x_axis, y_axis) else self.get_query()
 
-        return ES().aggregate_query(
+        aggr = ES().aggregate_query(
             query=query, terms=self.get_queries(),
             filters=self.get_filters(), group_by=group_by,
-            date_interval=interval, mediums=True
+            date_interval=interval, sets=map(attrgetter("id"), self.data.articlesets)
         )
+
+        aggr = get_mediums(aggr, list(group_by))
+        aggr = get_articlesets(aggr, list(group_by))
+
+        return aggr
 
     def get_medium_ids(self):
         return self.es.list_media(self.get_query(), self.get_filters())
