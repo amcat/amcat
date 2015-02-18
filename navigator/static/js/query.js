@@ -1,3 +1,5 @@
+"use strict";
+
 /**************************************************************************
 *          (C) Vrije Universiteit, Amsterdam (the Netherlands)            *
 *                                                                         *
@@ -41,97 +43,103 @@ $.fn.serializeObject = function()
 };
 
 
+var AGGR_HASH_FUCNTIONS = {
+    "equals": function (a, b) {
+        return (a.id === undefined) ? (a === b) : (a.id === b.id && a.label === b.label);
+    },
+    "hashCode": function (aggr) {
+        return (aggr.id === undefined) ? aggr.toString() : (aggr.id + "_" + aggr.label);
+    }
+}
 
 /**
  * Provides convience functions for aggregation-data returned by server
  * @param data returned by server (json)
- * @param form_data form data at the time of submitting query
  */
 function _Aggregation(data){
-    /**
-     * Checks for equality on a 'serie' / 'cell'
-     * @param a aggregation
-     * @param b aggregation
-     * @returns {boolean}
-     */
-    this.equals = function(a, b){
-        return (a.id === undefined) ? (a === b) : (a.id === b.id && a.label === b.label);
-    }
-
-    this.hashCode = function(aggr){
-        return (aggr.id === undefined) ? aggr.toString() : (aggr.id + "_" + aggr.label);
-    }
-
+    //////////////////////
+    // PUBLIC FUNCTIONS //
+    //////////////////////
     this.transpose = function(){
-        var aggr_dict = new Hashtable(this.hashCode, this.equals);
+        var aggr_dict = new Hashtable(AGGR_HASH_FUCNTIONS);
 
-        $.map(data, function(aggr){
-            var x_value = aggr[0];
-            var y_values = aggr[1];
+        var temp_column;
+        this.aggr.each(function(row, row_data){
+            row_data.each(function(column, article_count){
+                temp_column = aggr_dict.get(column);
 
-            $.map(y_values, function(aggr){
-                var y_value = aggr[0];
-                var article_count = aggr[1];
+                console.log(column)
+                console.log(temp_column)
+                console.log(aggr_dict.containsKey(column));
 
-                if (!aggr_dict.containsKey(y_value)){
-                    aggr_dict.put(y_value, [])
+                if (temp_column === null){
+                    aggr_dict.put(column, [[row, article_count]]);
+                } else {
+                    temp_column.push([row, article_count]);
                 }
-
-                aggr_dict.get(y_value).push([x_value, article_count]);
-            })
-        });
-
-        var aggr_list = [];
-        aggr_dict.each(function(k, v){ aggr_list.push([k, v]); })
-        return aggr_list;
-    }
-
-    /**
-     * Get column names from aggregation data. Can be used as 'categories'
-     * on a heapmap.
-     *
-     * @returns {*}
-     */
-    this.getColumns = function(){
-        var columns = {};
-        $.each(data, function(_, serie){
-            $.each(serie[1], function(_, value){
-                // Some objects are (notably mediums and articlesets) are
-                // represented as an object with properties 'id' and 'label'.
-                columns[value[0].id || value[0]] = value[0];
             });
         });
 
-        return $.map(columns, function(column){ return column; });
+        var aggr_list = [];
+        aggr_dict.each(function(k, v){ aggr_list.push([k, v]); });
+        console.log(aggr_list)
+        return Aggregation(aggr_list);
     };
 
-    /**
-     * Return mapping { column_name -> column_index }
-     */
-    this.getColumnIndices = function(){
-        var columns = this.getColumns();
-        var column_indices = {};
+    //////////////////////////////////////
+    // PRIVATE INITIALISATION FUNCTIONS //
+    //////////////////////////////////////
+    this._getHashMap = function(){
+        var aggr_dict = new Hashtable(AGGR_HASH_FUCNTIONS);
 
-        $.each(columns, function(i, column){
-            column_indices[column.id || column] = i;
+        $.map(data, (function(x_values){
+            aggr_dict.put(x_values[0], new Hashtable(AGGR_HASH_FUCNTIONS));
+
+            $.map(x_values[1], function(y_values){
+                aggr_dict.get(x_values[0]).put(y_values[0], y_values[1]);
+            });
+        }).bind(this));
+
+        return aggr_dict;
+    }
+
+    this._getColumns = function(aggr){
+        var columns = new HashSet(AGGR_HASH_FUCNTIONS);
+
+        $.each(aggr.values(), function(_, y_values) {
+            $.each(y_values.keys(), function(_, x_key) {
+                columns.add(x_key);
+            });
         });
 
-        return column_indices;
-    };
+        return columns.values();
+    }
 
-    /**
-     * Returns row names (first column of each row)
-     */
-    this.getRowNames = function(){
-        return $.map(data, function(serie){
-            return serie[0];
-        });
-    };
+    this._getColumnIndices = function(columns){
+        var indices = new Hashtable(AGGR_HASH_FUCNTIONS);
+        $.each(columns, indices.put);
+        return indices;
+    }
+
+    ///////////////////////
+    // PUBLIC PROPERTIES //
+    ///////////////////////
+    this.aggr = this._getHashMap();
+    this.rows = this.aggr.keys();
+    this.columns = this._getColumns(this.aggr);
+    this.columnIndices = this._getColumnIndices(this.columns);
+
+    ///////////////////////////////////////////
+    // PUBLIC FUNCTIONS MAPPING TO HASHTABLE //
+    ///////////////////////////////////////////
+    this.get = this.aggr.get;
+    this.size = this.aggr.size;
+
 
     return this;
 }
 
-Aggregation = function(data){
+var Aggregation = function(data){
     return _Aggregation.bind({})(data);
 };
 
@@ -189,7 +197,7 @@ $((function(){
         var field_map = {
             mediums: "mediumid", query: "q", article_ids: "ids",
             start_date: "start_date", end_date: "end_date",
-            articlesets: "sets"
+            articlesets: "sets", sets: "sets"
         };
 
         var value_map = {
@@ -215,6 +223,9 @@ $((function(){
     var value_renderer = {
         "medium": function(medium){
             return medium.id + " - " + medium.label;
+        },
+        "set": function(articleset){
+            return articleset.id + " - " + articleset.label;
         },
         "date": function(date){
             return moment(date).format("DD-MM-YYYY");
@@ -248,6 +259,9 @@ $((function(){
         },
         term: function(form_data, value){
             return {query: value.label};
+        },
+        set: function(form_data, value){
+            return {sets: value.id}
         }
     };
 
@@ -355,7 +369,11 @@ $((function(){
 
         "text/json+aggregation+barplot": function(container, data, type){
             var x_type = getType(form_data["x_axis"]);
-            var data = Aggregation(data).transpose();
+            var aggregation = Aggregation(data).transpose();
+            var columns = aggregation.columns;
+
+            //log(columns)
+            //log(aggregation.rows)
 
             type = (type === undefined) ? "column" : type;
 
@@ -364,13 +382,18 @@ $((function(){
                 chart: { zoomType: 'xy' },
                 xAxis: { allowDecimals: false, type: x_type },
                 yAxis: { allowDecimals: false, title: "total" },
-                series: $.map(data, function(serie){
-                    return {
+                series: $.map(aggregation.rows, function(x_key){
+                    var a = {
                         type: type,
-                        name: value_renderer[form_data["y_axis"]](serie[0]),
-                        data: serie[1],
-                        obj: serie[0]
+                        name: value_renderer[form_data["y_axis"]](x_key),
+                        data: $.map(columns, function(column){
+                            return aggregation.get(x_key).get(column);
+                        }),
+                        obj: x_key
                     }
+
+                    console.log(a);
+                    return a;
                 }),
                 plotOptions: {
                     series: {
@@ -383,6 +406,10 @@ $((function(){
                                 filters[y_type] = event.point.series.options.obj;
                                 filters[x_type] = event.point.x;
 
+                                if (getType(x_type) === 'category'){
+                                    filters[x_type] = columns[event.point.x];
+                                }
+
                                 articles_popup(filters);
                             }
                         },
@@ -393,7 +420,7 @@ $((function(){
             // We need category labels if x_axis is not of type datetime
             var renderer = value_renderer[form_data["x_axis"]];
             if (x_type === 'category'){
-                chart.xAxis.categories = $.map(Aggregation(data).getColumns(), renderer);
+                chart.xAxis.categories = $.map(columns, renderer);
             }
 
             container.highcharts(chart);
@@ -440,38 +467,37 @@ $((function(){
          *    1371160800000
          */
         "text/json+aggregation+table": function(container, data){
-            var row_template, columns, column_indices, table, thead, tbody, row, renderer;
+            var row_template, table, thead, tbody, renderer;
 
             var aggregation = Aggregation(data);
-            columns = aggregation.getColumns();
-            column_indices = aggregation.getColumnIndices();
 
             // Adding header
             thead = $("<thead>").append($("<th>"));
             renderer = value_renderer[form_data["y_axis"]];
-            $.map(columns, function(column){
+            $.map(aggregation.columns, function(column){
                 thead.append($("<th>").text(renderer(column)).data("value", column));
             });
 
             // Adding rows. Using row templates to prevent lots of small inserts
-            row_template = (new Array(columns.length + 1)).join("<td>0</td>");
+            row_template = (new Array(aggregation.columns.length + 1)).join("<td></td>");
             row_template = "<tr><th></th>" + row_template + "</tr>";
 
             tbody = $("<tbody>");
             renderer = value_renderer[form_data["x_axis"]];
-            $.map(data, function(serie){
-                row = $(row_template);
-                row.find("th").text(renderer(serie[0])).data("value", serie[0]);
 
-                var index;
-                $.map(serie[1], function(value){
+            $.map(aggregation.rows, function(row){
+                var row_element = $(row_template);
+                row_element.find("th").text(renderer(row)).data("value", row);
+
+                var value;
+                $.each(aggregation.columns, function(i, column){
                     // Check for float / integer. And wtf javascript, why not float type?!
-                    index = column_indices[value[0].id || value[0]];
-                    value = (value[1] % 1 === 0) ? value[1] : value[1].toFixed(2);
-                    row.find("td").eq(index).text(value);
+                    value = aggregation.get(row).get(column) || 0;
+                    value = (value % 1 === 0) ? value : value.toFixed(2);
+                    row_element.find("td").eq(i).text(value);
                 });
 
-                tbody.append(row);
+                tbody.append(row_element);
             });
 
             // Putting it together
@@ -511,6 +537,12 @@ $((function(){
         $.each(filters, function(type, value){
             $.extend(data, elastic_filters[type](form_data, value));
         });
+
+        // HACK: If a specific set is requested by a user (by clicking on a table cell,
+        // for example), override global articleset filter.
+        if (filters.set !== undefined){
+            delete data["articlesets"];
+        }
 
         var dialog = $("#articlelist-dialog").modal("show");
         var table = dialog.find(".articlelist").find(".dataTables_scrollBody table");
@@ -654,7 +686,7 @@ $((function(){
         form_data = $("form").serializeObject();
         $(".result .panel-body").html("<i>No results yet</i>");
 
-	script = scripts_container.find(".active")[0].id.replace("script_","")
+        var script = scripts_container.find(".active")[0].id.replace("script_","")
 
         $.ajax({
             type: "POST", dataType: "json",
