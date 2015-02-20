@@ -71,7 +71,9 @@
         <div class="navbar-collapse collapse">
 
           <ul class="nav navbar-nav navbar-right">
+	    {% if status != 503 %}
 	    {% include "main_menu.html" %}
+	    {% endif %}
           </ul>
           <ul class="nav navbar-nav">
 	    {% block contextmenu %}
