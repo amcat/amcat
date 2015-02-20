@@ -213,9 +213,13 @@ class ES(object):
             if 'IndexMissingException' in unicode(e): return
             raise
 
-    def create_index(self):
+    def create_index(self, shards=5, replicas=1):
+        es_settings = settings.ES_SETTINGS.copy()
+        es_settings.update({"number_of_shards" : shards,
+                            "number_of_replicas": replicas})
+
         body = {
-            "settings" : settings.ES_SETTINGS,
+            "settings" : es_settings,
             "mappings" : {settings.ES_ARTICLE_DOCTYPE : settings.ES_MAPPING}}
         indices.IndicesClient(self.es).create(self.index, body)
 
