@@ -129,6 +129,8 @@ class CodingJobResultsForm(CodingjobListForm):
     in all codingjobs, depending on their type.
     """
     include_duplicates = forms.BooleanField(initial=False, required=False)
+    include_uncoded_articles = forms.BooleanField(initial=False, required=False)
+    include_uncoded_sentences = forms.BooleanField(initial=False, required=False)
     export_format = forms.ChoiceField(tuple((c.label, c.label) for c in EXPORT_FORMATS))
     date_format = forms.CharField(initial="%Y-%m-%d %H-%M-%S", required=False)
 
@@ -141,6 +143,7 @@ class CodingJobResultsForm(CodingjobListForm):
         codingjobs = kwargs.pop("codingjobs", None)
         export_level = kwargs.pop("export_level", None)
         super(CodingJobResultsForm, self).__init__(data, files, **kwargs)
+
         if codingjobs is None:  # is this necessary?
             data = self.data.getlist("codingjobs", codingjobs)
             codingjobs = self.fields["codingjobs"].clean(data)
@@ -247,7 +250,7 @@ CodingRow = collections.namedtuple('CodingRow',
                                    ['job', 'coded_article', 'article', 'sentence', 'article_coding', 'sentence_coding'])
 
 
-def _get_rows(jobs, include_sentences=False, include_multiple=True, include_uncoded_articles=False,
+def _get_rows(jobs, include_sentences=False, include_multiple=True, include_uncoded_articles=False, include_uncoded_sentences=False,
               progress_monitor=NullMonitor()):
     """
     @param jobs: output rows for these jobs. Make sure this is a QuerySet object with .prefetch_related("codings__values")
@@ -261,6 +264,11 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
 
     job_articles = {a.id: a for a in Article.objects.filter(art_filter)}
     job_sentences = {s.id: s for s in Sentence.objects.filter(article__id__in=job_articles.keys())}
+
+    # Mapping of article -> sentences
+    article_sentences = collections.defaultdict(set)
+    for sentence_id, sentence in job_sentences.items():
+        article_sentences[sentence.article_id].add(sentence_id)
 
     # Articles that have been seen in a codingjob already (so we can skip duplicate codings on the same article)
     seen_articles = set()
@@ -299,6 +307,12 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
                     s = job_sentences[sid]
                     for sentence_coding in sentence_codings[ca.id][sid]:
                         yield CodingRow(job, ca, a, s, article_coding, sentence_coding)
+
+                if include_uncoded_sentences:
+                    non_coded_sentences = article_sentences[ca.article_id] - set(sentence_ids)
+                    for sentence in map(job_sentences.get, non_coded_sentences):
+                        yield CodingRow(job, ca, a, sentence, article_coding, None)
+
             elif article_coding:
                 seen_articles.add(a)
                 yield CodingRow(job, ca, a, None, article_coding, None)
@@ -408,14 +422,16 @@ class GetCodingJobResults(Script):
             called_with['data']['codingjobs'] = [codingjobs]
         return dict(options=cls.options_form(**called_with))
 
-    def get_table(self, codingjobs, export_level, **kargs):
+    def get_table(self, codingjobs, export_level, include_uncoded_sentences=False,
+                  include_uncoded_articles=False, **kargs):
         codingjobs = CodingJob.objects.prefetch_related("coded_articles__codings__values").filter(pk__in=codingjobs)
 
         # Get all row of table
         self.progress_monitor.update(5, "Preparing Jobs")
         rows = list(_get_rows(
             codingjobs, include_sentences=(int(export_level) != CODING_LEVEL_ARTICLE),
-            include_multiple=True, include_uncoded_articles=False,
+            include_multiple=True, include_uncoded_articles=include_uncoded_articles,
+            include_uncoded_sentences=include_uncoded_sentences,
             progress_monitor=self.progress_monitor
         ))
 
@@ -453,7 +469,6 @@ class GetCodingJobResults(Script):
 
         # Build columns based on form schemafields
         for schemafield in self.bound_form.schemafields:
-            #print(schemafield)
             prefix = _get_field_prefix(schemafield)
             if self.options[prefix + "_included"]:
                 options = {k[len(prefix) + 1:]: v for (k, v) in self.options.iteritems() if k.startswith(prefix)}
@@ -528,7 +543,9 @@ import unittest
 
 
 class TestGetCodingJobResults(amcattest.AmCATTestCase):
-    def _get_results_script(self, jobs, options, export_level=0, export_format='json'):
+    def _get_results_script(self, jobs, options, include_uncoded_articles=False,
+                            include_uncoded_sentences=False, export_level=0,
+                            export_format='json'):
         """
         @param options: {field :{options}} -> include that field with those options
         """
@@ -539,7 +556,10 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
 
         data = dict(codingjobs=[job.id for job in jobs],
                     export_format=[export_format],
-                    export_level=[str(export_level)])
+                    export_level=[str(export_level)],
+                    include_uncoded_articles="1" if include_uncoded_articles else "",
+                    include_uncoded_sentences="1" if include_uncoded_sentences else ""
+        )
 
         for field, opts in options.items():
             prefix = _get_field_prefix(field)
@@ -688,6 +708,44 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
 
         with self.checkMaxQueries(9):
             list(csv.reader(StringIO(script.run())))
+
+    def test_include_uncoded_articles(self):
+        aschema, acodebook, astrf, aintf, acodef = amcattest.create_test_schema_with_fields(isarticleschema=True)
+        sschema, scodebook, sstrf, sintf, scodef = amcattest.create_test_schema_with_fields(isarticleschema=False)
+        cjob = amcattest.create_test_job(2, articleschema=aschema, unitschema=sschema)
+        a1, a2 = cjob.articleset.articles.all()
+        coding = create_test_coding(codingjob=cjob, article=a1)
+        coding.update_values({sstrf: "bla", sintf: 10})
+
+        # Default settings should not export uncoded article (a2)
+        fields = {sstrf: {}, sintf: {}, astrf: {}, aintf: {}}
+        result = self._get_results([cjob], fields, export_level=CODING_LEVEL_BOTH)
+        self.assertEqual(1, len(result))
+
+        # Should export extra article if asked to
+        fields = {sstrf: {}, sintf: {}, astrf: {}, aintf: {}}
+        result = self._get_results([cjob], fields, include_uncoded_articles=True, export_level=CODING_LEVEL_BOTH)
+        self.assertEqual(2, len(result))
+
+    def test_include_uncoded_sentences(self):
+        aschema, acodebook, astrf, aintf, acodef = amcattest.create_test_schema_with_fields(isarticleschema=True)
+        sschema, scodebook, sstrf, sintf, scodef = amcattest.create_test_schema_with_fields(isarticleschema=False)
+        a1 = amcattest.create_test_article(text="Zin 1. Zin 2.")
+        a2 = amcattest.create_test_article(text="Zin 1. Zin 2.")
+        aset = amcattest.create_test_set([a1, a2])
+        cjob = amcattest.create_test_job(articleset=aset, articleschema=aschema, unitschema=sschema)
+
+        sentence = list(get_or_create_sentences(a1))[1]
+        coding = create_test_coding(codingjob=cjob, article=a1, sentence=sentence)
+        coding.update_values({sstrf: "bla", sintf: 10})
+
+        # We expect 1 sentence if we only export codings
+        fields = {sstrf: {}, sintf: {}, astrf: {}, aintf: {}}
+        result = self._get_results([cjob], fields, include_uncoded_sentences=False, export_level=CODING_LEVEL_BOTH)
+        self.assertEqual(1, len(result))
+
+        result = self._get_results([cjob], fields, include_uncoded_sentences=True, export_level=CODING_LEVEL_BOTH)
+        self.assertEqual(3, len(result))
 
     def test_nqueries(self):
         from amcat.tools import amcatlogging
