@@ -63,8 +63,8 @@ Next, download and extract elasticsearch and our custom hitcount jar, and instal
 cd /tmp
 
 # Download and install elasticsearch
-wget "https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.3.2.deb"
-sudo dpkg -i elasticsearch-1.3.2.deb
+wget "https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.4.4.deb"
+sudo dpkg -i elasticsearch-1.4.4.deb
 
 # Install plugins
 cd /usr/share/elasticsearch
