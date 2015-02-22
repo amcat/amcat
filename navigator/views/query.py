@@ -17,13 +17,17 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from __future__ import unicode_literals
+from django.db.models.query_utils import Q
 
 from django.views.generic.base import TemplateView
+from amcat.models import Query
 from amcat.tools.amcates import ES
 
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
 from amcat.scripts.forms import SelectionForm
 from navigator.views.project_views import ProjectDetailsView
+
+SHOW_N_QUERIES = 5
 
 
 class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, TemplateView):
@@ -50,6 +54,10 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
                 "articlesets": articlesets
             }
         )
+
+        saved_queries = Query.objects.filter(project=self.project)
+        saved_user_queries = saved_queries.filter(user=self.request.user)[:SHOW_N_QUERIES]
+        saved_project_queries = saved_queries.filter(~Q(user=self.request.user))[:SHOW_N_QUERIES]
 
         form.fields["articlesets"].widget.attrs['disabled'] = 'disabled'
         return dict(super(QueryView, self).get_context_data(), **locals())

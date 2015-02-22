@@ -1,19 +1,48 @@
 {% include "project/query/syntax_help.html" %}
 
 
-<p class="btn-group">
-    <a class="btn btn-default">
-        <i class="glyphicon glyphicon-open"></i> Load
-    </a>
-    <a class="btn btn-default">
-        <i class="glyphicon glyphicon-cog"></i> Settings
-    </a>
-    <a class="btn btn-danger disabled">
-        <i class="glyphicon glyphicon-trash"></i> Delete
-    </a>
+<div class="btn-group">
+    <div class="btn-group">
+        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+            Load query <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu" role="menu">
+            {% if not saved_queries.exists %}
+                <li><a href="#">No saved queries</a></li>
+            {% else %}
+                {% for query in saved_user_queries %}
+                    <li><a href="./{{ query.id }}">No saved queries</a></li>
+                {% empty %}
+                    <li><a href="#">No personal queries</a></li>
+                {% endfor %}
 
-    <h4 class="name" style="float:right;">Unsaved query</h4>
-</p>
+                <li class="divider"></li>
+                {% for query in saved_project_queries %}
+                    <li><a href="./{{ query.id }}">No saved queries</a></li>
+                {% empty %}
+                    <li><a href="#">No project queries</a></li>
+                {% endfor %}
+            {% endif %}
+        </ul>
+    </div>
+
+
+    <button class="btn btn-default">
+        Save query
+    </button>
+    <!--<a class="btn btn-default">
+        <i class="glyphicon glyphicon-cog"></i> Settings
+    </a>-->
+    <button class="btn btn-danger disabled">
+        <i class="glyphicon glyphicon-trash"></i> Delete
+    </button>
+
+</div>
+
+<!--<h4 class="name" style="float:right;">Unsaved query</h4>-->
+
+<br/>
+<br/>
 
 <div style="display:none;" class="alert alert-danger" id="global-error" role="alert">
     <p>A global form error has occured:</p>
@@ -81,8 +110,8 @@
 
 <div class="row query-submit">
     <div class="btn-group">
-        <a class="btn btn-default disabled">Save as..</a>
-        <a class="btn btn-default disabled">Save</a>
+        <!--<a class="btn btn-default disabled">Save as..</a>
+        <a class="btn btn-default disabled">Save</a>-->
         <a class="btn btn-success disabled" id="run-query">
             <i class="glyphicon glyphicon-cog"></i> Query
         </a>
