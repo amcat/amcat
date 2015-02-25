@@ -28,6 +28,7 @@ class ANALYSES:
                "arguments" : {"model" : "nltk"}}]
 
     corenlp = [{"module" : "xtas.tasks.single.corenlp"}]
+    parzu = [{"module" : "xtas.tasks.single.parzu"}]
     alpino = [{"module" : "xtas.tasks.single.alpino"}]
     sources_nl = [{"module" : "xtas.tasks.single.alpino"},
                   {"module" : "xtas.tasks.single.sources_nl"}]
