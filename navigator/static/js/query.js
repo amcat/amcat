@@ -367,9 +367,6 @@ $((function(){
             var aggregation = Aggregation(data).transpose();
             var columns = aggregation.columns;
 
-            //log(columns)
-            //log(aggregation.rows)
-
             type = (type === undefined) ? "column" : type;
 
             var chart = {
@@ -378,17 +375,14 @@ $((function(){
                 xAxis: { allowDecimals: false, type: x_type },
                 yAxis: { allowDecimals: false, title: "total" },
                 series: $.map(aggregation.rows, function(x_key){
-                    var a = {
+                    return {
                         type: type,
                         name: value_renderer[form_data["y_axis"]](x_key),
                         data: $.map(columns, function(column){
                             return aggregation.get(x_key).get(column) || 0;
                         }),
                         obj: x_key
-                    }
-
-                    console.log(a);
-                    return a;
+                    };
                 }),
                 plotOptions: {
                     series: {
@@ -399,11 +393,7 @@ $((function(){
 
                                 var filters = {};
                                 filters[y_type] = event.point.series.options.obj;
-                                filters[x_type] = event.point.x;
-
-                                if (getType(x_type) === 'category'){
-                                    filters[x_type] = columns[event.point.x];
-                                }
+                                filters[x_type] = columns[event.point.x];
 
                                 articles_popup(filters);
                             }
@@ -414,9 +404,7 @@ $((function(){
 
             // We need category labels if x_axis is not of type datetime
             var renderer = value_renderer[form_data["x_axis"]];
-            if (x_type === 'category'){
-                chart.xAxis.categories = $.map(columns, renderer);
-            }
+            chart.xAxis.categories = $.map(columns, renderer);
 
             container.highcharts(chart);
 
