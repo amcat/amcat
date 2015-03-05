@@ -17,7 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from django.shortcuts import render
-
+from amcat.models import ArticleSet
 
 def index(request):
     try:
@@ -30,4 +30,6 @@ def index(request):
         request.user.userprofile.save()
         print(request.user.userprofile.fluid)
 
-    return render(request, 'index.html')
+    featured_sets = ArticleSet.objects.filter(featured=True)
+
+    return render(request, 'index.html', locals())

@@ -63,6 +63,7 @@ class ArticleSet(AmcatModel):
     articles = models.ManyToManyField("amcat.Article", related_name="articlesets_set")
 
     provenance = models.TextField(null=True)
+    featured = models.BooleanField(default=False)
 
     class Meta():
         app_label = 'amcat'
