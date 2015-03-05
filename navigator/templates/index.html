@@ -9,6 +9,15 @@
 <div class="btn-group btn-group-lg">
   <a class="btn btn-primary" href="{% url "codingjobs" %}">Annotator</a></span>
 </div>
+{% if featured_sets %}
+<h3>Or explore one of our featured article sets:</h3>
+<ul class='list-group'>
+{% for a in featured_sets %}
+<li class="list-group-item"><a href="{% url 'article set-details' a.project_id a.id %}"><strong>{{a}}</strong> in project {{a.project_id}}: {{a.project}}</a>
+{% endfor %}
+</ul>
+{% endif %}
+
 </div>
 
 {% endblock %}

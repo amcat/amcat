@@ -311,11 +311,14 @@ class Article(AmcatModel):
         # add to index
         if add_to_index:
             es.bulk_insert(add_to_index)
+            log.info("Added {} to index".format(len(add_to_index)))
 
         if articleset:
             # add to articleset (db and index)
             articleset.add_articles(add_to_set | add_new_to_set, add_to_index=False)
+            log.info("Added {} to db".format(len(add_to_set | add_new_to_set)))
             es.add_to_set(articleset.id, add_to_set)
+            log.info("Added {} to elastic".format(len(add_to_set)))
 
         return result, errors
 
