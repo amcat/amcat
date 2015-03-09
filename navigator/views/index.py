@@ -18,6 +18,7 @@
 ###########################################################################
 from django.shortcuts import render
 from amcat.models import ArticleSet
+from amcat.models.authorisation import ROLE_PROJECT_READER
 
 def index(request):
     try:
@@ -29,7 +30,8 @@ def index(request):
         request.user.userprofile.fluid = fluid > 0
         request.user.userprofile.save()
         print(request.user.userprofile.fluid)
-
-    featured_sets = ArticleSet.objects.filter(featured=True)
+    
+    featured_sets = [(aset, aset.project.get_role_id(user=request.user) >= ROLE_PROJECT_READER)
+                     for aset in ArticleSet.objects.filter(featured=True)]
 
     return render(request, 'index.html', locals())
