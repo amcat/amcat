@@ -12,8 +12,13 @@
 {% if featured_sets %}
 <h3>Or explore one of our featured article sets:</h3>
 <ul class='list-group'>
-{% for a in featured_sets %}
+{% for a, canread in featured_sets %}
 <li class="list-group-item"><a href="{% url 'article set-details' a.project_id a.id %}"><strong>{{a}}</strong> in project {{a.project_id}}: {{a.project}}</a>
+{% if not canread %}
+<abbr class="text-warning" title="The project containing this articleset does not give full read access to the articles (probably because of copyright restrictions), so you might not be able to read the full text of all articles">(restricted access)</small>
+{% endif %}
+
+
 {% endfor %}
 </ul>
 {% endif %}
