@@ -25,7 +25,7 @@ from django.core.files import File
 
 import argparse
 import sys
-from amcat.tools import amcatlogging, classtools
+from amcat.tools import classtools
 import types, chardet
 
 import logging; log = logging.getLogger(__name__)
@@ -44,7 +44,6 @@ def get_script(depth=2):
 
 def run_cli(cls=None, handle_output=None, get_script_depth=2):
     """Handle command line interface invocation of this script"""
-    #amcatlogging.setup()
 
     if cls is None: cls = get_script(get_script_depth)
 
@@ -56,8 +55,6 @@ def run_cli(cls=None, handle_output=None, get_script_depth=2):
     options = args.__dict__
 
     verbose = options.pop("verbose", None)
-    if verbose:
-        amcatlogging.debug_module(cls.__module__)
     
     instance = cls(options)
     instance.verbose = verbose

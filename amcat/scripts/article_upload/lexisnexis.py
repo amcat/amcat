@@ -558,9 +558,6 @@ class LexisNexis(UploadScript):
             raise
 
 
-from amcat.tools import amcatlogging;
-
-amcatlogging.debug_module()
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli

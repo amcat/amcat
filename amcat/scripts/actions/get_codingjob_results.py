@@ -748,10 +748,6 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         self.assertEqual(3, len(result))
 
     def test_nqueries(self):
-        from amcat.tools import amcatlogging
-
-        amcatlogging.setup()
-
         codebook, codes = amcattest.create_test_codebook_with_codes()
         schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields(codebook=codebook)
         job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=7)
@@ -771,7 +767,6 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
 
         codingjobs = list(CodingJob.objects.filter(pk__in=[job.id]))
         c = list(codingjobs[0].codings)[0]
-        amcatlogging.debug_module('django.db.backends')
 
         script = self._get_results_script([job], {strf: {}, intf: {}})
         with self.checkMaxQueries(9):

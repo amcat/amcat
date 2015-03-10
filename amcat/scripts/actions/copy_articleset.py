@@ -209,6 +209,4 @@ class CopyArticleSetScript(Script):
         
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
-    from amcat.tools import amcatlogging
-    amcatlogging.debug_module()
     cli.run_cli()

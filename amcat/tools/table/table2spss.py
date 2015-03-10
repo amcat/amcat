@@ -2,7 +2,6 @@
 import tempfile
 
 from amcat.tools import toolkit, idlabel
-from amcat.tools import amcatlogging
 
 import sys
 import re
@@ -12,9 +11,6 @@ import os.path
 import logging;
 
 log = logging.getLogger(__name__)
-
-amcatlogging.debugModule()
-
 
 def clean(s, maxchars=None):
     if type(s) == str: s = s.decode('latin-1')

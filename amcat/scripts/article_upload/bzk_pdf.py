@@ -110,7 +110,6 @@ class BZKPDFScraper(UploadScript):
             return Medium.get_or_create(medium)
 
 if __name__ == "__main__":
-    from amcat.tools import amcatlogging
     from amcat.scripts.tools import cli
     cli.run_cli(BZKPDFScraper)
 
