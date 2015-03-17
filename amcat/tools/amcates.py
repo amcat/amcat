@@ -17,13 +17,11 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-
 from __future__ import unicode_literals, print_function, absolute_import
 import logging
+from django.db.models.fields.related import ForeignKey
 log = logging.getLogger(__name__)
 import re
-import requests
-import collections
 from datetime import datetime
 
 from hashlib import sha224 as hash_class
@@ -38,8 +36,36 @@ from django.conf import settings
 from amcat.tools.caching import cached
 from amcat.tools.progress import NullMonitor
 
+
+HASH_IGNORE_FIELDS = {"project", "insertdate", "uuid", "id"}
+
+
 def _clean(s):
-    if s: return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', s)
+    if s is not None:
+        return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', s)
+
+
+def _get_hash_fields():
+    from amcat.models import Article
+    for field in Article._meta.fields:
+        if field.name not in HASH_IGNORE_FIELDS:
+            if isinstance(field, ForeignKey):
+                yield field.name + "_id"
+            else:
+                yield field.name
+
+
+_hash_field_cache = None
+def get_hash_fields():
+    # Circular import :(
+    global _hash_field_cache
+
+    if _hash_field_cache is not None:
+        return _hash_field_cache
+
+    _hash_field_cache = sorted(_get_hash_fields())
+    return _hash_field_cache
+
 
 def get_article_dict(art, sets=None):
     date = art.date
@@ -47,42 +73,54 @@ def get_article_dict(art, sets=None):
         if isinstance(art.date, (str, unicode)):
             date = toolkit.readDate(date)
         date = date.isoformat()
-    d = dict(
-        # dublin core elements
-        id = art.id,
-        headline=_clean(art.headline),
-        text=_clean(art.text),
-        date=date,
-        creator=_clean(art.author),
 
-        # other elements
-        projectid=art.project_id,
-        mediumid=art.medium_id,
-        medium=art.medium.name,
-        byline=_clean(art.byline),
-        section=_clean(art.section),
-        page=art.pagenr,
-        addressee=_clean(art.addressee),
-        length=art.length,
-        sets = sets
-        )
+    return {
+        'id': art.id,
+        'date': date,
+        'section': _clean(art.section),
+        'page': art.pagenr,
+        'headline': _clean(art.headline),
+        'byline': _clean(art.byline),
+        'length': art.length,
+        # metastring?
+        # url?
+        # externalid?
+        'creator': _clean(art.author),
+        'addressee': _clean(art.addressee),
+        # uuid?
+        'text': _clean(art.text),
+        # parent?
+        'mediumid': art.medium_id,
+        'medium': art.medium.name,
+        'sets': sets,
+        'hash': _get_hash(art)
+    }
 
-    d['hash'] = _get_hash(d)
-    return d
 
-def _get_hash(article_dict):
-    c =hash_class()
-    keys = sorted(k for k in article_dict.keys()
-                  if k not in ('id', 'sets', 'hash', 'medium', 'projectid'))
-    for k in keys:
-        v = article_dict[k]
-        if isinstance(v, int):
-            c.update(str(v))
-        elif isinstance(v, unicode):
-            c.update(v.encode('utf-8'))
-        elif v is not None:
-            c.update(v)
-    return c.hexdigest()
+def _get_byte(value):
+    if isinstance(value, unicode):
+        return b"u" + value.encode("utf-8")
+    elif value is None:
+        return b"n"
+    return b"s" + str(value)
+
+
+def _get_hash(article):
+    hash = hash_class()
+
+    for field_name in get_hash_fields():
+        value = getattr(article, field_name)
+        value = _get_byte(value)
+
+        # Escape commas, as we use it as a separator
+        value.replace(b'\\', b'\\\\')
+        value = value.replace(b",", b"\\,")
+        hash.update(value)
+
+        # Field separator
+        hash.update(b",")
+
+    return hash.hexdigest()
 
 HIGHLIGHT_OPTIONS = {
     'fields': {
@@ -132,7 +170,6 @@ class SearchResult(object):
     def as_dicts(self):
         "Return the results as fieldname : value dicts"
         return [r.__dict__ for r in self]
-
 
 class Result(object):
     """Simple class to hold arbitrary values"""
@@ -201,7 +238,6 @@ class ES(object):
             return {f : hl[f][0] for f in hl}
         except KeyError:
             log.exception("Could not get highlights from {r!r}".format(**locals()))
-
 
     def clear_cache(self):
         indices.IndicesClient(self.es).clear_cache()
