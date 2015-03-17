@@ -18,8 +18,12 @@
 ###########################################################################
 
 from __future__ import unicode_literals, print_function, absolute_import
+import json
 import logging
+
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models.fields.related import ForeignKey
+
 log = logging.getLogger(__name__)
 import re
 from datetime import datetime
@@ -29,7 +33,7 @@ from json import dumps as serialize
 
 from amcat.tools import queryparser, toolkit
 from amcat.tools.toolkit import multidict, splitlist
-from elasticsearch import Elasticsearch, connection
+from elasticsearch import Elasticsearch
 from elasticsearch.client import indices, cluster
 from elasticsearch.helpers import scan
 from django.conf import settings
@@ -97,30 +101,11 @@ def get_article_dict(art, sets=None):
     }
 
 
-def _get_byte(value):
-    if isinstance(value, unicode):
-        return b"u" + value.encode("utf-8")
-    elif value is None:
-        return b"n"
-    return b"s" + str(value)
-
-
 def _get_hash(article):
-    hash = hash_class()
+    article_dict = {fn: getattr(article, fn) for fn in get_hash_fields()}
+    article_json = json.dumps(article_dict, cls=DjangoJSONEncoder)
+    return hash_class(article_json).hexdigest()
 
-    for field_name in get_hash_fields():
-        value = getattr(article, field_name)
-        value = _get_byte(value)
-
-        # Escape commas, as we use it as a separator
-        value.replace(b'\\', b'\\\\')
-        value = value.replace(b",", b"\\,")
-        hash.update(value)
-
-        # Field separator
-        hash.update(b",")
-
-    return hash.hexdigest()
 
 HIGHLIGHT_OPTIONS = {
     'fields': {
@@ -662,7 +647,7 @@ if __name__ == '__main__':
 ###########################################################################
 
 from amcat.tools import amcattest
-from unittest import skipUnless, skip
+from unittest import skip
 
 class TestAmcatES(amcattest.AmCATTestCase):
 
