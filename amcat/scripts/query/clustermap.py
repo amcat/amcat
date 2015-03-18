@@ -40,7 +40,7 @@ class ClusterMapForm(QueryActionForm):
         queries = self.cleaned_data["query"].split("\n")
         queries = filter(bool, map(unicode.strip, queries))
 
-        if len(queries) <= 2:
+        if len(queries) < 2:
             raise ValidationError("You need to provide at least 2 queries to generate a clustermap")
 
         return super(ClusterMapForm, self).clean()
