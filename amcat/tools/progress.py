@@ -31,9 +31,7 @@ class NullMonitor(ProgressMonitor):
         pass
 
 if __name__ == '__main__':
-    from amcat.tools import amcatlogging
     from django.conf import settings
-    amcatlogging.setup()
     p = ProgressMonitor()
     def listen(pm):
         print (pm.percent, pm.message)

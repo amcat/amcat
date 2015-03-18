@@ -139,7 +139,7 @@ def get_bulk_body(articles, action="index"):
 
 class SearchResult(object):
     """Iterable collection of results that also has total"""
-    def __init__(self, results, fields, score, body):
+    def __init__(self, results, fields, score, body, query=None):
         "@param results: the raw results dict from elasticsearch::search"
         self._results = results
         self.hits = self._results['hits']['hits']
@@ -147,11 +147,12 @@ class SearchResult(object):
         self.fields = fields
         self.score = score
         self.body = body
+        self.query = query
 
     @property
     @cached
     def results(self):
-        return [Result.from_hit(h, self.fields, self.score) for h in self.hits]
+        return [Result.from_hit(self, h, self.fields, self.score) for h in self.hits]
 
     def __len__(self):
         return len(self.hits)
@@ -169,7 +170,7 @@ class SearchResult(object):
 class Result(object):
     """Simple class to hold arbitrary values"""
     @classmethod
-    def from_hit(cls, row, fields, score=True):
+    def from_hit(cls, searchresult, row, fields, score=True):
         "@param hit: elasticsearch hit dict"
         field_dict = {f: None for f in fields}
         if 'fields' in row:
@@ -181,7 +182,7 @@ class Result(object):
                         v = v[0]
                 field_dict[k] = v
 
-        result =  Result(id=int(row['_id']), **field_dict)
+        result =  Result(id=int(row['_id']), _searchresult=searchresult, **field_dict)
         if score: result.score = int(row['_score'])
         if 'highlight' in row: result.highlight = row['highlight']
         if hasattr(result, 'date'):
@@ -217,7 +218,7 @@ class ElasticSearchError(Exception):
 
 
 class ES(object):
-    def __init__(self, index=None, doc_type=None, timeout=60, **args):
+    def __init__(self, index=None, doc_type=None, timeout=300, **args):
         elhost = {"host":settings.ES_HOST, "port":settings.ES_PORT}
         self.es = Elasticsearch(hosts=[elhost, ], timeout=timeout, **args)
         self.index = settings.ES_INDEX if index is None else index
@@ -325,7 +326,7 @@ class ES(object):
         if lead: body['script_fields'] = LEAD_SCRIPT_FIELD
 
         result = self.search(body, fields=fields, **kwargs)
-        return SearchResult(result, fields, score, body)
+        return SearchResult(result, fields, score, body, query=query)
 
     def query_all(self, *args, **kargs):
         kargs.update({"from_" : 0})

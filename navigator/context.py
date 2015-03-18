@@ -35,8 +35,10 @@ def extra(request):
     announcement = get_announcement(request)
     warning = AmCAT.get_instance().server_warning
     notice = session_pop(request.session, "notice")
-    if request.user.is_anonymous():
-        theme = 'amcat'
-    else:
-        theme = getattr(request.user.userprofile, 'theme', 'amcat').lower().replace(" ", "_")
+    if hasattr(request, 'user'):
+        if request.user.is_anonymous():
+            theme = 'amcat'
+        else:
+            theme = getattr(request.user.userprofile, 'theme', 'amcat').lower().replace(" ", "_")
+
     return locals()

@@ -20,7 +20,7 @@ from kombu import Exchange, Queue
 import os
 
 CELERY_RESULT_BACKEND = 'amqp'
-CELERY_TASK_RESULT_EXPIRES = 18000  # 5 hours.
+CELERY_TASK_RESULT_EXPIRES = 3600
 
 _qname = os.environ.get('AMCAT_CELERY_QUEUE', 'amcat')
 CELERY_QUEUES = (

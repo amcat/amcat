@@ -370,6 +370,7 @@ _DATEFORMATS = (
     _DateFormat("(\d{1,2})\.?\s+(\w*)\s+(\d{4})", 3, 2, 1, True),
     _DateFormat("(\d{1,2})[- ](\w+)[- ](\d{2,4})", 3, 2, 1, True),
     _DateFormat("(\w+) (\d{1,2}), (\d{4})", 3, 1, 2, True),
+    _DateFormat("(\d{1,2})(\w{3})(\d{4})", 3, 2, 1, True),
     _DateFormat("(\d{1,2})[-/](\d{1,2})[-/](\d{2})", 3, 2, 1, swapamerican=True),
 
 )

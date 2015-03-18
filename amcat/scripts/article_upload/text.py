@@ -177,9 +177,6 @@ class Text(UploadScript):
 
 
 if __name__ == '__main__':
-    from amcat.tools import amcatlogging
-
-    amcatlogging.debug_module("amcat.scripts.article_upload.upload")
     from amcat.scripts.tools.cli import run_cli
 
     run_cli(handle_output=False)
@@ -190,9 +187,6 @@ if __name__ == '__main__':
 
 from amcat.tools import amcattest
 import unittest
-from amcat.tools import amcatlogging
-
-amcatlogging.debug_module("amcat.scripts.article_upload.upload")
 
 
 class TestUploadText(amcattest.AmCATTestCase):

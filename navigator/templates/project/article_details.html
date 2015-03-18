@@ -20,6 +20,12 @@
                 {% if can_view_text %}
                     {{ text|safe|urlizetrunc:30|linebreaks }}
                 {% else %}
+   		    {% if article.url %}
+		<div class="alert alert-info">View article in original
+		    context
+		    at <a href="{{article.url}}">{{article.url|urlizetrunc:40}}</a></div>
+
+		    {% endif %}
                     <div class="alert alert-warning">You do not have sufficient access to this project to view the full text of the article. Please contact an administrator of <a href="{% url "user-list" article.project_id %}">project {{article.project_id}} - {{article.project}}</a> to gain access</div>
                 {% endif %}
             </article>
