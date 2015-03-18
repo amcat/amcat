@@ -127,6 +127,17 @@ UPDATE_SCRIPT_ADD_TO_SET = ("s=ctx._source; "
                             "if (s.sets) {if (!(set in s.sets)) s.sets += set} "
                             "else {s.sets = [set]}")
 
+
+def _get_bulk_body(articles, action):
+    for article_id, article in articles.items():
+        yield serialize({action: {'_id': article_id}})
+        yield article
+
+
+def get_bulk_body(articles, action="index"):
+    return "\n".join(_get_bulk_body(articles, action)) + "\n"
+
+
 class SearchResult(object):
     """Iterable collection of results that also has total"""
     def __init__(self, results, fields, score, body):
@@ -200,6 +211,11 @@ class Result(object):
         keys = sorted(self.__dict__)
         items = ("{}={!r}".format(k, self.__dict__[k]) for k in keys)
         return "{}({})".format(type(self).__name__, ", ".join(items))
+
+
+class ElasticSearchError(Exception):
+    pass
+
 
 class ES(object):
     def __init__(self, index=None, doc_type=None, timeout=60, **args):
@@ -362,26 +378,38 @@ class ES(object):
         """
         Add the given article dict objects to the index using a bulk insert call
         """
-        def get_bulk_body(dicts):
-            for article_dict in dicts:
-                yield serialize(dict(index={'_id' : article_dict['id']}))
-                yield serialize(article_dict)
-        r = self.es.bulk(body=get_bulk_body(dicts), index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
+        body = get_bulk_body({d["id"]: serialize(d) for d in dicts})
+        resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
 
+        if resp["errors"]:
+            raise ElasticSearchError(resp["errors"])
+
+    def update_values(self, article_id, values):
+        """Update properties of existing article.
+
+        @param values: mapping from field name to (new) value
+        @type values: dict"""
+        return self.bulk_update_values({article_id: values})
+
+    def bulk_update_values(self, articles):
+        """Updates set of articles in bulk.
+        """
+        body = get_bulk_body({aid: serialize({"doc": a}) for aid, a in articles.items()}, action="update")
+        resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
+
+        if resp["errors"]:
+            raise ElasticSearchError(resp["errors"])
 
     def bulk_update(self, article_ids, script, params):
         """
         Execute a bulk update script with the given params on the given article ids.
         """
         payload = serialize(dict(script=script, params=params))
-        def get_bulk_body(article_ids, payload):
-            for aid in article_ids:
-                yield serialize(dict(update={'_id': aid}))
-                yield payload
-        body = ("\n".join(get_bulk_body(article_ids, payload))) + "\n"
-        r = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
-        if r['errors']:
-            log.warning(r)
+        body = get_bulk_body({aid: payload for aid in article_ids}, action="update")
+        resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
+
+        if resp["errors"]:
+            raise ElasticSearchError(resp["errors"])
 
     def synchronize_articleset(self, aset, full_refresh=False):
         """
