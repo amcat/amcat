@@ -36,6 +36,8 @@ class BreadCrumbMixin(object):
 
     def get_context_data(self, **kwargs):
         context = super(BreadCrumbMixin, self).get_context_data(**kwargs)
+        if getattr(self, "help_context"):
+            context["help_context"] = self.help_context
         context["breadcrumbs"] = list(self.get_breadcrumbs())
         return context
 

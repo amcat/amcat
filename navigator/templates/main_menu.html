@@ -14,6 +14,9 @@
   </ul>
 </li>
 
+<li><a target="_blank" href="http://wiki.amcat.nl{% if help_context %}/{{help_context}}{% endif %}">
+<span class="alert alert-success"><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> Help</a></span>
+
 <li id="layout-switcher">
 {% if not annotator %}
     {% if request.user.userprofile.fluid %}

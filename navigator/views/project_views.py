@@ -34,6 +34,7 @@ log = logging.getLogger("statistics:" + __name__)
 class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
     model = Project
     template_name = "project/project_list.html"
+    help_context = "Creating_an_AmCAT_project_and_adding_articles"
 
     def get(self, *args, **kargs):
         favaction = self.request.GET.get('favaction')
