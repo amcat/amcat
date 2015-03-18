@@ -33,18 +33,3 @@ class NullMonitor(ProgressMonitor):
     def update(self, *args, **kargs):
         pass
 
-
-if __name__ == '__main__':
-    from amcat.tools import amcatlogging
-
-    amcatlogging.setup()
-    p = ProgressMonitor()
-
-    def listen(pm):
-        print(pm.percent, pm.message)
-
-    p.add_listener(listen)
-    p.update(15, "bezig")
-    p.update(15, "nog steeds")
-    p.remove_listener(listen)
-    p.update(10, 'Ja')

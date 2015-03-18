@@ -23,8 +23,8 @@ install:
  - sudo service rabbitmq-server start
 
  # Elasticsearch
- - wget https://hmbastiaan.nl/martijn/amcat/hitcount.jar
- - wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.4.3.tar.gz -O - | tar xvz
+ - wget --no-check-certificate https://hmbastiaan.nl/martijn/amcat/hitcount.jar
+ - wget --no-check-certificate https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.4.3.tar.gz -O - | tar xvz
  - cd elasticsearch-1*
  - bin/plugin -install elasticsearch/elasticsearch-lang-python/2.4.1
  - bin/plugin -install elasticsearch/elasticsearch-analysis-icu/2.4.2

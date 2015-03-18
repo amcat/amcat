@@ -105,7 +105,9 @@ class ArticleLemmataSerializer(ArticleXTasSerializer):
         from saf.saf import SAF
         saf = SAF(saf)
         tokens = saf.resolve()
-        return tokens
+        for token in tokens:
+            token["aid"] = aid
+            yield token
 
 
     def get_sources(self, aid, saf):

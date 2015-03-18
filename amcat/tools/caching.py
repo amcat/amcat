@@ -338,4 +338,3 @@ class TestCaching(amcattest.AmCATTestCase):
         with self.checkMaxQueries(0, "Get multiple cached projects one by one"):
             ps = [get_objects(Project, pid) for pid in pids]
 
-#from amcat.tools import amcatlogging; amcatlogging.infoModule()

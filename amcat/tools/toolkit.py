@@ -52,6 +52,7 @@ import subprocess
 import base64
 import logging
 import string
+from django.core.serializers.json import DjangoJSONEncoder
 
 from collections import OrderedDict, Callable
 
@@ -409,6 +410,7 @@ _DATEFORMATS = (
     _DateFormat("(\d{1,2})\.?\s+(\w*)\s+(\d{4})", 3, 2, 1, True),
     _DateFormat("(\d{1,2})[- ](\w+)[- ](\d{2,4})", 3, 2, 1, True),
     _DateFormat("(\w+) (\d{1,2}), (\d{4})", 3, 1, 2, True),
+    _DateFormat("(\d{1,2})(\w{3})(\d{4})", 3, 2, 1, True),
     _DateFormat("(\d{1,2})[-/](\d{1,2})[-/](\d{2})", 3, 2, 1, swapamerican=True),
 
 )
@@ -659,6 +661,16 @@ def is_sequence(obj, exclude_strings=False):
     if exclude_strings and isinstance(obj, basestring):
         return False
     return hasattr(obj, "__getslice__")
+
+###########################################################################
+##                      Serialising functions                            ##
+###########################################################################
+class DeterministicDjangoJSONEncoder(DjangoJSONEncoder):
+    """Provides the same functionality as DjangoJSONEncoder, but converts
+    dictionaries to (sorted) list of tuples."""
+    def default(self, o):
+        o = sorted(o.items()) if isinstance(o, dict) else o
+        return super(DeterministicDjangoJSONEncoder, self).default(o)
 
 ###########################################################################
 ##                         Misc. functions                               ##

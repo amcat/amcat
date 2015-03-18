@@ -2,7 +2,6 @@
 import tempfile
 
 from amcat.tools import toolkit, idlabel
-from amcat.tools import amcatlogging
 
 import sys
 import re
@@ -12,9 +11,6 @@ import os.path
 import logging
 
 log = logging.getLogger(__name__)
-
-amcatlogging.debugModule()
-
 
 def clean(s, maxchars=None):
     if type(s) == str: s = s.decode('latin-1')
@@ -114,8 +110,8 @@ def table2spss(t, writer=sys.stdout, saveas=None):
 class EchoWriter(object):
     def __init__(self, writer):
         self.writer = writer
-        self.log, filename = tempfile.mkstemp(suffix=".sps", prefix="data-")
-        log.warn("Writing spss commands to %s" % filename)
+        self.log = tempfile.NamedTemporaryFile(suffix=".sps", prefix="data-", delete=False)
+        log.warn("Writing spss commands to %s" % self.log.name)
 
     def write(self, bytes):
         self.log.write(bytes)
@@ -146,4 +142,3 @@ def table2sav(t, filename=None):
     if not os.path.exists(filename):
         raise Exception("PSPP Exited without errors, but file was not saved.\n\nOut=%r\n\nErr=%r" % (out, err))
     return filename
-

@@ -66,17 +66,9 @@ class ClauseView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, FormVi
                 clause[place] = saf.resolve(clause[place])
         print clauses
         # make tree
-        from syntaxrules.syntaxtree import SyntaxTree, VIS_IGNORE_PROPERTIES
-        import base64
-        VIS_IGNORE_PROPERTIES.append("clause_role")
-        VIS_IGNORE_PROPERTIES.append("clause_id")
-        VIS_IGNORE_PROPERTIES.append("source_role")
-        VIS_IGNORE_PROPERTIES.append("source_id")
-        VIS_IGNORE_PROPERTIES.append("pos")
+        from saf import visualize
+        tree = visualize.get_png_bytes(saf)
 
-        t = SyntaxTree(saf.saf)
-        g = t.get_graphviz()
-        tree = base64.b64encode(g.draw(format='png', prog='dot'))
 
         ctx = dict(form=form,
                    clauses=clauses,

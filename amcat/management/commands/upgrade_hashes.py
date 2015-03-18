@@ -16,22 +16,43 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from django.shortcuts import render
-from amcat.models import ArticleSet
-from amcat.models.authorisation import ROLE_PROJECT_READER
+from __future__ import print_function
+import datetime
+from itertools import izip_longest
+from django.core.management import BaseCommand
+import sys
+from amcat.models import Article
+from amcat.tools import amcates
+from amcat.tools.amcates import _get_hash
 
-def index(request):
-    try:
-        fluid = int(request.GET['fluid'])
-    except (ValueError, KeyError):
-        pass
-    else:
-        print(request.user.userprofile.fluid)
-        request.user.userprofile.fluid = fluid > 0
-        request.user.userprofile.save()
-        print(request.user.userprofile.fluid)
-    
-    featured_sets = [(aset, aset.project.get_role_id(user=request.user) >= ROLE_PROJECT_READER)
-                     for aset in ArticleSet.objects.filter(featured=True)]
+GROUP_SIZE = 10000
 
-    return render(request, 'index.html', locals())
+
+def grouper(iterable, n=GROUP_SIZE):
+    """Collect data into fixed-length chunks or blocks"""
+    return izip_longest(*[iterable] * n)
+
+
+class Command(BaseCommand):
+    help = 'Recalculate and update hashes in elasticsearch database.'
+
+    def handle(self, *args, **options):
+        es = amcates.ES()
+
+        print("Counting articles..", end=" ")
+        sys.stdout.flush()
+        narticles = es.count(query="*", filters={})
+        print(narticles)
+
+        then, now = datetime.datetime.now(), datetime.datetime.now()
+        for i, article_ids in enumerate(grouper(es.query_ids())):
+            progress = (float(i * GROUP_SIZE) / float(narticles)) * 100
+            print("{} of {} ({:.2f}%)".format(i*GROUP_SIZE, narticles, progress))
+            articles = Article.objects.in_bulk(article_ids).values()
+            es.bulk_update_values({a.id: {"hash": _get_hash(a)} for a in articles})
+
+            then, now = now, datetime.datetime.now()
+            print("Articles per second: ", end="")
+            print(int(GROUP_SIZE / (now - then).total_seconds()))
+
+        print("Done.")

@@ -17,10 +17,12 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-
 from __future__ import unicode_literals, print_function, absolute_import
 from collections import namedtuple
+import json
 import logging
+
+from django.db.models.fields.related import ForeignKey
 
 log = logging.getLogger(__name__)
 import re
@@ -30,7 +32,7 @@ from hashlib import sha224 as hash_class
 from json import dumps as serialize
 
 from amcat.tools import queryparser, toolkit
-from amcat.tools.toolkit import multidict, splitlist
+from amcat.tools.toolkit import multidict, splitlist, DeterministicDjangoJSONEncoder
 from elasticsearch import Elasticsearch
 from elasticsearch.client import indices, cluster
 from elasticsearch.helpers import scan
@@ -39,10 +41,33 @@ from amcat.tools.caching import cached
 from amcat.tools.progress import NullMonitor
 
 
+HASH_IGNORE_FIELDS = {"project", "insertdate", "uuid", "id"}
+
+
 def _clean(s):
-    if s:
+    if s is not None:
         return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', s)
 
+
+def _get_hash_fields():
+    from amcat.models import Article
+    for field in Article._meta.fields:
+        if field.name not in HASH_IGNORE_FIELDS:
+            if isinstance(field, ForeignKey):
+                yield field.name + "_id"
+            else:
+                yield field.name
+
+_hash_field_cache = None
+def get_hash_fields():
+    # Circular import :(
+    global _hash_field_cache
+
+    if _hash_field_cache is not None:
+        return _hash_field_cache
+
+    _hash_field_cache = sorted(_get_hash_fields())
+    return _hash_field_cache
 
 def get_article_dict(art, sets=None):
     date = art.date
@@ -51,39 +76,33 @@ def get_article_dict(art, sets=None):
             date = toolkit.readDate(date)
         date = date.isoformat()
 
-    article_dict = {
+    return {
         'id': art.id,
-        'headline': _clean(art.headline),
-        'text': _clean(art.text),
         'date': date,
-        'creator': _clean(art.author),
-        'projectid': art.project_id,
-        'mediumid': art.medium_id,
-        'medium': art.medium.name,
-        'byline': _clean(art.byline),
         'section': _clean(art.section),
         'page': art.pagenr,
-        'addressee': _clean(art.addressee),
+        'headline': _clean(art.headline),
+        'byline': _clean(art.byline),
         'length': art.length,
+        # metastring?
+        # url?
+        # externalid?
+        'creator': _clean(art.author),
+        'addressee': _clean(art.addressee),
+        # uuid?
+        'text': _clean(art.text),
+        # parent?
+        'mediumid': art.medium_id,
+        'medium': art.medium.name,
         'sets': sets,
+        'hash': _get_hash(art)
     }
 
-    article_dict['hash'] = _get_hash(article_dict)
-    return article_dict
 
-
-def _get_hash(article_dict):
-    c = hash_class()
-    keys = sorted(k for k in article_dict.keys() if k not in ('id', 'sets', 'hash', 'medium', 'projectid'))
-    for k in keys:
-        v = article_dict[k]
-        if isinstance(v, int):
-            c.update(str(v))
-        elif isinstance(v, unicode):
-            c.update(v.encode('utf-8'))
-        elif v is not None:
-            c.update(v)
-    return c.hexdigest()
+def _get_hash(article):
+    article_dict = [(fn, getattr(article, fn)) for fn in get_hash_fields()]
+    article_json = json.dumps(article_dict, cls=DeterministicDjangoJSONEncoder)
+    return hash_class(article_json).hexdigest()
 
 
 HIGHLIGHT_OPTIONS = {
@@ -106,18 +125,25 @@ UPDATE_SCRIPT_ADD_TO_SET = ("s=ctx._source; "
                             "if (s.sets) {if (!(set in s.sets)) s.sets += set} "
                             "else {s.sets = [set]}")
 
+def _get_bulk_body(articles, action):
+    for article_id, article in articles.items():
+        yield serialize({action: {'_id': article_id}})
+        yield article
+
+def get_bulk_body(articles, action="index"):
+    return "\n".join(_get_bulk_body(articles, action)) + "\n"
 
 class SearchResult(object):
     """Iterable collection of results that also has total"""
-
-    def __init__(self, results, fields, score, body):
-        """@param results: the raw results dict from elasticsearch::search"""
+    def __init__(self, results, fields, score, body, query=None):
+        "@param results: the raw results dict from elasticsearch::search"
         self._results = results
         self.hits = self._results['hits']['hits']
         self.total = self._results['hits']['total']
         self.fields = fields
         self.score = score
         self.body = body
+        self.query = query
 
     @property
     @cached
@@ -136,7 +162,6 @@ class SearchResult(object):
     def as_dicts(self):
         """Return the results as fieldname : value dicts"""
         return [r.__dict__ for r in self]
-
 
 class Result(object):
     """Simple class to hold arbitrary values"""
@@ -186,8 +211,12 @@ class Result(object):
         return "{}({})".format(type(self).__name__, ", ".join(items))
 
 
+class ElasticSearchError(Exception):
+    pass
+
+
 class ES(object):
-    def __init__(self, index=None, doc_type=None, timeout=60, **args):
+    def __init__(self, index=None, doc_type=None, timeout=300, **args):
         elhost = {"host":settings.ES_HOST, "port":settings.ES_PORT}
         self.es = Elasticsearch(hosts=[elhost, ], timeout=timeout, **args)
         self.index = settings.ES_INDEX if index is None else index
@@ -222,7 +251,6 @@ class ES(object):
         except KeyError:
             log.exception("Could not get highlights from {r!r}".format(**locals()))
 
-
     def clear_cache(self):
         indices.IndicesClient(self.es).clear_cache()
 
@@ -233,11 +261,18 @@ class ES(object):
             if 'IndexMissingException' in unicode(e): return
             raise
 
-    def create_index(self):
+    def create_index(self, shards=5, replicas=1):
+        es_settings = settings.ES_SETTINGS.copy()
+        es_settings.update({"number_of_shards" : shards,
+                            "number_of_replicas": replicas})
+
         body = {
-            "settings": settings.ES_SETTINGS,
-            "mappings": {settings.ES_ARTICLE_DOCTYPE: settings.ES_MAPPING}
+            "settings": es_settings,
+            "mappings": {
+                settings.ES_ARTICLE_DOCTYPE: settings.ES_MAPPING
+            }
         }
+
         indices.IndicesClient(self.es).create(self.index, body)
 
     def check_index(self):
@@ -307,7 +342,7 @@ class ES(object):
         if lead: body['script_fields'] = LEAD_SCRIPT_FIELD
 
         result = self.search(body, fields=fields, **kwargs)
-        return SearchResult(result, fields, score, body)
+        return SearchResult(result, fields, score, body, query=query)
 
     def query_all(self, *args, **kargs):
         kargs.update({"from_": 0})
@@ -359,32 +394,38 @@ class ES(object):
         """
         Add the given article dict objects to the index using a bulk insert call
         """
+        body = get_bulk_body({d["id"]: serialize(d) for d in dicts})
+        resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
 
-        def get_bulk_body():
-            for article_dict in dicts:
-                yield serialize(dict(index={'_id': article_dict['id']}))
-                yield serialize(article_dict)
+        if resp["errors"]:
+            raise ElasticSearchError(resp["errors"])
 
-        self.es.bulk(
-            body=get_bulk_body(), index=self.index,
-            doc_type=settings.ES_ARTICLE_DOCTYPE
-        )
+    def update_values(self, article_id, values):
+        """Update properties of existing article.
+
+        @param values: mapping from field name to (new) value
+        @type values: dict"""
+        return self.bulk_update_values({article_id: values})
+
+    def bulk_update_values(self, articles):
+        """Updates set of articles in bulk.
+        """
+        body = get_bulk_body({aid: serialize({"doc": a}) for aid, a in articles.items()}, action="update")
+        resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
+
+        if resp["errors"]:
+            raise ElasticSearchError(resp["errors"])
 
     def bulk_update(self, article_ids, script, params):
         """
         Execute a bulk update script with the given params on the given article ids.
         """
         payload = serialize(dict(script=script, params=params))
+        body = get_bulk_body({aid: payload for aid in article_ids}, action="update")
+        resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
 
-        def get_bulk_body(article_ids, payload):
-            for aid in article_ids:
-                yield serialize(dict(update={'_id': aid}))
-                yield payload
-
-        body = ("\n".join(get_bulk_body(article_ids, payload))) + "\n"
-        r = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
-        if r['errors']:
-            log.warning(r)
+        if resp["errors"]:
+            raise ElasticSearchError(resp["errors"])
 
     def synchronize_articleset(self, aset, full_refresh=False):
         """
@@ -751,3 +792,4 @@ if __name__ == '__main__':
 #                          U N I T   T E S T S                            #
 ###########################################################################
 # amcat.tools.tests.amcates
+

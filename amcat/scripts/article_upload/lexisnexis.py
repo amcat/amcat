@@ -361,30 +361,43 @@ def parse_article(art):
             headline = headline.split(":", 1)[1]
     else:
         headline, byline = _get_headline(lines)
+
     meta = _get_meta(lines)
+    if headline is None and 'headline' in meta:
+        headline = meta.pop('headline')
+        
     body = _get_body(lines)
 
     meta.update(_get_meta(lines))
 
-    date, dateline = None, None
+
+    def _get_source(lines, i):
+        source = lines[0 if i>0 else 1]
+        if source.strip() == "PCM Uitgevers B.V." and i > 2 and lines[i-1].strip():
+            source = lines[i-1]
+        return source
+    
+    date, dateline, source = None, None, None
     for i, line in enumerate(header):
         if _is_date(line):
             date = line
             dateline = i
-            source = header[0 if i > 0 else 1]
+            source = _get_source(header, i)
     if date is None:  # try looking for only month - year notation by preprending a 1
         for i, line in enumerate(header):
             line = "1 {line}".format(**locals())
             if _is_date(line):
                 date = line
-                source = header[0 if i > 0 else 1]
+                source = _get_source(header, i)
     if date is None:  # try looking for season names
         #TODO: Hack, reimplement more general!
         for i, line in enumerate(header):
             if line.strip() == "Winter 2008/2009":
                 date = "2009-01-01"
-                source = header[0 if i > 0 else 1]
+                source = _get_source(header, i)
 
+
+                
     def find_re_in(pattern, lines):
         for line in lines:
             m = re.search(pattern, line)
@@ -538,17 +551,6 @@ class LexisNexis(UploadScript):
         except:
             log.error("Error on processing fields: {fields}".format(**locals()))
             raise
-
-
-from amcat.tools import amcatlogging
-
-amcatlogging.debug_module()
-
-if __name__ == '__main__':
-    from amcat.scripts.tools import cli
-
-    cli.run_cli(handle_output=False)
-
 
 
 ###########################################################################

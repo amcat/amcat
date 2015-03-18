@@ -1,10 +1,11 @@
 from distutils.core import setup
 from os import path
 from pip.req import parse_requirements
+from pip.download import PipSession
 
 here = path.abspath(path.join(path.dirname(path.abspath(__file__))))
 requirements = [str(ir.req) for ir in
-                parse_requirements(path.join(here, "requirements.txt"))]
+                parse_requirements(path.join(here, "requirements.txt"), session=PipSession())]
 
 # Ugly hack to get the version prior to installation, without having the amcat
 # package depend on setup.py.

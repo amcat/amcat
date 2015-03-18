@@ -81,6 +81,10 @@
                         <td>{{object.name}}</td>
                     </tr>
                     <tr>
+                        <td>Project:</td>
+                        <td><a href="{% url 'article set-list' object.project_id %} ">{{object.project_id}} : {{object.project}}</a></td>
+                    </tr>
+                    <tr>
                         <td>Provenance:&nbsp;</td>
                         <td>{{object.provenance|linebreaks}}</td>
                     </tr>

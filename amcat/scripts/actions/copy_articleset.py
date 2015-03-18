@@ -204,10 +204,3 @@ class CopyArticleSetScript(Script):
         self.dest_set.add_articles(aids, add_to_index=False)
         log.debug("... Done!")
 
-
-if __name__ == '__main__':
-    from amcat.scripts.tools import cli
-    from amcat.tools import amcatlogging
-
-    amcatlogging.debug_module()
-    cli.run_cli()
