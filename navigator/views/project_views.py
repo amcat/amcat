@@ -34,7 +34,6 @@ log = logging.getLogger("statistics:" + __name__)
 class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
     model = Project
     template_name = "project/project_list.html"
-    help_context = "Creating_an_AmCAT_project_and_adding_articles"
 
     def get(self, *args, **kargs):
         favaction = self.request.GET.get('favaction')
@@ -124,6 +123,7 @@ class ProjectAddView(BreadCrumbMixin, ScriptView):
     def get_context_data(self, **kwargs):
         context = super(ProjectAddView, self).get_context_data(**kwargs)
         context["cancel_url"] = reverse("projects")
+        context["help_context"] = "Create_a_project"
         return context
 
     def get_form(self, form_class):

@@ -73,7 +73,38 @@
 
           <ul class="nav navbar-nav navbar-right">
 	    {% if status != 503 %}
-	    {% include "main_menu.html" %}
+<li {% if main_active == 'Projects' %}class="active"{% endif %}><a href="{% url 'projects' %}">Projects</a></li>
+<li {% if main_active == 'Coding' %}class="active"{% endif %}><a href="{% url 'codingjobs' %}">Annotator</a></li>
+<li class="dropdown{% if main_active == 'Current User' %} active{% endif %}">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+{% if request.user.first_name %}
+{{ request.user.first_name }} {{ request.user.last_name }}
+{% else %}
+{{ request.user.username }}
+{% endif %}
+<b class="caret"></b></a>
+  <ul class="dropdown-menu">
+    <li><a href="{% url 'user' %}">Account details</a></li>
+    <li><a href="{% url 'accounts-logout' %}">Log out</a></li>
+  </ul>
+</li>
+
+<li><a target="_blank" href="http://wiki.amcat.nl/{% block help_context %}{% endblock %}">
+<span class="alert alert-success"><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> Help</a></span>
+
+<li id="layout-switcher">
+{% if not annotator %}
+    {% if request.user.userprofile.fluid %}
+        <a title="Switch to static layout" href="">
+            <i class="glyphicon glyphicon-resize-small"></i>
+        </a>
+    {% else %}
+        <a title="Switch to flexible layout" href="">
+            <i class="glyphicon glyphicon-resize-full"></i>
+        </a>
+    {% endif %}
+{% endif %}
+</li>
 	    {% endif %}
           </ul>
           <ul class="nav navbar-nav">

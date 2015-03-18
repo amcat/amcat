@@ -1,6 +1,12 @@
 {% extends "base.html" %}
+{% load markdown_deux_tags %}
+
+{% block help_context %}{{help_context}}{% endblock %}
 
 {% block content %}
+{% if script_doc %}
+<div class="alert alert-info">{{ script_doc|markdown }}</div>
+{% endif %}
 
 <form action="" enctype="multipart/form-data" method="POST">
    <legend>Please enter options for {{ script_name }} below.</legend>
@@ -14,8 +20,5 @@
    </div>
 </form>
 
-{% if script_doc %}
-<div class="alert alert-info" style="white-space:pre-wrap">{{ script_doc }}</div>
-{% endif %}
 
 {% endblock %}
