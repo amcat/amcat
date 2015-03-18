@@ -21,7 +21,6 @@ from __future__ import unicode_literals, print_function, absolute_import
 import json
 import logging
 
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models.fields.related import ForeignKey
 
 log = logging.getLogger(__name__)
@@ -32,7 +31,7 @@ from hashlib import sha224 as hash_class
 from json import dumps as serialize
 
 from amcat.tools import queryparser, toolkit
-from amcat.tools.toolkit import multidict, splitlist
+from amcat.tools.toolkit import multidict, splitlist, DeterministicDjangoJSONEncoder
 from elasticsearch import Elasticsearch
 from elasticsearch.client import indices, cluster
 from elasticsearch.helpers import scan
@@ -102,8 +101,8 @@ def get_article_dict(art, sets=None):
 
 
 def _get_hash(article):
-    article_dict = {fn: getattr(article, fn) for fn in get_hash_fields()}
-    article_json = json.dumps(article_dict, cls=DjangoJSONEncoder)
+    article_dict = [(fn, getattr(article, fn)) for fn in get_hash_fields()]
+    article_json = json.dumps(article_dict, cls=DeterministicDjangoJSONEncoder)
     return hash_class(article_json).hexdigest()
 
 

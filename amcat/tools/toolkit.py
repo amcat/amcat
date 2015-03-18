@@ -50,6 +50,7 @@ import subprocess
 import base64
 import logging
 import string
+from django.core.serializers.json import DjangoJSONEncoder
 
 try:
     import mx.DateTime
@@ -619,6 +620,16 @@ def is_sequence(obj, exclude_strings=False):
     if exclude_strings and isinstance(obj, basestring):
         return False
     return hasattr(obj, "__getslice__")
+
+###########################################################################
+##                      Serialising functions                            ##
+###########################################################################
+class DeterministicDjangoJSONEncoder(DjangoJSONEncoder):
+    """Provides the same functionality as DjangoJSONEncoder, but converts
+    dictionaries to (sorted) list of tuples."""
+    def default(self, o):
+        o = sorted(o.items()) if isinstance(o, dict) else o
+        return super(DeterministicDjangoJSONEncoder, self).default(o)
 
 ###########################################################################
 ##                         Misc. functions                               ##
