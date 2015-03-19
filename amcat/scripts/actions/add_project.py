@@ -60,7 +60,12 @@ class AddProjectForm(forms.ModelForm):
 
 
 class AddProject(Script):
-    """Add a project to the database."""
+    """Add a project to the database.
+
+    Guest role specifies the 'default' role that anybody has, so if you choose 'Reader' everyone can see the contents of your project.
+    If you are not allowed to share the texts (e.g. for copyright reasons), choose 'Metareader'.
+    To create a private project, select '----' as guest role.
+    """
 
     options_form = AddProjectForm
     output_type = Project
@@ -79,5 +84,4 @@ class AddProject(Script):
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     cli.run_cli()
-
 

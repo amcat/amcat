@@ -1,6 +1,8 @@
 {% extends "project/base.html" %}
 {% load markdown_deux_tags %}
 
+{% block help_context %}{{help_context}}{% endblock %}
+
 {% block content %}
 {% if script_doc %}
     <div class="alert alert-info">{{ script_doc|markdown }}</div>

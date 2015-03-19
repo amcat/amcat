@@ -123,6 +123,8 @@ class ProjectAddView(BreadCrumbMixin, ScriptView):
     def get_context_data(self, **kwargs):
         context = super(ProjectAddView, self).get_context_data(**kwargs)
         context["cancel_url"] = reverse("projects")
+        context["help_context"] = "Create_a_project"
+        context["script_doc"] = (self.script.__doc__ and self.script.__doc__.replace("   ", ""))
         return context
 
     def get_form(self, form_class):
