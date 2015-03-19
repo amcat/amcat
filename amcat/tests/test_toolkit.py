@@ -84,16 +84,6 @@ class TestToolkit(amcattest.AmCATTestCase):
             self.assertEqual(toolkit.writeDate(date), iso)
             self.assertEqual(toolkit.writeDateTime(date), isotime)
 
-    def test_splitlist(self):
-        for input, output, itemsperbatch in (
-                ([1, 2, 3], [[1, 2], [3]], 2),
-                ([1, 2, 3], [[1, 2, 3]], 20),
-                ((1, 2, 3), [(1, 2), (3,)], 2),
-                ((i for i in (1, 2, 3)), [[1, 2], [3]], 2),
-        ):
-            o = toolkit.splitlist(input, itemsperbatch)
-            self.assertEqual(list(o), output)
-
     def test_head(self):
         it = iter(range(10))
         self.assertEqual(0, toolkit.head(it))

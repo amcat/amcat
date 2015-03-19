@@ -40,6 +40,7 @@ this organisation!
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
+from functools import partial
 import time
 import warnings
 import random
@@ -55,6 +56,7 @@ import string
 from django.core.serializers.json import DjangoJSONEncoder
 
 from collections import OrderedDict, Callable
+import itertools
 
 log = logging.getLogger(__name__)
 
@@ -181,25 +183,18 @@ def idlist(idcolumn):
     raise TypeError("%s-like objects not supported" % repr(type(idcolumn)))
 
 
-def splitlist(sequence, itemsperbatch=100):
-    """Split a list into smaller lists
+def grouper(iterable, n, fillvalue=None):
+    """Collect data into fixed-length chunks or blocks."""
+    if n < 1:
+        raise ValueError("Size of {} invalid for grouper() / splitlist().".format(n))
+    return itertools.izip_longest(fillvalue=fillvalue, *([iter(iterable)] * n))
 
-    @param sequence: the iterable to split
-    @param itemsperbatch: the size of the desired splits
-    @return: yields subsequences of the same type as sequence, unless that was a generator,
-      in which case lists are yielded.
-    """
-    if hasattr(sequence, '__getslice__'):  # use slicing
-        for i in xrange(0, len(sequence), itemsperbatch):
-            yield sequence[i:i + itemsperbatch]
-    else:  # use iterating, copying into a buffer
-        bufferlist = []
-        for s in sequence:
-            bufferlist.append(s)
-            if len(bufferlist) >= itemsperbatch:
-                yield bufferlist
-                bufferlist = []
-        if bufferlist: yield bufferlist
+
+def splitlist(iterable, itemsperbatch=100):
+    """Split a list into smaller lists. Uses no fillvalue, as opposed to grouper()."""
+    _fillvalue = object()
+    for group in grouper(iterable, itemsperbatch, _fillvalue):
+        yield [e for e in group if e is not _fillvalue]
 
 
 ###########################################################################
@@ -661,16 +656,6 @@ def is_sequence(obj, exclude_strings=False):
     if exclude_strings and isinstance(obj, basestring):
         return False
     return hasattr(obj, "__getslice__")
-
-###########################################################################
-##                      Serialising functions                            ##
-###########################################################################
-class DeterministicDjangoJSONEncoder(DjangoJSONEncoder):
-    """Provides the same functionality as DjangoJSONEncoder, but converts
-    dictionaries to (sorted) list of tuples."""
-    def default(self, o):
-        o = sorted(o.items()) if isinstance(o, dict) else o
-        return super(DeterministicDjangoJSONEncoder, self).default(o)
 
 ###########################################################################
 ##                         Misc. functions                               ##

@@ -32,11 +32,15 @@ from __future__ import unicode_literals, print_function, absolute_import
 import os
 from contextlib import contextmanager
 from functools import wraps
+import datetime
 from django.test.runner import DiscoverRunner
 
 from django.test import TestCase
 import unittest
-import logging; log = logging.getLogger(__name__)
+import logging;
+from amcat.tools.toolkit import read_date
+
+log = logging.getLogger(__name__)
 
 from django.conf import settings
 
@@ -136,8 +140,12 @@ def create_test_medium(**kargs):
 def create_test_article(create=True, articleset=None, check_duplicate=False, **kargs):
     """Create a test article"""
     from amcat.models.article import Article
+
+    if "date" in kargs and isinstance(kargs["date"], basestring):
+        kargs["date"] = read_date(kargs["date"])
+
     if "project" not in kargs: kargs["project"] = create_test_project()
-    if "date" not in kargs: kargs["date"] = "2000-01-01"
+    if "date" not in kargs: kargs["date"] = datetime.date(2000, 1, 1)
     if "medium" not in kargs: kargs["medium"] = create_test_medium()
     if "id" not in kargs: kargs["id"] = _get_next_id()
     if 'headline' not in kargs: kargs['headline'] = 'test headline'
