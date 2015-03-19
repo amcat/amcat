@@ -24,6 +24,7 @@ Plugin for uploading csv files
 from __future__ import unicode_literals, absolute_import
 
 import datetime
+import json
 
 from django import forms
 from django.db.models.fields import FieldDoesNotExist
@@ -194,6 +195,8 @@ class CSV(UploadScript):
             if key not in csvfields:
                 kargs["metastring"][key] = value
 
+        kargs["metastring"] = json.dumps(kargs["metastring"])
+
         # In case medium wasn't defined in csv
         medium = self._medium
         if medium is not None:
@@ -227,5 +230,4 @@ if __name__ == '__main__':
     from amcat.scripts.tools import cli
 
     cli.run_cli(CSV)
-
 

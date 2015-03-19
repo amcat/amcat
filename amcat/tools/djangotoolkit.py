@@ -38,7 +38,6 @@ from django.db import connections
 from contextlib import contextmanager
 from django.conf import settings
 
-
 from amcat.tools.table.table3 import ObjectTable, SortedTable
 
 def parse_date(date):
@@ -190,6 +189,21 @@ def query_list_to_table(queries, maxqlen=120, output=False, normalise_numbers=Tr
                 outputoptions["stream"] = output
         t.output(**outputoptions)
     return t
+
+def get_model_field(obj, field_name):
+    """Given a nested fieldname, retrieve value. For example:
+
+    >>> article = Article.objects.get(id=1)
+    >>> get_model_field(article, "medium__name")
+    "The Guardian"
+    """
+    fields = field_name.split("__")
+
+    while fields:
+        field = fields.pop(0)
+        obj = getattr(obj, field)
+
+    return obj
 
 def get_ids(objects):
     """Convert the given object(s) to integers by asking for their .pk.

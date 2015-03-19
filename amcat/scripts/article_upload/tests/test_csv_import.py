@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import csv
 import unittest
 from amcat.models import Medium, ArticleSet

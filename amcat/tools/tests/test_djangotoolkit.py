@@ -1,7 +1,8 @@
 from django.http import QueryDict
 from amcat.tools import amcattest
+from amcat.tools.amcattest import create_test_medium, create_test_article
 from amcat.tools.djangotoolkit import get_related_models, list_queries, to_querydict, get_or_create, \
-    db_supports_distinct_on
+    db_supports_distinct_on, get_model_field
 
 
 class TestDjangoToolkit(amcattest.AmCATTestCase):
@@ -55,3 +56,12 @@ class TestDjangoToolkit(amcattest.AmCATTestCase):
 
     def test_db_supports_distinct_on(self):
         self.assertTrue(db_supports_distinct_on() in (True, False))
+
+    def test_get_model_field(self):
+        article = create_test_article(text="abc", medium=create_test_medium(name="The Guardian"))
+
+        self.assertEqual(article.medium.name, "The Guardian")
+        self.assertEqual(get_model_field(article, "medium__name"), "The Guardian")
+        self.assertEqual(get_model_field(article, "medium"), article.medium)
+        self.assertEqual(get_model_field(article, "text"), "abc")
+

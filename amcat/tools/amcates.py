@@ -21,18 +21,18 @@ from __future__ import unicode_literals, print_function, absolute_import
 from collections import namedtuple
 import json
 import logging
-
-from django.db.models.fields.related import ForeignKey
+from types import NoneType
+from amcat.tools.djangotoolkit import get_model_field
 
 log = logging.getLogger(__name__)
 import re
-from datetime import datetime
+from datetime import datetime, date
 
 from hashlib import sha224 as hash_class
 from json import dumps as serialize
 
 from amcat.tools import queryparser, toolkit
-from amcat.tools.toolkit import multidict, splitlist, DeterministicDjangoJSONEncoder
+from amcat.tools.toolkit import multidict, splitlist
 from elasticsearch import Elasticsearch
 from elasticsearch.client import indices, cluster
 from elasticsearch.helpers import scan
@@ -41,68 +41,67 @@ from amcat.tools.caching import cached
 from amcat.tools.progress import NullMonitor
 
 
-HASH_IGNORE_FIELDS = {"project", "insertdate", "uuid", "id"}
+ARTICLE_FIELDS = frozenset({
+    "id", "date", "section", "pagenr", "headline",
+    "byline", "length", "metastring", "url", "externalid",
+    "author", "addressee", "uuid", "text", "parent_id",
+    "medium_id", "medium__name"
+})
 
+# These fields should be cleaned using _clean()
+ARTICLE_CLEAN_FIELDS = frozenset({
+    "section", "headline", "byline",
+    "metastring", "addressee", "text",
+})
+
+# Postgres field name -> Elastic field name
+ARTICLE_FIELD_MAP = {
+    "author": "creator",
+    "medium_id": "mediumid",
+    "parent_id": "parentid",
+    "pagenr": "page",
+    "medium__name": "medium"
+}
+
+# These fields should be hashed by _get_hash()
+HASH_FIELDS = sorted({
+    "date", "section", "page", "headline",
+    "byline", "length", "metastring", "url", "externalid",
+    "creator", "addressee", "text", "parentid",
+    "mediumid"
+})
+
+_clean_re = re.compile('[\x00-\x08\x0B\x0C\x0E-\x1F]')
 
 def _clean(s):
+    """Remove non-printalbe characters
+    @type s: unicode | str | NoneType"""
     if s is not None:
-        return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', s)
+        return _clean_re.sub(' ', s)
 
 
-def _get_hash_fields():
-    from amcat.models import Article
-    for field in Article._meta.fields:
-        if field.name not in HASH_IGNORE_FIELDS:
-            if isinstance(field, ForeignKey):
-                yield field.name + "_id"
-            else:
-                yield field.name
+def get_article_dict(article, sets=None):
+    # Previous versions of get_article_dict() accepted strings as dates,
+    # which current versions do not accept. Thus, explicitely assert type.
+    assert isinstance(article.date, (NoneType, date, datetime))
 
-_hash_field_cache = None
-def get_hash_fields():
-    # Circular import :(
-    global _hash_field_cache
+    # Build article dict. We filter non-printable characters for fields in ARTICLE_CLEAN_FIELDS
+    article_dict = {}
+    for field_name in ARTICLE_FIELDS:
+        value = get_model_field(article, field_name)
+        if field_name in ARTICLE_CLEAN_FIELDS:
+            value = _clean(value)
+        article_dict[ARTICLE_FIELD_MAP.get(field_name, field_name)] = value
 
-    if _hash_field_cache is not None:
-        return _hash_field_cache
-
-    _hash_field_cache = sorted(_get_hash_fields())
-    return _hash_field_cache
-
-def get_article_dict(art, sets=None):
-    date = art.date
-    if date:
-        if isinstance(art.date, basestring):
-            date = toolkit.readDate(date)
-        date = date.isoformat()
-
-    return {
-        'id': art.id,
-        'date': date,
-        'section': _clean(art.section),
-        'page': art.pagenr,
-        'headline': _clean(art.headline),
-        'byline': _clean(art.byline),
-        'length': art.length,
-        # metastring?
-        # url?
-        # externalid?
-        'creator': _clean(art.author),
-        'addressee': _clean(art.addressee),
-        # uuid?
-        'text': _clean(art.text),
-        # parent?
-        'mediumid': art.medium_id,
-        'medium': art.medium.name,
-        'sets': sets,
-        'hash': _get_hash(art)
-    }
+    article_dict["date"] = article.date.isoformat() if article.date is not None else None
+    article_dict["sets"] = sets
+    article_dict['hash'] = _get_hash(article_dict)
+    return article_dict
 
 
 def _get_hash(article):
-    article_dict = [(fn, getattr(article, fn)) for fn in get_hash_fields()]
-    article_json = json.dumps(article_dict, cls=DeterministicDjangoJSONEncoder)
-    return hash_class(article_json).hexdigest()
+    article_dict = [(fn, article[fn]) for fn in HASH_FIELDS]
+    return hash_class(json.dumps(article_dict)).hexdigest()
 
 
 HIGHLIGHT_OPTIONS = {
