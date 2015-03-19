@@ -1,4 +1,4 @@
-# ##########################################################################
+###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -115,65 +115,3 @@ def get_calling_module(depth=1):
     return caller.f_globals['__name__']
 
 
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-
-
-class _TestClass(object):
-    pass
-
-
-class TestClassTools(amcattest.AmCATTestCase):
-    def test_get_caller(self):
-        fn, line, func = get_caller(depth=0)
-        self.assertEqual(fn, __file__.replace(".pyc", ".py"))
-        self.assertEqual(func, "test_get_caller")
-
-        def _test():
-            return get_caller()
-
-        fn, line, func = _test()
-        self.assertEqual(fn, __file__.replace(".pyc", ".py"))
-        self.assertEqual(func, "test_get_caller")
-
-    def test_get_calling_module(self):
-        self.assertEqual(get_calling_module(depth=0), self.__module__)
-
-    def test_get_class_from_module(self):
-        m = TestClassTools.__module__
-        cls = get_class_from_module(m, amcattest.AmCATTestCase)
-        self.assertEqual(cls, self.__class__)
-        cls = get_class_from_module(m, TestClassTools)
-        self.assertEqual(cls, TestClassTools)
-        import unittest
-
-        cls = get_class_from_module(m, unittest.TestCase)
-        self.assertEqual(cls, TestClassTools)
-
-        from amcat.models.article import Article
-
-        self.assertRaises(ValueError, get_class_from_module, m, Article.__class__)
-
-    def test_import_attribute(self):
-        t = import_attribute("amcat.tools.classtools", "TestClassTools")
-        self.assertEqual(t.__name__, 'TestClassTools')
-        t = import_attribute("amcat.tools.classtools.TestClassTools")
-        self.assertRaises(ImportError, import_attribute, "__wva_does_not_exist")
-        self.assertRaises(ImportError, import_attribute,
-                          "amcat.tools.classtools", "__wva_does_not_exist")
-        self.assertRaises(ImportError, import_attribute,
-                          "amcat.tools.classtools.__wva_does_not_exist")
-
-        self.assertEqual(import_attribute(u"amcat.models.article").__name__, "amcat.models.article")
-
-    def test_get_classes_from_package(self):
-        package = self.__module__
-        self.assertEqual(set(get_classes_from_package(package)), {_TestClass, TestClassTools})
-        from unittest import TestCase
-
-        self.assertEqual(set(get_classes_from_package(package, superclass=TestCase)),
-                         {TestClassTools})
-        self.assertEqual(set(get_classes_from_package(package, superclass=dict)), set())

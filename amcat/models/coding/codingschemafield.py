@@ -28,16 +28,14 @@ are ontology coding types.
 """
 
 from amcat.tools.model import AmcatModel
-
 from amcat.models.coding.codebook import Codebook
-
 from amcat.models.coding.codingschema import CodingSchema, RequiredValueError
-
 from amcat.models.coding import serialiser
 
 from django.db import models
 
 import logging; log = logging.getLogger(__name__)
+
 
 class CodingSchemaFieldType(AmcatModel):
     """
@@ -110,27 +108,3 @@ class CodingSchemaField(AmcatModel):
         """Validate the given value for this field"""
         if (value is None) and self.required:
             raise RequiredValueError(self)
-            
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-        
-from amcat.tools import amcattest
-        
-class TestCodingSchemaFieldType(amcattest.AmCATTestCase):
-    def test_get_serialiser(self):
-        """Are the built in field types present and bound to the right class?"""
-        fieldtype = CodingSchemaFieldType.objects.get(pk=1)
-        self.assertEqual(fieldtype.serialiserclass, serialiser.TextSerialiser)
-
-class TestCodingSchemaField(amcattest.AmCATTestCase):
-    def test_create_field(self):
-        """Can we create a schema field object on a schema"""
-        fieldtype = CodingSchemaFieldType.objects.get(pk=1)
-        a = amcattest.create_test_schema()
-        f = CodingSchemaField.objects.create(codingschema=a, fieldnr=1, fieldtype=fieldtype)
-        self.assertIsNotNone(f)
-        
-        
-        
-        

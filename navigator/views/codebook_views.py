@@ -19,13 +19,11 @@
 import json
 import itertools
 
-from django.contrib.auth.models import User
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.views.generic.list import ListView
 from django import forms
 from json_field.forms import JSONFormField
 
-from amcat.tools.amcattest import create_test_user
 from api.rest.datatable import Datatable
 from amcat.models import Language, Project, Code, CodebookCode, Label
 from amcat.scripts.actions.import_codebook import ImportCodebook
@@ -38,7 +36,6 @@ from navigator.views.scriptview import TableExportMixin
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectFormView, ProjectDetailView, ProjectActionRedirectView
 from amcat.models import Codebook
 from amcat.forms import widgets
-
 
 
 class CodebookListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, ListView):
@@ -331,57 +328,3 @@ class CodebookSaveLabelsView(CodebookFormActionView):
         content = json.dumps(dict(code_id=code.id))
         return HttpResponse(content=content, status=201, content_type="application/json")
 
-        
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-
-
-from amcat.tools import amcattest
-
-class TestCodebookViews(amcattest.AmCATTestCase):
-
-    def setUp(self):
-        if not User.objects.filter(username='amcat').exists():
-            create_test_user(username='amcat', password='amcat')
-        self.cb = amcattest.create_test_codebook()
-        from django.test import Client
-        self.client = Client()
-        response = self.client.post('/accounts/login/', {'username': 'amcat', 'password': 'amcat'})
-        self.assert_status(response, 302)
-    
-    def assert_status(self, response, expect=200):
-        if response.status_code != expect:
-            try:
-                error = response.json()
-            except:
-                error = response.content
-            self.fail("{response.status_code} Error on action:\n {error}".format(**locals()))
-    
-    def test_change_name(self):
-        url = "/navigator/projects/{self.cb.project.id}/codebooks/{self.cb.id}/change-name/".format(**locals())
-        response = self.client.post(url, {"codebook_name" : "bla"})
-        self.assert_status(response)
-        cb = Codebook.objects.get(pk=self.cb.id)
-        self.assertEqual(cb.name, "bla")
-         
-         
-    def test_save_changesets(self):
-        # nog geen inhoudelijke test
-        url = "/navigator/projects/{self.cb.project.id}/codebooks/{self.cb.id}/save-changesets/".format(**locals())
-        data = {'moves' : json.dumps({"bla" : [1,2,{"meerbla" : "abc"}]})}
-        #response = self.client.post(url, data)
-        #self.assert_status(response)
-        
-        
-
-    def test_save_labels(self):
-        # nog geen inhoudelijke test
-        url = "/navigator/projects/{self.cb.project.id}/codebooks/{self.cb.id}/save-labels/".format(**locals())
-        data = {}
-        #response = self.client.post(url, data)
-        #self.assert_status(response)
-        
-        

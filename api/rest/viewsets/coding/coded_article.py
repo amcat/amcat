@@ -16,11 +16,10 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from rest_framework import serializers, filters
+from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from amcat.models import Sentence, CodedArticle, Article, Medium
-from amcat.tools import amcattest
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
@@ -28,6 +27,7 @@ from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.coding.codingjob import CodingJobViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
 from api.rest.viewsets.sentence import SentenceSerializer, SentenceViewSetMixin
+
 
 __all__ = (
     "CodedArticleSerializer", "CodedArticleViewSetMixin", "CodedArticleViewSet",
@@ -123,38 +123,3 @@ class CodedArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
         qs = super(CodedArticleSentenceViewSet, self).filter_queryset(queryset)
         return qs.filter(article__id=self.coded_article.article_id)
 
-class TestCodedArticleSerializer(amcattest.AmCATTestCase):
-    # Simulating request
-    class View(object):
-        def __init__(self, objs):
-            if isinstance(objs, CodedArticle):
-                self.object = objs
-            else:
-                self.object_list = objs
-
-    def _get_serializer(self, coded_article):
-        return CodedArticleSerializer(context={"view" : self.View(coded_article)})
-
-    def test_fields(self):
-        c = amcattest.create_test_job()
-        a = c.articleset.articles.all()[0]
-        ca = c.coded_articles.all()[0]
-        s = self._get_serializer(c.coded_articles.all())
-
-        self.assertEqual(a.headline, s.get_headline(ca))
-        self.assertEqual(a.date, s.get_date(ca))
-        self.assertEqual(a.pagenr, s.get_pagenr(ca))
-        self.assertEqual(a.length, s.get_length(ca))
-
-    def test_n_queries(self):
-        c = amcattest.create_test_job(10)
-        s = self._get_serializer(c.coded_articles.all())
-        ca1, ca2, ca3 = c.coded_articles.all()[0:3]
-
-        with self.checkMaxQueries(1):
-            s.get_headline(ca1)
-            s.get_headline(ca2)
-            s.get_headline(ca3)
-            s.get_date(ca3)
-            s.get_pagenr(ca3)
-            s.get_length(ca3)

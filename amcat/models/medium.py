@@ -135,19 +135,3 @@ class MediumAlias(AmcatModel):
         verbose_name_plural = 'media_aliases'
         app_label = 'amcat'
 
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-
-
-class TestMedium(amcattest.AmCATTestCase):
-    def test_to_medium_ids(self):
-        arts = amcattest.create_test_set(2).articles.all()
-        m1, m2 = amcattest.create_test_medium(), amcattest.create_test_medium()
-        self.assertEqual(set(to_medium_ids(m1)), {m1.id, })
-        self.assertEqual(set(to_medium_ids([m1, m2])), {m1.id, m2.id})
-        self.assertEqual(set(to_medium_ids(Medium.objects.filter(id__in=[m1.id, m2.id]))), {m1.id, m2.id})
-        self.assertEqual(set(to_medium_ids(arts.values_list("medium__id", flat=True))), {a.medium_id for a in arts})
-

@@ -27,7 +27,6 @@ from amcat.models.coding.codingschemafield import CodingSchemaField
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from amcat.models.coding.codedarticle import STATUS_COMPLETE, STATUS_IRRELEVANT, CodedArticle, STATUS_INPROGRESS, STATUS_NOTSTARTED
 from amcat.tools import sbd
-from amcat.tools.amcattest import AmCATTestCase
 from amcat.tools.caching import cached
 from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
@@ -165,71 +164,3 @@ class CodingJobCodingSchemaFieldViewSet(ProjectViewSetMixin, CodingJobViewSetMix
             codingschema__pk__in=(self.codingjob.articleschema_id, self.codingjob.unitschema_id)
         )
 
-class TestCodingJobSerializer(AmCATTestCase):
-    # Simulating request
-    class View(object):
-        def __init__(self, objs):
-            if isinstance(objs, CodingJob):
-                self.object = objs
-            else:
-                self.object_list = objs
-
-    def _get_serializer(self, codingjob):
-        return CodingJobSerializer(context={"view" : self.View(codingjob)})
-
-    def test_get_n_done_jobs(self):
-        from amcat.tools import amcattest
-        from amcat.models.coding.codedarticle import CodedArticleStatus, STATUS_INPROGRESS
-
-        codingjob = amcattest.create_test_job(10)
-        s = self._get_serializer(codingjob)
-        self.assertEqual(0, s.get_n_done_jobs(codingjob))
-        self.assertEqual(10, codingjob.coded_articles.all().count())
-
-        ca, ca2, ca3 = codingjob.coded_articles.all()[0:3]
-        ca.status = CodedArticleStatus.objects.get(id=STATUS_COMPLETE)
-        ca.save()
-
-        s = self._get_serializer(codingjob)
-        self.assertEqual(1, s.get_n_done_jobs(codingjob))
-        self.assertEqual(10, codingjob.coded_articles.all().count())
-
-        ca2.status = CodedArticleStatus.objects.get(id=STATUS_IRRELEVANT)
-        ca2.save()
-
-        s = self._get_serializer(codingjob)
-        self.assertEqual(2, s.get_n_done_jobs(codingjob))
-        self.assertEqual(10, codingjob.coded_articles.all().count())
-
-        ca2.status = CodedArticleStatus.objects.get(id=STATUS_INPROGRESS)
-        ca2.save()
-        self.assertEqual(2, s.get_n_done_jobs(codingjob))
-
-    def test_get_n_articles(self):
-        from amcat.tools import amcattest
-        codingjob1 = amcattest.create_test_job(10)
-        codingjob2 = amcattest.create_test_job(5)
-
-        jobs = CodingJob.objects.filter(id__in=[codingjob1.id, codingjob2.id])
-        s = self._get_serializer(jobs)
-        self.assertEqual(10, s.get_n_articles(codingjob1))
-        self.assertEqual(5, s.get_n_articles(codingjob2))
-
-    def test_n_queries(self):
-        from amcat.tools import amcattest
-
-        codingjob1 = amcattest.create_test_job(10)
-        codingjob2 = amcattest.create_test_job(5)
-        jobs = CodingJob.objects.filter(id__in=[codingjob1.id, codingjob2.id])
-        s = self._get_serializer(jobs)
-
-        # Number of codingjobs should be cached for all codingsjobs after one call
-        with self.checkMaxQueries(1):
-            s.get_n_articles(codingjob1)
-            s.get_n_articles(codingjob2)
-
-        # Same for done jobs
-        s = self._get_serializer(jobs)
-        with self.checkMaxQueries(1):
-            s.get_n_done_jobs(codingjob1)
-            s.get_n_done_jobs(codingjob2)

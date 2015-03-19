@@ -127,8 +127,7 @@ STATICFILES_DIRS = (
 # Examples: "http://foo.com/media/", "/media/".
 ADMIN_MEDIA_PREFIX = '/media/admin/'
 
-# A test runner defines which tests are executed
-TEST_RUNNER = "amcat.tools.amcattest.TestRunner"
+TEST_RUNNER = "django.test.runner.DiscoverRunner"
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (

@@ -23,12 +23,14 @@
 from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools.model import AmcatModel
-
 from django.db import models
 
-import logging; log = logging.getLogger(__name__)
+import logging
+
+log = logging.getLogger(__name__)
 
 ALL = ["CodingRuleAction", "CodingRule"]
+
 
 class CodingRuleAction(AmcatModel):
     """Model representing an action  """
@@ -38,6 +40,7 @@ class CodingRuleAction(AmcatModel):
     class Meta():
         db_table = 'codingruleactions'
         app_label = 'amcat'
+
 
 class CodingRule(AmcatModel):
     """

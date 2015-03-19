@@ -50,12 +50,3 @@ if __name__ == '__main__':
     from amcat.scripts.tools import cli
     cli.run_cli()
 
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-
-class TestAddCodebook(amcattest.AmCATTestCase):
-    pass

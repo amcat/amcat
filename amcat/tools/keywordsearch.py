@@ -30,9 +30,9 @@ import re
 
 from django.core.exceptions import ValidationError
 from dateutil.relativedelta import relativedelta
+
 from amcat.tools.aggregate import get_mediums
 from amcat.tools.aggregate import get_articlesets
-
 from amcat.tools.amcates import ES
 from amcat.tools.caching import cached
 from amcat.models import Label, Article, Medium
@@ -403,18 +403,3 @@ def resolve_queries(queries, codebook=None, label_language=None, replacement_lan
 
     for query in queries:
         yield resolve_query(query, _queries, codebook, labels, replacement_language)
-
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-
-
-class TestKeywordSearch(amcattest.AmCATTestCase):
-    def test_get_label_delimiter(self):
-        self.assertEquals(SearchQuery._get_label_delimiter("abc", "a"), "a")
-        self.assertEquals(SearchQuery._get_label_delimiter("abc", "ab"), "a")
-        self.assertEquals(SearchQuery._get_label_delimiter("abc", "ba"), "b")
-        self.assertEquals(SearchQuery._get_label_delimiter("abc", "d"), None)

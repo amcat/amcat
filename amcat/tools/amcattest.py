@@ -305,8 +305,3 @@ def use_elastic(func):
         return func(*args, **kargs)
     return inner
 
-class TestRunner(DiscoverRunner):
-    def __init__(self, pattern=None, toplevel=None, **kwargs):
-        # Force runner to look for tests in all Python files. File must start with and
-        # alphabetical character, as unittest breaks when trying to test __init__ files.
-        super(TestRunner, self).__init__(pattern="[a-zA-Z][a-zA-Z0-9_]*.py", **kwargs)

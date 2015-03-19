@@ -16,16 +16,15 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from __future__ import print_function, absolute_import
 
 """
 Object-layer module containing classes modelling sentences
 """
 
-from __future__ import print_function, absolute_import
-
+from django.db import models
 from amcat.tools.model import AmcatModel
 
-from django.db import models
 
 class Sentence(AmcatModel):
     """Model for sentences.
@@ -47,42 +46,3 @@ class Sentence(AmcatModel):
         app_label = 'amcat'
         unique_together = ('article', 'parnr', 'sentnr')
         ordering = ['article', 'parnr', 'sentnr']
-
-    def get_triples(self, analysis):
-        from amcat.models.analysis import Triple
-        return Triple.objects.filter(parent__sentence=self, analysis=analysis)
-
-
-    
-    
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-        
-from amcat.tools import amcattest
-
-class TestSentence(amcattest.AmCATTestCase):
-
-    def test_get_sentences(self):
-        """Test retrieving all (unicode) sentences for an article"""
-        a = amcattest.create_test_article()
-        sentences = []
-        for i, offset in enumerate(range(22, 20000, 1000)):
-            sentnr = i % 7
-            parnr = i // 7
-            sent = "".join(unichr(offset + c) for c in range(47, 1000, 100))
-            sentences += [(parnr, sentnr, sent)]
-            Sentence.objects.create(article = a, parnr = parnr, sentnr = sentnr, sentence=sent)
-        from amcat.models.article import Article
-        aid = a.id
-        del a
-        a2 = Article.objects.get(pk = aid)
-        sentences2 = [(s.parnr, s.sentnr, s.sentence) for s in a2.sentences.all()]
-
-        self.assertEqual(set(sentences), set(sentences2))
-
-            
-            
-            
-        

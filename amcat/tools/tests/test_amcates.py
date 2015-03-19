@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from __future__ import unicode_literals
+
 from datetime import datetime
 from unittest import skip
 from amcat.models import Article
@@ -86,10 +88,10 @@ class TestAmcatES(amcattest.AmCATTestCase):
         query = lambda **kw: set(ES().aggregate_query(filters={"sets": [s1.id, s2.id]}, **kw))
 
         # Not specifiying a 'filter' should result in all sets
-        self.assertEqual(query(group_by=["sets"]), {(1000000005, 4), (1000000007, 1)})
+        self.assertEqual(query(group_by=["sets"]), {(s1.id, 4), (s2.id, 1)})
 
         # Specifiying a 'filter' should result in less sets
-        self.assertEqual(query(group_by=["sets"], sets=[1000000005]), {(1000000005, 4)})
+        self.assertEqual(query(group_by=["sets"], sets=[s1.id]), {(s1.id, 4)})
 
 
     @amcattest.use_elastic

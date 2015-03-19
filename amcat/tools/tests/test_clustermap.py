@@ -53,12 +53,16 @@ class TestClusterMap(AmCATTestCase):
         queries = set(get_cluster_queries(clusters))
 
         good_queries = [
-            # get_cluter_queries generates queries undeterministically
-            ('((b) AND (a) AND (c))', '((b) AND (c) AND (a))'),
+            # get_cluster_queries generates queries non-deterministically
+            (
+                '((a) AND (b) AND (c))', '((a) AND (c) AND (b))',
+                '((b) AND (a) AND (c))', '((b) AND (c) AND (a))',
+                '((c) AND (a) AND (b))', '((c) AND (b) AND (a))',
+            ),
             ('((a)) NOT ((b) OR (c))', '((a)) NOT ((c) OR (b))'),
-            ('((b)) NOT ((c) OR (a))', '((b)) NOT ((a) OR (c))'),
+            ('((b)) NOT ((c) OR (a))', '((b)) NOT ((a) OR (c))')
         ]
 
-        for q1, q2 in good_queries:
-            self.assertTrue((q1 in queries) or (q2 in queries))
+        for qs in good_queries:
+            self.assertTrue(any(q in queries for q in qs))
 

@@ -147,12 +147,3 @@ class Network(Script):
         html += "<pre>{dot}</pre>".format(**locals())
         return HttpResponse(html, status=200, mimetype="text/html")
 
-    
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-
-class TestArticle(amcattest.AmCATTestCase):
-    pass

@@ -25,10 +25,10 @@ schema to be used for manual coding
 from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools.model import AmcatModel
-
 from django.db import models
 
-import logging; log = logging.getLogger(__name__)
+import logging
+log = logging.getLogger(__name__)
 
 
 class ValidationError(ValueError):
@@ -61,15 +61,3 @@ class CodingSchema(AmcatModel):
         ordering = ['name']
         db_table = 'codingschemas'
         app_label = 'amcat'
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-        
-from amcat.tools import amcattest
-
-class TestCodingSchema(amcattest.AmCATTestCase):
-    def test_create(self):
-        """Test whether coding schema objects can be created"""
-        s = amcattest.create_test_schema(name='test')
-        self.assertEqual(s.name, 'test')

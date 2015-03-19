@@ -180,7 +180,3 @@ class TaskHandler(object):
         """Inverse of `serialise_arguments`."""
         return arguments.copy()
 
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-# See: amcat.tests.test_task

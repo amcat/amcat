@@ -71,20 +71,3 @@ class Plugin(AmcatModel):
             self.label = self.class_name.split(".")[-1]
         super(Plugin, self).save(*args, **kargs)
     
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-
-
-class TestPlugin(amcattest.AmCATTestCase):
-    
-    def test_get_classes(self):
-        pt = PluginType.objects.create(class_name="amcat.models.Article")
-        p1 = Plugin.objects.create(class_name="amcat.models.ArticleSet", plugin_type=pt)
-        p2 = Plugin.objects.create(class_name="amcat.models.Project", plugin_type=pt)
-
-        from amcat.models import ArticleSet, Project
-        self.assertEqual(set(pt.get_classes()), {ArticleSet, Project})
-

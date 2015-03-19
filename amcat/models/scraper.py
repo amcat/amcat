@@ -18,12 +18,10 @@
 ###########################################################################
 from __future__ import unicode_literals, print_function, absolute_import
 
-"""ORM Module representing scrapers"""
-
+import logging
 from django.db import models
 from amcat.tools.model import AmcatModel
 from amcat.tools.djangotoolkit import JsonField
-import logging;
 
 log = logging.getLogger(__name__)
 
@@ -91,43 +89,4 @@ class Scraper(AmcatModel):
         q = q.extra(select=dict(d="cast(date as date)")).values_list("d")
         q = q.annotate(models.Count("id"))
         return dict(q)
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-
-
-class TestScrapers(amcattest.AmCATTestCase):
-    def test_get_scraper(self):
-        """Can we get a scraper from the db?"""
-
-        s = Scraper.objects.create(module='amcat.models.scraper',
-                                   class_name='TestScrapers')
-        self.assertEqual(s.get_scraper_class().__name__, 'TestScrapers')
-
-    def test_recent_articles(self):
-        # DOES NOT WORK WITH SQLITE
-        import settings
-
-        if settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
-            return
-        s = amcattest.create_test_set()
-        sc = Scraper.objects.create(module='amcat.models.scraper',
-                                    class_name='TestScraperModel', articleset=s)
-        for date in ['2010-01-01'] * 3 + ['2010-01-03'] * 5 + ['2009-01-01'] * 6:
-            s.add(amcattest.create_test_article(date=date))
-
-        from amcat.tools.toolkit import writeDate
-
-        normalize = lambda nn: dict((writeDate(k), v) for (k, v,) in nn.items())
-        self.assertEqual(normalize(sc.n_scraped_articles()),
-                         {'2010-01-03': 5, '2010-01-01': 3, '2009-01-01': 6})
-        self.assertEqual(normalize(sc.n_scraped_articles(from_date='2010-01-01')),
-                         {'2010-01-03': 5, '2010-01-01': 3})
-        s.add(amcattest.create_test_article(date='2010-01-01 13:45'))
-        self.assertEqual(normalize(sc.n_scraped_articles(from_date='2010-01-01')),
-                         {'2010-01-03': 5, '2010-01-01': 4})
-
 

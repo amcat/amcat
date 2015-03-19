@@ -21,7 +21,6 @@ from __future__ import unicode_literals, print_function, absolute_import
 import os
 import logging
 
-from django.core.cache import cache
 from django.db import models
 
 from amcat.tools.model import AmcatModel
@@ -75,22 +74,3 @@ class AmCAT(AmcatModel):
     class Meta():
         db_table = 'amcat_system'
         app_label = 'amcat'
-
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-
-class TestAmCAT(amcattest.AmCATTestCase):
-    def test_get_instance(self):
-        a = AmCAT.get_instance()
-        self.assertEqual(type(a), AmCAT)
-
-        os.environ['AMCAT_SERVER_STATUS']=""
-        self.assertEqual(a.server_warning,
-                         WARNING_NOT_PRODUCTION.format(server = "not the production server"))
-
-        os.environ['AMCAT_SERVER_STATUS']="production"
-        self.assertEqual(a.server_warning, None)

@@ -108,25 +108,4 @@ class SchemaFieldColumn(table3.ObjectColumn):
     def getCell(self, coding):
         return coding.get_value(field=self.field)
 
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
 
-from amcat.tools import amcattest
-
-class TestCodingJob(amcattest.AmCATTestCase):
-    def test_create(self):
-        """Can we create a coding job with articles?"""
-        from amcat.models.project import Project
-        p = amcattest.create_test_project()
-        j = amcattest.create_test_job(project=p)
-        self.assertIsNotNone(j)
-        self.assertEqual(j.project, Project.objects.get(pk=p.id))
-        j.articleset.add(amcattest.create_test_article())
-        j.articleset.add(amcattest.create_test_article())
-        j.articleset.add(amcattest.create_test_article())
-        self.assertEqual(1+3, len(j.articleset.articles.all()))
-
-    def test_post_create(self):
-        job = amcattest.create_test_job(10)
-        self.assertEqual(CodedArticle.objects.filter(codingjob=job).count(), 10)

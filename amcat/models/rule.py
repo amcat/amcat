@@ -25,9 +25,7 @@ articles database table.
 from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools.model import AmcatModel
-from amcat.models import Label
 from django.db import models
-from collections import defaultdict
 import logging
 import re
 log = logging.getLogger(__name__)
@@ -110,55 +108,3 @@ class Rule(AmcatModel):
         app_label = 'amcat'
         ordering = ['ruleset', 'order']
 
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-
-
-class TestRules(amcattest.AmCATTestCase):
-
-    def test_lexicon(self):
-        from amcat.models import Language
-        cb = amcattest.create_test_codebook()
-        l1, l2 = [Language.get_or_create(label=x) for x in ["a", 'b']]
-
-        c1 = amcattest.create_test_code(label="a", language=l1)
-        c1.add_label(l2, "A")
-        cb.add_code(c1)
-
-        c2 = amcattest.create_test_code(label="b", language=l1)
-        c2.add_label(l2, "B1, B2")
-        cb.add_code(c2)
-
-        r = RuleSet.objects.create(label="test", lexicon_codebook=cb,
-                                   lexicon_language=l2)
-
-        result = sorted(r.get_lexicon(), key=lambda l: l['lexclass'])
-        self.assertEqual(result, [{"lexclass": "a", "lemma": ["A"]},
-                                  {"lexclass": "b", "lemma": ["B1", "B2"]}])
-
-    def test_rules(self):
-        cb = amcattest.create_test_codebook()
-        lang = amcattest.get_test_language()
-        r = RuleSet.objects.create(label="test", lexicon_codebook=cb,
-                                   lexicon_language=lang)
-        condition = "?x :rel_nsubj ?y"
-        insert = "?x :boe ?y"
-        Rule.objects.create(ruleset=r, label="x", order=2,
-                            where=condition, insert=insert)
-
-        getrules = lambda r : [{k:v for k,v in rule.iteritems()
-                                if k in ["condition", "insert"]}
-                               for rule in r.get_rules()]
-
-        self.assertEqual(getrules(r),
-                         [{"condition": condition, "insert": insert}])
-
-        Rule.objects.create(ruleset=r, label="y", order=1,
-                            where="w", insert="i")
-        self.assertEqual(getrules(r),
-                         [{"condition": "w", "insert": "i"},
-                          {"condition": condition, "insert": insert}])

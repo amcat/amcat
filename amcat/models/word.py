@@ -21,6 +21,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 from amcat.tools.model import AmcatModel
 from django.db import models
 
+
 class Lemma(AmcatModel):
     __label__ = 'lemma'
 
@@ -31,10 +32,8 @@ class Lemma(AmcatModel):
 
     class Meta():
         db_table = 'words_lemmata'
-
-    class Meta():
-        db_table = 'words_lemmata'
         app_label = 'amcat'
+
 
 class Word(AmcatModel):
     __label__ = 'word'
@@ -47,14 +46,3 @@ class Word(AmcatModel):
     class Meta():
         db_table = 'words_words'
         app_label = 'amcat'
-
-
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-
-class TestWord(amcattest.AmCATTestCase):
-    pass

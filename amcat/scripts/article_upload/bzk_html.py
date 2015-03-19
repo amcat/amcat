@@ -22,15 +22,17 @@ Plugin for uploading html files of a certain markup, provided by BZK
 """
 
 from __future__ import unicode_literals, absolute_import
-from amcat.models import ArticleSet
+import re
+import logging
+
+from lxml import html
+from html2text import html2text
+
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.tools.toolkit import readDate
 from amcat.models.medium import Medium
 from amcat.models.article import Article
-from lxml import html
-from html2text import html2text
-import re
-import logging
+
 
 log = logging.getLogger(__name__)
 from amcat.scripts.article_upload.bzk_aliases import BZK_ALIASES as MEDIUM_ALIASES
@@ -206,33 +208,3 @@ if __name__ == "__main__":
 
     cli.run_cli(BZK)
 
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-import unittest
-
-
-@unittest.skip("BZK needs more test-files.")
-class TestBZK(amcattest.AmCATTestCase):
-    def setUp(self):
-        from django.core.files import File
-        import os.path
-
-        self.dir = os.path.join(os.path.dirname(__file__), 'test_files', 'bzk')
-        self.bzk = BZK(project=amcattest.create_test_project().id,
-                       file=File(open(os.path.join(self.dir, 'test.html'))),
-                       articlesets=[amcattest.create_test_set().id])
-        self.result = ArticleSet.objects.get(id=self.bzk.run()[0]).articles.all()
-
-    def todo_test_scrape_unit(self):
-        self.assertTrue(self.result)
-
-    def todo_test_scrape_file(self):
-        must_props = ('headline', 'text', 'medium', 'date')
-        must_props = [[getattr(a, prop) for a in self.result] for prop in must_props]
-
-        for proplist in must_props:
-            self.assertTrue(all(proplist))
