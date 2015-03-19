@@ -19,6 +19,7 @@
 from __future__ import print_function
 import datetime
 from itertools import izip_longest
+from optparse import make_option
 from django.core.management import BaseCommand
 import sys
 from amcat.models import Article
@@ -33,8 +34,19 @@ def grouper(iterable, n=GROUP_SIZE):
     return izip_longest(*[iterable] * n)
 
 
+def _get_existing_hashes(ids):
+    es = amcates.ES()
+    articles = es.query_all(filters={"id": ids}, fields=["hash"])
+    articles = {a.id: {"hash": a.hash} for a in articles.results}
+    return articles
+
+
 class Command(BaseCommand):
     help = 'Recalculate and update hashes in elasticsearch database.'
+
+    option_list = BaseCommand.option_list + (
+        make_option('--dry', action='store_true', help='"Upgrade" to existing hash values'),
+    )
 
     def handle(self, *args, **options):
         es = amcates.ES()
@@ -49,7 +61,11 @@ class Command(BaseCommand):
             progress = (float(i * GROUP_SIZE) / float(narticles)) * 100
             print("{} of {} ({:.2f}%)".format(i*GROUP_SIZE, narticles, progress))
             articles = Article.objects.in_bulk(article_ids).values()
-            es.bulk_update_values({a.id: {"hash": _get_hash(a)} for a in articles})
+
+            if options["dry"]:
+                es.bulk_update_values(_get_existing_hashes(article_ids))
+            else:
+                es.bulk_update_values({a.id: {"hash": _get_hash(a)} for a in articles})
 
             then, now = now, datetime.datetime.now()
             print("Articles per second: ", end="")
