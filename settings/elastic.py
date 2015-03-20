@@ -69,3 +69,11 @@ ES_SETTINGS = {"analysis": {
             }
         }
     }
+
+
+def _get_use_legacy_hash():
+    use = os.environ.get("AMCAT_ES_LEGACY_HASH", None)
+    if use is not None:
+        return use.strip() in ("1", "Y", "ON")
+
+ES_USE_LEGACY_HASH_FUNCTION = _get_use_legacy_hash()

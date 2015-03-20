@@ -17,21 +17,21 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from __future__ import print_function
-import datetime
+
 import sys
+import datetime
 
+from amcat.management.commands.upgrade_hashes import GROUP_SIZE
 from django.core.management import BaseCommand
-
+from amcat.models import Article
 from amcat.tools import amcates
-from amcat.tools.amcates import _get_hash, HASH_FIELDS
+from amcat.tools.amcates import get_article_dict
 from amcat.tools.toolkit import grouper
 
 
-GROUP_SIZE = 10000
-
-
 class Command(BaseCommand):
-    help = 'Recalculate and update hashes in elasticsearch database.'
+    help = 'Reindex existing articles in elasticsearch database, using postgres data. Does not' \
+           'update hash or set membership.'
 
     def handle(self, *args, **options):
         es = amcates.ES()
@@ -46,8 +46,14 @@ class Command(BaseCommand):
             progress = (float(i * GROUP_SIZE) / float(narticles)) * 100
             print("{} of {} ({:.2f}%)".format(i*GROUP_SIZE, narticles, progress))
 
-            es_articles = es.query_all(filters={"ids": article_ids}, fields=HASH_FIELDS)
-            es.bulk_update_values({a.id: {"hash": _get_hash(a.to_dict())} for a in es_articles})
+            articles = Article.objects.filter(id__in=article_ids).select_related("medium")
+            article_dicts = map(get_article_dict, articles)
+
+            for article_dict in article_dicts:
+                del article_dict["sets"]
+                del article_dict["hash"]
+
+            es.bulk_update_values({a["id"]: a for a in article_dicts})
 
             then, now = now, datetime.datetime.now()
             print("Articles per second: ", end="")

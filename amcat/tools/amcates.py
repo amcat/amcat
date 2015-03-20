@@ -33,12 +33,16 @@ from json import dumps as serialize
 
 from amcat.tools import queryparser, toolkit
 from amcat.tools.toolkit import multidict, splitlist
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, ImproperlyConfigured
 from elasticsearch.client import indices, cluster
 from elasticsearch.helpers import scan
 from django.conf import settings
 from amcat.tools.caching import cached
 from amcat.tools.progress import NullMonitor
+
+if settings.ES_USE_LEGACY_HASH_FUNCTION is None:
+    error_msg = "Environment variable AMCAT_ES_LEGACY_HASH should be explicitely set."
+    raise ImproperlyConfigured(error_msg)
 
 
 ARTICLE_FIELDS = frozenset({
@@ -69,6 +73,12 @@ HASH_FIELDS = sorted({
     "byline", "length", "metastring", "url", "externalid",
     "creator", "addressee", "text", "parentid",
     "mediumid"
+})
+
+LEGACY_HASH_FIELDS = sorted({
+    "headline", "text", "date", "creator",
+    "mediumid", "byline", "section", "page",
+    "addressee", "length"
 })
 
 _clean_re = re.compile('[\x00-\x08\x0B\x0C\x0E-\x1F]')
@@ -103,8 +113,25 @@ def get_article_dict(article, sets=None):
 
     article_dict["date"] = date.isoformat() if date is not None else None
     article_dict["sets"] = sets
-    article_dict['hash'] = _get_hash(article_dict)
+
+    if settings.ES_USE_LEGACY_HASH_FUNCTION:
+        article_dict['hash'] = _get_legacy_hash(article_dict)
+    else:
+        article_dict['hash'] = _get_hash(article_dict)
     return article_dict
+
+
+def _get_legacy_hash(article_dict):
+    c = hash_class()
+    for k in LEGACY_HASH_FIELDS:
+        v = article_dict[k]
+        if isinstance(v, int):
+            c.update(str(v))
+        elif isinstance(v, unicode):
+            c.update(v.encode('utf-8'))
+        elif v is not None:
+            c.update(v)
+    return c.hexdigest()
 
 
 def _get_hash(article):
