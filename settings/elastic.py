@@ -23,32 +23,57 @@ Configuration options to change how AmCAT uses elastic
 import os
 
 # Host/port on which elastic can be reached:
-ES_HOST=os.environ.get("AMCAT_ES_HOST", 'localhost')
-ES_PORT=os.environ.get("AMCAT_ES_PORT", 9200)
+ES_HOST = os.environ.get("AMCAT_ES_HOST", 'localhost')
+ES_PORT = os.environ.get("AMCAT_ES_PORT", 9200)
 
-ES_INDEX =os.environ.get('AMCAT_ES_INDEX', 'amcat')
-ES_ARTICLE_DOCTYPE='article'
+ES_INDEX = os.environ.get('AMCAT_ES_INDEX', 'amcat')
+ES_ARTICLE_DOCTYPE = 'article'
 
-ES_MAPPING_STRING_OPTIONS = {"type" : "string", "omit_norms": True}
-ES_MAPPING_SIMPLE_STRING_OPTIONS = {"type":"string",  "omit_norms": True, "include_in_all": "false"}
+ES_MAPPING_STRING_OPTIONS = {
+    "type": "string",
+    "omit_norms": True
+}
 
-ES_MAPPING = {"properties" : {"id":{"type":"long"},
-                              "text": ES_MAPPING_STRING_OPTIONS,
-                              "headline": ES_MAPPING_STRING_OPTIONS,
-                              "byline": ES_MAPPING_STRING_OPTIONS,
-                              "medium": ES_MAPPING_SIMPLE_STRING_OPTIONS,
-                              "creator": ES_MAPPING_SIMPLE_STRING_OPTIONS,
-                              "section": ES_MAPPING_SIMPLE_STRING_OPTIONS,
-                              "date": {"type":"date","format":"dateOptionalTime"},
-                              "mediumid":{"type":"long"},
-                              "projectid":{"type":"long"},
-                              "sets":{"type":"long"},
-                              "hash":{"type":"string", "index" : "not_analyzed", "postings_format":"bloom_default"},
-                          },
+ES_MAPPING_SIMPLE_STRING_OPTIONS = {
+    "type": "string",
+    "omit_norms": True,
+    "include_in_all": "false"
+}
+
 #              TODO: possibly interesting global options to consider
 #              "_source" : {"enabled" : false}
 #              "_routing" : {"required" : True, "path" : "mediumid"}
 #              "_timestamp" : {"enabled" : true, "path" : "date"}
+
+ES_MAPPING = {
+    "properties": {
+        "id": {"type": "long"},
+        "text": ES_MAPPING_STRING_OPTIONS,
+        "headline": ES_MAPPING_STRING_OPTIONS,
+        "byline": ES_MAPPING_STRING_OPTIONS,
+        "medium": ES_MAPPING_SIMPLE_STRING_OPTIONS,
+        "creator": ES_MAPPING_SIMPLE_STRING_OPTIONS,
+        "section": ES_MAPPING_SIMPLE_STRING_OPTIONS,
+        "page": {"type": "long"},
+        "addressee": ES_MAPPING_SIMPLE_STRING_OPTIONS,
+        "url": ES_MAPPING_SIMPLE_STRING_OPTIONS,
+        "metastring": ES_MAPPING_SIMPLE_STRING_OPTIONS,
+        "length": {"type": "long"},
+        "externalid": {"type": "long"},
+        "date": {
+            "type": "date",
+            "format": "dateOptionalTime"
+        },
+        "mediumid": {"type": "long"},
+        "projectid": {"type": "long"},
+        "parentid": {"type": "long"},
+        "sets": {"type": "long"},
+        "hash": {
+            "type": "string",
+            "index": "not_analyzed",
+            "postings_format": "bloom_default"
+        },
+    },
 }
 ES_SETTINGS = {"analysis": {
         "analyzer": {
