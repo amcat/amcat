@@ -26,7 +26,7 @@ from amcat.tools.djangotoolkit import get_model_field
 
 log = logging.getLogger(__name__)
 import re
-from datetime import datetime, date
+import datetime
 
 from hashlib import sha224 as hash_class
 from json import dumps as serialize
@@ -80,20 +80,28 @@ def _clean(s):
         return _clean_re.sub(' ', s)
 
 
-def get_article_dict(article, sets=None):
-    # Previous versions of get_article_dict() accepted strings as dates,
-    # which current versions do not accept. Thus, explicitely assert type.
-    assert isinstance(article.date, (NoneType, date, datetime))
-
-    # Build article dict. We filter non-printable characters for fields in ARTICLE_CLEAN_FIELDS
-    article_dict = {}
+def get_article_dict_from_model(article):
     for field_name in ARTICLE_FIELDS:
         value = get_model_field(article, field_name)
         if field_name in ARTICLE_CLEAN_FIELDS:
             value = _clean(value)
-        article_dict[ARTICLE_FIELD_MAP.get(field_name, field_name)] = value
+        yield ARTICLE_FIELD_MAP.get(field_name, field_name), value
 
-    article_dict["date"] = article.date.isoformat() if article.date is not None else None
+
+def get_article_dict(article, sets=None):
+    # Build article dict. We filter non-printable characters for fields in ARTICLE_CLEAN_FIELDS
+    article_dict = dict(get_article_dict_from_model(article))
+
+    # Previous versions of get_article_dict() accepted strings as dates,
+    # which current versions do not accept. Thus, explicitely assert type.
+    date = article_dict["date"]
+    assert isinstance(date, (NoneType, datetime.date, datetime.datetime))
+
+    # We need to convert it to datetime.datetime to get an uniform isoformat() representation.
+    if not isinstance(date, datetime.datetime) and isinstance(date, datetime.date):
+        date = datetime.datetime(date.year, date.month, date.day)
+
+    article_dict["date"] = date.isoformat() if date is not None else None
     article_dict["sets"] = sets
     article_dict['hash'] = _get_hash(article_dict)
     return article_dict
@@ -183,9 +191,9 @@ class Result(object):
         if 'highlight' in row: result.highlight = row['highlight']
         if hasattr(result, 'date'):
             if len(result.date) == 10:
-                result.date = datetime.strptime(result.date, '%Y-%m-%d')
+                result.date = datetime.datetime.strptime(result.date, '%Y-%m-%d')
             else:
-                result.date = datetime.strptime(result.date[:19], '%Y-%m-%dT%H:%M:%S')
+                result.date = datetime.datetime.strptime(result.date[:19], '%Y-%m-%dT%H:%M:%S')
         return result
 
     @classmethod
@@ -201,7 +209,11 @@ class Result(object):
             result.max=f(stats['max'])
         return result
 
+    def to_dict(self):
+        return dict(self._result)
+
     def __init__(self, **kwargs):
+        self._result = kwargs
         self.__dict__.update(kwargs)
 
     def __repr__(self):
@@ -397,7 +409,7 @@ class ES(object):
         resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
 
         if resp["errors"]:
-            raise ElasticSearchError(resp["errors"])
+            raise ElasticSearchError(resp)
 
     def update_values(self, article_id, values):
         """Update properties of existing article.
@@ -413,7 +425,7 @@ class ES(object):
         resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
 
         if resp["errors"]:
-            raise ElasticSearchError(resp["errors"])
+            raise ElasticSearchError(resp)
 
     def bulk_update(self, article_ids, script, params):
         """
@@ -424,7 +436,7 @@ class ES(object):
         resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
 
         if resp["errors"]:
-            raise ElasticSearchError(resp["errors"])
+            raise ElasticSearchError(resp)
 
     def synchronize_articleset(self, aset, full_refresh=False):
         """
@@ -688,8 +700,8 @@ class ES(object):
         self.es.delete_by_query(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=query)
 
 def get_date(timestamp):
-    d = datetime.fromtimestamp(timestamp / 1000)
-    return datetime(d.year, d.month, d.day)
+    d = datetime.datetime.fromtimestamp(timestamp / 1000)
+    return datetime.datetime(d.year, d.month, d.day)
 
 
 def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):

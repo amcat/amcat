@@ -18,11 +18,12 @@
 ###########################################################################
 from __future__ import unicode_literals
 
-from datetime import datetime
+import datetime
 from unittest import skip
 from amcat.models import Article
 from amcat.tools import amcattest
-from amcat.tools.amcates import ES
+from amcat.tools.amcates import ES, get_article_dict, HASH_FIELDS, _get_hash
+from amcat.tools.amcattest import create_test_medium, create_test_project, create_test_set
 from amcat.tools.keywordsearch import SearchQuery
 
 
@@ -51,16 +52,16 @@ class TestAmcatES(amcattest.AmCATTestCase):
                          {m1.id: 1, m2.id: 3})
 
         self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="date", date_interval="year")),
-                         {datetime(2001, 1, 1): 3, datetime(2002, 1, 1): 1})
+                         {datetime.datetime(2001, 1, 1): 3, datetime.datetime(2002, 1, 1): 1})
 
         self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="date", date_interval="month")),
-                         {datetime(2001, 1, 1): 1, datetime(2002, 1, 1): 1, datetime(2001, 2, 1): 2})
+                         {datetime.datetime(2001, 1, 1): 1, datetime.datetime(2002, 1, 1): 1, datetime.datetime(2001, 2, 1): 2})
 
         # set statistics
         stats = ES().statistics(filters=dict(sets=s1.id))
         self.assertEqual(stats.n, 4)
-        self.assertEqual(stats.start_date, datetime(2001, 1, 1))
-        self.assertEqual(stats.end_date, datetime(2002, 1, 1))
+        self.assertEqual(stats.start_date, datetime.datetime(2001, 1, 1))
+        self.assertEqual(stats.end_date, datetime.datetime(2002, 1, 1))
 
         # media list
         self.assertEqual(set(ES().list_media(filters=dict(sets=s1.id))),
@@ -357,3 +358,37 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual({paul.id, adam.id}, q("NOT eve"))
         self.assertEqual({paul.id, adam.id}, q("* NOT eve"))
         self.assertEqual({eve.id}, q("NOT (NOT eve)"))
+
+    @amcattest.use_elastic
+    def test_elastic_hash(self):
+        """Can we reproduce a hash from elastic data alone?"""
+        article = Article(**{
+            "date": datetime.date(2015, 1, 1),
+            "section": "\u6f22\u5b57",
+            "pagenr": 1928390,
+            "headline": "Headline hier.",
+            "byline": "byline..",
+            "length": 1928,
+            "metastring": "Even more strange characters.. \x0C ..",
+            "url": "https://example.com",
+            "externalid": None,
+            "author": None,
+            "addressee": "Hmm",
+            "text": "Contains invalid char \x08 woo",
+            "medium": create_test_medium(name="abc."),
+            "project": create_test_project()
+        })
+
+        article.save()
+
+        es = ES()
+        es.add_articles([article.id])
+        hash = get_article_dict(article)["hash"]
+        es.flush()
+
+        es_articles = es.query_all(filters={"ids": [article.id]}, fields=HASH_FIELDS + ["hash"])
+        es_article = list(es_articles)[0]
+
+        self.assertEqual(article.id, es_article.id)
+        self.assertEqual(hash, es_article.hash)
+        self.assertEqual(_get_hash(es_article.to_dict()), hash)
