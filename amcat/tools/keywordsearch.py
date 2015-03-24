@@ -178,7 +178,7 @@ class SelectionSearch:
         """
         article_ids = self.get_article_ids()
         if size is not None:
-            article_ids = islice(article_ids, offset, size)
+            article_ids = islice(article_ids, offset, size + offset)
 
         # Return in order
         article_ids = tuple(article_ids)
