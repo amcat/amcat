@@ -162,6 +162,10 @@ $((function(){
         "codebook", "query", "download"
     ];
 
+    var HOTKEYS = {
+        "ctrl_q": function(event){ $("#run-query").click(); }
+    };
+
     var dates_enabling = {
         'all': [],
         'on': ['on_date'],
@@ -809,6 +813,17 @@ $((function(){
         new PNotify({type: "error", hide: (hide === undefined) ? false : hide, text: msg});
     }
 
+    self.init_shortcuts = function initialise_shortcuts(){
+        $.each(HOTKEYS, function(keys, callback){
+            $(document).delegate('*', 'keydown.' + keys, function(event){
+                event.preventDefault();
+                event.stopPropagation();
+                callback(event);
+            });
+        })
+    };
+
+
     function init_scripts(){
         $.ajax({
             dataType: "json",
@@ -827,13 +842,15 @@ $((function(){
             });
 
             scripts_container.html(buttons);
-	    buttons.click(script_changed);
+            buttons.click(script_changed);
+            $("#script_summary").click();
         });
     }
 
     $(function(){
         init_dates();
         init_scripts();
+        init_shortcuts();
 
         $("#run-query").click(run_query);
     });
