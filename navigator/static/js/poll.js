@@ -182,5 +182,5 @@ _Poll = (function(uuid, opts){
  * >>> });
  */
 Poll = function(uuid, opts){
-    return _Poll.call({}, uuid, opts);
+    return _Poll.call({}, uuid, opts === undefined ? {} : opts);
 };
