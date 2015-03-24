@@ -309,13 +309,6 @@ $((function(){
                 }})
             });
 
-            // Install tooltip (hover)
-            $("area", map).each(function(_, e){
-                $(e).tooltip({
-                    title: "Article #" + $(e).data("article_id")
-                });
-            });
-
             container.append(img).append(map);
         },
         "image/png+base64": function(container, data){
