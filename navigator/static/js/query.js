@@ -215,6 +215,22 @@ $((function(){
         return new_filters;
     }
 
+    function getSerie(aggr, x_key, x_type){
+        var serie = { obj: x_key, name: value_renderer[form_data["y_axis"]](x_key) }
+
+        if (x_type === "datetime"){
+            serie.data = $.map(aggr.columns, function(column){
+                return [[column, aggr.get(x_key).get(column) || 0]];
+            });
+        } else {
+            serie.data = $.map(aggr.columns, function(column){
+                return aggr.get(x_key).get(column) || 0;
+            });
+        }
+
+        return serie;
+    }
+
     var value_renderer = {
         "medium": function(medium){
             return medium.id + " - " + medium.label;
@@ -226,7 +242,7 @@ $((function(){
             return moment(date).format("DD-MM-YYYY");
         },
         "total": function(total){
-            return total;
+            return "Total";
         },
         "term": function(term){
             return term.id;
@@ -371,18 +387,11 @@ $((function(){
 
             var chart = {
                 title: "",
-                chart: { zoomType: 'xy' },
-                xAxis: { allowDecimals: false, type: x_type },
-                yAxis: { allowDecimals: false, title: "total" },
+                chart: { zoomType: 'xy', type: type },
+                xAxis: { allowDecimals: false, type: x_type},
+                yAxis: { allowDecimals: false, title: "total", min: 0 },
                 series: $.map(aggregation.rows, function(x_key){
-                    return {
-                        type: type,
-                        name: value_renderer[form_data["y_axis"]](x_key),
-                        data: $.map(columns, function(column){
-                            return aggregation.get(x_key).get(column) || 0;
-                        }),
-                        obj: x_key
-                    };
+                    return getSerie(aggregation, x_key, x_type);
                 }),
                 plotOptions: {
                     series: {
@@ -403,8 +412,10 @@ $((function(){
             };
 
             // We need category labels if x_axis is not of type datetime
-            var renderer = value_renderer[form_data["x_axis"]];
-            chart.xAxis.categories = $.map(columns, renderer);
+            if (x_type !== "datetime"){
+                var renderer = value_renderer[form_data["x_axis"]];
+                chart.xAxis.categories = $.map(columns, renderer);
+            }
 
             container.highcharts(chart);
 
@@ -451,7 +462,6 @@ $((function(){
          */
         "text/json+aggregation+table": function(container, data){
             var row_template, table, thead, tbody, renderer;
-
             var aggregation = Aggregation(data);
 
             // Adding header
@@ -693,6 +703,21 @@ $((function(){
         });
     }
 
+    /**
+     * Massages given data into a format easily parseable by renderers.
+     */
+    function prepare_data(data){
+        // 'Total' is actually a 1D aggregation; we're fitting the data below to
+        // look like it is a 2D aggregation.
+        if (form_data["y_axis"] === "total"){
+            data = $.map(data, function(values){
+                return [[values[0], [["Total", values[1]]]]]
+            })
+        }
+
+        return data;
+    }
+
     function init_poll(uuid){
         var poll = Poll(uuid, {download: download_result()});
 
@@ -709,7 +734,7 @@ $((function(){
             if(renderer === undefined){
                 show_error("Server replied with unknown datatype: " + contentType);
             } else {
-                renderer(body, data);
+                renderer(body, prepare_data(data));
             }
 
         }).always(function() {

@@ -27,7 +27,9 @@ from amcat.tools.aggregate import get_relative
 from amcat.tools.djangotoolkit import parse_date
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
 
-AXES = tuple((c, c.title()) for c in ("date", "medium", "total", "term", "set"))
+X_AXES = tuple((c, c.title()) for c in ("date", "medium", "term", "set"))
+Y_AXES = X_AXES + (("total", "Total"),)
+
 INTERVALS = tuple((c, c.title()) for c in ("day", "week", "month", "quarter", "year"))
 TRANSPOSE = {"text/json+aggregation+graph"}
 
@@ -62,8 +64,8 @@ def _get_medium(column):
 
 
 class AggregationActionForm(QueryActionForm):
-    x_axis = ChoiceField(label="X-axis (rows)", choices=AXES, initial="date")
-    y_axis = ChoiceField(label="Y-axis (columns)", choices=AXES, initial="medium")
+    x_axis = ChoiceField(label="X-axis (rows)", choices=X_AXES, initial="date")
+    y_axis = ChoiceField(label="Y-axis (columns)", choices=Y_AXES, initial="medium")
     interval = ChoiceField(choices=INTERVALS, required=False, initial="day")
     relative_to = CharField(required=False, help_text=(
         "Enter medium, term or date for which to make the counts "
