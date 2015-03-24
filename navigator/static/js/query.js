@@ -22,6 +22,17 @@ function log(txt){
     console.log(txt);
 }
 
+function serializeForm(form){
+    var formData = $(form).serializeObject();
+
+    $.map($("input[type=checkbox]", form), function(input){
+        var inputName = $(input).attr("name");
+        formData[inputName] = input.checked;
+    });
+
+    return formData;
+}
+
 /**
  * Shamelessly stolen from: http://stackoverflow.com/a/1186309
  */
@@ -29,6 +40,7 @@ $.fn.serializeObject = function()
 {
     var o = {};
     var a = this.serializeArray();
+
     $.each(a, function() {
         if (o[this.name] !== undefined) {
             if (!o[this.name].push) {
@@ -39,6 +51,7 @@ $.fn.serializeObject = function()
             o[this.name] = this.value || '';
         }
     });
+
     return o;
 };
 
@@ -318,7 +331,11 @@ $((function(){
          * Inserts given html into container, without processing it further.
          */
         "text/html": function(container, data){
-            container.html(data);
+            return container.html(data);
+        },
+        "text/html+summary": function(container, data){
+            container = renderers["text/html"](container, data);
+            bottom(load_extra_summary);
         },
 
         /**
@@ -512,6 +529,40 @@ $((function(){
         }
     };
 
+    function bottom(callback){
+        $(window).scroll(function() {
+            if($(window).scrollTop() + $(window).height() == $(document).height()) {
+                $(window).off("scroll");
+                callback();
+            }
+        });
+    }
+
+    function load_extra_summary(){
+        $(".result .loading").show();
+        var data = $(".result .row.summary").data("form");
+        data["aggregations"] = false;
+        data["offset"] = $(".result .articles > li").length;
+
+        $.ajax({
+            type: "POST", dataType: "json",
+            url: get_api_url("summary"),
+            data: data,
+            headers: { "X-Available-Renderers": get_accepted_mimetypes().join(",") },
+            traditional: true,
+        }).done(function(data){
+            // Form accepted, we've been given a task uuid
+            Poll(data.uuid).result(function(data){
+                $(".result .loading").hide();
+                var articles = $(".articles > li", $(data));
+                if (articles.length === 0) return;
+                $(".result .articles").append(articles);
+                bottom(load_extra_summary);
+            });
+        })
+
+    };
+
     /**
      * Renders popup with a list of articles, based on given filters.
      * @param filters mapping { type -> filter }. For example:
@@ -661,6 +712,7 @@ $((function(){
      * Called when 'run query' is clicked.
      */
     function run_query() {
+        $(window).off("scroll");
         $(".error").removeClass("error").tooltip("destroy");
         $("#global-error").hide();
         PNotify.removeAll();
@@ -677,7 +729,7 @@ $((function(){
         $.ajax({
             type: "POST", dataType: "json",
             url: get_api_url(script),
-            data: $("form").serialize(),
+            data: serializeForm($("form")),
             headers: {
                 "X-Available-Renderers": get_accepted_mimetypes().join(",")
             }

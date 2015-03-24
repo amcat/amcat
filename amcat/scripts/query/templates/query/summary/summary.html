@@ -5,7 +5,7 @@
 {% else %}
     <h2>Found {{ narticles }} articles in {{ timer.interval|floatformat:3 }} seconds.</h2>
 
-    <div class="row">
+    <div data-form="{{ form_data }}" class="row summary">
         <div class="col-md-6">
             <ul class="articles">
                 {% for a in articles %}
@@ -14,22 +14,19 @@
             </ul>
         </div>
         <div class="col-md-6">
-          <div id="date-aggregation">
-            {% include "query/summary/summary_count_chart.html" %}
-          </div>
-          <div id="medium-aggregation">
-            {% include "query/summary/summary_medium_chart.html" %}
-          </div>
+            {% if show_aggregation %}
+                <div id="date-aggregation">
+                    {% include "query/summary/summary_count_chart.html" %}
+                </div>
+                <div id="medium-aggregation">
+                    {% include "query/summary/summary_medium_chart.html" %}
+                </div>
+            {% endif %}
         </div>
     </div>
-
 {% endif %}
 
-<style>
-    h2{margin-top:0;}
-    ul.articles{
-        list-style-type: none;
-        margin-left:0;
-        padding-left:10px;
-    }
-</style>
+<center>
+    {% include "query/summary/loading.html" %}
+</center>
+
