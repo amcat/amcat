@@ -71,7 +71,6 @@ class ArticleSerializer(AmCATModelSerializer):
         return super(ArticleSerializer, self).restore_fields(data, files)
 
     def from_native(self, data, files):
-        log.warn(">>> from_native")
         if "id" in data:
             # add existing ID rather than new
             id = int(data['id'])
@@ -97,11 +96,9 @@ class ArticleSerializer(AmCATModelSerializer):
                 return child
             return [result] + [get_child(child) for child in children]
 
-        log.warn("<<< from_native")
         return result
 
     def save(self, **kwargs):
-        log.warn(">>> save")
         def _flatten(l):
             """Turn either an object or a (recursive/irregular/jagged) list-of-lists into a flat list"""
             # inspired by http://stackoverflow.com/questions/2158395/flatten-an-irregular-list-of-lists-in-python
@@ -119,11 +116,9 @@ class ArticleSerializer(AmCATModelSerializer):
 
         # make sure that self.many is True for serializing result
         self.many = True
-        log.warn("<<< save")
         return self.object
 
     def to_native(self, data):
-        log.warn(">>> to_native")
         result = super(ArticleSerializer, self).to_native(data)
         mid = result['medium']
         result['mediumid'] = mid
@@ -131,7 +126,6 @@ class ArticleSerializer(AmCATModelSerializer):
             # this should not occur, but happens e.g. if index is not flushed
             self.medium_names[mid] = Medium.objects.get(pk=mid).name
         result['medium'] = self.medium_names[mid]
-        log.warn("<<< to_native")
         return result
 
 
