@@ -100,12 +100,12 @@ LEAD_SCRIPT_FIELD = {
     }
 }
 
-UPDATE_SCRIPT_REMOVE_FROM_SET = 'ctx._source.sets = ($ in ctx._source.sets if $ != set)'
+UPDATE_SCRIPT_REMOVE_FROM_SET = ("s=ctx._source; if (s.sets) {s.sets -= set}")
 
-UPDATE_SCRIPT_ADD_TO_SET = 'if (!(ctx._source.sets contains set)) {ctx._source.sets += set}'
 
-UPDATE_SCRIPT_ADD_TO_SET = ("if (ctx._source.sets == null) {ctx._source.sets = [set]} "
-                            "else { if (!(ctx._source.sets contains set)) {ctx._source.sets += set}}")
+UPDATE_SCRIPT_ADD_TO_SET = ("s=ctx._source; "
+                            "if (s.sets) {if (!(set in s.sets)) s.sets += set} "
+                            "else {s.sets = [set]}")
 
 
 class SearchResult(object):

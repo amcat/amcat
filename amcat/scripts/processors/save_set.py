@@ -98,14 +98,12 @@ class SaveAsSetScript(script.Script):
         else:
             name = self.options['setname']
             project = self.options['setproject']
-
-            try:
-                ArticleSet.objects.get(name=name, project=project)
-            except ArticleSet.DoesNotExist:
-                s = ArticleSet(name=self.options['setname'], project=self.options['setproject'])
-                s.save()
-            else:
+            
+            if ArticleSet.objects.get(name=name, project=project).exists():
                 raise ValueError("Set with this name already exists!")
+
+            s = ArticleSet(name=self.options['setname'], project=self.options['setproject'])
+            s.save()
 
         s.add_articles(article_ids, monitor=self.progress_monitor)
         return s
