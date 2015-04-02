@@ -17,13 +17,17 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from __future__ import unicode_literals, print_function
+import csv
 import json
 from base64 import b64encode, b64decode
+import StringIO
+import traceback
 
 from django.core.exceptions import ValidationError
 
 from amcat.scripts.query import QueryActionForm, QueryAction, QueryActionHandler
-from amcat.tools.clustermap import get_clustermap_image, clustermap_html_to_coords, get_clusters, get_cluster_queries
+from amcat.tools.clustermap import get_clustermap_image, clustermap_html_to_coords, get_clusters, get_cluster_queries, \
+    get_clustermap_table
 from amcat.tools.keywordsearch import SelectionSearch
 
 
@@ -50,21 +54,22 @@ class ClusterMapAction(QueryAction):
     form_class = ClusterMapForm
     task_handler = ClusterMapHandler
     output_types = (
-        ("application/json+clustermap", "Inline (interactive)"),
-        ("image/png+base64", "Inline (image only)"),
-        ("image/png", "PNG"),
+        ("application/json+clustermap", "Aduna"),
+        ("application/json+clustermap+table", "Table"),
+        ("text/csv", "CSV"),
+        ("text/csv", "CSV (Excel)"),
+        ("text/csv+tab", "CSV (tab-separated)"),
     )
 
     def run(self, form):
         selection = SelectionSearch(form)
         queries = selection.get_article_ids_per_query()
-        image, html = get_clustermap_image(queries)
 
         if form.cleaned_data["output_type"] == "application/json+clustermap":
-            coords = tuple(clustermap_html_to_coords(html))
-
             clusters, articles = zip(*get_clusters(queries).items())
             cluster_queries = get_cluster_queries(clusters)
+            image, html = get_clustermap_image(queries)
+            coords = tuple(clustermap_html_to_coords(html))
 
             return json.dumps(
                 {"coords": coords, "image": b64encode(image),
@@ -74,5 +79,22 @@ class ClusterMapAction(QueryAction):
                  ]}
             )
 
-        # JSON can't encode bytes (celery)
-        return b64encode(image)
+        dialect = 'excel'
+        if form.cleaned_data["output_type"] == "text/csv+tab":
+            dialect = 'excel-tab'
+
+        result = StringIO.StringIO()
+        headers, rows = get_clustermap_table(queries)
+        csvf = csv.writer(result, dialect=dialect)
+        csvf.writerow(map(str, headers))
+        csvf.writerows(sorted(rows))
+
+        if form.cleaned_data["output_type"] == "application/json+clustermap+table":
+            return json.dumps({
+                "csv": result.getvalue(),
+                "queries": {q.label: q.query for q in queries}
+            })
+
+        return result.getvalue()
+
+

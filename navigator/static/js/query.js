@@ -294,6 +294,55 @@ $((function(){
     };
 
     var renderers = {
+        "application/json+clustermap+table": function(container, data){
+            var table = renderers["text/csv+table"](container, data.csv);
+            table.addClass("table-hover")
+
+            $("tr", table).click(function(event){
+                // Find column indices of relevant queries
+                var columns = [];
+                var tds = $("td", $(event.currentTarget)).toArray();
+                tds.pop();
+
+                $.each(tds, function(i, td){
+                    if ($(td).text() == "1"){
+                        columns.push(i);
+                    }
+                });
+
+                // Resolve queries
+                var queries = $.map(columns, function(column){
+                    var query = $($("thead > th", table)[column]).text();
+                    return data.queries[query];
+                });
+
+                articles_popup({query: "(" + queries.join(") AND (") + ")"});
+            }).css("cursor","pointer");
+        },
+        "text/csv+table": function(container, data){
+            var table_data = Papa.parse(data, {skipEmptyLines: true}).data;
+
+            var thead = $("<thead>").append(
+                $.map(table_data[0], function(label){
+                    return $("<th>").text(label);
+                })
+            );
+
+            var tbody = $("<tbody>").append(
+                $.map(table_data.slice(1), function(row){
+                    return $("<tr>").append(
+                        $.map(row, function(value){
+                            return $("<td>").text(value);
+                        })
+                    )
+                })
+            )
+
+            var table = $("<table class='table'>").append([thead, tbody])
+            container.append(table);
+            return table;
+
+        },
         "application/json+clustermap": function(container, data){
             var img = $("<img>")
                 .attr("src", "data:image/png;base64," + data.image)
@@ -576,7 +625,11 @@ $((function(){
         var data = $.extend({}, form_data);
 
         $.each(filters, function(type, value){
-            $.extend(data, elastic_filters[type](form_data, value));
+            if (elastic_filters[type] !== undefined){
+                $.extend(data, elastic_filters[type](form_data, value));
+            } else {
+                data[type] = value;
+            }
         });
 
         // HACK: If a specific set is requested by a user (by clicking on a table cell,
@@ -815,6 +868,7 @@ $((function(){
 
     self.init_shortcuts = function initialise_shortcuts(){
         $.each(HOTKEYS, function(keys, callback){
+            console.log(keys)
             $(document).delegate('*', 'keydown.' + keys, function(event){
                 event.preventDefault();
                 event.stopPropagation();

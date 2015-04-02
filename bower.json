@@ -13,7 +13,8 @@
     "jquery.hotkeys": "",
     "bootstrap-datepicker": "",
     "highcharts": "",
-    "moment": ""
+    "moment": "",
+    "papaparse": "4.1.0"
   },
   "resolutions": {
     "jquery": "~2.x",

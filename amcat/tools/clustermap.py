@@ -29,10 +29,11 @@ from __future__ import unicode_literals, print_function
 from StringIO import StringIO
 from collections import defaultdict
 from functools import partial
-from itertools import chain
+from itertools import chain, product, permutations, repeat
 
 import os
 from tempfile import NamedTemporaryFile
+import datetime
 from django.template import Context
 from lxml import html
 import sh
@@ -58,6 +59,30 @@ HTML_TEMPLATE = get_template("query/clustermap/clustermap.html")
 
 
 ### CLUSTER LOGIC ###
+def get_product(queries):
+    return set(map(frozenset, product(*repeat(tuple(queries), len(queries)))))
+
+
+def get_intersections(queries):
+    """Based on a mapping {query: ids} determine a mapping {[query] -> [ids]}. This
+    is different from a clustermap; this function merely determines intersections: an
+    article id can exist in multiple sets.
+
+    @param queries.keys(): [SearchQuery]
+    @param queries.values(): [int]
+    @returns: mapping of cluster (frozenset of queries) to a set of article ids
+    """
+    queries = {q: set(ids) for q, ids in queries.items()}
+    all_article_ids = set(chain.from_iterable(queries.values()))
+    clusters = {cluster: all_article_ids.copy() for cluster in get_product(queries.keys())}
+
+    for cluster, cluster_ids in clusters.items():
+        for query in cluster:
+            cluster_ids &= queries[query]
+
+    return clusters
+
+
 def get_clusters(queries):
     """Based on a mapping {query: ids} determine a mapping {[query] -> [ids]}, thus
     determining the cluster it belongs to.
@@ -78,6 +103,18 @@ def get_clusters(queries):
         clusters[frozenset(queries)].add(aid)
 
     return clusters
+
+
+def _get_clustermap_table_rows(headers, isects):
+    for cluster in get_product(headers):
+        yield tuple(int(bool(h in cluster)) for h in headers) + (len(isects[cluster]),)
+
+
+def get_clustermap_table(queries):
+    intersections = get_intersections(queries)
+    headers = sorted(queries.keys(), key=lambda q: str(q))
+    rows = _get_clustermap_table_rows(headers, intersections)
+    return headers + ["Total"], rows
 
 
 def _get_cluster_query(all_queries, cluster_queries):
