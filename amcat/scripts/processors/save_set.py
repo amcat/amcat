@@ -99,7 +99,7 @@ class SaveAsSetScript(script.Script):
             name = self.options['setname']
             project = self.options['setproject']
             
-            if ArticleSet.objects.get(name=name, project=project).exists():
+            if ArticleSet.objects.filter(name=name, project=project).exists():
                 raise ValueError("Set with this name already exists!")
 
             s = ArticleSet(name=self.options['setname'], project=self.options['setproject'])
