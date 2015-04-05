@@ -43,6 +43,7 @@ from amcat.models import Project, ArticleSet
 from api.rest.resources import SearchResource
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
+from django.forms.widgets import HiddenInput
 
 from navigator.views.project_views import ProjectDetailsView
 UPLOAD_PLUGIN_TYPE = 1
@@ -258,6 +259,12 @@ class ArticleSetDeduplicateView(ProjectScriptView):
     script = DeduplicateSet
     url_fragment = "deduplicate"
 
+
+    def get_form(self, form_class):
+        form = super(ArticleSetDeduplicateView, self).get_form(form_class)
+        form.fields["articleset"].widget = HiddenInput()
+        form.fields["articleset"].initial = self.get_object()
+        return form
 
     def success_message(self, result=None):
         (n, dry_run) = self.result
