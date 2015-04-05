@@ -31,6 +31,7 @@ from amcat.models import Plugin, Article
 from amcat.models.project import LITTER_PROJECT_ID
 
 from amcat.scripts.actions.sample_articleset import SampleSet
+from amcat.scripts.actions.deduplicate_set import DeduplicateSet
 from amcat.scripts.actions.import_articleset import ImportSet
 from api.rest.viewsets import FavouriteArticleSetViewSet, ArticleSetViewSet, CodingjobArticleSetViewSet
 
@@ -251,6 +252,24 @@ class ArticleSetSampleView(ProjectScriptView):
                         .format(newname=escape(self.result.name), oldurl=reverse('article set-details', kwargs=self.kwargs),
                                 oldname=escape(old.name), **locals()))
 
+
+class ArticleSetDeduplicateView(ProjectScriptView):
+    parent = ArticleSetDetailsView
+    script = DeduplicateSet
+    url_fragment = "deduplicate"
+
+
+    def success_message(self, result=None):
+        (n, dry_run) = self.result
+        if not n:
+            return SafeText("No duplicates were found in the set")
+        if dry_run:
+            return SafeText("Found {n} duplicates, but did not delete them. Re-run without dry-run to remove"
+                            .format(**locals()))
+        else:
+            return SafeText("Removed {n} duplicates from the set!"
+                            .format(**locals()))
+    
 class ArticleSetEditView(ProjectEditView):
     parent = ArticleSetDetailsView
     fields = ['project', 'name', 'provenance']
@@ -317,6 +336,7 @@ class ArticleSetUploadView(ProjectScriptView):
 
         return context
 
+        
 class ArticleSetRefreshView(ProjectActionRedirectView):
     parent = ArticleSetDetailsView
     url_fragment = "refresh"
@@ -325,6 +345,8 @@ class ArticleSetRefreshView(ProjectActionRedirectView):
         # refresh the queryset. Probably not the nicest way to do this (?)
         ArticleSet.objects.get(pk=articleset_id).refresh_index(full_refresh=True)
 
+
+        
 class ArticleSetDeleteView(ProjectActionRedirectView):
     parent = ArticleSetDetailsView
     url_fragment = "delete"
