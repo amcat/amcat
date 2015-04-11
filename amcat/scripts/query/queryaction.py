@@ -16,10 +16,12 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import traceback
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.http import QueryDict, HttpResponse
+import sys
 from amcat.models import Project, ArticleSet, TaskHandler
 from amcat.scripts.forms import SelectionForm
 from django import forms
@@ -81,11 +83,34 @@ class QueryActionHandler(TaskHandler):
         query_action = self.get_query_action()
         updater = CeleryProgressUpdater(self.task.uuid)
         query_action.monitor.add_listener(updater.update)
-        return query_action.run(query_action.get_form())
+
+        try:
+            return query_action.run(query_action.get_form())
+        except Exception as e:
+            traceback.print_exc(e, sys.stderr)
+            sys.stderr.flush()
+            raise
 
     def _get_content_type(self):
+        """Returns content type of selected 'output_type'. This usually is a mimetype
+        formatted like:
+
+            application/json
+            text/csv
+
+        If clients want to add a specific 'meaning' to the data, the can add it using
+        the separator comma:
+
+            application/json,normalise
+            text/csv,sparse
+
+        In the latter cases only the part before the comma will be send back to the client
+        as Content-Type header.
+        """
         form = self.get_query_action().get_form()
-        return form.cleaned_data["output_type"]
+        content_type = form.cleaned_data["output_type"]
+        content_type = content_type.split(";")[0]
+        return content_type
 
     def get_response(self):
         response = HttpResponse(content=self.get_result())
@@ -129,7 +154,6 @@ class QueryAction(object):
         return self.form_class
 
     def get_task_handler(self):
-        print(self.task_handler)
         return self.task_handler
 
     @cached
@@ -168,5 +192,3 @@ class QueryAction(object):
                 "data": self.data, "articlesets": self.articlesets
             }
         )
-
-

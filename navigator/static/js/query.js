@@ -321,7 +321,21 @@ $((function(){
         },
         "text/csv+table": function(container, data){
             var table_data = Papa.parse(data, {skipEmptyLines: true}).data;
+            return renderers["application/json+table"](container, table_data);
+        },
+        "application/json+tables": function(container, data){
+            $.map(data, function(table){
+                var table_name = table[0];
+                var table_data = table[1];
+                var table_container = $("<div>");
+                renderers["application/json+table"](table_container, table_data);
+                $(table_container).prepend($("<h1>").text(table_name));
+                $(container).append(table_container);
+            });
 
+            return container;
+        },
+        "application/json+table": function(container, table_data){
             var thead = $("<thead>").append(
                 $.map(table_data[0], function(label){
                     return $("<th>").text(label);
@@ -336,12 +350,15 @@ $((function(){
                         })
                     )
                 })
-            )
+            );
 
             var table = $("<table class='table'>").append([thead, tbody])
             container.append(table);
             return table;
-
+        },
+        "application/json+crosstables": function(container, data){
+            renderers["application/json+tables"](container, data);
+            $("tr td:first-child", container).css("font-weight", "bold");
         },
         "application/json+clustermap": function(container, data){
             var img = $("<img>")
@@ -376,6 +393,21 @@ $((function(){
             });
 
             container.append(img).append(map);
+        },
+        "application/json+image+svg+multiple": function(container, data){
+            console.log(data);
+            console.log(typeof(data))
+            $.map(data, function(table){
+                var table_container = $("<div>");
+                renderers["image/svg"](table_container, table[1]);
+                $(table_container).prepend($("<h1>").text(table[0]));
+                $(container).append(table_container);
+            });
+
+            return container;
+        },
+        "image/svg": function(container, data){
+            return container.html(data);
         },
         "image/png+base64": function(container, data){
             container.append($("<img>").attr("src", "data:image/png;base64," + data));
@@ -695,8 +727,12 @@ $((function(){
         script_form.html("");
         $.each(fields, function(i, field_name){
             var row = $("<div>").addClass("row");
-            var label = $("<label class='col-md-3'>").text(data.labels[field_name]);
-            var widget = $("<div class='col-md-9'>").html(data.form[field_name]);
+            var label = $("<label class='col-md-5'>").text(data.labels[field_name]);
+            var widget = $("<div class='col-md-7'>").html(data.form[field_name]);
+
+            var id = widget.children().first().attr("id");
+            label.attr("for", id)
+
             script_form.append(row.append(label).append(widget));
 
             // Add help text
@@ -740,7 +776,7 @@ $((function(){
 
         // If we cannot render the selected output type, we should offer download option
         var outputType = $("form [name=output_type]").val();
-        return $.inArray(outputType, get_accepted_mimetypes()) === -1;
+        return $.inArray(outputType.split(";")[0], get_accepted_mimetypes()) === -1;
     }
 
     function form_invalid(data){
@@ -789,7 +825,8 @@ $((function(){
             data: serializeForm($("form")),
             headers: {
                 "X-Available-Renderers": get_accepted_mimetypes().join(",")
-            }
+            },
+            traditional: true
         }).done(function(data){
             // Form accepted, we've been given a task uuid
             init_poll(data.uuid);
@@ -889,12 +926,16 @@ $((function(){
                 + "administrators."
             );
         }).done(function(data){
-            var buttons = $("<div class='btn-group'>");
-
+            var buttons = [];
             $.each(data, function(name, url){
-                buttons.append($("<span class='btn btn-sm btn-default' id='script_"+name+"'>").text(name));
+                buttons.push($("<span class='btn btn-sm btn-default' id='script_"+name+"'>").text(name));
             });
 
+            buttons.sort(function(a, b){
+                return a.attr("id") > b.attr("id");
+            });
+
+            buttons = $("<div class='btn-group'>").append(buttons);
             scripts_container.html(buttons);
             buttons.click(script_changed);
             $("#script_summary").click();
