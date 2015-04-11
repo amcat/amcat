@@ -167,6 +167,10 @@ $((function(){
         "codebook", "query", "download"
     ];
 
+    var SCRIPT_NAMES = {
+        saveasset: "Save as set"
+    };
+
     var HOTKEYS = {
         "ctrl_q": function(event){ $("#run-query").click(); }
     };
@@ -704,11 +708,10 @@ $((function(){
 
     function script_changed(event){
         $(".query-submit .btn").addClass("disabled");
-
-        $("#scripts .main-scripts").children().removeClass("active");
+        $("#scripts .active").removeClass("active");
         $(event.target).addClass("active");
 
-        var url = get_api_url($(event.target).text().toLowerCase());
+        var url = get_api_url($(event.target).attr("name"));
 
         $.ajax({
             "type": "OPTIONS", url: url, dateType: "json"
@@ -816,7 +819,8 @@ $((function(){
     /*
      * Called when 'run query' is clicked.
      */
-    function run_query() {
+    function run_query(event) {
+        event.preventDefault();
         $(window).off("scroll");
         $(".error").removeClass("error").tooltip("destroy");
         $("#global-error").hide();
@@ -958,15 +962,20 @@ $((function(){
                 button = $("<span>");
                 button.attr("class", "btn btn-sm btn-default script");
                 button.attr("id", "script_" + name);
-                button.text(name.capitalize());
+                button.attr("name", name);
+                button.text((SCRIPT_NAMES[name] || name).capitalize());
                 $("#scripts .main-scripts").prepend(button);
             });
 
+            var a;
             $.each(other_buttons, function(i, name){
+                a = $("<a class='script' href='#'></a>");
+                a.attr("id", "script_" + name);
+                a.attr("name", name);
+                a.text((SCRIPT_NAMES[name] || name).capitalize());
+
                 $("#scripts .other-scripts").append(
-                    $("<li class='dropdown'>").append(
-                        $("<a class='script' id='script_" + name + "' href='#'>" + name.capitalize() + "</a>")
-                    )
+                    $("<li class='dropdown'>").append(a)
                 );
             });
 
@@ -983,6 +992,7 @@ $((function(){
         init_shortcuts();
 
         $("#run-query").click(run_query);
+        $("#content > form").submit(run_query);
     });
 }).bind({}));
 
