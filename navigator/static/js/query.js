@@ -22,6 +22,10 @@ function log(txt){
     console.log(txt);
 }
 
+String.prototype.capitalize = function() {
+    return this.charAt(0).toUpperCase() + this.slice(1);
+}
+
 function serializeForm(form){
     var formData = $(form).serializeObject();
 
@@ -152,6 +156,7 @@ var Aggregation = function(data){
 };
 
 $((function(){
+    var MAIN_SCRIPTS = ["summary", "aggregation", "association"];
     var DEFAULT_SCRIPT = "summary";
     var QUERY_API_URL = "/api/v4/query/";
     var SEARCH_API_URL = "/api/v4/search";
@@ -700,10 +705,11 @@ $((function(){
     function script_changed(event){
         $(".query-submit .btn").addClass("disabled");
 
-	$(event.target).parent().children().removeClass("active");
-	$(event.target).addClass("active");
+        $("#scripts .main-scripts").children().removeClass("active");
+        $(event.target).addClass("active");
 
-        var url = get_api_url($(event.target).text());
+        var url = get_api_url($(event.target).text().toLowerCase());
+
         $.ajax({
             "type": "OPTIONS", url: url, dateType: "json"
         }).done(script_form_loaded).error(function(){
@@ -932,18 +938,41 @@ $((function(){
                 + "administrators."
             );
         }).done(function(data){
-            var buttons = [];
-            $.each(data, function(name, url){
-                buttons.push($("<span class='btn btn-sm btn-default' id='script_"+name+"'>").text(name));
+            var main_buttons = [];
+            var other_buttons = [];
+
+            $.each(data, function(name){
+                if (MAIN_SCRIPTS.indexOf(name) === -1){
+                    other_buttons.push(name);
+                } else {
+                    main_buttons.push(name);
+                }
             });
 
-            buttons.sort(function(a, b){
-                return a.attr("id") > b.attr("id");
+            main_buttons.sort();
+            main_buttons.reverse();
+            other_buttons.sort();
+
+            var button;
+            $.each(main_buttons, function(i, name){
+                button = $("<span>");
+                button.attr("class", "btn btn-sm btn-default script");
+                button.attr("id", "script_" + name);
+                button.text(name.capitalize());
+                $("#scripts .main-scripts").prepend(button);
             });
 
-            buttons = $("<div class='btn-group'>").append(buttons);
-            scripts_container.html(buttons);
-            buttons.click(script_changed);
+            $.each(other_buttons, function(i, name){
+                $("#scripts .other-scripts").append(
+                    $("<li class='dropdown'>").append(
+                        $("<a class='script' id='script_" + name + "' href='#'>" + name.capitalize() + "</a>")
+                    )
+                );
+            });
+
+            $("#scripts .main-scripts").show()
+            $("#scripts .loading").hide();
+            $("#scripts .script").click(script_changed);
             $("#script_summary").click();
         });
     }

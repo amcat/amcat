@@ -97,7 +97,16 @@
         <div class="panel panel-default">
             <div class="panel-heading">Output options</div>
             <div class="panel-body">
-	      <div id="scripts"><i>Loading options..</i></div>
+	      <div id="scripts">
+              <i class="loading">Loading options..</i>
+              <div style="display: none;" class="btn-group main-scripts">
+                  <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                      More <span class="caret"></span>
+                  </button>
+                  <ul class="dropdown-menu other-scripts pull-right" role="menu">
+                  </ul>
+              </div>
+          </div>
 	      <hr id="script-line" style="display:none"/>
 	      <div class="row">
 		<div class="col-md-8" id="script-form"></div>
@@ -112,7 +121,7 @@
     <div class="btn-group">
         <!--<a class="btn btn-default disabled">Save as..</a>
         <a class="btn btn-default disabled">Save</a>-->
-        <a class="btn btn-success disabled" id="run-query">
+        <a type="button" data-toggle="tooltip" data-placement="bottom" title="CTRL+Q" class="btn btn-success disabled" id="run-query">
             <i class="glyphicon glyphicon-cog"></i> <u>Q</u>uery
         </a>
     </div>
@@ -137,7 +146,7 @@
         ];
         $.each(inputs, function (i, el) { $(el).prop("tabindex", i+1); });
 
-        $(inputs[0]).focus();
+        $('[data-toggle="tooltip"]').tooltip()
     });
 </script>
 
