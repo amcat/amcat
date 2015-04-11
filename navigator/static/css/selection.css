@@ -108,3 +108,7 @@ map area:hover{
 textarea.query {
   height: 15em;
 }
+
+#dates > div {
+    width:100%;
+}

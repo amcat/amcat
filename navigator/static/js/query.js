@@ -685,10 +685,16 @@ $((function(){
     }
 
     function datetype_changed(){
-        date_inputs.prop("disabled", true);
+        date_inputs.prop("disabled", true).addClass("hidden");
         $.each(dates_enabling[datetype_input.val()], function(i, selector){
-            $("#dates").find("input[name=" + selector + "]").prop("disabled", false);
+            $("#dates").find("input[name=" + selector + "]").prop("disabled", false).removeClass("hidden");
         });
+
+        if (datetype_input.val() == "all"){
+            $("#dates .formatting-help").hide();
+        } else {
+            $("#dates .formatting-help").show();
+        }
     }
 
     function script_changed(event){
