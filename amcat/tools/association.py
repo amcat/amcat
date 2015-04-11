@@ -234,7 +234,6 @@ class Association(object):
         nodes = {query: get_node(queries, query) for query in queries}
 
         for _, p, of, given in associations:
-            print(p, threshold)
             if isinstance(p, basestring) or p <= threshold or of == given:
                 continue
 
