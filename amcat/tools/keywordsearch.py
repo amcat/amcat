@@ -279,7 +279,7 @@ def get_date_filters(start_date, end_date, on_date, datetype):
     elif datetype == 'after':
         yield 'start_date', start_date
 
-    elif datetype == 'end_date':
+    elif datetype == 'before':
         yield 'end_date', end_date
 
     # No filter given.
