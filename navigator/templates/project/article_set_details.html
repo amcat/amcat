@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block actions %}
-    <a class="btn btn-primary" href="{% url "query" project.id %}?articlesets={{ object.id }}"><i class="glyphicon glyphicon-cog"></i>Query</a>
+    <a class="btn btn-primary" href="{% url "query" project.id %}?sets={{ object.id }}"><i class="glyphicon glyphicon-cog"></i>Query</a>
     {% if can_edit %}
         <a class="btn btn-default" data-confirm="You're about to refresh the index for <i>{{ object.name }}</i>. This action can take a while, and all articles in the index will be unavailable for search in the meantime." href="{% url "article set-refresh" project.id object.id %}"><i class="glyphicon glyphicon-refresh"></i> Refresh Index</a>
     {% endif %}
