@@ -29,13 +29,15 @@ from amcat.scripts.query import QueryActionForm, QueryAction, QueryActionHandler
 from amcat.tools.clustermap import get_clustermap_image, clustermap_html_to_coords, get_clusters, get_cluster_queries, \
     get_clustermap_table
 from amcat.tools.keywordsearch import SelectionSearch
+from amcat.tools.table.table2spss import table2sav
+from amcat.tools.table.table3 import Table, ListTable
 
 
 class ClusterMapHandler(QueryActionHandler):
     def get_result(self):
         result = super(ClusterMapHandler, self).get_result()
-        if self.task.arguments["data"]["output_type"][0] == "image/png":
-            return b64decode(result)
+        if self.task.arguments["data"]["output_type"][0] == "application/spss-sav":
+            return open(result, "rb").read()
         return result
 
 
@@ -59,6 +61,7 @@ class ClusterMapAction(QueryAction):
         ("text/csv", "CSV"),
         ("text/csv", "CSV (Excel)"),
         ("text/csv+tab", "CSV (tab-separated)"),
+        ("application/spss-sav", "SPSS")
     )
 
     def run(self, form):
@@ -79,12 +82,24 @@ class ClusterMapAction(QueryAction):
                  ]}
             )
 
+        headers, rows = get_clustermap_table(queries)
+
+        if form.cleaned_data["output_type"] == "application/spss-sav":
+            # *sigh*.. this code is fugly.
+            _headers = {str(h): i for i, h in enumerate(headers)}
+
+            return table2sav(Table(
+                rows=list(rows),
+                columns=map(str, headers),
+                columnTypes=[int]*len(headers),
+                cellfunc=lambda row, col: row[_headers[col]]
+            ))
+
         dialect = 'excel'
         if form.cleaned_data["output_type"] == "text/csv+tab":
             dialect = 'excel-tab'
 
         result = StringIO.StringIO()
-        headers, rows = get_clustermap_table(queries)
         csvf = csv.writer(result, dialect=dialect)
         csvf.writerow(map(str, headers))
         csvf.writerows(sorted(rows))
