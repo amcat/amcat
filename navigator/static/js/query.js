@@ -157,6 +157,8 @@ var Aggregation = function(data){
 
 $((function(){
     var MAIN_SCRIPTS = ["summary", "aggregation", "association"];
+    var ACTION_SCRIPTS = ["saveasset", "assignascodingjob"];
+
     var DEFAULT_SCRIPT = "summary";
     var QUERY_API_URL = "/api/v4/query/";
     var SEARCH_API_URL = "/api/v4/search";
@@ -168,7 +170,8 @@ $((function(){
     ];
 
     var SCRIPT_NAMES = {
-        saveasset: "Save as set"
+        saveasset: "Save as set",
+        assignascodingjob: "Assign as codingjob"
     };
 
     var HOTKEYS = {
@@ -707,11 +710,16 @@ $((function(){
     }
 
     function script_changed(event){
+        var name = $(event.target).attr("name");
         $(".query-submit .btn").addClass("disabled");
         $("#scripts .active").removeClass("active");
         $(event.target).addClass("active");
 
-        var url = get_api_url($(event.target).attr("name"));
+        event.preventDefault();
+
+        window.history.replaceState(null, null, '#' + name);
+
+        var url = get_api_url(name);
 
         $.ajax({
             "type": "OPTIONS", url: url, dateType: "json"
@@ -782,7 +790,7 @@ $((function(){
      * @returns boolean
      */
     function download_result(){
-        var download = $("form [name=download]").is(":checked");
+        var download = $("#quer-form [name=download]").is(":checked");
 
         if (download){
             // User explicitly indicated wanting to download
@@ -790,14 +798,14 @@ $((function(){
         }
 
         // If we cannot render the selected output type, we should offer download option
-        var outputType = $("form [name=output_type]").val();
+        var outputType = $("#query-form [name=output_type]").val();
         return $.inArray(outputType.split(";")[0], get_accepted_mimetypes()) === -1;
     }
 
     function form_invalid(data){
         // Add error class to all
         $.each(data, function(field_name, errors){
-            $("[name=" + field_name + "]", $("form"))
+            $("[name=" + field_name + "]", $("#query-form"))
                 .addClass("error")
                 .prop("title", errors[0])
                 .data("toggle", "tooltip")
@@ -830,7 +838,7 @@ $((function(){
         progress_bar.css("width", 0);
         message_element.text(message_element.attr("placeholder"));
 
-        form_data = $("form").serializeObject();
+        form_data = $("#query-form").serializeObject();
         $(".result .panel-body").html("<i>No results yet</i>");
 
         var script = scripts_container.find(".active")[0].id.replace("script_","")
@@ -838,7 +846,7 @@ $((function(){
         $.ajax({
             type: "POST", dataType: "json",
             url: get_api_url(script),
-            data: serializeForm($("form")),
+            data: serializeForm($("#query-form")),
             headers: {
                 "X-Available-Renderers": get_accepted_mimetypes().join(",")
             },
@@ -944,18 +952,22 @@ $((function(){
         }).done(function(data){
             var main_buttons = [];
             var other_buttons = [];
+            var action_buttons = []
 
             $.each(data, function(name){
-                if (MAIN_SCRIPTS.indexOf(name) === -1){
-                    other_buttons.push(name);
-                } else {
+                if (MAIN_SCRIPTS.indexOf(name) !== -1 && ACTION_SCRIPTS.indexOf(name) === -1) {
                     main_buttons.push(name);
+                } else if(ACTION_SCRIPTS.indexOf(name) !== -1){
+                    action_buttons.push(name);
+                } else {
+                    other_buttons.push(name);
                 }
             });
 
             main_buttons.sort();
             main_buttons.reverse();
             other_buttons.sort();
+            action_buttons.sort();
 
             var button;
             $.each(main_buttons, function(i, name){
@@ -967,22 +979,31 @@ $((function(){
                 $("#scripts .main-scripts").prepend(button);
             });
 
-            var a;
-            $.each(other_buttons, function(i, name){
+            var to_dropdown = function(name){
+                var a;
                 a = $("<a class='script' href='#'></a>");
                 a.attr("id", "script_" + name);
                 a.attr("name", name);
                 a.text((SCRIPT_NAMES[name] || name).capitalize());
+                return $("<li class='dropdown'>").append(a);
+            }
 
-                $("#scripts .other-scripts").append(
-                    $("<li class='dropdown'>").append(a)
-                );
-            });
+
+            var other = $("#scripts .other-scripts");
+            other.append($.map(other_buttons, to_dropdown));
+            other.append($("<li class='divider'></li>"));
+            other.append($.map(action_buttons, to_dropdown));
 
             $("#scripts .main-scripts").show()
             $("#scripts .loading").hide();
             $("#scripts .script").click(script_changed);
-            $("#script_summary").click();
+
+            $(window).bind('hashchange', function(event){
+                var script = $("#script_" + location.hash.slice(1));
+                if (script){ script.click() };
+            });
+
+            $(window).trigger("hashchange");
         });
     }
 
