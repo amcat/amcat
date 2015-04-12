@@ -999,7 +999,14 @@ $((function(){
             $("#scripts .script").click(script_changed);
 
             $(window).bind('hashchange', function(event){
-                var script = $("#script_" + location.hash.slice(1));
+                var hash;
+                if(!location.hash || !location.hash.slice(1)){
+                    hash = DEFAULT_SCRIPT;
+                } else {
+                    hash = location.hash.slice(1);
+                }
+
+                var script = $("#script_" + hash);
                 if (script){ script.click() };
             });
 
