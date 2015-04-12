@@ -94,7 +94,7 @@ def _create_codingjob_batches(codingjob, article_ids, batch_size):
 
     for i, batch in enumerate(splitlist(article_ids, batch_size)):
         codingjob.pk = None
-        codingjob.name = "{name} - {i}".format(i=i, name=name)
+        codingjob.name = "{name} - {i}".format(i=i+1, name=name)
         codingjob.articleset = ArticleSet.create_set(
             project=codingjob.project,
             name=codingjob.name,

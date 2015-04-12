@@ -53,7 +53,7 @@ class AddCodingJob(Script):
 
             
     def _run(self, job_size, articleset, name, project, **args):
-        article_ids = articleset.objects.all().values_list("id", flat=True)
+        article_ids = articleset.articles.all().values_list("id", flat=True)
         job = self.bound_form.save(commit=False)
         
         if not job_size:
