@@ -69,6 +69,9 @@ class AssignAsCodingjobAction(QueryAction):
         n_batches = len(article_ids) // job_size
         n_batches += 1 if len(article_ids) % job_size else 0
 
+        if job_size == 0:
+            job_size = len(article_ids)
+
         for i, cid in enumerate(_create_codingjob_batches(cj, article_ids, job_size)):
             progress = int((i / float(n_batches)) * (100 // 2))
             msg = "Creating codingjob {} of {}..".format(i+1, n_batches)
