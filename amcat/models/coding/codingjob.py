@@ -26,7 +26,7 @@ Each coding job has codingschemas for articles and/or sentences.
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from amcat.models import CodedArticle
+from amcat.models import CodedArticle, ArticleSet
 
 from amcat.tools.model import AmcatModel
 from amcat.tools.table import table3
@@ -38,7 +38,10 @@ from django.db import models
 from amcat.models.user import LITTER_USER_ID
 from amcat.models.project import LITTER_PROJECT_ID
 
-import logging; log = logging.getLogger(__name__)
+import logging;
+from amcat.tools.toolkit import splitlist
+
+log = logging.getLogger(__name__)
 
 class CodingJob(AmcatModel):
     """
@@ -84,6 +87,38 @@ class CodingJob(AmcatModel):
     def get_coded_article(self, article):
         # probably want to use a cached value if it exists?
         return self.coded_articles.get(article=article)
+
+
+def _create_codingjob_batches(codingjob, article_ids, batch_size):
+    name = codingjob.name
+
+    for i, batch in enumerate(splitlist(article_ids, batch_size)):
+        codingjob.pk = None
+        codingjob.name = "{name} - {i}".format(i=i, name=name)
+        codingjob.articleset = ArticleSet.create_set(
+            project=codingjob.project,
+            name=codingjob.name,
+            favourite=False,
+            articles=batch,
+        )
+
+        codingjob.save()
+        yield codingjob.pk
+
+
+def create_codingjob_batches(codingjob, article_ids, batch_size):
+    """
+    Split article_ids in batches of of 'batch_size', and create a codingjob
+    for each batch.
+
+    @param codingjob: Non-saved instance of a codingjob
+    @type codingjob: CodingJob
+    @type article_ids: [int]
+    @type batch_size: int
+    """
+    codingjob_ids = _create_codingjob_batches(codingjob, article_ids, batch_size)
+    return CodingJob.objects.filter(id__in=codingjob_ids)
+
 
 @receiver(post_save, sender=CodingJob)
 def create_coded_articles(sender, instance=None, created=None, **kwargs):

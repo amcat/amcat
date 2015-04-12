@@ -26,7 +26,7 @@ import logging; log = logging.getLogger(__name__)
 
 from django import forms
 from amcat.scripts.script import Script
-from amcat.models import CodingJob, User, ArticleSet
+from amcat.models import CodingJob, User, ArticleSet, create_codingjob_batches
 
 
 class AddCodingJob(Script):
@@ -53,25 +53,16 @@ class AddCodingJob(Script):
 
             
     def _run(self, job_size, articleset, name, project, **args):
+        article_ids = articleset.objects.all().values_list("id", flat=True)
         job = self.bound_form.save(commit=False)
         
         if not job_size:
-            job.articleset = ArticleSet.create_set(project=project, name=name, articles=articleset.articles.all(), favourite=False)
+            job.articleset = ArticleSet.create_set(project=project, name=name, articles=article_ids, favourite=False)
             job.save()
             return job
 
-        n = articleset.articles.count()
-        result = []
-        for i, start in enumerate(range(0, n, job_size)):
-            job.pk = None
-            articles = articleset.articles.all()[start : start + job_size]
-            set_name = "{name} - {j}".format(j=i+1, **locals())
-            job.articleset = ArticleSet.create_set(project=project, articles=articles, name=set_name, favourite=False)
-            job.name = "{name} - {j}".format(j=i+1, **locals())
-            job.save()
-            result.append(CodingJob.objects.get(pk=job.pk))
-        return result
-                          
+        return create_codingjob_batches(job, article_ids, job_size)
+
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli

@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from amcat.models import CodedArticle
+from amcat.models import CodedArticle, CodingJob, create_codingjob_batches
 from amcat.tools import amcattest
 
 class TestCodingJob(amcattest.AmCATTestCase):
@@ -35,3 +35,24 @@ class TestCodingJob(amcattest.AmCATTestCase):
     def test_post_create(self):
         job = amcattest.create_test_job(10)
         self.assertEqual(CodedArticle.objects.filter(codingjob=job).count(), 10)
+
+    def test_create_codingjob_batches(self):
+        a = amcattest.create_test_set(10)
+
+        cj = CodingJob()
+        cj.project = a.project
+        cj.name = "foo"
+        cj.unitschema = amcattest.create_test_schema(project=a.project)
+        cj.articleschema = amcattest.create_test_schema(isarticleschema=True, project=a.project)
+        cj.coder = amcattest.create_test_user()
+        cj.insertuser = amcattest.create_test_user()
+
+        arts = a.articles.all().values_list("id", flat=True)
+
+        cjs = create_codingjob_batches(cj, arts, 2)
+        self.assertEqual(5, len(cjs))
+
+        cjs = create_codingjob_batches(cj, arts, 3)
+        self.assertEqual(4, len(cjs))
+
+

@@ -5,3 +5,4 @@ from aggregation import AggregationAction
 from clustermap import ClusterMapAction
 from association import AssociationAction
 from saveset import SaveAsSetAction
+from assignascodingjob import AssignAsCodingjobAction
