@@ -26,7 +26,7 @@ textarea{
     height:100%;
 }
 
-.filters-tab input{
+.filters-tab > input{
     max-width: 100%;
     min-width: 100%;
     width:100%;
@@ -40,6 +40,10 @@ select.wide,
 
 form > .row{
     margin-bottom: -5px;
+}
+
+textarea[name=article_ids]{
+    height:125px;
 }
 
 .formatting-help{

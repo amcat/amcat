@@ -58,7 +58,7 @@ class AmCATMetadataMixin(object):
 
     def get_metadata_fields(self):
         serializer = self.get_serializer()
-        for name, field in serializer.get_fields().iteritems():
+        for name, field in serializer.fields.iteritems():
             field_name = None
             if hasattr(serializer, "get_metadata_field_name"):
                 field_name = serializer.get_metadata_field_name(field)

@@ -40,9 +40,6 @@ class SummaryActionForm(QueryActionForm):
 
 
 class SummaryAction(QueryAction):
-    """
-    This is the docstring of SummaryAction!
-    """
     output_types = (("text/html+summary", "HTML"),)
     form_class = SummaryActionForm
 

@@ -75,6 +75,7 @@ class AssignAsCodingjobAction(QueryAction):
         for i, cid in enumerate(_create_codingjob_batches(cj, article_ids, job_size)):
             progress = int((i / float(n_batches)) * (100 // 2))
             msg = "Creating codingjob {} of {}..".format(i+1, n_batches)
+            print(50 + progress)
             self.monitor.update(50 + progress, msg)
 
             if provenance:

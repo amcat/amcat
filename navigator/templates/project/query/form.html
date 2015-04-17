@@ -68,6 +68,14 @@
                 <div class="row mediums">
                     <div class="col-md-3"><label>Media</label></div>
                     <div class="col-md-9">{{ form.mediums }}</div>
+                    <script>
+                        $("select[multiple=multiple]").multiselect(
+                           $.extend({}, MULTISELECT_DEFAULTS, {
+                               nonSelectedText: 'All selected',
+                               buttonWidth: "100%"
+                           })
+                        );
+                    </script>
                 </div>
                 <br/>
                 <div class="row">

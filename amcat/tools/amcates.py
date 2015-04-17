@@ -40,6 +40,7 @@ from django.conf import settings
 from amcat.tools.caching import cached
 from amcat.tools.progress import NullMonitor
 
+settings.ES_USE_LEGACY_HASH_FUNCTION = False
 if settings.ES_USE_LEGACY_HASH_FUNCTION is None:
     error_msg = "Environment variable AMCAT_ES_LEGACY_HASH should be explicitely set."
     raise ImproperlyConfigured(error_msg)
@@ -183,7 +184,7 @@ class SearchResult(object):
     @property
     @cached
     def results(self):
-        return [Result.from_hit(h, self.fields, self.score) for h in self.hits]
+        return [Result.from_hit(self, h, self.fields, self.score) for h in self.hits]
 
     def __len__(self):
         return len(self.hits)
@@ -202,7 +203,7 @@ class Result(object):
     """Simple class to hold arbitrary values"""
 
     @classmethod
-    def from_hit(cls, row, fields, score=True):
+    def from_hit(cls, searchresult, row, fields, score=True):
         """@param hit: elasticsearch hit dict"""
         field_dict = {f: None for f in fields}
         if 'fields' in row:
@@ -214,7 +215,7 @@ class Result(object):
                         v = v[0]
                 field_dict[k] = v
 
-        result = Result(id=int(row['_id']), **field_dict)
+        result = Result(id=int(row['_id']), _searchresult=searchresult, **field_dict)
         if score: result.score = int(row['_score'])
         if 'highlight' in row: result.highlight = row['highlight']
         if hasattr(result, 'date'):

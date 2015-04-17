@@ -207,6 +207,7 @@ class Datatable(object):
             # ViewSet
             fields = self.resource.get_serializer_class()().fields.keys()
 
+
         fields = [f for f in fields if f not in self.hidden]
 
         if not self.resource.get_serializer_class()().opts.fields and \

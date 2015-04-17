@@ -27,7 +27,7 @@ from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools.keywordsearch import SelectionSearch
 
 
-OK_TEMPLATE = get_template("query/saveset/ok.html")
+OK_TEMPLATE = get_template("query/ok.html")
 
 
 class SaveAsSetForm(QueryActionForm):

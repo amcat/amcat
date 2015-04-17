@@ -18,6 +18,18 @@
 * You should have received a copy of the GNU Affero General Public        *
 * License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
 ***************************************************************************/
+var MULTISELECT_DEFAULTS = {
+    enableFiltering: true,
+    numberDisplayed: 3,
+    //buttonWidth: '100%',
+    enableCaseInsensitiveFiltering: true,
+    onDropdownShown: function(event){
+        var input = $("input.multiselect-search", event.currentTarget);
+        window.setTimeout(function(){input.focus()});
+    }
+}
+
+
 function log(txt){
     console.log(txt);
 }
@@ -156,7 +168,7 @@ var Aggregation = function(data){
 };
 
 $((function(){
-    var MAIN_SCRIPTS = ["summary", "aggregation", "association"];
+    var MAIN_SCRIPTS = ["summary", "aggregation", "association", "articlelist"];
     var ACTION_SCRIPTS = ["saveasset", "assignascodingjob"];
 
     var DEFAULT_SCRIPT = "summary";
@@ -171,7 +183,8 @@ $((function(){
 
     var SCRIPT_NAMES = {
         saveasset: "Save as set",
-        assignascodingjob: "Assign as codingjob"
+        assignascodingjob: "Assign as codingjob",
+        articlelist: "Articlelist"
     };
 
     var HOTKEYS = {
@@ -769,6 +782,8 @@ $((function(){
             var is_hidden = widget.find("[type=hidden]").length;
             if (is_hidden) row.css("height", 0).css("overflow", "hidden");
         });
+
+        $("select[multiple=multiple]", $("#script-form")).multiselect(MULTISELECT_DEFAULTS);
 
         $(".query-submit .btn").removeClass("disabled");
     }

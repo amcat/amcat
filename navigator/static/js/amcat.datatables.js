@@ -667,17 +667,28 @@ amcat.datatables.fnServerData = function(sSource, aoData, fnCallback){
  * properties aTargets, mData.
  */
 amcat.datatables.gen_aoColumnDefs = function (metadata) {
-    var res = [], i = 0;
+    var res = [];
+    var fields = [];
 
     for (var fieldname in metadata.fields) {
-        res.push({
-            aTargets: [fieldname],
-            mData: fieldname
-            // TODO: Add sType
-        });
-
-        i++;
+        fields.push(fieldname);
     }
+
+    fields.sort();
+    var id = fields.indexOf("id");
+
+    if (id !== -1){
+        fields.splice(i, 1);
+        fields.splice(0, 0, "id");
+    }
+
+    for (var i in fields){
+        res.push({
+            aTargets: [fields[i]],
+            mData: fields[i]
+        });
+    }
+
 
     return res;
 };
@@ -777,7 +788,7 @@ amcat.datatables.create_table_element = function(opts){
 };
 
 /*
- * This function is executed when the initial call to the api succeeds.
+ * This function is executed when the initial (OPTIONS) call to the api succeeds.
  */
 amcat.datatables.fetched_initial_success = function (data, textStatus, jqXHR) {
     this.metadata = data;
@@ -787,12 +798,28 @@ amcat.datatables.fetched_initial_success = function (data, textStatus, jqXHR) {
         this.datatables_options.aoColumnDefs = [];
     }
 
-    this.datatables_options.aoColumnDefs = amcat.datatables.gen_aoColumnDefs(data)
-        .concat(this.datatables_options.aoColumnDefs);
+    //
+    var api_columns = amcat.datatables.gen_aoColumnDefs(data);
+    var user_columns = this.datatables_options.aoColumnDefs;
+    this.datatables_options.aoColumnDefs = api_columns.concat(user_columns);
 
     // Merge aoColumnDefs / aoColumns
     this.datatables_options.aoColumns = amcat.datatables.get_columns(this.datatables_options);
     delete this.datatables_options.aoColumnDefs;
+
+    // If the API didn't return a column as valid, remove it from column list
+    var cols = [], that = this;
+
+    // ~O(n^3); long hair don't care.
+    $.map(api_columns, function(api_col){
+        $.map(that.datatables_options.aoColumns, function(col){
+            if (col.mData === api_col.mData && $.inArray(col, cols) === -1){
+                cols.push(col);
+            }
+        });
+    });
+
+    this.datatables_options.aoColumns = cols;
 
     // Create table element and add it to the DOM
     var tbl = amcat.datatables.create_table_element(this.datatables_options);

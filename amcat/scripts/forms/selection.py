@@ -102,6 +102,8 @@ class SelectionForm(forms.Form):
             articlesets = project.all_articlesets(distinct=True)
 
         self.project = project
+        self.articlesets = articlesets
+
         self.fields['articlesets'].queryset = articlesets.order_by('-pk')
         self.fields['codebook'].queryset = project.get_codebooks()
         self.fields['mediums'].queryset = self._get_mediums()

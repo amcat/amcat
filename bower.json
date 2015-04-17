@@ -14,7 +14,8 @@
     "bootstrap-datepicker": "",
     "highcharts": "",
     "moment": "",
-    "papaparse": "4.1.0"
+    "papaparse": "4.1.0",
+    "bootstrap-multiselect": ""
   },
   "resolutions": {
     "jquery": "~2.x",

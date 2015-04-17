@@ -22,6 +22,8 @@ from __future__ import unicode_literals, print_function, absolute_import
 import re
 import itertools
 
+from django.http import QueryDict
+
 from rest_framework.fields import DateField, CharField, IntegerField
 from rest_framework.serializers import Serializer
 from django_filters import filters, filterset
@@ -29,12 +31,14 @@ from django_filters import filters, filterset
 from amcat.tools import amcates, keywordsearch
 from api.rest.resources.amcatresource import AmCATResource
 from amcat.tools.caching import cached
-from amcat.models import Project, authorisation
+from amcat.models import Project, authorisation, Article
 
 
 # NOTE: Adding 'page' to filter fields introduces ambiguity (article-page vs. API page)
-FILTER_FIELDS = {"start_date", "end_date", "mediumid", "sets", "section"}
-FILTER_ID_FIELDS = {"ids", "pk"}
+FILTER_FIELDS = frozenset({"start_date", "end_date", "mediumid", "sets", "section"})
+FILTER_SINGLE_FIELDS = frozenset({"start_date", "end_date", "section"})
+FILTER_ID_FIELDS = frozenset({"ids", "pk"})
+
 RE_KWIC = re.compile("(?P<left>.*?)<em>(?P<keyword>.*?)</em>(?P<right>.*)", re.DOTALL)
 
 
@@ -62,27 +66,39 @@ class LazyES(object):
         return self._count
 
     def __getslice__(self, i, j):
-        kargs = {}
-        fields = self.fields
-        if self.query and ("lead" in fields or "headline" in fields):
-            kargs["highlight"] = True
-        elif "lead" in fields:
-            kargs["lead"] = True
-        fields = [f for f in fields if f != "lead"]
+        query_kargs = {}
 
-        if "text" in fields and "projectid" not in fields: fields.append("projectid")
-        result = self.es.query(self.query, filters=self.filters, fields=fields,
-                               size=(j-i), sort=["id"], from_=i, score=False, **kargs)
+        if self.query and ("lead" in self.fields or "headline" in self.fields):
+            query_kargs["highlight"] = True
+        elif "lead" in self.fields:
+            query_kargs["lead"] = True
+
+        fields = [f for f in self.fields if f != "lead"]
+
+        if "text" in fields and "projectid" not in fields:
+            fields.append("projectid")
+
+        result = self.es.query(
+            query=self.query,
+            filters=self.filters,
+            fields=fields,
+            size=j - i,
+            sort=["id"],
+            from_=i,
+            score=False,
+            **query_kargs
+        )
+
         if self.hits:
             def add_hits_column(r):
                 r.hits = {q.label : 0 for q in self.queries}
                 return r
 
             result_dict = {r.id : add_hits_column(r) for r in result}
-            f = {'ids': list(result_dict.keys())}
+            filters = {'ids': list(result_dict)}
 
             for q in self.queries:
-                for hit in self.es.query_all(q.query, filters=f, fields=[]):
+                for hit in self.es.query_all(q.query, filters=filters, fields=[]):
                     result_dict[hit.id].hits[q.label] = hit.score
 
         cache = {} # projectid -> is_reader
@@ -93,14 +109,18 @@ class LazyES(object):
                 try:
                     is_reader = cache[row.projectid]
                 except KeyError:
-                    is_reader = user.userprofile.has_role(authorisation.ROLE_PROJECT_READER,
-                                                            Project.objects.get(pk=row.projectid))
+                    is_reader = user.userprofile.has_role(
+                        authorisation.ROLE_PROJECT_READER,
+                        Project.objects.get(pk=row.projectid)
+                    )
                     cache[row.projectid] = is_reader
             if not is_reader:
                 row.text = None
             return row
 
-        result = [_check_text_permission(self.user, row) for row in result] if "text" in fields else list(result)
+        if "text" in fields:
+            result = [_check_text_permission(self.user, row) for row in result]
+
         return result
 
 
@@ -123,9 +143,13 @@ class KWICField(CharField):
 
     def field_to_native(self, obj, field_name):
         # use highlighting if available, otherwise fall back to raw text
-        if obj is None: return None
+        if obj is None:
+            return None
+
         hl = obj.highlight.get('headline')
-        if not hl: hl = obj.highlight.get('text')
+        if not hl:
+            hl = obj.highlight.get('text')
+
         if hl:
             # try to get match of first word
             use_hl = hl[0]
@@ -134,7 +158,6 @@ class KWICField(CharField):
                 matches = [x.groupdict()['keyword'].lower() for x in matches if x]
                 query = re.sub("[^\w ]", "", obj._searchresult.query)
                 query = query.split()[0].lower()
-                print(query, matches, query in matches)
                 if query in matches:
                     use_hl = hl[matches.index(query)]
                 else:
@@ -156,7 +179,49 @@ class ScoreField(IntegerField):
         return obj and obj.hits.get(source, 0)
 
 
+class SearchResourceSerialiser(Serializer):
+    id = IntegerField()
+    date = DateField()
+    headline = HighlightField()
+    mediumid = IntegerField()
+    medium = CharField()
+    creator = CharField()
+    byline = CharField()
+    addressee = CharField()
+    section = CharField()
+    url = CharField()
+    length = IntegerField()
+    page = IntegerField()
+
+    def __init__(self, *args, **kwargs):
+        Serializer.__init__(self, *args, **kwargs)
+        ctx = kwargs.get("context", {})
+        columns = ctx.get("columns", [])
+        queries = ctx.get("queries", [])
+
+        if ctx.get('minimal'):
+            for fn in list(self.fields):
+                if fn != 'id' and fn not in list(columns):
+                    del self.fields[fn]
+
+        if "hits" in columns and queries:
+            for q in queries:
+                self.fields[q.label] = ScoreField()
+        if "text" in columns:
+            self.fields['text'] = CharField()
+        if "projectid" in columns:
+            self.fields['projectid'] = IntegerField()
+        if "lead" in columns:
+            self.fields['lead'] = HighlightField()
+        if "kwic" in columns:
+            self.fields['left'] = KWICField(kwic='left')
+            self.fields['keyword'] = KWICField(kwic='keyword')
+            self.fields['right'] = KWICField(kwic='right')
+
+
 class SearchResource(AmCATResource):
+    model = Article
+    serializer_class = SearchResourceSerialiser
 
     def post(self, request, *args, **kwargs):
         # allow for POST requests
@@ -164,15 +229,23 @@ class SearchResource(AmCATResource):
 
     @property
     @cached
+    def params(self):
+        q = QueryDict("", mutable=True)
+        q.update(self.request.QUERY_PARAMS)
+        q.update(self.request.DATA)
+        return QueryDict(q.urlencode())
+
+
+    @property
+    @cached
     def columns(self):
-        return self.request.QUERY_PARAMS.getlist("col")
+        return self.params.getlist("col")
 
     @property
     @cached
     def queries(self):
-        params = self.request.QUERY_PARAMS
-        return [keywordsearch.SearchQuery.from_string(q)
-                for q in filter(bool, params.getlist("q"))]
+        queries = filter(bool, self.params.getlist("q"))
+        return map(keywordsearch.SearchQuery.from_string, queries)
 
     def get_queryset(self):
         fields = self.get_serializer().get_fields().keys()
@@ -181,20 +254,23 @@ class SearchResource(AmCATResource):
         if "kwic" in self.columns and "lead" not in fields: fields += ["lead"]
         hits = "hits" in self.columns
 
+        print(self.queries)
+        print(fields)
         return LazyES(self.request.user, self.queries, fields=fields, hits=hits)
 
     def filter_queryset(self, queryset):
-        params = self.request.QUERY_PARAMS
-
         # Allow for both 'ids' and 'pk' filtering
-        ids = [params.getlist(field_name) for field_name in FILTER_ID_FIELDS]
+        ids = [self.params.getlist(field_name) for field_name in FILTER_ID_FIELDS]
         ids = list(itertools.chain.from_iterable(ids))
         if ids:
             queryset.filter("ids", ids)
 
         for k in FILTER_FIELDS:
-            if k in params:
-                queryset.filter(k, params.getlist(k))
+            if k in self.params:
+                if k in FILTER_SINGLE_FIELDS:
+                    queryset.filter(k, self.params.get(k))
+                else:
+                    queryset.filter(k, self.params.getlist(k))
 
         return queryset
 
@@ -219,55 +295,11 @@ class SearchResource(AmCATResource):
         ctx = super(SearchResource, self).get_serializer_context()
         ctx["queries"] = self.queries
         ctx["columns"] = self.columns
-        ctx["minimal"] = self.request.QUERY_PARAMS.get('minimal')
+        ctx["minimal"] = self.params.get('minimal')
         return ctx
 
-    class serializer_class(Serializer):
-        id = IntegerField()
-        date = DateField()
-        headline = HighlightField()
-        mediumid = IntegerField()
-        medium = CharField()
-        creator = CharField()
-        byline = CharField()
-        addressee = CharField()
-        section = CharField()
-        url = CharField()
-        length = IntegerField()
-        page = IntegerField()
-
-        def __init__(self, *args, **kwargs):
-            Serializer.__init__(self, *args, **kwargs)
-            ctx = kwargs.get("context", {})
-            columns = ctx.get("columns", [])
-            queries = ctx.get("queries", None)
-
-            if ctx.get('minimal'):
-                for fn in list(self.fields):
-                    if fn != 'id' and fn not in list(columns):
-                        del self.fields[fn]
-
-            if "hits" in columns and queries:
-                for q in queries:
-                    self.fields[q.label] = ScoreField()
-            if "text" in columns:
-                self.fields['text'] = CharField()
-            if "projectid" in columns:
-                self.fields['projectid'] = IntegerField()
-            if "lead" in columns:
-                self.fields['lead'] = HighlightField()
-            if "kwic" in columns:
-                self.fields['left'] = KWICField(kwic='left')
-                self.fields['keyword'] = KWICField(kwic='keyword')
-                self.fields['right'] = KWICField(kwic='right')
-
-
     @classmethod
-    def extra_fields(cls, args):
-        """Used by datatable.py for dynamic fields. Hack?"""
-        queries = [val for (name, val) in args if name == "q"]
-        cols = [val for (name, val) in args if name == "col"]
-
+    def _extra_fields(cls, cols, queries):
         if 'hits' in cols:
             for q in queries:
                 q = keywordsearch.SearchQuery.from_string(q)
@@ -283,6 +315,15 @@ class SearchResource(AmCATResource):
             yield 'left'
             yield 'keyword'
             yield 'right'
+
+    @classmethod
+    def extra_fields(cls, args):
+        """Used by datatable.py for dynamic fields. Hack?"""
+        print(args)
+        queries = [val for (name, val) in args if name == "q"]
+        cols = [val for (name, val) in args if name == "col"]
+        return list(cls._extra_fields(cols, queries))
+
 
 ###########################################################################
 #                          U N I T   T E S T S                            #

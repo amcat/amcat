@@ -84,6 +84,9 @@ class QueryActionHandler(TaskHandler):
         updater = CeleryProgressUpdater(self.task.uuid)
         query_action.monitor.add_listener(updater.update)
 
+        msg = "Task started, running {query_action.__class__.__name__}..".format(**locals())
+        query_action.monitor.update(0, msg)
+
         try:
             return query_action.run(query_action.get_form())
         except Exception as e:
