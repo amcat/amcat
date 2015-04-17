@@ -678,8 +678,10 @@ amcat.datatables.gen_aoColumnDefs = function (metadata) {
     var id = fields.indexOf("id");
 
     if (id !== -1){
+        var tmp = fields[0];
         fields.splice(i, 1);
         fields.splice(0, 0, "id");
+        fields[i] = tmp;
     }
 
     for (var i in fields){
