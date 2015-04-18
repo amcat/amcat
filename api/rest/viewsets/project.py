@@ -62,18 +62,22 @@ class ProjectPermission(permissions.BasePermission):
 
     def has_permission(self, request, view):
         # When viewing project lists, no project is in context
-        if view.project is None: return True
+        if view.project is None:
+            return True
 
         user = request.user if request.user.is_authenticated() else None
-        if user and user.is_superuser: return True
+
+        if user and user.is_superuser:
+            return True
+
         required_role_id = getattr(view, 'permission_map', {}).get(request.method)
-        if not required_role_id:
+        if required_role_id is None:
             required_role_id = _DEFAULT_PERMISSION_MAP[request.method]
         if required_role_id in (True, False):
             return required_role_id
 
         actual_role_id = view.project.get_role_id(user=user)
-        if not actual_role_id >= required_role_id:
+        if actual_role_id < required_role_id:
             log.warn("User {user} has role {actual_role_id} < {required_role_id}".format(**locals()))
         return actual_role_id >= required_role_id
 
