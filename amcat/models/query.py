@@ -34,13 +34,14 @@ class Query(AmcatModel):
 
     name = models.TextField()
     parameters = JSONField()
-    private = models.BooleanField(default=True)
+    private = models.BooleanField(default=True, db_index=True)
 
     project = models.ForeignKey("amcat.Project")
     user = models.ForeignKey(User)
 
-    last_saved = models.DateTimeField(auto_now=True)
+    last_saved = models.DateTimeField(auto_now=True, db_index=True)
 
     class Meta:
         app_label = 'amcat'
         db_table = 'queries'
+        ordering = ("-last_saved",)
