@@ -35,6 +35,7 @@ from api.rest.viewsets.project import *
 from api.rest.viewsets.task import *
 from api.rest.viewsets.xtas import *
 from api.rest.viewsets.rules import *
+from api.rest.viewsets.query import *
 
 def get_viewsets():
     for cls in globals().values():
