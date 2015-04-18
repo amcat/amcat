@@ -55,6 +55,23 @@ def skip_slow_tests():
     """Should we skip the slow tests, e.g. Solr, Alpino etc"""
     return os.environ.get('DJANGO_SKIP_SLOW_TESTS') in ("1","Y", "ON")
 
+def create_test_query(**kargs):
+    from amcat.models import Query
+
+    if "name" not in kargs:
+        kargs["name"] = "Test query"
+
+    if "parameters" not in kargs:
+        kargs["parameters"] = [1,2,3]
+
+    if "project" not in kargs:
+        kargs["project"] = create_test_project()
+
+    if "user" not in kargs:
+        kargs["user"] = create_test_user()
+
+    return Query.objects.create(**kargs)
+
 def create_test_user(**kargs):
     """Create a user to be used in unit testing"""
     from amcat.models.user import Affiliation, User, create_user
