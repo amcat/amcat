@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from django.db.models import Q
-from rest_framework import permissions
+import json
+from django.db.models import Q, CharField
+from rest_framework import permissions, serializers
 from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.viewsets import ModelViewSet
 
@@ -33,6 +34,23 @@ __all__ = ("QuerySerializer", "QueryViewSet")
 class QuerySerializer(AmCATModelSerializer):
     user = PrimaryKeyRelatedField(read_only=True)
     project = PrimaryKeyRelatedField(read_only=True)
+
+    def to_native(self, obj):
+        native = super(QuerySerializer, self).to_native(obj)
+        native["parameters"] = json.dumps(obj.parameters)
+        return native
+
+    def is_valid(self):
+        # Hack? Hack.
+        parameters = self.init_data.get("parameters")
+        if parameters is not None and isinstance(parameters, basestring):
+            try:
+                json.loads(parameters)
+            except ValueError:
+                self._errors = {"parameters": ["Could not be decoded as JSON."]}
+                return False
+
+        return super(QuerySerializer, self).is_valid()
 
     class Meta:
         model = Query

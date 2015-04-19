@@ -34,8 +34,8 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
         ProjectRole.objects.create(project=self.project, user=self.member, role_id=ROLE_PROJECT_WRITER)
         ProjectRole.objects.create(project=self.project, user=self.owner, role_id=ROLE_PROJECT_WRITER)
 
-        self.private_query = amcattest.create_test_query(user=self.owner, project=self.project)
-        self.public_query = amcattest.create_test_query(user=self.owner, project=self.project, private=False)
+        self.private_query = amcattest.create_test_query(user=self.owner, project=self.project, parameters='[1,2,"ab"]')
+        self.public_query = amcattest.create_test_query(user=self.owner, project=self.project, private=False, parameters='[1,2,"ab"]')
 
         self.client = Client()
 
@@ -89,6 +89,18 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
         self.assertEqual(200, status_code)
         self.assertEqual(2, len(results))
 
+    def test_get_parameters(self):
+        self.assertTrue(self.client.login(username=self.member.username, password="test"))
+
+        status_code, results = self.json(self.get_url())
+        self.assertEqual(200, status_code)
+        self.assertEqual(1, len(results))
+        self.assertEqual(
+            json.loads(results[0]['parameters']),
+            [1,2,"ab"]
+        )
+
+
     def test_post_unauthenticated(self):
         """Anonymous users should not be able to use POST"""
         status_code, results = self.json(self.get_url(), method="post")
@@ -119,6 +131,30 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
         self.assertEqual(self.project.id, results["project"])
         self.assertEqual(self.member.id, results["user"])
         self.assertEqual(True, results["private"])
+
+    def test_post_parameters_as_string(self):
+        self.client.login(username=self.member.username, password="test")
+        data = {"name": "test_post", "parameters": '[1, 2, "a"]'}
+        status_code, results = self.json(self.get_url(), data=data, method="post")
+        self.assertEqual(201, status_code)
+
+        q = Query.objects.get(id=results["id"])
+        self.assertEqual(q.parameters, [1, 2, "a"])
+
+    def test_post_parameters_as_json(self):
+        self.client.login(username=self.member.username, password="test")
+        data = {"name": "test_post", "parameters": [1, 2, "a"]}
+        status_code, results = self.json(self.get_url(), data=data, method="post")
+        self.assertEqual(201, status_code)
+
+        q = Query.objects.get(id=results["id"])
+        self.assertEqual(q.parameters, [1, 2, "a"])
+
+    def test_post_parameters_invalid(self):
+        self.client.login(username=self.member.username, password="test")
+        data = {"name": "test_post", "parameters": "[1, 2, invalid]"}
+        status_code, results = self.json(self.get_url(), data=data, method="post")
+        self.assertEqual(400, status_code)
 
     def test_put_unauthorised(self):
         """PUT with an object which 'does not exist' for current user (but does in DB)
