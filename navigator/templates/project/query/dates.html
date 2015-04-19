@@ -11,6 +11,10 @@
         <option value="before">Before</option>
     </select>
 
+    <script>$(function(){
+        $("#id_datetype").multiselect({});
+    })</script>
+
     <input disabled name="on_date" placeholder="On" class="input-sm form-control" type="text"/>
 
     <div data-min="{{ statistics.start_date|date:'c' }}" data-max="{{ statistics.end_date|date:'c' }}" class="input-daterange input-group">

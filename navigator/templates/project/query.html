@@ -44,12 +44,13 @@
   {% if not articlesets %}
       {% include "project/query/articleset_error.html" %}
   {% else %}
-      <form id="query-form">
+      <form data-query="{{ query_id }}" id="query-form">
           {% include "project/query/form.html" %}
       </form>
 
       {% include "project/query/loading_dialog.html" %}
       {% include "project/query/articlelist_dialog.html" %}
+      {% include "project/query/save_dialog.html" %}
   {% endif %}
 
 

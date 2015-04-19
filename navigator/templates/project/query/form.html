@@ -3,31 +3,32 @@
 
 <div class="btn-group">
     <div class="btn-group">
-        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+        <button id="load-query" type="button" class="disabled btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
             Load query <span class="caret"></span>
         </button>
         <ul class="dropdown-menu" role="menu">
+            <li role="presentation" class="dropdown-header">My queries</li>
             {% if not saved_queries.exists %}
                 <li><a href="#">No saved queries</a></li>
             {% else %}
                 {% for query in saved_user_queries %}
-                    <li><a href="./{{ query.id }}">No saved queries</a></li>
+                    <li><a title="Last saved: {{ query.last_saved }}" href="./?query={{ query.id }}">{{ query.name }}</a></li>
                 {% empty %}
-                    <li><a href="#">No personal queries</a></li>
+                    <li><a><i>No personal queries</i></a></li>
                 {% endfor %}
 
-                <li class="divider"></li>
+                <li role="presentation" class="dropdown-header">Project queries</li>
                 {% for query in saved_project_queries %}
-                    <li><a href="./{{ query.id }}">No saved queries</a></li>
+                    <li><a title="Last saved: {{ query.last_saved }}" href="./?query={{ query.id }}">{{ query.name }}</a></li>
                 {% empty %}
-                    <li><a href="#">No project queries</a></li>
+                    <li><a><i>No project queries</i></a></li>
                 {% endfor %}
             {% endif %}
         </ul>
     </div>
 
 
-    <button class="btn btn-default">
+    <button id="save-query" class="disabled btn btn-default">
         Save query
     </button>
     <!--<a class="btn btn-default">

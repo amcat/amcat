@@ -38,6 +38,22 @@ String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1);
 }
 
+/**
+ * http://stackoverflow.com/questions/4974238/javascript-equivalent-of-pythons-format-function
+ */
+String.prototype.format = function(args){
+    var this_string = '';
+    for (var char_pos = 0; char_pos < this.length; char_pos++) {
+        this_string = this_string + this[char_pos];
+    }
+
+    for (var key in args) {
+        var string_key = '{' + key + '}'
+        this_string = this_string.replace(new RegExp(string_key, 'g'), args[key]);
+    }
+    return this_string;
+};
+
 function serializeForm(form){
     var formData = $(form).serializeObject();
 
@@ -168,10 +184,16 @@ var Aggregation = function(data){
 };
 
 $((function(){
+    var query_screen = $("#query-screen");
+
     var MAIN_SCRIPTS = ["summary", "aggregation", "association", "articlelist"];
     var ACTION_SCRIPTS = ["saveasset", "assignascodingjob"];
 
+    var PROJECT = query_screen.data("project");
+    var SETS = query_screen.data("sets");
+
     var DEFAULT_SCRIPT = "summary";
+    var SAVED_QUERY_API_URL = "/api/v4/projects/{project_id}/querys/{query_id}";
     var QUERY_API_URL = "/api/v4/query/";
     var SEARCH_API_URL = "/api/v4/search";
     var SELECTION_FORM_FIELDS = [
@@ -199,7 +221,6 @@ $((function(){
         'between': ['start_date', 'end_date']
     };
 
-    var query_screen = $("#query-screen");
     var datetype_input = $("#id_datetype");
     var date_inputs = $("#dates").find("input");
     var scripts_container = $("#scripts");
@@ -208,14 +229,17 @@ $((function(){
     var message_element = loading_dialog.find(".message");
     var progress_bar = loading_dialog.find(".progress-bar");
 
+    var saved_query = {
+        id: $("#query-form").data("query"),
+        name: null,
+        private: null
+    }
+
     /**
      * At each query, data will be stored here to make sure we
      * can access form data as it were at the time of querying.
      */
     var form_data = null;
-
-    var PROJECT = query_screen.data("project");
-    var SETS = query_screen.data("sets");
 
     function getType(axis){
         return (axis === "date") ? "datetime" : "category";
@@ -750,8 +774,8 @@ $((function(){
             $("#script-help").text(data.help_text);
             $("#script-help").show();
         } else {
-	    $("#script-help").hide();
-	}
+            $("#script-help").hide();
+        }
 
         // Determine fields which are *NOT* in the normal selection form.
         // Btw: who the hello thought it would be a good idea to let inArray
@@ -785,6 +809,16 @@ $((function(){
 
         $("select[multiple=multiple]", $("#script-form")).multiselect(MULTISELECT_DEFAULTS);
 
+        $.map($("select", $("#script-form")), function(el){
+            if ($(el).attr("multiple") === "multiple") return;
+            $(el).multiselect();
+        });
+
+        if (saved_query.loading){
+            fill_form();
+            saved_query.loading = false;
+        }
+
         $(".query-submit .btn").removeClass("disabled");
     }
 
@@ -805,7 +839,7 @@ $((function(){
      * @returns boolean
      */
     function download_result(){
-        var download = $("#quer-form [name=download]").is(":checked");
+        var download = $("#query-form [name=download]").is(":checked");
 
         if (download){
             // User explicitly indicated wanting to download
@@ -869,16 +903,7 @@ $((function(){
         }).done(function(data){
             // Form accepted, we've been given a task uuid
             init_poll(data.uuid);
-        }).fail(function(jqXHR, textStatus, errorThrown){
-            if(jqXHR.status === 400){
-                // Form not accepted or other type of error
-                form_invalid(JSON.parse(jqXHR.responseText));
-            } else {
-                // Unknown error
-                show_jqXHR_error(jqXHR, errorThrown);
-            }
-
-        });
+        }).fail(fail);
     }
 
     /**
@@ -896,6 +921,81 @@ $((function(){
         return data;
     }
 
+    function save_query(event){
+        event.preventDefault();
+        var dialog = $("#save-query-dialog");
+        var name_btn = $("[name=name]", dialog)
+        var private_btn = $("[name=private]", dialog);
+        var save_btn = $(".save", dialog);
+
+        save_btn.removeClass("disabled");
+        name_btn.removeClass('error');
+
+        // Save query clicked, but no modal was open.
+        if (!this){
+            if (saved_query.id !== null){
+                name_btn.val(saved_query.name);
+                private_btn.prop("checked", saved_query.private)
+            }
+
+            return dialog.modal();
+        }
+
+        // Save query in modal clicked
+        var _private = private_btn.is(":checked");
+        var name = name_btn.val();
+
+        // Must have non-empty name
+        if (name === ""){
+            return name_btn.addClass("error");
+        }
+
+        var method = (saved_query.id === null) ? "post" : "patch";
+
+        var url;
+        if (saved_query.id !== null){
+            url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: saved_query.id})
+        } else {
+            url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: ''})
+        }
+
+        var data = serializeForm($("#query-form"));
+        data["script"] = window.location.hash.slice(1);
+
+        $.ajax({
+            type: (saved_query.id === null) ? "POST" : "PUT",
+            dataType: "json",
+            url: url + "?format=json",
+            data: {
+                name: name,
+                private: _private,
+                parameters: JSON.stringify(data)
+            }
+        }).done(function(data){
+            dialog.modal("hide");
+
+            new PNotify({
+                type: "success",
+                text: "Query saved as <i>{name}</i>.".format(data),
+                delay: 1500
+            });
+        }).fail(fail);
+
+        save_btn.addClass("disabled");
+    }
+
+    function fail(jqXHR, textStatus, errorThrown){
+        if(jqXHR.status === 400){
+            // Form not accepted or other type of error
+            form_invalid(JSON.parse(jqXHR.responseText));
+        } else {
+            // Unknown error
+            show_jqXHR_error(jqXHR, errorThrown);
+        }
+
+        $("#loading-dialog").modal("hide");
+    }
+
     function init_poll(uuid){
         var poll = Poll(uuid, {download: download_result()});
 
@@ -904,6 +1004,7 @@ $((function(){
             message_element.text("Fetching results..")
         }).fail(function(data, textStatus, _){
             show_error("Server replied with " + data.status + " error: " + data.responseText);
+            $("#loading-dialog").modal("hide");
         }).result(function(data, textStatus, jqXHR){
             var contentType = jqXHR.getResponseHeader("Content-Type");
             var body = $(".result .panel-body").html("");
@@ -914,9 +1015,9 @@ $((function(){
             } else {
                 renderer(body, prepare_data(data));
             }
-
         }).always(function() {
             loading_dialog.modal("hide");
+            progress_bar.css("width", 0);
         }).progress_bar(message_element, progress_bar);
     }
 
@@ -1025,8 +1126,74 @@ $((function(){
                 if (script){ script.click() };
             });
 
-            $(window).trigger("hashchange");
+            $("#save-query").removeClass("disabled");
+            $("#load-query").removeClass("disabled");
+
+            if (saved_query.id !== null){
+                init_saved_query(saved_query.id);
+            } else {
+                $(window).trigger("hashchange");
+            }
         });
+    }
+
+    function fill_form(){
+        $.each(saved_query.parameters, function(name, value){
+            var inputs = "input[name={name}]";
+            inputs += ",textarea[name={name}]";
+            inputs += ",select[name={name}]";
+            inputs = $(inputs.format({name: name}));
+
+            if (inputs.length === 0 || name == "articlesets"){
+                return;
+            }
+
+            var tagName = inputs.get(0).tagName;
+
+            if (tagName === "SELECT"){
+                // Bootstrap (multi)select
+                inputs.multiselect("deselectAll", false);
+                value = (inputs.attr("multiple") !== "multiple") ? [value] : value;
+                $.map(value, function(val){
+                    inputs.multiselect('select', value);
+                });
+            } else if (tagName === "INPUT" && inputs.attr("type") == "checkbox"){
+                // Boolean fields
+                inputs.prop("checked", value);
+            } else {
+                inputs.val(value);
+            }
+
+            inputs.trigger("change");
+        });
+    }
+
+    function init_saved_query(query_id){
+        var url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: query_id});
+        $("#loading-dialog").modal({keyboard: false, backdrop: "static"});
+        $("#loading-dialog .message").text("Loading saved query..")
+        progress_bar.css("width", "10%");
+
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            url: url + "?format=json"
+        }).done(function(data){
+            data.parameters = JSON.parse(data.parameters);
+            saved_query = data;
+            saved_query.loading = true;
+
+            $("#loading-dialog .message").html("Retrieved <i class='name'></i>. Loading script..");
+            $("#loading-dialog .message .name").text(data.name);
+            progress_bar.css("width", "50%");
+            fill_form();
+
+            window.location.hash = "#" + data.parameters.script;
+            $(window).trigger("hashchange");
+
+            loading_dialog.modal("hide");
+
+        }).fail(fail);
     }
 
     $(function(){
@@ -1034,6 +1201,8 @@ $((function(){
         init_scripts();
         init_shortcuts();
 
+        $("#save-query").click(save_query.bind(false));
+        $("#save-query-dialog .save").click(save_query.bind(true))
         $("#run-query").click(run_query);
         $("#content > form").submit(run_query);
     });

@@ -68,36 +68,43 @@ urlpatterns = patterns(
     url(r'^projects/(?P<project_id>[0-9]+)/tasks/(?P<uuid>%s)' % UUID_RE, uuid_redirect, name='task-uuid'),
 )
 
+_views = [
+    ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
+    ArticleSetArticleDetailsView, ProjectArticleDetailsView, ArticleRemoveFromSetView,
+    ArticleSetUploadView, ArticleSetUploadListView, QueryView, ArticleSetSampleView,
+    ArticleSetEditView, ArticleSetImportView, ArticleSetRefreshView,
+    ArticleSetDeleteView, ArticleSetUnlinkView, ArticleSetDeduplicateView,
+    ArticleSplitView,
 
-for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
-             ArticleSetArticleDetailsView, ProjectArticleDetailsView, ArticleRemoveFromSetView,
-             ArticleSetUploadView,ArticleSetUploadListView,
-             QueryView, ArticleSetSampleView, ArticleSetEditView,ArticleSetImportView,ArticleSetRefreshView,
-             ArticleSetDeleteView,ArticleSetUnlinkView,ArticleSetDeduplicateView,
-             ArticleSplitView,
-             CodebookListView, CodebookDetailsView, CodebookImportView, CodebookLinkView, ExportCodebook,
-             CodebookUnlinkView, CodebookDeleteView, CodebookAddView,
-             CodebookChangeNameView, CodebookSaveChangesetsView,CodebookSaveLabelsView,
-             CodingSchemaListView, CodingSchemaDetailsView, CodingSchemaDeleteView, CodingSchemaCreateView,
-             CodingSchemaEditView,CodingSchemaEditFieldsView,CodingSchemaEditRulesView, CodingSchemaNameView,
-             CodingSchemaCopyView,CodingSchemaLinkView,CodingSchemaUnlinkView,
-             CodingJobListView, CodingJobAddView, CodingJobDetailsView,CodingJobDeleteView,CodingJobEditView,
-             CodingJobExportSelectView, CodingJobExportView,
-             ProjectUserListView, ProjectUserAddView,
-             ArticleRuleListView, ArticleRuleDetailsView,
-             ProjectUserListView, ProjectUserAddView,
-             TaskDetailsView, TaskListView, MultipleArticleSetDestinationView,
-             ClauseView
-             ]:
+    CodebookListView, CodebookDetailsView, CodebookImportView, CodebookLinkView,
+    ExportCodebook, CodebookUnlinkView, CodebookDeleteView, CodebookAddView,
+    CodebookChangeNameView, CodebookSaveChangesetsView,CodebookSaveLabelsView,
+
+    CodingSchemaListView, CodingSchemaDetailsView, CodingSchemaDeleteView, CodingSchemaCreateView,
+    CodingSchemaEditView,CodingSchemaEditFieldsView,CodingSchemaEditRulesView, CodingSchemaNameView,
+    CodingSchemaCopyView,CodingSchemaLinkView,CodingSchemaUnlinkView, CodingJobListView,
+    CodingJobAddView, CodingJobDetailsView,CodingJobDeleteView, CodingJobEditView,
+    CodingJobExportSelectView, CodingJobExportView,
+
+    ProjectUserListView, ProjectUserAddView,
+    ArticleRuleListView, ArticleRuleDetailsView,
+    ProjectUserListView, ProjectUserAddView,
+
+    TaskDetailsView, TaskListView,
+    MultipleArticleSetDestinationView,
+    ClauseView
+]
+
+for view in _views:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
                                 url(pattern, view.as_view(), name=view.get_view_name())
                             )
 
 urlpatterns += patterns('',
-                        url("^projects/(?P<project_id>[0-9]+)/$", ArticleSetListView.as_view(), name="project"),
-                        url("^projects/$", ProjectListView.as_view(), name="projects"),
-                        url("^projects/add/$$", ProjectAddView.as_view(), name="projects-add"),
-                        url("^projects/(?P<what>[a-z]+)/$", ProjectListView.as_view(), name="projects"),
-                        )
+    url("^projects/(?P<project_id>[0-9]+)/$", ArticleSetListView.as_view(), name="project"),
+    url("^projects/$", ProjectListView.as_view(), name="projects"),
+    url("^projects/add/$$", ProjectAddView.as_view(), name="projects-add"),
+    url("^projects/(?P<what>[a-z]+)/$", ProjectListView.as_view(), name="projects"),
+)
 #    url(r'^projects(?P<what>/\w+)?$', 'navigator.views.project.projectlist', name='projects'),
