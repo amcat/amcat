@@ -59,7 +59,13 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
         else:
             result = method(url)
 
-        status_code, results = result.status_code, json.loads(result.content)
+        status_code, results = result.status_code, result.content
+
+        if method == "delete":
+            # DELETE methods may not return a body
+            return status_code, None
+
+        results = json.loads(results)
 
         if "results" in results:
             return status_code, results["results"]
@@ -193,4 +199,38 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
         self.client.login(username=self.owner.username, password="test")
         status_code, results = self.json(self.get_url(self.private_query.id), data={}, method="patch")
         self.assertEqual(200, status_code)
+
+    def test_patch(self):
+        self.client.login(username=self.owner.username, password="test")
+        data = {"private": False}
+        status_code, results = self.json(self.get_url(self.private_query.id), data=data, method="patch")
+
+        self.assertEqual(200, status_code)
+        self.assertFalse(results["private"])
+
+        data = {"private": True}
+        status_code, results = self.json(self.get_url(self.private_query.id), data=data, method="patch")
+
+        self.assertEqual(200, status_code)
+        self.assertTrue(results["private"])
+
+    def test_delete_unauthorised(self):
+        self.client.login(username=self.member.username, password="test")
+
+        # Deleting another member's PRIVATE query should result in a 404
+        status_code, results = self.json(self.get_url(self.private_query.id), method="delete")
+        self.assertEqual(404, status_code)
+        self.assertTrue(Query.objects.filter(id=self.private_query.id).exists())
+
+        # Deleting another member's PUBLIC query should result in
+        status_code, results = self.json(self.get_url(self.public_query.id), method="delete")
+        self.assertEqual(403, status_code)
+        self.assertTrue(Query.objects.filter(id=self.public_query.id).exists())
+
+    def test_delete(self):
+        self.client.login(username=self.owner.username, password="test")
+        status_code, results = self.json(self.get_url(self.public_query.id), method="delete")
+        self.assertEqual(204, status_code)
+        self.assertFalse(Query.objects.filter(id=self.public_query.id).exists())
+
 

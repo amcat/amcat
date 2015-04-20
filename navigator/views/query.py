@@ -31,8 +31,6 @@ from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin,
 from amcat.scripts.forms import SelectionForm
 from navigator.views.project_views import ProjectDetailsView
 
-SHOW_N_QUERIES = 5
-
 
 class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, TemplateView):
     context_category = 'Query'
@@ -55,9 +53,9 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         except TypeError:
             pass
         else:
-            owned_queries = Q(user__id=self.request.user.id)
-            project_queries = Q(project__id=self.project.id, private=False)
-            queries = Query.objects.filter(owned_queries | project_queries)
+            queries = Query.objects.filter(project=self.project)
+            owned_queries = queries.filter(user=self.request.user)
+            project_queries = queries.filter(~Q(user=self.request.user))
 
             query = queries.filter(id=query_id)
             if not query:
@@ -76,10 +74,8 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         articlesets = self.project.all_articlesets().filter(id__in=articleset_ids)
         articlesets = articlesets.only("id", "name")
         query_id = self.request.GET.get("query", "null")
-
-        statistics = ES().statistics(query="*", filters={
-            "sets": [aset.id for aset in articlesets]
-        })
+        user_id = self.request.user.id
+        articleset_ids_json = json.dumps(articleset_ids)
 
         form = SelectionForm(
             project=self.project,
@@ -92,8 +88,8 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         )
 
         saved_queries = Query.objects.filter(project=self.project)
-        saved_user_queries = saved_queries.filter(user=self.request.user)[:SHOW_N_QUERIES]
-        saved_project_queries = saved_queries.filter(~Q(user=self.request.user))[:SHOW_N_QUERIES]
+        saved_user_queries = saved_queries.filter(user=self.request.user)
+        saved_project_queries = saved_queries.filter(~Q(user=self.request.user))
 
         form.fields["articlesets"].widget.attrs['disabled'] = 'disabled'
         return dict(super(QueryView, self).get_context_data(), **locals())

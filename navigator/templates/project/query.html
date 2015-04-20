@@ -20,6 +20,7 @@
 
   {% compress js %}
       <!-- Bower dependencies -->
+      {% if articlesets %}
       <script type="text/javascript" src="{% static 'components/jquery.hotkeys/jquery.hotkeys.js' %}"></script>
       <script type="text/javascript" src="{% static 'js/jshashtable-3.0.js' %}"></script>
       <script type="text/javascript" src="{% static 'js/jshashset-3.0.js' %}"></script>
@@ -35,6 +36,7 @@
       <script type="text/javascript" src="{% static 'components/highcharts/modules/exporting.js' %}"></script>
       <script type="text/javascript" src="{% static 'components/papaparse/papaparse.js' %}"></script>
       <script type="text/javascript" src="{% static 'components/bootstrap-multiselect/dist/js/bootstrap-multiselect.js' %}"></script>
+      {% endif %}
   {% endcompress %}
 {% endblock %}
 
@@ -44,7 +46,7 @@
   {% if not articlesets %}
       {% include "project/query/articleset_error.html" %}
   {% else %}
-      <form data-query="{{ query_id }}" id="query-form">
+      <form data-sets="{{ articleset_ids_json }}" data-user="{{ user_id }}" data-query="{{ query_id }}" id="query-form">
           {% include "project/query/form.html" %}
       </form>
 

@@ -62,6 +62,11 @@ function serializeForm(form){
         formData[inputName] = input.checked;
     });
 
+    var sets = formData["articlesets"];
+    if (typeof(sets) === "string" || typeof(sets) === "number"){
+        formData["articlesets"] = [sets];
+    }
+
     return formData;
 }
 
@@ -210,8 +215,28 @@ $((function(){
     };
 
     var HOTKEYS = {
-        "ctrl_q": function(event){ $("#run-query").click(); }
+        "ctrl_q": function(event){ $("#run-query").click(); },
+        "ctrl_r": function(event){ $("#new-query").click(); },
+        "ctrl_shift_s": function(event){
+            $("#save-query-dialog .save:visible").click();
+            $("#save-query-as").click();
+        },
+        "ctrl_s": function(event){
+            var save_query = $("#save-query");
+
+            if (!save_query.hasClass("disabled")){
+                save_query.click();
+            } else {
+                $("#save-query-as").click();
+            }
+        },
+        "ctrl_o": function(event){
+            $("#load-query > button").click();
+
+        }
     };
+
+
 
     var dates_enabling = {
         'all': [],
@@ -232,7 +257,8 @@ $((function(){
     var saved_query = {
         id: $("#query-form").data("query"),
         name: null,
-        private: null
+        private: true,
+        user: null
     }
 
     /**
@@ -819,6 +845,7 @@ $((function(){
             saved_query.loading = false;
         }
 
+        $("#loading-dialog").modal("hide");
         $(".query-submit .btn").removeClass("disabled");
     }
 
@@ -869,6 +896,7 @@ $((function(){
         });
 
         loading_dialog.modal("hide");
+        progress_bar.css("width", "0%");
         show_error("Invalid form. Please change the red input fields" +
             " to contain valid values.", true)
     }
@@ -931,15 +959,23 @@ $((function(){
         save_btn.removeClass("disabled");
         name_btn.removeClass('error');
 
-        // Save query clicked, but no modal was open.
-        if (!this){
-            if (saved_query.id !== null){
-                name_btn.val(saved_query.name);
-                private_btn.prop("checked", saved_query.private)
-            }
+        var dialog_visible = $("#save-query-dialog").is(":visible");
 
-            return dialog.modal();
+        if (this.method !== undefined){
+            saved_query.method = this.method;
         }
+
+        if (!dialog_visible){
+            name_btn.val(saved_query.name);
+            private_btn.prop("checked", saved_query.private);
+        }
+
+        if (!dialog_visible && this.confirm === true) {
+            dialog.modal();
+            return $(dialog.find("input").get(0)).focus();
+        }
+
+        var method = saved_query.method.toUpperCase();
 
         // Save query in modal clicked
         var _private = private_btn.is(":checked");
@@ -950,10 +986,8 @@ $((function(){
             return name_btn.addClass("error");
         }
 
-        var method = (saved_query.id === null) ? "post" : "patch";
-
         var url;
-        if (saved_query.id !== null){
+        if (method === "PATCH"){
             url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: saved_query.id})
         } else {
             url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: ''})
@@ -963,22 +997,30 @@ $((function(){
         data["script"] = window.location.hash.slice(1);
 
         $.ajax({
-            type: (saved_query.id === null) ? "POST" : "PUT",
+            type: method,
             dataType: "json",
             url: url + "?format=json",
             data: {
                 name: name,
-                private: _private,
+                private: _private ? true : false,
                 parameters: JSON.stringify(data)
             }
         }).done(function(data){
             dialog.modal("hide");
+            progress_bar.css("width", "0%");
+            $("#query-name").text(data.name);
+
+            saved_query = data;
+            saved_query["parameters"] = JSON.parse(saved_query["parameters"]);
 
             new PNotify({
                 type: "success",
                 text: "Query saved as <i>{name}</i>.".format(data),
                 delay: 1500
             });
+
+            $("#delete-query").removeClass("disabled");
+            $("#save-query").removeClass("disabled");
         }).fail(fail);
 
         save_btn.addClass("disabled");
@@ -994,6 +1036,7 @@ $((function(){
         }
 
         $("#loading-dialog").modal("hide");
+        progress_bar.css("width", "0%");
     }
 
     function init_poll(uuid){
@@ -1005,6 +1048,7 @@ $((function(){
         }).fail(function(data, textStatus, _){
             show_error("Server replied with " + data.status + " error: " + data.responseText);
             $("#loading-dialog").modal("hide");
+            progress_bar.css("width", "0%");
         }).result(function(data, textStatus, jqXHR){
             var contentType = jqXHR.getResponseHeader("Content-Type");
             var body = $(".result .panel-body").html("");
@@ -1126,7 +1170,7 @@ $((function(){
                 if (script){ script.click() };
             });
 
-            $("#save-query").removeClass("disabled");
+
             $("#load-query").removeClass("disabled");
 
             if (saved_query.id !== null){
@@ -1153,7 +1197,11 @@ $((function(){
             if (tagName === "SELECT"){
                 // Bootstrap (multi)select
                 inputs.multiselect("deselectAll", false);
-                value = (inputs.attr("multiple") !== "multiple") ? [value] : value;
+
+                if (!inputs.attr("multiple") || typeof(value) !== "object"){
+                    value = [value];
+                }
+
                 $.map(value, function(val){
                     inputs.multiselect('select', value);
                 });
@@ -1166,6 +1214,14 @@ $((function(){
 
             inputs.trigger("change");
         });
+    }
+
+    function init_delete_query_button(){
+        $("#delete-query").addClass("disabled");
+
+        if (saved_query.user === $("#query-form").data("user")){
+            $("#delete-query").removeClass("disabled");
+        }
     }
 
     function init_saved_query(query_id){
@@ -1192,8 +1248,66 @@ $((function(){
             $(window).trigger("hashchange");
 
             loading_dialog.modal("hide");
+            progress_bar.css("width", "0%");
+            init_delete_query_button();
+            $("#query-name").text(data.name);
 
+            if (saved_query.user === $("#query-form").data("user")){
+                $("#save-query").removeClass("disabled");
+            }
         }).fail(fail);
+    }
+
+    function delete_query(event){
+        event.preventDefault();
+
+        $("#loading-dialog").modal({keyboard: false, backdrop: "static"});
+        $("#loading-dialog .message").text("Deleting saved query..");
+        $("#loading-dialog .message .name").text(saved_query.name);
+        progress_bar.css("width", "20%");
+
+        var url = SAVED_QUERY_API_URL.format({
+            project_id: PROJECT,
+            query_id: saved_query.id
+        });
+
+        url += "/";
+
+        $.ajax({
+            type: "DELETE",
+            url: url,
+            dataType: "json",
+            data: {},
+        }).done(function(data){
+            $("#load-query-menu li[query={id}]".format(saved_query)).remove();
+
+            saved_query = {
+                parameters: null,
+                name: null,
+                id: null,
+                private: true,
+                user: null
+            };
+
+            loading_dialog.modal("hide");
+            progress_bar.css("width", "0%");
+            init_delete_query_button();
+            $("#query-name").html("<i>Unsaved query</i>");
+            $("#save-query").addClass("disabled");
+
+            new PNotify({
+                type: "success",
+                text: "Query deleted.",
+                delay: 1500
+            });
+
+            history.replaceState({}, document.title, "?sets={sets}#{hash}".format({
+                sets: $("#query-form").data("sets").join(","),
+                hash: window.location.hash.slice(1)
+            }));
+        }).fail(fail);
+
+        $("#delete-query").addClass("disabled");
     }
 
     $(function(){
@@ -1201,10 +1315,36 @@ $((function(){
         init_scripts();
         init_shortcuts();
 
-        $("#save-query").click(save_query.bind(false));
-        $("#save-query-dialog .save").click(save_query.bind(true))
+        $("#save-query").click(save_query.bind({confirm: false, method: "patch"}));
+        $("#save-query-as").click(save_query.bind({confirm: true, method: "post"}));
+        $("#delete-query").click(delete_query);
+        $("#save-query-dialog .save").click(save_query.bind({confirm: false}))
         $("#run-query").click(run_query);
         $("#content > form").submit(run_query);
+
+        $("#load-query > button").click(function() {
+            window.setTimeout(function () {
+                $("#load-query input.multiselect-search").focus();
+            });
+        });
+
+        $("#new-query").click(function(event){
+            event.preventDefault();
+
+            var url = "?sets={sets}#{hash}".format({
+                sets: $("#query-form").data("sets").join(","),
+                hash: window.location.hash.slice(1)
+            });
+
+            if (window.location.search + window.location.hash === url){
+                window.location.reload();
+            } else {
+                window.location = url;
+            }
+
+            $("#loading-dialog").modal({keyboard: false, backdrop: "static"});
+            $("#loading-dialog .message").text("Refreshing..");
+        });
     });
 }).bind({}));
 

@@ -37,11 +37,17 @@ class QuerySerializer(AmCATModelSerializer):
 
     def to_native(self, obj):
         native = super(QuerySerializer, self).to_native(obj)
-        native["parameters"] = json.dumps(obj.parameters)
+
+        if obj is not None:
+            native["parameters"] = json.dumps(obj.parameters)
+
         return native
 
     def is_valid(self):
         # Hack? Hack.
+        if self.init_data is None:
+            return super(QuerySerializer, self).is_valid()
+
         parameters = self.init_data.get("parameters")
         if parameters is not None and isinstance(parameters, basestring):
             try:
@@ -66,9 +72,13 @@ class QueryViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     model_serializer_class = QuerySerializer
     model = QuerySerializer.Meta.model
     search_fields = ordering_fields = ("id", "name")
-    permission_map = {"PUT": ROLE_PROJECT_WRITER, "PATCH": ROLE_PROJECT_WRITER}
-    http_method_names = ("get", "options", "post", "put", "patch")
+    http_method_names = ("get", "options", "post", "put", "patch", "delete")
     permission_classes = (QueryPermission, ProjectPermission)
+    permission_map = {
+        "PUT": ROLE_PROJECT_WRITER,
+        "PATCH": ROLE_PROJECT_WRITER,
+        "DELETE": ROLE_PROJECT_WRITER
+    }
 
     def pre_save(self, obj):
         #self.check_object_permissions(self.request, obj)

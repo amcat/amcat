@@ -1,46 +1,60 @@
 {% include "project/query/syntax_help.html" %}
 
 
-<div class="btn-group">
-    <div class="btn-group">
-        <button id="load-query" type="button" class="disabled btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-            Load query <span class="caret"></span>
-        </button>
-        <ul class="dropdown-menu" role="menu">
-            <li role="presentation" class="dropdown-header">My queries</li>
-            {% if not saved_queries.exists %}
-                <li><a href="#">No saved queries</a></li>
-            {% else %}
-                {% for query in saved_user_queries %}
-                    <li><a title="Last saved: {{ query.last_saved }}" href="./?query={{ query.id }}">{{ query.name }}</a></li>
-                {% empty %}
-                    <li><a><i>No personal queries</i></a></li>
-                {% endfor %}
-
-                <li role="presentation" class="dropdown-header">Project queries</li>
-                {% for query in saved_project_queries %}
-                    <li><a title="Last saved: {{ query.last_saved }}" href="./?query={{ query.id }}">{{ query.name }}</a></li>
-                {% empty %}
-                    <li><a><i>No project queries</i></a></li>
-                {% endfor %}
-            {% endif %}
-        </ul>
-    </div>
+<div id="query-options" class="btn-group">
+    <select id="load-query-menu" role="menu">
+        <option value="load_query">Load query</option>
+        <optgroup label="My queries">
+            {% for query in saved_user_queries %}
+                <option title="Last saved: {{ query.last_saved }}" href="./?query={{ query.id }}">{{ query.name }}</option>
+            {% endfor %}
+        </optgroup>
+        <optgroup label="Project queries">
+            {% for query in saved_project_queries %}
+                <option title="Last saved: {{ query.last_saved }}" href="./?query={{ query.id }}">{{ query.name }}</option>
+            {% endfor %}
+        </optgroup>
+    </select>
 
 
-    <button id="save-query" class="disabled btn btn-default">
+    <button data-toggle="tooltip" data-placement="bottom" title="CTRL+S" id="save-query" class="disabled btn btn-default">
         Save query
     </button>
-    <!--<a class="btn btn-default">
-        <i class="glyphicon glyphicon-cog"></i> Settings
-    </a>-->
-    <button class="btn btn-danger disabled">
-        <i class="glyphicon glyphicon-trash"></i> Delete
+
+    <button data-toggle="tooltip" data-placement="bottom" title="CTRL+SHIFT+S" id="save-query-as" class="btn btn-default">
+        Save query as..
     </button>
 
+    <button data-toggle="tooltip" data-placement="bottom" title="CTRL+R (reload)" id="new-query" class="btn btn-warning">
+        <i class="glyphicon glyphicon-asterisk"></i> New query
+    </button>
+
+    <button id="delete-query" class="delete btn btn-danger disabled">
+        <i class="glyphicon glyphicon-trash"></i> Delete
+    </button>
 </div>
 
-<!--<h4 class="name" style="float:right;">Unsaved query</h4>-->
+<script>
+$(function(){
+    $("#load-query-menu").multiselect({
+        enableCaseInsensitiveFiltering: true,
+        enableFiltering: true,
+        onChange: function(option, checked, select) {
+            window.location = $(option).attr("href");
+            $("#loading-dialog").modal({keyboard: false, backdrop: "static"});
+            $("#loading-dialog .message").text("Loading query..");
+        },
+        maxHeight: 400,
+        buttonWidth: '150px',
+        buttonContainer: '<div data-placement="bottom" data-toggle="tooltip" title="CTRL+O" id="load-query" class="btn-group" />'
+    }).multiselect("select", "load_query");
+
+    $("#query-options .multiselect-container li.active").remove();
+    $("#load-query > button").attr("title", "");
+});
+</script>
+
+<h4 id="query-name" class="name" style="float:right;"><i>Unsaved query</i></h4>
 
 <br/>
 <br/>

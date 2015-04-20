@@ -116,3 +116,7 @@ textarea.query {
 #dates > div {
     width:100%;
 }
+
+#query-options .multiselect-container input[type=radio]{
+    visibility: hidden;
+}
