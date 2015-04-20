@@ -121,14 +121,7 @@ $(function(){
             <div class="panel-heading">Output options</div>
             <div class="panel-body">
 	      <div id="scripts">
-              <i class="loading">Loading options..</i>
-              <div style="display: none;" class="btn-group main-scripts">
-                  <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                      More <span class="caret"></span>
-                  </button>
-                  <ul class="dropdown-menu other-scripts pull-right" role="menu">
-                  </ul>
-              </div>
+              {% include "project/query/scripts.html" %}
           </div>
 	      <hr id="script-line" style="display:none"/>
 	      <div class="row">

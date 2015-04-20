@@ -191,9 +191,6 @@ var Aggregation = function(data){
 $((function(){
     var query_screen = $("#query-screen");
 
-    var MAIN_SCRIPTS = ["summary", "aggregation", "association", "articlelist"];
-    var ACTION_SCRIPTS = ["saveasset", "assignascodingjob"];
-
     var PROJECT = query_screen.data("project");
     var SETS = query_screen.data("sets");
 
@@ -207,12 +204,6 @@ $((function(){
         "codebook_replacement_language", "codebook_label_language",
         "codebook", "query", "download"
     ];
-
-    var SCRIPT_NAMES = {
-        saveasset: "Save as set",
-        assignascodingjob: "Assign as codingjob",
-        articlelist: "Articlelist"
-    };
 
     var HOTKEYS = {
         "ctrl_q": function(event){ $("#run-query").click(); },
@@ -1098,87 +1089,31 @@ $((function(){
         })
     };
 
+    function hashchange(event){
+        var hash;
+
+        if(!location.hash || !location.hash.slice(1)){
+            hash = DEFAULT_SCRIPT;
+        } else {
+            hash = location.hash.slice(1);
+        }
+
+        console.log(hash)
+
+        $("#script_" + hash).click();
+    }
+
 
     function init_scripts(){
-        $.ajax({
-            dataType: "json",
-            url: QUERY_API_URL
-        }).error(function(event){
-            show_error(
-                "Could not load scripts. Try to refresh this page and "
-                + "try again. If the problem persists, please contact the "
-                + "administrators."
-            );
-        }).done(function(data){
-            var main_buttons = [];
-            var other_buttons = [];
-            var action_buttons = []
+        // Load default or chosen scripts
+        $(window).bind('hashchange', hashchange);
+        $("#load-query").removeClass("disabled");
 
-            $.each(data, function(name){
-                if (MAIN_SCRIPTS.indexOf(name) !== -1 && ACTION_SCRIPTS.indexOf(name) === -1) {
-                    main_buttons.push(name);
-                } else if(ACTION_SCRIPTS.indexOf(name) !== -1){
-                    action_buttons.push(name);
-                } else {
-                    other_buttons.push(name);
-                }
-            });
-
-            main_buttons.sort();
-            main_buttons.reverse();
-            other_buttons.sort();
-            action_buttons.sort();
-
-            var button;
-            $.each(main_buttons, function(i, name){
-                button = $("<span>");
-                button.attr("class", "btn btn-sm btn-default script");
-                button.attr("id", "script_" + name);
-                button.attr("name", name);
-                button.text((SCRIPT_NAMES[name] || name).capitalize());
-                $("#scripts .main-scripts").prepend(button);
-            });
-
-            var to_dropdown = function(name){
-                var a;
-                a = $("<a class='script' href='#'></a>");
-                a.attr("id", "script_" + name);
-                a.attr("name", name);
-                a.text((SCRIPT_NAMES[name] || name).capitalize());
-                return $("<li class='dropdown'>").append(a);
-            }
-
-
-            var other = $("#scripts .other-scripts");
-            other.append($.map(other_buttons, to_dropdown));
-            other.append($("<li class='divider'></li>"));
-            other.append($.map(action_buttons, to_dropdown));
-
-            $("#scripts .main-scripts").show()
-            $("#scripts .loading").hide();
-            $("#scripts .script").click(script_changed);
-
-            $(window).bind('hashchange', function(event){
-                var hash;
-                if(!location.hash || !location.hash.slice(1)){
-                    hash = DEFAULT_SCRIPT;
-                } else {
-                    hash = location.hash.slice(1);
-                }
-
-                var script = $("#script_" + hash);
-                if (script){ script.click() };
-            });
-
-
-            $("#load-query").removeClass("disabled");
-
-            if (saved_query.id !== null){
-                init_saved_query(saved_query.id);
-            } else {
-                $(window).trigger("hashchange");
-            }
-        });
+        if (saved_query.id !== null){
+            init_saved_query(saved_query.id);
+        } else {
+            $(window).trigger("hashchange");
+        }
     }
 
     function fill_form(){
@@ -1311,16 +1246,13 @@ $((function(){
     }
 
     $(function(){
-        init_dates();
-        init_scripts();
-        init_shortcuts();
-
         $("#save-query").click(save_query.bind({confirm: false, method: "patch"}));
         $("#save-query-as").click(save_query.bind({confirm: true, method: "post"}));
         $("#delete-query").click(delete_query);
         $("#save-query-dialog .save").click(save_query.bind({confirm: false}))
         $("#run-query").click(run_query);
         $("#content > form").submit(run_query);
+        $("#scripts .script").click(script_changed);
 
         $("#load-query > button").click(function() {
             window.setTimeout(function () {
@@ -1345,6 +1277,10 @@ $((function(){
             $("#loading-dialog").modal({keyboard: false, backdrop: "static"});
             $("#loading-dialog .message").text("Refreshing..");
         });
+
+        init_dates();
+        init_scripts();
+        init_shortcuts();
     });
 }).bind({}));
 
