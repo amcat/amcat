@@ -4,7 +4,7 @@
     </div>
     <div class="col-md-12 codebook-options">
         <div class="btn-group btn-group-justified">
-            <select id="codebooks">
+            <select name="codebook" id="codebooks">
                 {% if codebooks %}
                     <option selected hidden value=''>No codebook</option>
                 {% endif %}
@@ -12,8 +12,8 @@
                     <option value="{{ codebook.id }}">{{ codebook.name }}</option>
                 {% endfor %}
             </select>
-            <select id="keywords" class="disabled"></select>
-            <select id="indicators" class="disabled"></select>
+            <select name="codebook_label_language" id="keywords" class="disabled"></select>
+            <select name="codebook_replacement_language" id="indicators" class="disabled"></select>
         </div>
         {% comment %}
             <a class="codebook-help" data-toggle="modal" data-target="#codebook-help">
