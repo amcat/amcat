@@ -1176,6 +1176,8 @@ $((function(){
                 $.map(value, function(val){
                     inputs.multiselect('select', value);
                 });
+
+                inputs.multiselect("rebuild");
             } else if (tagName === "INPUT" && inputs.attr("type") == "checkbox"){
                 // Boolean fields
                 inputs.prop("checked", value);
