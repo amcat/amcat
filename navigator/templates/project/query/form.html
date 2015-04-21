@@ -3,7 +3,7 @@
 
 <div id="query-options" class="btn-group">
     <select id="load-query-menu" role="menu">
-        <option value="load_query">Load query</option>
+        <option id="load-query-hack" value="load_query">Load query</option>
         <optgroup label="My queries">
             {% for query in saved_user_queries %}
                 <option title="Last saved: {{ query.last_saved }}" href="./?query={{ query.id }}">{{ query.name }}</option>
@@ -45,12 +45,20 @@ $(function(){
             $("#loading-dialog .message").text("Loading query..");
         },
         maxHeight: 400,
+        nonSelectedText: "Load query",
+        allSelectedText: "Load query",
+        disableIfEmpty: true,
         buttonWidth: '150px',
         buttonContainer: '<div data-placement="bottom" data-toggle="tooltip" title="CTRL+O" id="load-query" class="btn-group" />'
     }).multiselect("select", "load_query");
 
     $("#query-options .multiselect-container li.active").remove();
     $("#load-query > button").attr("title", "");
+
+    {% if not saved_user_queries and not saved_project_queries %}
+        $("#load-query-hack").remove();
+        $("#load-query-menu").multiselect("rebuild");
+    {% endif %}
 });
 </script>
 
