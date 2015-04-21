@@ -112,7 +112,6 @@ class SelectionSearch:
 
         if codebook:
             codebook.cache_labels()
-            log.debug("X {cb}:{lbl}->{rep}".format(**locals()))
 
         queries = map(unicode.strip, self.data.query.split("\n"))
         queries = map(SearchQuery.from_string, queries)
