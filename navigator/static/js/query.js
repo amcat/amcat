@@ -198,6 +198,7 @@ $((function(){
     var SAVED_QUERY_API_URL = "/api/v4/projects/{project_id}/querys/{query_id}";
     var QUERY_API_URL = "/api/v4/query/";
     var SEARCH_API_URL = "/api/v4/search";
+    var CODEBOOK_LANGUAGE_API_URL = "/api/v4/projects/{project_id}/codebooks/{codebook_id}/languages/";
     var SELECTION_FORM_FIELDS = [
         "include_all", "articlesets", "mediums", "article_ids",
         "start_date", "end_date", "datetype", "on_date",
@@ -1089,6 +1090,41 @@ $((function(){
         })
     };
 
+    function codebook_changed(event){
+        var codebook_id = $(event.currentTarget).val();
+
+        var url = CODEBOOK_LANGUAGE_API_URL.format({
+            project_id: PROJECT,
+            codebook_id: codebook_id
+        });
+
+        $("#keywords,#indicators").html("");
+        $("#keywords,#indicators").multiselect("rebuild");
+
+        if (codebook_id === ""){
+            return;
+        }
+
+        $("#keywords,#indicators").multiselect("setOptions", {
+            nonSelectedText: "Loading options.."
+        });
+
+        $("#keywords,#indicators").multiselect("rebuild");
+
+        $.getJSON(url, function(languages){
+            var options = $.map(languages.results, function(language){
+                return '<option value="{id}">{label}</option>'.format(language);
+            });
+
+            $("#keywords,#indicators").html(options.join(""));
+            $("#keywords,#indicators").multiselect("rebuild");
+            $("#keywords,#indicators").multiselect("setAllSelectedText", options[0].label);
+
+            $("#keywords").multiselect("setOptions", {nonSelectedText: "Keyword language"});
+            $("#indicators").multiselect("setOptions", {nonSelectedText: "Indicator language"});
+        })
+    }
+
     function hashchange(event){
         var hash;
 
@@ -1246,6 +1282,7 @@ $((function(){
     }
 
     $(function(){
+        $("#codebooks").change(codebook_changed);
         $("#save-query").click(save_query.bind({confirm: false, method: "patch"}));
         $("#save-query-as").click(save_query.bind({confirm: true, method: "post"}));
         $("#delete-query").click(delete_query);
@@ -1253,6 +1290,9 @@ $((function(){
         $("#run-query").click(run_query);
         $("#content > form").submit(run_query);
         $("#scripts .script").click(script_changed);
+        $("h4.name").click(function(){
+            $("#save-query-as").click();
+        });
 
         $("#load-query > button").click(function() {
             window.setTimeout(function () {

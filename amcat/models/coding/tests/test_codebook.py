@@ -17,7 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import datetime
-from amcat.models import Code, Codebook, CodebookCode
+from amcat.models import Code, Codebook, CodebookCode, Language
 from amcat.tools import amcattest
 
 
@@ -359,3 +359,19 @@ class TestCodebook(amcattest.AmCATTestCase):
         # Codebook cached
         self.assertEqual({u'c': u'b', u'e': u'd', u'f': u'd'}, D.get_aggregation_mapping(language))
 
+    def test_get_language_ids(self):
+        l1 = Language.objects.create(label="blaat")
+        al, bl, cl = [Language.objects.create(label=l) for l in "abc"]
+        ac, bc, cc = [amcattest.create_test_code(label=l) for l in "abc"]
+
+        ac.add_label(al, "a")
+        bc.add_label(bl, "a")
+        cc.add_label(cl, "a")
+
+        A = amcattest.create_test_codebook(name="A")
+
+        A.add_code(ac)
+        A.add_code(bc)
+        A.add_code(cc)
+
+        self.assertEqual(A.get_language_ids(), {l1.id, al.id, bl.id, cl.id})

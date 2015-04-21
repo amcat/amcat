@@ -22,7 +22,7 @@ from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
-from amcat.models import Codebook, CodingSchema
+from amcat.models import Codebook, CodingSchema, Language
 from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
@@ -32,7 +32,7 @@ from api.rest.viewsets.project import ProjectViewSetMixin
 log = logging.getLogger(__name__)
 
 __all__ = ("CodebookSerializer", "CodebookViewSetMixin", "CodingJobCodebookViewSet",
-            "CodebookViewSet")
+            "CodebookViewSet", "CodebookLanguageViewSet")
 
 def serialize_codebook_code(codebook, ccode):
     function = ccode.function
@@ -77,6 +77,18 @@ class CodebookViewSet(ProjectViewSetMixin, CodebookViewSetMixin, DatatablesMixin
     def filter_queryset(self, queryset):
         qs = super(CodebookViewSet, self).filter_queryset(queryset)
         return qs.filter(Q(project=self.project)|Q(projects_set=self.project))
+
+
+class LanguageViewSetMixin(AmCATViewSetMixin):
+    model_key = "language"
+    model = Language
+
+class CodebookLanguageViewSet(ProjectViewSetMixin, CodebookViewSetMixin,
+                              LanguageViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+    model = Language
+
+    def filter_queryset(self, queryset):
+        return Language.objects.filter(id__in=self.codebook.get_language_ids())
 
 class CodingJobCodebookViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                       CodebookViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):

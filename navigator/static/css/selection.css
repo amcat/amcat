@@ -120,3 +120,8 @@ textarea.query {
 #query-options .multiselect-container input[type=radio]{
     visibility: hidden;
 }
+
+h4.name:hover{
+    cursor: pointer;
+    background-color: #f0f0f0;
+}

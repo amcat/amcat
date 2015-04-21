@@ -3,21 +3,42 @@
         <textarea value="" class="query" placeholder="Query" name="query" type="query"></textarea>
     </div>
     <div class="col-md-12 codebook-options">
-        <select>
-            <option value="">-- codebook --</option>
-        </select>
-        <select>
-            <option value="">-- keyword language --</option>
-        </select>
-        <select>
-            <option value="">-- replacement language --</option>
-        </select>
-<a class="codebook-help" data-toggle="modal" data-target="#codebook-help">
-            <i class="glyphicon glyphicon-info-sign"></i>
-        </a>
-
-        {% include "project/query/codebook_help.html" %}
+        <div class="btn-group btn-group-justified">
+            <select id="codebooks">
+                {% if codebooks %}
+                    <option selected hidden value=''>No codebook</option>
+                {% endif %}
+                {% for codebook in codebooks %}
+                    <option value="{{ codebook.id }}">{{ codebook.name }}</option>
+                {% endfor %}
+            </select>
+            <select id="keywords" class="disabled"></select>
+            <select id="indicators" class="disabled"></select>
+        </div>
+        {% comment %}
+            <a class="codebook-help" data-toggle="modal" data-target="#codebook-help">
+                <i class="glyphicon glyphicon-info-sign"></i>
+            </a>
+            {% include "project/query/codebook_help.html" %}
+        {% endcomment %}
     </div>
-
 </div>
+
+<script>
+    $(function(){
+        $("#codebooks").multiselect({
+            disableIfEmpty: true,
+        });
+
+        $("#keywords").multiselect({
+            disableIfEmpty: true,
+            nonSelectedText: "Keyword language"
+        })
+
+        $("#indicators").multiselect({
+            disableIfEmpty: true,
+            nonSelectedText: "Indicator language"
+        });
+    });
+</script>
 

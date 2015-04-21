@@ -536,6 +536,16 @@ class Codebook(AmcatModel):
 
             code_id = parent
 
+    def get_language_ids(self):
+        """
+        For all labels for all codes in this codebook, return the language id.
+        """
+        # For some reason, postgres is *really* slow when querying with joins / distincts, so
+        # we'll compile these queries by using set logic.
+        codes = self.codes.values_list("id", flat=True)
+        labels = Label.objects.filter(code__id__in=codes).order_by()
+        return set(labels.values_list("language__id", flat=True))
+
     def recycle(self):
         """Move this job to the recycle bin"""
         from amcat.models.project import LITTER_PROJECT_ID

@@ -76,6 +76,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         query_id = self.request.GET.get("query", "null")
         user_id = self.request.user.id
         articleset_ids_json = json.dumps(articleset_ids)
+        codebooks = self.project.get_codebooks().order_by("name").only("id", "name")
 
         form = SelectionForm(
             project=self.project,
