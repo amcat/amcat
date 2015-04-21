@@ -1122,6 +1122,16 @@ $((function(){
 
             $("#keywords").multiselect("setOptions", {nonSelectedText: "Keyword language"});
             $("#indicators").multiselect("setOptions", {nonSelectedText: "Indicator language"});
+
+            $.map($("#keywords,#indicators"), function(select){
+                var initial = $(select).data("initial");
+
+                if (initial){
+                    $(select).multiselect("select", initial[0]);
+                }
+
+                $(select).data("initial", null);
+            });
         })
     }
 
@@ -1177,6 +1187,7 @@ $((function(){
                     inputs.multiselect('select', value);
                 });
 
+                inputs.data('initial', value);
                 inputs.multiselect("rebuild");
             } else if (tagName === "INPUT" && inputs.attr("type") == "checkbox"){
                 // Boolean fields
