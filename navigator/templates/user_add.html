@@ -11,6 +11,7 @@
 
 <h1>Add user</h1>
 <form action="{% url "user-add-submit" %}" method="POST">
+ {% csrf_token %}
  <table>
   {{ add_form.as_table }}
  </table>
@@ -22,6 +23,7 @@
 
 <p>You can select an affiliation and language below.</p>
 <form enctype="multipart/form-data" action="{% url "user-add-submit" %}" method="POST">
+ {% csrf_token %}
  <table>
  {{ add_multiple_form.as_table }}
  <tr>

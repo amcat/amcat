@@ -39,6 +39,7 @@ h3 {font-size: large; border-bottom: 1px dotted gray}
 {% block content %}
 
 <form action="" enctype="multipart/form-data" method="GET">
+{% csrf_token %}
    <table>
     {{ form.as_table }}
    </table>

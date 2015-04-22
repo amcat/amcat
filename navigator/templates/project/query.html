@@ -47,6 +47,7 @@
       {% include "project/query/articleset_error.html" %}
   {% else %}
       <form data-sets="{{ articleset_ids_json }}" data-user="{{ user_id }}" data-query="{{ query_id }}" id="query-form">
+          {% csrf_token %}
           {% include "project/query/form.html" %}
       </form>
 

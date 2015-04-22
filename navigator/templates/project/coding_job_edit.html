@@ -3,6 +3,7 @@
 {% block content %}
 
 <form action="" method="POST">
+    {% csrf_token %}
    <legend>Edit details of coding job "{{ object.name }}" below.</legend>
 
    <table>

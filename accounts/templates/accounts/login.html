@@ -20,7 +20,8 @@
 </div>
 <div class="login_buttons well">
  <form method="POST" action = "">
-     <input {% if username %}value="{{username}}"{% endif %} name="username" type="text" class="input-small" placeholder="Username" />
+ {% csrf_token %}
+ <input {% if username %}value="{{username}}"{% endif %} name="username" type="text" class="input-small" placeholder="Username" />
   <input name="password" type="password" class="input-small" placeholder="Password" />
   <button type="submit" class="btn">Sign in</button>
  </form>

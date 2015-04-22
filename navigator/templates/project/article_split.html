@@ -11,6 +11,7 @@
 
     <div style="float:left; width:65%">
         <form action="" method="POST">
+        {% csrf_token %}
             <div>
                 {% include "project/article_split_button.html" %}
             </div>

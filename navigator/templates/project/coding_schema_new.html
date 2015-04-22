@@ -3,6 +3,7 @@
 {% block content %}
 <legend>Please provide details for the new schema</legend>
 <form method="POST" action="">
+    {% csrf_token %}
 <table>
 {{ form.as_table }}
 </table>

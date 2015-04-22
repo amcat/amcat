@@ -5,6 +5,7 @@
 {% if can_edit %}
 
 <form action="" method="POST">
+{% csrf_token %}
     <legend>Edit project details of project {{project.id}}: "{{ project.name }}"</legend>
    <table>
     {{ form.as_table }}

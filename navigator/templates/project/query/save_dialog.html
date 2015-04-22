@@ -7,6 +7,7 @@
             </div>
             <div class="modal-body">
                 <form>
+                    {% csrf_token %}
                     <input name="name" type="text" placeholder="Name.."></input>
                     <br/>
                     <input name="private" checked="checked" type="checkbox"></input>

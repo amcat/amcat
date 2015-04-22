@@ -32,6 +32,7 @@ some errors where encountered while uploading:
 <legend> Uploading articles using {{script_name}} </legend>
 
 <form method="POST" enctype="multipart/form-data" action="">
+    {% csrf_token %}
   {{ form.non_field_errors }}
     {% for hidden in form.hidden_fields %}
     {{ hidden }}

@@ -17,6 +17,7 @@
 {% endif %}
 <h2>Edit details</h2>
 <form action="{% url "user-edit" user.id %}" method="POST">
+    {% csrf_token %}
  <table>
   {{ form.as_table }}
  </table>

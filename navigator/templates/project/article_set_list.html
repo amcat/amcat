@@ -21,6 +21,7 @@
             <form id="set-favourite"
                   action=""
                   data-id-field="[name=ids]" data-table="#datatable" data-require-selection="1">
+                {% csrf_token %}
                 <input type="hidden" name="favaction" value="{{ favaction }}">
                 <input type="hidden" name="ids" />
 

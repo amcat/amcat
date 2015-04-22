@@ -19,6 +19,7 @@
      You can choose any of the available options.
  </p>
  <form method="POST" class="form-horizontal">
+     {% csrf_token %}
     {% for hidden in form.hidden_fields %}
     {{ hidden }}
     {% if hidden.errors %}{{ hidden.name}} : {{ hidden.errors }}{% endif %}

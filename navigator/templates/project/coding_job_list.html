@@ -17,6 +17,7 @@
     <div id="{{ table.get_name }}-actions">
         <form id="set-favourite" action=""
               data-id-field="[name=ids]" data-table="#all-codingjobs" data-require-selection="1">
+            {% csrf_token %}
             <input type="hidden" name="favaction" value="{{ favaction }}">
             <input type="hidden" name="ids" />
             <input type="submit" id="favourite" class="btn btn-default"
@@ -28,6 +29,7 @@
               action="{% url "coding job-export-select" context.id %}"
               data-id-field="[name=codingjobs]" data-table="#all-codingjobs">
 
+            {% csrf_token %}
             <input type="hidden" name="what" value="{{what}}" />
             <input type="hidden" name="codingjobs" />
             <input type="hidden" name="export_level" />

@@ -27,6 +27,7 @@
 {% else %}
 <p>
  <form method="POST" class="well form-inline">
+ {% csrf_token %}
      <legend>Registration form</legend>
      <table>
          {{ form.as_table }}

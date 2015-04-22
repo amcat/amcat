@@ -3,15 +3,16 @@
 {% block content %}
 
 {% block table %}
-<h2>{{model_name}} list:</h1>
+<h2>{{model_name}} list:</h2>
 
 {{ table|safe }}
 {% endblock %}
 
 {% block create_form %}
 {% if form %}
-<h2>Create a new {{model_name}}:</h1>
+<h2>Create a new {{model_name}}:</h2>
 <form action="" method="post">
+{% csrf_token %}
 <table>
 {{ form }}
 </table>

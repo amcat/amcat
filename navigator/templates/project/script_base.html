@@ -9,6 +9,7 @@
 {% endif %}
 
 <form action="" enctype="multipart/form-data" method="POST">
+    {% csrf_token %}
    <legend>Please enter options for {{ script_name }} below.</legend>
    <table>
     {{ form.as_table }}

@@ -3,6 +3,7 @@
 {% block content %}
 
 <form action="" method="POST">
+    {% csrf_token %}
    <legend>Edit details of articleset "{{ articleset.name }}" below.</legend>
 
    {% if form.is_valid and not form.errors %}
