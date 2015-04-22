@@ -152,8 +152,13 @@ class SelectionForm(forms.Form):
 
     def clean_datetype(self):
         datetype = self.cleaned_data["datetype"]
-        start_date = self.cleaned_data["start_date"]
-        end_date = self.cleaned_data["end_date"]
+
+        try:
+            start_date = self.cleaned_data["start_date"]
+            end_date = self.cleaned_data["end_date"]
+        except KeyError:
+            # start or end date invalid
+            return
 
         if datetype == "between":
             if not (start_date and end_date):
