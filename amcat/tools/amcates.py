@@ -40,7 +40,6 @@ from django.conf import settings
 from amcat.tools.caching import cached
 from amcat.tools.progress import NullMonitor
 
-settings.ES_USE_LEGACY_HASH_FUNCTION = False
 if settings.ES_USE_LEGACY_HASH_FUNCTION is None:
     error_msg = "Environment variable AMCAT_ES_LEGACY_HASH should be explicitely set."
     raise ImproperlyConfigured(error_msg)
