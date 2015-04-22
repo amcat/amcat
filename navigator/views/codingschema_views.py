@@ -160,8 +160,6 @@ class CodingSchemaCreateView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumb
         return form
 
 
-
-
     def get_success_url(self):
         return reverse("coding schema-details", args=(self.project.id, self.object.id))
 
