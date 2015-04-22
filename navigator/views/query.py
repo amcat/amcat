@@ -18,15 +18,15 @@
 ###########################################################################
 from __future__ import unicode_literals
 import json
+
 from django.core.urlresolvers import reverse
 from django.db.models.query_utils import Q
-from django.http import HttpResponseBadRequest, Http404, HttpResponseRedirect
+from django.http import HttpResponseBadRequest, Http404
 from django.shortcuts import redirect
-
 from django.views.generic.base import TemplateView
-from amcat.models import Query
-from amcat.tools.amcates import ES
 
+from amcat.models import Query
+from amcat.tools import amcates
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
 from amcat.scripts.forms import SelectionForm
 from navigator.views.project_views import ProjectDetailsView
@@ -70,7 +70,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         return super(QueryView, self).get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
-        articleset_ids = map(int, filter(unicode.isdigit, self.request.GET.get("sets", "").split(",")))
+        articleset_ids = list(map(int, filter(unicode.isdigit, self.request.GET.get("sets", "").split(","))))
         articlesets = self.project.all_articlesets().filter(id__in=articleset_ids)
         articlesets = articlesets.only("id", "name")
         query_id = self.request.GET.get("query", "null")
@@ -87,6 +87,8 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
                 "articlesets": articlesets
             }
         )
+
+        statistics = amcates.ES().statistics(filters={"sets": articleset_ids})
 
         saved_queries = Query.objects.filter(project=self.project)
         saved_user_queries = saved_queries.filter(user=self.request.user)
