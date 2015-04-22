@@ -29,11 +29,11 @@
 
 <script type="text/javascript">
     var opts = {
-        format: "dd-mm-yyyy",
+        //format: "dd-mm-yyyy",
         calendarWeeks: true,
         todayHighlight: true,
-        startDate: "{{ statistics.start_date|date:"d-m-Y" }}",
-        endDate: "{{ statistics.end_date|date:"d-m-Y" }}"
+        startDate: "{{ statistics.start_date|date:"Y-m-d" }}",
+        endDate: "{{ statistics.end_date|date:"Y-m-d" }}"
     };
 
     $('.input-daterange').datepicker(opts);
