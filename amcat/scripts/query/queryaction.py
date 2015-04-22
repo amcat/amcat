@@ -47,6 +47,10 @@ class QueryActionForm(SelectionForm):
     output_type = forms.ChoiceField(choices=())
     download = forms.BooleanField(initial=False, required=False)
 
+    def __init__(self, user, *args, **kwargs):
+        super(QueryActionForm, self).__init__(*args, **kwargs)
+        self.user = user
+
 
 class QueryActionHandler(TaskHandler):
     @classmethod
@@ -150,7 +154,7 @@ class QueryAction(object):
     def get_form_kwargs(self, **kwargs):
         return dict({
             "data": self.data, "project": self.project,
-            "articlesets": self.articlesets,
+            "articlesets": self.articlesets, "user": self.user
         }, **kwargs)
 
     def get_form_class(self):

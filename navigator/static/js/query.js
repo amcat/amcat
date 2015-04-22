@@ -28,7 +28,8 @@ var MULTISELECT_DEFAULTS = {
     onDropdownShown: function(event){
         var input = $("input.multiselect-search", event.currentTarget);
         window.setTimeout(function(){input.focus()});
-    }
+    },
+    disableIfEmpty: true
 }
 
 
@@ -825,13 +826,15 @@ $((function(){
 
             var is_hidden = widget.find("[type=hidden]").length;
             if (is_hidden) row.css("height", 0).css("overflow", "hidden");
+
+            $(".depends", widget).depends();
         });
 
         $("select[multiple=multiple]", $("#script-form")).multiselect(MULTISELECT_DEFAULTS);
 
         $.map($("select", $("#script-form")), function(el){
             if ($(el).attr("multiple") === "multiple") return;
-            $(el).multiselect();
+            $(el).multiselect({ disableIfEmpty: true });
         });
 
         if (saved_query.loading){
@@ -1191,6 +1194,10 @@ $((function(){
 
                 inputs.data('initial', value);
                 inputs.multiselect("rebuild");
+
+                if (inputs.hasClass("depends")){
+
+                }
             } else if (tagName === "INPUT" && inputs.attr("type") == "checkbox"){
                 // Boolean fields
                 inputs.prop("checked", value);

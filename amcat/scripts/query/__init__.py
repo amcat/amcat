@@ -7,3 +7,4 @@ from association import AssociationAction
 from saveset import SaveAsSetAction
 from assignascodingjob import AssignAsCodingjobAction
 from articlelist import ArticleListAction
+from appendtoset import AppendToSetAction
