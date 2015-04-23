@@ -17,12 +17,8 @@
     </select>
 
 
-    <button data-toggle="tooltip" data-placement="bottom" title="CTRL+S" id="save-query" class="disabled btn btn-default">
+    <button data-toggle="tooltip" data-placement="bottom" title="CTRL+S" id="save-query" class="btn btn-default">
         Save query
-    </button>
-
-    <button data-toggle="tooltip" data-placement="bottom" title="CTRL+SHIFT+S" id="save-query-as" class="btn btn-default">
-        Save query as..
     </button>
 
     <button data-toggle="tooltip" data-placement="bottom" title="CTRL+R (reload)" id="new-query" class="btn btn-warning">
@@ -62,7 +58,7 @@ $(function(){
 });
 </script>
 
-<h4 id="query-name" class="name" style="float:right;"><i>Unsaved query</i></h4>
+<h4 data-toggle="tooltip" data-placement="bottom" title="Click to edit" id="query-name" class="name" style="float:right;"><i>Unsaved query</i></h4>
 
 <br/>
 <br/>

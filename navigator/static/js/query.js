@@ -194,6 +194,7 @@ var Aggregation = function(data){
 $((function(){
     var query_screen = $("#query-screen");
 
+    var USER = $("#query-form").data("user");
     var PROJECT = query_screen.data("project");
     var SETS = query_screen.data("sets");
 
@@ -1017,7 +1018,6 @@ $((function(){
             });
 
             $("#delete-query").removeClass("disabled");
-            $("#save-query").removeClass("disabled");
         }).fail(fail);
 
         save_btn.addClass("disabled");
@@ -1212,7 +1212,7 @@ $((function(){
     function init_delete_query_button(){
         $("#delete-query").addClass("disabled");
 
-        if (saved_query.user === $("#query-form").data("user")){
+        if (saved_query.user === USER){
             $("#delete-query").removeClass("disabled");
         }
     }
@@ -1244,10 +1244,6 @@ $((function(){
             progress_bar.css("width", "0%");
             init_delete_query_button();
             $("#query-name").text(data.name);
-
-            if (saved_query.user === $("#query-form").data("user")){
-                $("#save-query").removeClass("disabled");
-            }
         }).fail(fail);
     }
 
@@ -1286,7 +1282,6 @@ $((function(){
             progress_bar.css("width", "0%");
             init_delete_query_button();
             $("#query-name").html("<i>Unsaved query</i>");
-            $("#save-query").addClass("disabled");
 
             new PNotify({
                 type: "success",
@@ -1303,18 +1298,29 @@ $((function(){
         $("#delete-query").addClass("disabled");
     }
 
+    function save_query_clicked(event){
+        var args = {};
+
+        if (saved_query.id === null || saved_query.user !== USER) {
+            args.confirm = true;
+            args.method = "post";
+        } else {
+            args.confirm = false;
+            args.method = "patch";
+        }
+
+        save_query.bind(args)(event);
+    }
+
     $(function(){
         $("#codebooks").change(codebook_changed);
-        $("#save-query").click(save_query.bind({confirm: false, method: "patch"}));
-        $("#save-query-as").click(save_query.bind({confirm: true, method: "post"}));
         $("#delete-query").click(delete_query);
         $("#save-query-dialog .save").click(save_query.bind({confirm: false}))
         $("#run-query").click(run_query);
         $("#content > form").submit(run_query);
         $("#scripts .script").click(script_changed);
-        $("h4.name").click(function(){
-            $("#save-query-as").click();
-        });
+        $("h4.name").click(save_query.bind({confirm: true, method: "patch"}));
+        $("#save-query").click(save_query_clicked);
 
         $("#load-query > button").click(function() {
             window.setTimeout(function () {
