@@ -1355,7 +1355,7 @@ $((function(){
         $("#scripts .script").click(script_changed);
         $("h4.name").click(save_query.bind({confirm: true, method: "patch"}));
         $("#save-query").click(save_query_clicked);
-        $("#change-articlesets").click(change_articlesets_clicked).click();
+        $("#change-articlesets").click(change_articlesets_clicked);
         $("#change-articlesets-confirm").click(change_articlesets_confirmed_clicked);
 
         $("#load-query > button").click(function() {
