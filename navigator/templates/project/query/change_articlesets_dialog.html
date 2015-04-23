@@ -1,0 +1,41 @@
+<div role="dialog" id="change-articlesets-query-dialog" class="modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Change articlesets</h4>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <b>Changing articlesets causes the script form to be reloaded.</b>
+                    Scripts
+                    may offer options which depend on the properties of the selected
+                    articlesets. Although AmCAT will try to restore the query form already
+                    entered, this is not guaranteed to succeed and may result in errors.
+                </div>
+
+                <label>Articlesets:</label>
+
+                <select multiple="multiple" id="change-articlesets-select">
+                    {% for aset in all_articlesets %}
+                        <option {% if aset.id in articleset_ids %}selected="selected"{% endif %} value="{{ aset.id }}">{{ aset.name }}</option>
+                    {% endfor %}
+                </select>
+
+                <script>
+                    $("#change-articlesets-select").multiselect({
+                        enableFiltering: true,
+                        enableCaseInsensitiveFiltering: true,
+                        maxHeight:500,
+                        buttonWidth: '80%',
+                        numberDisplayed: 5
+                    })
+                </script>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button id="change-articlesets-confirm" type="button" class="btn btn-primary">Change articlesets</button>
+            </div>
+        </div>
+    </div>
+</div>

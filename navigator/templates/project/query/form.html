@@ -3,16 +3,20 @@
 
 <div id="query-options" class="btn-group">
     <select id="load-query-menu" role="menu">
-        <option id="load-query-hack" value="load_query">Load query</option>
-        <optgroup label="My queries">
-            {% for query in saved_user_queries %}
-                <option title="Last saved: {{ query.last_saved }}" href="./?query={{ query.id }}">{{ query.name }}</option>
-            {% endfor %}
-        </optgroup>
-        <optgroup label="Project queries">
+        {% if saved_user_queries %}
+            <option id="load-query-hack" value="load_query">Recent queries</option>
+            <optgroup label="My queries">
+                {% for query in saved_user_queries %}
+                    <option title="Last saved: {{ query.last_saved }}" href="./?query={{ query.id }}">{{ query.name }}</option>
+                {% endfor %}
+            </optgroup>
+        {% endif %}
+        {% if saved_project_queries %}
+            <optgroup label="Project queries">
             {% for query in saved_project_queries %}
                 <option title="Last saved: {{ query.last_saved }}" href="./?query={{ query.id }}">{{ query.name }}</option>
             {% endfor %}
+        {% endif %}
         </optgroup>
     </select>
 
@@ -33,19 +37,16 @@
 <script>
 $(function(){
     $("#load-query-menu").multiselect({
-        enableCaseInsensitiveFiltering: true,
-        enableFiltering: true,
         onChange: function(option, checked, select) {
             window.location = $(option).attr("href");
             $("#loading-dialog").modal({keyboard: false, backdrop: "static"});
             $("#loading-dialog .message").text("Loading query..");
         },
         maxHeight: 400,
-        nonSelectedText: "Load query",
-        allSelectedText: "Load query",
+        nonSelectedText: "Recent queries",
+        allSelectedText: "Recent queries",
         disableIfEmpty: true,
         buttonWidth: '150px',
-        buttonContainer: '<div data-placement="bottom" data-toggle="tooltip" title="CTRL+O" id="load-query" class="btn-group" />'
     }).multiselect("select", "load_query");
 
     $("#query-options .multiselect-container li.active").remove();
@@ -68,32 +69,47 @@ $(function(){
     <ul></ul>
 </div>
 
-{% comment %}Legacy{% endcomment %}
-{% for aset_id in articleset_ids %}
-    <input type="hidden" name="articlesets" value="{{ aset_id }}" />
-{% endfor %}
-
-
-
-<div class="row equal" id="query-screen" data-sets="{{ articleset_ids }}" data-project="{{ project.id }}">
+<div class="row equal" id="query-screen" data-project="{{ project.id }}">
     <div class="col-md-4 filters-tab">
         <div class="panel panel-default">
             <div class="panel-heading">Filters</div>
             <div class="panel-body">
+                <div class="row">
+                    <div class="col-md-3"><label>Sets</label></div>
+                    <div class="col-md-9">
+                        <select multiple="multiple" id="id_articlesets" name="articlesets">
+                            {% for aset in all_articlesets %}
+                                <option value="{{ aset.id }}">{{ aset.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div style="text-align: center;">
+                            <small><a id="change-articlesets" href="#">change articlesets?</a></small>
+                        </div>
+                    </div>
+                </div>
+                <br/>
                 <div class="row">
                     {% include "project/query/dates.html" %}
                 </div>
                 <br/>
                 <div class="row mediums">
                     <div class="col-md-3"><label>Media</label></div>
-                    <div class="col-md-9">{{ form.mediums }}</div>
+                    <div class="col-md-9">
+                        {{ form.mediums }}
+                    </div>
+
                     <script>
-                        $("select[multiple=multiple]").multiselect(
+                        $("#id_mediums,#id_articlesets").multiselect(
                            $.extend({}, MULTISELECT_DEFAULTS, {
                                nonSelectedText: 'All selected',
                                buttonWidth: "100%"
                            })
                         );
+
+                        $("#id_articlesets")
+                                .multiselect("deselectAll")
+                                .multiselect("select", {{ articleset_ids_json }})
+                                .multiselect("disable");
                     </script>
                 </div>
                 <br/>

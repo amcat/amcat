@@ -196,7 +196,7 @@ $((function(){
 
     var USER = $("#query-form").data("user");
     var PROJECT = query_screen.data("project");
-    var SETS = query_screen.data("sets");
+    var SETS = $("#query-form").data("sets");
 
     var DEFAULT_SCRIPT = "summary";
     var SAVED_QUERY_API_URL = "/api/v4/projects/{project_id}/querys/{query_id}";
@@ -1290,7 +1290,7 @@ $((function(){
             });
 
             history.replaceState({}, document.title, "?sets={sets}#{hash}".format({
-                sets: $("#query-form").data("sets").join(","),
+                sets: SETS.join(","),
                 hash: window.location.hash.slice(1)
             }));
         }).fail(fail);
@@ -1312,6 +1312,40 @@ $((function(){
         save_query.bind(args)(event);
     }
 
+    function change_articlesets_clicked(event){
+        event.preventDefault();
+        $("#change-articlesets-query-dialog").modal();
+    }
+
+    function change_articlesets_confirmed_clicked(event){
+        var options = $('#change-articlesets-select option:selected');
+
+        SETS = $.map(options, function(option){
+            return parseInt($(option).val());
+        });
+
+        var url = get_window_url(SETS, window.location.hash.slice(1));
+        history.replaceState({}, document.title, url);
+
+        $("#id_articlesets")
+            .multiselect('deselectAll', false)
+            .multiselect('select', SETS)
+            .multiselect('rebuild')
+            .multiselect('disable');
+
+        $("#change-articlesets-query-dialog").modal("hide");
+        $("#script_{script}".format({
+            script: window.location.hash.slice(1)
+        })).click();
+    }
+
+    function get_window_url(sets, hash){
+        return "?sets={sets}#{hash}".format({
+            sets: sets.join(","),
+            hash: hash
+        });
+    }
+
     $(function(){
         $("#codebooks").change(codebook_changed);
         $("#delete-query").click(delete_query);
@@ -1321,6 +1355,8 @@ $((function(){
         $("#scripts .script").click(script_changed);
         $("h4.name").click(save_query.bind({confirm: true, method: "patch"}));
         $("#save-query").click(save_query_clicked);
+        $("#change-articlesets").click(change_articlesets_clicked).click();
+        $("#change-articlesets-confirm").click(change_articlesets_confirmed_clicked);
 
         $("#load-query > button").click(function() {
             window.setTimeout(function () {
@@ -1328,13 +1364,11 @@ $((function(){
             });
         });
 
+
         $("#new-query").click(function(event){
             event.preventDefault();
 
-            var url = "?sets={sets}#{hash}".format({
-                sets: $("#query-form").data("sets").join(","),
-                hash: window.location.hash.slice(1)
-            });
+            var url = get_window_url(SETS, window.location.hash.slice(1));
 
             if (window.location.search + window.location.hash === url){
                 window.location.reload();
