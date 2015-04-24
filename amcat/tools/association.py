@@ -234,7 +234,7 @@ class Association(object):
         nodes = {query: get_node(queries, query) for query in queries}
 
         for _, p, of, given in associations:
-            if isinstance(p, basestring) or p <= threshold or of == given:
+            if isinstance(p, basestring) or p <= threshold or of == given or p == 0.0:
                 continue
 
             label = format(p) if include_labels else ""
