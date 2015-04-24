@@ -15,10 +15,10 @@
     "highcharts": "",
     "moment": "",
     "papaparse": "4.1.0",
-    "bootstrap-multiselect": ""
+    "bootstrap-multiselect": "git://github.com/davidstutz/bootstrap-multiselect.git#c8351a6f0ab37dacfcebe52001ec22ca6c6896a0"
   },
   "resolutions": {
-    "jquery": "~2.x",
-    "bootstrap": "3.1.1"
+    "jquery": ">= 1.9.1",
+    "bootstrap": ">= 2.3.2"
   }
 }
