@@ -45,7 +45,7 @@
 
 {% block content %}
   {% if not articlesets %}
-      {% include "project/query/articleset_error.html" %}
+      {% include "project/query/no_articlesets.html" %}
   {% else %}
       <form data-sets="{{ articleset_ids_json }}" data-user="{{ user_id }}" data-query="{{ query_id }}" id="query-form">
           {% csrf_token %}

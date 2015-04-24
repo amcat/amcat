@@ -17,12 +17,13 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import json
+from django.contrib.auth.models import User
 from django.db.models import Q, CharField
 from rest_framework import permissions, serializers
 from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.viewsets import ModelViewSet
 
-from amcat.models import Query, ROLE_PROJECT_WRITER
+from amcat.models import Query, ROLE_PROJECT_WRITER, Project
 from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewsets import ProjectViewSetMixin, ProjectPermission
@@ -32,8 +33,8 @@ __all__ = ("QuerySerializer", "QueryViewSet")
 
 
 class QuerySerializer(AmCATModelSerializer):
-    user = PrimaryKeyRelatedField(read_only=True)
-    project = PrimaryKeyRelatedField(read_only=True)
+    user = PrimaryKeyRelatedField(read_only=True, queryset=User.objects.none())
+    project = PrimaryKeyRelatedField(read_only=True, queryset=Project.objects.none())
 
     def to_native(self, obj):
         native = super(QuerySerializer, self).to_native(obj)
@@ -71,7 +72,7 @@ class QueryViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     model_key = "query"
     model_serializer_class = QuerySerializer
     model = QuerySerializer.Meta.model
-    search_fields = ordering_fields = ("id", "name")
+    search_fields = ordering_fields = ("id", "name", "user__username")
     http_method_names = ("get", "options", "post", "put", "patch", "delete")
     permission_classes = (QueryPermission, ProjectPermission)
     permission_map = {

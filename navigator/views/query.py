@@ -27,6 +27,8 @@ from django.views.generic.base import TemplateView
 
 from amcat.models import Query
 from amcat.tools import amcates
+from api.rest.datatable import Datatable
+from api.rest.viewsets import QueryViewSet, FavouriteArticleSetViewSet
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
 from amcat.scripts.forms import SelectionForm
 from navigator.views.project_views import ProjectDetailsView
@@ -71,6 +73,22 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
 
         return super(QueryView, self).get(request, *args, **kwargs)
 
+    def get_saved_queries_table(self):
+        table = Datatable(QueryViewSet, url_kwargs={"project": self.project.id}, rowlink="?query={id}")
+        table = table.hide("last_saved", "parameters", "private", "project")
+        return table
+
+    def get_articlesets_table(self):
+        table = Datatable(
+            FavouriteArticleSetViewSet,
+            url_kwargs={"project": self.project.id},
+            rowlink="?query={id}",
+            checkboxes=True
+        )
+
+        table = table.hide("favourite", "featured", "project", "provenance")
+        return table
+
     def get_context_data(self, **kwargs):
         articleset_ids = set(map(int, filter(unicode.isdigit, self.request.GET.get("sets", "").split(","))))
         articlesets = self.project.all_articlesets().filter(id__in=articleset_ids)
@@ -81,6 +99,9 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         codebooks = self.project.get_codebooks().order_by("name").only("id", "name")
 
         all_articlesets = self.project.all_articlesets().filter(codingjob_set__id__isnull=True).only("id", "name")
+
+        saved_queries_table = self.get_saved_queries_table()
+        articlesets_table = self.get_articlesets_table()
 
         form = SelectionForm(
             project=self.project,
@@ -100,3 +121,4 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
 
         form.fields["articlesets"].widget.attrs['disabled'] = 'disabled'
         return dict(super(QueryView, self).get_context_data(), **locals())
+
