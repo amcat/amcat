@@ -74,7 +74,11 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         return super(QueryView, self).get(request, *args, **kwargs)
 
     def get_saved_queries_table(self):
-        table = Datatable(QueryViewSet, url_kwargs={"project": self.project.id}, rowlink="?query={id}")
+        table = Datatable(
+            QueryViewSet,
+            url_kwargs={"project": self.project.id},
+            rowlink="?query={id}"
+        )
         table = table.hide("last_saved", "parameters", "private", "project")
         return table
 
@@ -82,7 +86,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         table = Datatable(
             FavouriteArticleSetViewSet,
             url_kwargs={"project": self.project.id},
-            rowlink="?query={id}",
+            rowlink="?sets={id}",
             checkboxes=True
         )
 
