@@ -47,6 +47,14 @@ class ArticleSerializer(AmCATModelSerializer):
         self.medium_names = {m.id: m.name for m in media}
         self.medium_ids = {m.name: m.id for m in media}
 
+
+    def get_field(self, model_field):
+        f = super(ArticleSerializer, self).get_field(model_field)
+        if model_field.name == "uuid":
+            f.read_only = False
+            # set uuid to read_only False to allow inserting uuids
+        return f
+        
     def restore_fields(self, data, files):
         # convert media from name to id, if needed
         data = data.copy() # make data mutable
@@ -186,6 +194,7 @@ class TestArticleViewSet(ApiTestCase):
             'text': 'Hello Universe',
             'pagenr': 1,
             'url': 'http://example.org',
+            'uuid': 'c691fadf-3c45-4ed6-93fe-f035b5f500af',
         }
         url = "/api/v4/projects/{p.id}/articlesets/{s.id}/articles/".format(**locals())
         self.post(url, a, as_user=self.user)
@@ -196,6 +205,7 @@ class TestArticleViewSet(ApiTestCase):
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]["headline"], a['headline'])
         self.assertEqual(toolkit.readDate(res[0]["date"]), toolkit.readDate(a['date']))
+        self.assertEqual(res[0]["uuid"], a['uuid'])
 
     @amcattest.use_elastic
     def test_children(self):
