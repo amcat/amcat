@@ -63,14 +63,14 @@ sudo dpkg -i elasticsearch-1.4.4.deb
 
 # Install plugins
 cd /usr/share/elasticsearch
-sudo bin/plugin -install elasticsearch/elasticsearch-lang-python/2.4.1
+# sudo bin/plugin -install elasticsearch/elasticsearch-lang-python/2.4.1 (no longer needed for master)
 sudo bin/plugin -install elasticsearch/elasticsearch-analysis-icu/2.4.2
 sudo bin/plugin -install mobz/elasticsearch-head
 sudo wget http://hmbastiaan.nl/martijn/amcat/hitcount.jar
 
-# Allow dynamic scripting
-cd /etc/elasticsearch
-echo -e "\nscript.disable_dynamic: false" | sudo tee -a elasticsearch.yml
+# Allow dynamic scripting (no longer needed for master)
+# cd /etc/elasticsearch
+# echo -e "\nscript.disable_dynamic: false" | sudo tee -a elasticsearch.yml
 
 # Make sure elasticsearch detects hitcount.jar
 sudo editor /etc/init.d/elasticsearch
@@ -85,6 +85,7 @@ export ES_CLASSPATH
 # Save file and close editor
 # Restart elasticsearch
 sudo service elasticsearch restart
+cd
 ```
 
 ### Installing AmCAT (pip install from git)
@@ -114,7 +115,14 @@ export PYTHONPATH=$PYTHONPATH:$HOME/amcat
 
 ### Collecting static files
 
-AmCAT uses [bower](http://bower.io/) to install javascript/CSS libraries. On Ubuntu, you need to install a recent version of `nodejs` first, and then install bower by using `npm`:
+AmCAT uses [bower](http://bower.io/) to install javascript/CSS libraries. On Ubuntu, you need to install the legacy version of `nodejs` first, and then install bower by using `npm`:
+
+```sh
+sudo apt-get install nodejs-legacy npm
+sudo npm install -g bower
+```
+
+On older ubuntu versions, if the above does not work, try installing nodejs via Chris Lea's ppa:
 
 ```sh
 sudo add-apt-repository ppa:chris-lea/node.js
