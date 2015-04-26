@@ -107,10 +107,13 @@ git clone https://github.com/amcat/amcat.git
 pip install -r amcat/requirements.txt
 ```
 
-If you install amcat via cloning, be sure to add the new directory to the pythonpath, e.g.:
+If you install amcat via cloning, be sure to add the new directory to the pythonpath. 
+Also, add AMCAT_ES_LEGACY hash to the environment.
+If you add these lines to amcat-env/bin/activate they will be automatically set when you activate.
 
 ```sh
 export PYTHONPATH=$PYTHONPATH:$HOME/amcat
+export AMCAT_ES_LEGACY_HASH=N
 ```
 
 ### Collecting static files
