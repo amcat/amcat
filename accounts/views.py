@@ -15,7 +15,7 @@ from amcat.models.authorisation import Role
 from amcat.models import AmCAT
 
 import logging
-log = logging.getLogger("statistics" + __name__)
+usage_log = logging.getLogger("amcat.statistics." + __name__)
 
 def _login(request, error, username, announcement):
     """
@@ -63,16 +63,20 @@ def login(request):
         # Credentials OK, log user in
         auth_login(request, user)
         signals.user_logged_in.send(sender=user.__class__, request=request, user=user)
-        log.info(json.dumps({"action": "login", "user": username}))
+        usage_log.info("Login: {username}".format(**locals()),
+                       extra={"type": "account", "action": "login", "user": username})
         return _redirect_login(request)
 
     # GET request, send empty form
     return _login(request, False, None, announcement)
 
 def logout(request):
+    username = request.user.username
     auth_logout(request)
     signals.user_logged_out.send(sender=request.user.__class__, request=request, user=request.user)
-    log.info(json.dumps({"action": "logout", "user": request.user.username}))
+    usage_log.info("log out: {username}".format(**locals()),
+                   extra={"type": "account", "action": "logout", "user": username})
+    
     return redirect(login)
 
 def register(request):
@@ -97,8 +101,10 @@ def register(request):
         )
 
         form = AddUserForm(request)
-        log.info(json.dumps({"action": "register", "user": user.username}))
-
+        usage_log.info("account created: {username}".format(**locals()),
+                   extra={"type": "account", "action": "register", "user": username})
+    
+        
     return render(request, "accounts/register.html", locals())
 
 def recover(request):
