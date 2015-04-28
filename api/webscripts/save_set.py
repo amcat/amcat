@@ -26,7 +26,6 @@ from amcat.tools import keywordsearch
 import logging
 import json
 
-log = logging.getLogger(__name__)
 
 class SaveAsSetWebScriptForm(SaveAsSetForm):
     output = forms.CharField(widget=forms.HiddenInput(), initial='json-html')
@@ -52,6 +51,8 @@ class SaveAsSet(WebScript):
         result.provenance = json.dumps(dict(self.data))
         result.save()
 
+        self.log_usage("articles", "save_set", target=result.id, n=len(article_ids))
+        
         return self.outputResponse(result, object)
         
     

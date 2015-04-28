@@ -28,8 +28,7 @@ from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin,
 from navigator.views.scriptview import ScriptView
 from amcat.scripts.actions.add_project import AddProject
 
-import logging
-log = logging.getLogger("statistics:" + __name__)
+from amcat.tools.usage import log_usage
 
 class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
     model = Project
@@ -133,9 +132,5 @@ class ProjectAddView(BreadCrumbMixin, ScriptView):
             return super(ProjectAddView, self).get_form(form_class)
 
     def get_success_url(self):
-        log.info(json.dumps({
-            "action": "project_added", "project_id": self.result.id,
-            "name": self.result.name, "description": self.result.description,
-            "insert_user": self.result.insert_user.username
-        }))
+        log_usage(self.request, "project", "create", self.result)
         return reverse('article set-list', args=[self.result.id])

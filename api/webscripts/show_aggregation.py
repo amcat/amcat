@@ -57,6 +57,9 @@ class ShowAggregation(WebScript):
         selection = SelectionForm(project=self.project, data=self.data)
         selection.full_clean()
         aggrTable = AggregationScript(project=self.project, options=self.data, monitor=self.progress_monitor).run()
+
+        self.log_usage("query", "aggregation", sets=[i.id for i in self.options["articlesets"]], xaxis=self.options['xAxis'], yaxis=self.options['yAxis'])
+        
         if self.output == 'json-html' or (self.output == 'html' and self.options['graphOnly'] == True):
 
             columns = sorted(aggrTable.getColumns(), key=lambda x:x.id if hasattr(x,'id') else x)

@@ -135,6 +135,7 @@ class AssignCodingJob(WebScript):
                                      insertuser=insertuser)
         html = "<div>Saved as <a href='%s'>coding job %s</a>.</div>"
 
+        self.log_usage("coding", "create_job", target=c.id, n=len(articles))
 
         return HttpResponse(json.dumps({
             "html" : html % (reverse("coding job-details", args=[self.project.id, c.id]), c.id),

@@ -89,6 +89,7 @@ class ScriptHandler(TaskHandler):
         script = self.get_script()
         script.progress_monitor = ProgressMonitor()
         script.progress_monitor.add_listener(CeleryProgressUpdater(self.task.uuid).update)
+        script.task = self.task
         result = script.run()
         if isinstance(result, models.Model):
             result = result.pk

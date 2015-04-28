@@ -28,7 +28,6 @@ from amcat.models import Project
 from amcat.tools import keywordsearch
 from amcat.scripts.forms import SelectionForm
 
-stats_log = logging.getLogger("statistics:" + __name__)
 log = logging.getLogger(__name__)
 
 FORM_FIELDS_TO_ELASTIC = {'article_id': "id", "medium_name": "medium", "medium_id": "mediumid",
@@ -74,10 +73,8 @@ class ShowArticleList(WebScript):
             t = t.add_arguments(col=col)
         html = unicode(t)
 
-        stats_log.info(json.dumps({
-            "actions": "query:articlelist", "user": self.user.username,
-            "project_id": self.project.id, "project__name": self.project.name
-        }))
+        
+        self.log_usage("query", "articlelist", sets=[int(i) for i in formData["articlesets"]], columns=list(cols))
 
         if self.output == "html":
             response = HttpResponse(mimetype='text/html')

@@ -88,7 +88,7 @@ if os.environ.get('AMCAT_USE_LOGSTASH', 'N').upper() in ("1", "Y", "ON"):
         'version': 1, 
         'message_type': 'logstash',
     }
-    LOGGING['loggers']['amcat.statistics'] = {
+    LOGGING['loggers']['amcat.usage'] = {
         'handlers': ['logstash'],
         'level': 'INFO',
     }
@@ -105,4 +105,6 @@ if 'DJANGO_LOG_FILE' in os.environ:
         'formatter': 'color',
     }
     LOGGING['loggers']['amcat']['handlers'] += ['logfile']
+    LOGGING['loggers']['django']['handlers'] += ['logfile']
+
 

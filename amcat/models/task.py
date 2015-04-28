@@ -23,6 +23,9 @@ by a Script object.
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
+
+import datetime
+
 from django.contrib.auth.models import User
 from celery.result import AsyncResult
 
@@ -33,6 +36,7 @@ from amcat.tools.caching import cached
 from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
 from amcat.forms.fields import JSONField
 from amcat.amcatcelery import app
+from amcat.tools.usage import log_usage
 
 
 IN_PROGRESS = "INPROGRESS"
@@ -106,6 +110,19 @@ class Task(AmcatModel):
     def ready(self):
         return self.get_async_result().ready()
 
+
+    def log_usage(self, type, action, **extra):
+        duration = datetime.datetime.now() - self.issued_at
+        extra.update({
+            "class": self.class_name,
+            "task_handler": self.handler_class_name,
+            "task_issued": self.issued_at,
+            "task_duration": duration.total_seconds()
+        })
+        
+        log_usage(self.user.username, type, action, self.project, **extra)
+
+        
     class Meta:
         db_table = "tasks"
         app_label = "amcat"

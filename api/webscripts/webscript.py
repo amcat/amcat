@@ -34,6 +34,7 @@ from amcat.tools.progress import ProgressMonitor
 from amcat.tools import classtools
 from django.http import QueryDict
 from amcat.tools.djangotoolkit import to_querydict
+from amcat.tools.usage import log_usage
 
 import logging
 log = logging.getLogger(__name__)
@@ -185,6 +186,12 @@ class WebScript(object):
             return response
 
 
+    def log_usage(self, type, action, **extra):
+        extra.update({
+            "class": self.__class__.__name__,
+        })
+        log_usage(self.user.username, type, action, self.project, **extra)
+    
 def getQueries():
     return [(x.get('time') or x.get('duration'), x['sql']) for x in connection.queries]
 

@@ -4,11 +4,6 @@ from amcat.scripts.searchscripts.articlelist import ArticleListScript
 from amcat.scripts.forms import SelectionForm
 from amcat.tools import keywordsearch
 
-import logging
-
-stats_log = logging.getLogger("statistics:" + __name__)
-
-
 class ShowSummary(WebScript):
     name = "Summary"
     form_template = None
@@ -32,9 +27,6 @@ class ShowSummary(WebScript):
         self.output_template = 'api/webscripts/articlelist.html'
         self.progress_monitor.update(40, "Created summary")
 
-        stats_log.info(json.dumps({
-            "action": "query:summary", "user": self.user.username,
-            "project_id": self.project.id, "project_name": self.project.name
-        }))
-            
+        self.log_usage("query", "summary", n=n, sets=[int(i) for i in self.data.get("articlesets", [])])
+
         return self.outputResponse(dict(articlelist=articles, n=n, page=self.data.get('start')), ArticleListScript.output_type)
