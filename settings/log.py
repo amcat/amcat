@@ -104,5 +104,5 @@ if 'DJANGO_LOG_FILE' in os.environ:
         'backupCount': 2,
         'formatter': 'color',
     }
-    LOGGING['loggers']['']['handlers'] += ['logfile']
+    LOGGING['loggers']['amcat']['handlers'] += ['logfile']
 
