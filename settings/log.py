@@ -84,7 +84,7 @@ if os.environ.get('AMCAT_USE_LOGSTASH', 'N').upper() in ("1", "Y", "ON"):
         'level': 'INFO',
         'class': 'logstash.LogstashHandler',
         'host': 'localhost',
-        'port': 5000,
+        'port': 5959,
         'version': 1, 
         'message_type': 'logstash',
     }
