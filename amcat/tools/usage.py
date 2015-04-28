@@ -21,8 +21,7 @@ def log_usage(username, type, action, project=None, **extra):
 def log_request_usage(request, type, action, project=None, **extra):
     extra.update({
         "path": request.path,
-        "remote_host": request.META['REMOTE_HOST'],
-        "http_host": request.META['HTTP_HOST'],
+        "meta": request.META,
     })
     log_usage(request.user.username, type, action, project, **extra)
     
