@@ -9,7 +9,7 @@ def log_usage(username, type, action, project=None, **extra):
         
     extra.update({
         "username": username,
-        "type": type,
+        "domain": type,
         "action": action,
         "project": project,
     })
