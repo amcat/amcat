@@ -21,7 +21,7 @@ def log_usage(username, type, action, project=None, **extra):
 def log_request_usage(request, type, action, project=None, **extra):
     extra.update({
         "path": request.path,
-        "meta": request.META,
+        "meta": repr(request.META),
     })
     log_usage(request.user.username, type, action, project, **extra)
     
