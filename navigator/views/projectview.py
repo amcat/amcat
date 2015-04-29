@@ -28,6 +28,8 @@ from django.core.exceptions import PermissionDenied
 from amcat.models import authorisation, Project
 from navigator.views.scriptview import ScriptView
 
+from amcat.tools.usage import log_request_usage
+
 PROJECT_READ_WRITE = 12
 # = Role.objects.get(projectlevel=True, label="read/write").id
 
@@ -135,6 +137,17 @@ class HierarchicalViewMixin(object):
 
     def get_context_data(self, **kwargs):
         context = super(HierarchicalViewMixin, self).get_context_data(**kwargs)
+        try:
+            project = self.get_project()
+        except:
+            project = None
+        try:
+            obj = self.get_object()
+            obj = "{} {}: {}".format(obj.__class__.__name__, obj.id, str(obj))
+        except:
+            obj = None
+            
+        log_request_usage(self.request, "view", self.get_view_name(), project, object=obj)
         context["object"] = self.get_object
         return context
 

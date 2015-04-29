@@ -28,7 +28,7 @@ from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin,
 from navigator.views.scriptview import ScriptView
 from amcat.scripts.actions.add_project import AddProject
 
-from amcat.tools.usage import log_usage
+from amcat.tools.usage import log_request_usage
 
 class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
     model = Project
@@ -132,5 +132,5 @@ class ProjectAddView(BreadCrumbMixin, ScriptView):
             return super(ProjectAddView, self).get_form(form_class)
 
     def get_success_url(self):
-        log_usage(self.request, "project", "create", self.result)
+        log_request_usage(self.request, "project", "create", self.result)
         return reverse('article set-list', args=[self.result.id])
