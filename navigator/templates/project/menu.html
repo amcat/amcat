@@ -2,7 +2,6 @@
 
 <li {% is_active 'Articles' %}><a href="{% url 'article set-list' project.id %}">Articles</a></li>
 <li {% is_active 'Query' %}><a href="{% url 'query' project.id %}">Query</a></li>
-<li {% is_active 'Tasks' %}><a href="{% url 'task-list' project.id %}">Tasks</a></li>
 <li {% is_active 'Coding' classnames="dropdown" %}>
   <a href="#" class="dropdown-toggle" data-toggle="dropdown">Coding<b class="caret"></b></a>
   <ul class="dropdown-menu">
@@ -13,9 +12,10 @@
 </li>
 
 <li {% is_active 'Settings' classnames="dropdown" %}>
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown">Settings<b class="caret"></b></a>
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown">Advanced<b class="caret"></b></a>
   <ul class="dropdown-menu">
-    <li><a href="{% url 'user-list' project.id %}">Users</a></li>
     <li><a href="{% url 'project' project.id %}">Project details</a></li>
+    <li><a href="{% url 'user-list' project.id %}">Users</a></li>
+    <li><a href="{% url 'task-list' project.id %}">Tasks</a></li>
  </ul>
 </li>
