@@ -997,7 +997,10 @@ $((function(){
             data: {
                 name: name,
                 private: _private ? true : false,
-                parameters: JSON.stringify(data)
+                parameters: JSON.stringify(data),
+            },
+            headers: {
+                "X-CSRFTOKEN": $("[name=csrfmiddlewaretoken]").attr("value")
             }
         }).done(function(data){
             dialog.modal("hide");
@@ -1262,7 +1265,9 @@ $((function(){
             type: "DELETE",
             url: url,
             dataType: "json",
-            data: {},
+            headers: {
+                "X-CSRFTOKEN": $("[name=csrfmiddlewaretoken]").attr("value")
+            }
         }).done(function(data){
             $("#load-query-menu li[query={id}]".format(saved_query)).remove();
 
