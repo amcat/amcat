@@ -57,7 +57,7 @@ String.prototype.format = function(args){
     return this_string;
 };
 
-function serializeForm(form){
+function serializeForm(form, sets){
     var formData = $(form).serializeObject();
 
     $.map($("input[type=checkbox]", form), function(input){
@@ -65,11 +65,7 @@ function serializeForm(form){
         formData[inputName] = input.checked;
     });
 
-    var sets = formData["articlesets"];
-    if (typeof(sets) === "string" || typeof(sets) === "number"){
-        formData["articlesets"] = [sets];
-    }
-
+    formData["articlesets"] = sets;
     return formData;
 }
 
@@ -913,7 +909,7 @@ $((function(){
         progress_bar.css("width", 0);
         message_element.text(message_element.attr("placeholder"));
 
-        form_data = $("#query-form").serializeObject();
+        form_data = serializeForm($("#query-form"), SETS);
         $(".result .panel-body").html("<i>No results yet</i>");
 
         var script = scripts_container.find(".active")[0].id.replace("script_","")
@@ -921,7 +917,7 @@ $((function(){
         $.ajax({
             type: "POST", dataType: "json",
             url: get_api_url(script),
-            data: serializeForm($("#query-form")),
+            data: serializeForm($("#query-form"), SETS),
             headers: {
                 "X-Available-Renderers": get_accepted_mimetypes().join(",")
             },
@@ -991,7 +987,7 @@ $((function(){
             url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: ''})
         }
 
-        var data = serializeForm($("#query-form"));
+        var data = serializeForm($("#query-form"), SETS);
         data["script"] = window.location.hash.slice(1);
 
         $.ajax({
