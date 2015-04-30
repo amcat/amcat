@@ -41,14 +41,14 @@ class SaveAsSetForm(QueryActionForm):
     def __init__(self, *args, **kwargs):
         super(SaveAsSetForm, self).__init__(*args, **kwargs)
         rw_role = Role.objects.get(id=ROLE_PROJECT_WRITER)
-        self.fields["project"].queryset = self.user.userprofile.get_projects(rw_role)
+        self.fields["project"].queryset = self.user.userprofile.get_projects(rw_role).distinct("id")
         self.fields["project"].initial = self.project
 
     def clean_name(self):
         new_name = self.cleaned_data["name"]
         project = self.cleaned_data["project"]
 
-        all_articlesets = project.articlesets_set.all()
+        all_articlesets = project.articlesets_set.all().distinct("id")
         if all_articlesets.filter(name__iexact=new_name).exists():
             error_msg = "An articleset called {0!r} already exists in project {1.name!r}."
             raise ValidationError(error_msg.format(new_name, project))
