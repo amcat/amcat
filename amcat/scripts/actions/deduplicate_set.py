@@ -26,7 +26,6 @@ from amcat.scripts.script import Script
 from amcat.models import ArticleSet
 from hashlib import sha224 as hash_class
 from django import forms
-from elasticsearch.helpers import scan
 from amcat.tools import amcates
 import json
 import collections
@@ -98,8 +97,8 @@ class DeduplicateSet(Script):
         if fields == FIELDS:
             fields = ["hash"]
         setid = self.options['articleset'].id
-        for x in scan(amcates.ES().es, query={"query" : {"constant_score" : {"filter": {"term": {"sets": setid}}}}},
-                    fields=fields):
+        for x in amcates.ES().scan(query={"query" : {"constant_score" : {"filter": {"term": {"sets": setid}}}}},
+                                   fields=fields):
             if fields == ["hash"]:
                 hash = x['fields']['hash'][0]
             else:

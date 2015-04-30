@@ -33,9 +33,13 @@ from amcat.tools import queryparser, toolkit
 from amcat.tools.toolkit import multidict, splitlist
 from elasticsearch import Elasticsearch, connection
 from elasticsearch.client import indices, cluster
+from elasticsearch.helpers import scan
+
 from django.conf import settings
 from amcat.tools.caching import cached
 from amcat.tools.progress import NullMonitor
+
+
 
 def _clean(s):
     if s: return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', s)
@@ -254,6 +258,13 @@ class ES(object):
         kargs.update(options)
         return self.es.search(body=body, **kargs)
 
+    def scan(self, query, **kargs):
+        """
+        Perform a scan query on the es index
+        See: http://elasticsearch-py.readthedocs.org/en/latest/helpers.html#elasticsearch.helpers.scan
+        """
+        return scan(self.es, index=self.index, doc_type=self.doc_type, query=query, **kargs)
+        
 
     def query_ids(self, query=None, filters={}, **kwargs):
         """
