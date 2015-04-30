@@ -56,7 +56,7 @@ class ClusterMapAction(QueryAction):
     form_class = ClusterMapForm
     task_handler = ClusterMapHandler
     output_types = (
-        ("application/json+clustermap", "Aduna"),
+        ("application/json+clustermap", "Diagram"),
         ("application/json+clustermap+table", "Table"),
         ("text/csv", "CSV"),
         ("text/csv", "CSV (Excel)"),
