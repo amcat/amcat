@@ -49,15 +49,15 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
         return url
 
     def json(self, url, data=None, method="get"):
-        method = getattr(self.client, method)
+        method_func = getattr(self.client, method)
         url += "?format=json"
 
         if data is not None:
             data = json.dumps(data)
             content_type = "application/json"
-            result = method(url, content_type=content_type, data=data)
+            result = method_func(url, content_type=content_type, data=data)
         else:
-            result = method(url)
+            result = method_func(url)
 
         status_code, results = result.status_code, result.content
 

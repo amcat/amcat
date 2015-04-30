@@ -360,7 +360,11 @@ class TestCodebook(amcattest.AmCATTestCase):
         self.assertEqual({u'c': u'b', u'e': u'd', u'f': u'd'}, D.get_aggregation_mapping(language))
 
     def test_get_language_ids(self):
-        l1 = Language.objects.create(label="blaat")
+        try:
+            l1 = Language.objects.all()[0]
+        except KeyError:
+            l1 = Language.objects.create(label="blaat")
+
         al, bl, cl = [Language.objects.create(label=l) for l in "abc"]
         ac, bc, cc = [amcattest.create_test_code(label=l) for l in "abc"]
 
