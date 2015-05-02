@@ -17,6 +17,9 @@ before_install:
  - export DJANGO_SETTINGS_MODULE=settings
  - export AMCAT_ES_LEGACY_HASH=0
  - export PYTHONPATH=
+ - "export DISPLAY=:99.0"
+ - "sh -e /etc/init.d/xvfb start"
+ - sleep 2 # Give framebuffer some time to start
 
 install:
  - sudo apt-get update
