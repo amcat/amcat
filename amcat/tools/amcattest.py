@@ -33,11 +33,14 @@ import os
 from contextlib import contextmanager
 from functools import wraps
 import datetime
+from urlparse import urljoin
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test.runner import DiscoverRunner
 
-from django.test import TestCase
+from django.test import TestCase, LiveServerTestCase
 import unittest
 import logging;
+from splinter import Browser
 from amcat.tools.toolkit import read_date
 
 log = logging.getLogger(__name__)
@@ -295,6 +298,33 @@ class AmCATTestCase(TestCase):
         if settings.ES_INDEX.endswith("__unittest"):
             settings.ES_INDEX = settings.ES_INDEX[:len("__unittest")]
         super(AmCATTestCase, cls).tearDownClass()
+
+class AmCATLiveServerTestCase(StaticLiveServerTestCase):
+    def get_url(self, relative_url):
+        return urljoin(self.live_server_url, relative_url)
+
+    def logout(self):
+        self.browser.visit(self.get_url("/accounts/logout/"))
+
+    def login(self, username, password):
+        self.logout()
+        self.browser.visit(self.get_url("/accounts/login/"))
+        self.browser.fill_form({"username": username, "password": password})
+        self.browser.find_by_css("[type=submit]")[0].click()
+
+    @classmethod
+    def setUpClass(cls):
+        super(AmCATLiveServerTestCase, cls).setUpClass()
+        cls.browser = Browser()
+
+    def setUp(self):
+        self.browser.visit(self.live_server_url)
+        super(AmCATLiveServerTestCase, self).setUp()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.browser.quit()
+        super(AmCATLiveServerTestCase, cls).tearDownClass()
 
 def require_postgres(func):
     def run_or_skip(self, *args, **kargs):
