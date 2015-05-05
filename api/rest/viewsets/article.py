@@ -78,8 +78,12 @@ class ArticleSerializer(AmCATModelSerializer):
 
         return super(ArticleSerializer, self).restore_fields(data, files)
 
+
+    def get_validation_exclusions(self, instance=None):
+        result = super(ArticleSerializer, self).get_validation_exclusions(instance)
+        return result + ['uuid']
+        
     def from_native(self, data, files):
-        log.warn(">>> from_native")
         if "id" in data:
             # add existing ID rather than new
             id = int(data['id'])
@@ -90,7 +94,7 @@ class ArticleSerializer(AmCATModelSerializer):
                 raise APIException("Requested article id {id} does not exist"
                                    .format(**locals()))
         result = super(ArticleSerializer, self).from_native(data, files)
-
+        
         # deserialize children (if needed)
         children = data.get('children')# TODO: children can be a multi-value GET param as well, e.g. handle getlist
 
@@ -105,11 +109,9 @@ class ArticleSerializer(AmCATModelSerializer):
                 return child
             return [result] + [get_child(child) for child in children]
 
-        log.warn("<<< from_native")
         return result
 
     def save(self, **kwargs):
-        log.warn(">>> save")
         def _flatten(l):
             """Turn either an object or a (recursive/irregular/jagged) list-of-lists into a flat list"""
             # inspired by http://stackoverflow.com/questions/2158395/flatten-an-irregular-list-of-lists-in-python
@@ -131,7 +133,6 @@ class ArticleSerializer(AmCATModelSerializer):
         return self.object
 
     def to_native(self, data):
-        log.warn(">>> to_native")
         result = super(ArticleSerializer, self).to_native(data)
         mid = result['medium']
         result['mediumid'] = mid
