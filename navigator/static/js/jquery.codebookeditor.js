@@ -777,14 +777,19 @@ Array.prototype.remove=function(s){
                     callback_func = self.labels_updated;
                 }
 
-                $.post(
-                    window.location.href + "save-labels/",
-                    callback_data, callback_func.bind({
+
+                $.ajax({
+		    headers: {"X-CSRFTOKEN": csrf_middleware_token},
+                    type: "POST",
+                    url: window.location.href + "save-labels/",
+                    data: callback_data,
+		    dataType: 'json'
+                }).done(callback_func.bind({
                         "labels": labels,
                         "code": this.code,
                         "parent": this.parent
-                    }), "json"
-                );
+                }));
+            
             };
 
             self.labels_updated = function () {
@@ -819,7 +824,6 @@ Array.prototype.remove=function(s){
                  * needed
                  */
                 $("#loading_modal").modal("hide").remove();
-
                 // Init new code
                 new_code.children = [];
                 new_code.hidden = false;
@@ -1124,21 +1128,26 @@ Array.prototype.remove=function(s){
                 $(".modal-footer", loading_modal).remove();
                 $(".modal-body", loading_modal).html("Saving changesets..");
 
-                $.post(
-                    window.location.pathname + 'save-changesets/', {
+
+
+                $.ajax({
+		    headers: {"X-CSRFTOKEN": csrf_middleware_token},
+                    type: "POST",
+                    url: window.location.href + "save-changesets/",
+                    data: {
                         "moves": JSON.stringify(moves),
                         "hides": JSON.stringify(hides),
                         "reorders": JSON.stringify(reorders)
-                    }, (function () {
+                    }
+                }).done((function () {
                         $("#loading_modal").modal("hide").remove();
                         self.changesets.moves = {};
                         self.changesets.hides = {};
                         self.changesets.reorders = {};
 
                         if (typeof(this) === "function") this();
-                    }).bind(this)
-                );
-
+                }).bind(this));
+		
             };
 
             self.btn_save_changes.click(self.btn_save_changes_clicked);

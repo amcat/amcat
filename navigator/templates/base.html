@@ -52,6 +52,10 @@
         <script type="text/javascript" src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
         <script type="text/javascript" src="{% static 'js/amcat.js' %}"></script>
         <script type="text/javascript" src="{% static 'js/amcat.datatables.js' %}"></script>
+
+	<script type="text/javascript">
+var csrf_middleware_token = "{{ csrf_token }}";
+	</script>
     {% endcompress %}
     {% block javascript %}{% endblock %}
 
