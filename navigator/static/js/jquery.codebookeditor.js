@@ -448,11 +448,18 @@ Array.prototype.remove=function(s){
                     action_icon.attr("src", self.NOACTION_ICON);
                 }
 
+		var label_span = $("<span>");
+		var label_text = $("<span>").addClass("lbl").append(document.createTextNode(object.label));
+		var label_input = $("<input>").val(object.label).css("display", "none");
+		d = {code: object, span: label_text, input: label_input};
+		label_text.attr("title", "Click to rename").click(self.rename_clicked.bind(d));
+		label_span.append(label_text).append(label_input)
+		
                 // Add action icon and label
                 code_el.append(
                     $("<span>").addClass("parts")
                         .append(action_icon)
-                        .append($("<span>").addClass("lbl").append(document.createTextNode(object.label)))
+                        .append(label_span)
                         .append(options_el)
                         .mouseenter(self.options_mouse_enter)
                         .mouseleave(self.options_mouse_leave)
@@ -477,7 +484,7 @@ Array.prototype.remove=function(s){
             };
 
             self.update_label = function (code) {
-                $("> .parts > .lbl", code.dom_element).html(code.label);
+                $("> .parts .lbl", code.dom_element).html(code.label);
             };
 
             self.collapse = function (code, animation) {
@@ -556,6 +563,34 @@ Array.prototype.remove=function(s){
 
 
             /* EVENTS */
+
+	    self.rename_clicked = function (event) {
+		if (self.moving) return;
+		
+		this.span.css("display", "none");		
+		this.input.css("display", "inline").val(this.code.label).select();
+		hide_input = function() {
+		    this.span.css("display", "inline");		
+		    this.input.css("display", "none");
+		}.bind(this);
+		save_results = function() {
+		    this.code.label = this.input.val();
+                    $.ajax({
+			headers: {"X-CSRFTOKEN": csrf_middleware_token},
+			type: "POST",
+			url: window.location.href + "save-labels/",
+			data: {"label": this.code.label, "code": this.code.code_id},
+			dataType: 'json'
+                    }).done(self.labels_updated.bind({"code": this.code}));
+		    hide_input()
+		}.bind(this);
+		this.input.keypress(function(e) {
+		    if (e.keyCode == 13) save_results();
+		    if (e.keyCode == 27) hide_input();
+		});
+		this.input.blur(save_results);
+	    };
+	    
             self.collapse_clicked = function (event) {
                 /*
                  * Collapse icon clicked. Replace icon and collapse tree
