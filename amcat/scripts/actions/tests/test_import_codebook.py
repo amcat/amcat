@@ -1,5 +1,34 @@
-from amcat.scripts.actions.import_codebook import _csv_bytes, _run_test
+import csv
+from cStringIO import StringIO
+
 from amcat.tools import amcattest
+from amcat.scripts.actions.import_codebook import ImportCodebook
+
+def _run_test(bytes, **options):
+    if 'project' not in options: options['project'] = amcattest.create_test_project().id
+    if 'codebook_name' not in options: options['codebook_name'] = 'test'
+    if 'default_language' not in options: options['default_language'] = 1
+    from tempfile import NamedTemporaryFile
+    from django.core.files import File
+
+    with NamedTemporaryFile(suffix=".txt") as f:
+        f.write(bytes)
+        f.flush()
+
+        return ImportCodebook(dict(file=File(open(f.name)), **options)).run()
+
+
+def _csv_bytes(rows, encoding="utf-8", **kargs):
+    def encode(x):
+        if x is None or isinstance(x, str): return x
+        return unicode(x).encode(encoding)
+
+
+    out = StringIO()
+    w = csv.writer(out, **kargs)
+    for row in rows:
+        w.writerow(map(encode, row))
+    return out.getvalue()
 
 
 class TestImportCodebook(amcattest.AmCATTestCase):
@@ -18,9 +47,9 @@ class TestImportCodebook(amcattest.AmCATTestCase):
 
     def test_unicode(self):
         from amcat.scripts.article_upload.fileupload import ENCODINGS
-
-        c = [("c1",),
-             (u"code_\xe9",)]
+        test1, test2 = u'code_\xe9', u'c\xd8de'
+        c = [("c1","label - test"),
+             (test1, test2)]
         for encoding in ('UTF-8', 'Latin-1'):
             b = _csv_bytes(c, encoding=encoding)
             cb = _run_test(b, encoding=ENCODINGS.index(encoding))
@@ -28,8 +57,10 @@ class TestImportCodebook(amcattest.AmCATTestCase):
             self.assertEqual(len(h), 1)
             code, parent = h[0]
             self.assertEqual(parent, None)
+            self.assertEqual(code.label, test1)
             label, = code.labels.all()
-            self.assertEqual(label.label, u"code_\xe9")
+            self.assertEqual(label.label, test2)
+            self.assertEqual(label.language.label, "test")
 
     def test_uuid(self):
         c = [("Code-1", "uuid"),
