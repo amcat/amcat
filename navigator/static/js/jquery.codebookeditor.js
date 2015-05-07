@@ -42,7 +42,6 @@ Array.prototype.remove=function(s){
 
             /* EDITOR STATE VARIABLES */
             self.read_only = $(this).attr("editable") !== "true";
-            self.current_label_lang = null;
             self.codebook = null;
             self.languages = null;
             self.moving = false; // Indicates wether the user is moving a code
@@ -652,25 +651,10 @@ Array.prototype.remove=function(s){
                 // Create table
                 var table = self._create_label_table(labels);
                 $("#labels .modal-body").contents().remove();
+                $("#labels .modal-body").append($("<p>")).append("Label:")
+		$("#labels .modal-body").append($("<input id='code_label'>").val(this.label));
                 $("#labels .modal-body").append(table);
 
-                var current_label = this;
-
-                // Because the codebookhierarchy does not return corresponding
-                // languages with each label, we have to guess which language
-                // the current label has.
-                self.current_label_lang = null;
-                $.each(labels, function (i, label) {
-                    if (current_label.label == label.label) {
-                        self.current_label_lang = label.language;
-                    }
-                });
-
-                // if (self.current_label_lang === null):
-                //
-                // No label in db corresponds with label given by API. This means
-                // that somebody changed the label within the timespan of this
-                // codebookeditor instance or this is a newly created child.
             };
 
             self.add_label_row_clicked = function (event) {
@@ -704,18 +688,16 @@ Array.prototype.remove=function(s){
                 return labels;
             };
 
-            self._validate_label_data = function (labels) {
+            self._validate_label_data = function (label, labels) {
                 /*
                  * Validate entered data before sending it to the server.
                  *
                  * @return: error message if errors or null if successful
                  */
 
-                // Validate rowcount. Ugly alerts below, but should suffice for now..
-                if (labels.length == 0) {
-                    // No labels!
-                    return ("You should at least enter one label!");
-                }
+		if (label.length == 0) {
+		    return ("Code label is empty");
+		}
                 // Prevent empty labels
                 for (var i = 0; i < labels.length; i++) {
                     if (labels[i].label.length == 0) {
@@ -743,8 +725,9 @@ Array.prototype.remove=function(s){
                  * containing at least the boolean property "new_code". Depending on this
                  * value, it futher contains either "code" or "parent".
                  */
+		var label = $("#code_label").val();
                 var labels = self._get_label_data($("#labels tbody tr"));
-                var error = self._validate_label_data(labels);
+                var error = self._validate_label_data(label, labels);
 
                 if (error !== null) {
                     alert(error);
@@ -760,62 +743,30 @@ Array.prototype.remove=function(s){
                 $(".modal-footer", loading_modal).remove();
                 $(".modal-body", loading_modal).html("Saving labels..");
 
+		this.code.label = label;
+		
                 $(loading_modal).modal({
                     keyboard: false,
                     backdrop: "static"
                 });
-
-                var callback_data = { "labels": JSON.stringify(labels) };
-                var callback_func = null;
-
-                if (this.new_code == true) {
-                    callback_data.parent = JSON.stringify(this.parent.code_id);
-                    callback_data.ordernr = this.parent.children.length;
-                    callback_func = self.new_code_created;
-                } else {
-                    callback_data.code = this.code.code_id;
-                    callback_func = self.labels_updated;
-                }
-
-
                 $.ajax({
 		    headers: {"X-CSRFTOKEN": csrf_middleware_token},
                     type: "POST",
                     url: window.location.href + "save-labels/",
-                    data: callback_data,
+                    data: {
+			"label": label,
+			"labels": JSON.stringify(labels),
+			"code": this.code.code_id},
 		    dataType: 'json'
-                }).done(callback_func.bind({
-                        "labels": labels,
-                        "code": this.code,
-                        "parent": this.parent
-                }));
-            
+                }).done(self.labels_updated.bind({"code": this.code}));
             };
 
-            self.labels_updated = function () {
-                /*
-                 * Called when labels are saved to server.
-                 */
-                $("#loading_modal").modal("hide").remove();
-
-                var _found = false;
-                for (var i = 0; i < this.labels.length; i++) {
-                    if (this.labels[i].language == self.current_label_lang) {
-                        this.code.label = this.labels[i].label;
-                        _found = true;
-                        break;
-                    }
-                }
-
-                // Previous language removed?
-                if (!_found) {
-                    this.code.label = this.labels[0].label;
-                }
-
-                // Reset value
-                self.current_label_lang = null;
-                self.update_label(this.code);
+	    self.labels_updated = function () {
+		$("#loading_modal").modal("hide").remove();
+		self.update_label(this.code);
             };
+
+		
 
             self.new_code_created = function (new_code) {
                 /*
@@ -828,7 +779,7 @@ Array.prototype.remove=function(s){
                 new_code.children = [];
                 new_code.hidden = false;
                 new_code.parent = this.parent;
-                new_code.label = this.labels[0].label;
+                new_code.label = this.label
                 new_code.ordernr = this.parent.children.length;
                 self._set_is_hidden_functions(new_code);
                 this.parent.children.push(new_code);
@@ -938,17 +889,24 @@ Array.prototype.remove=function(s){
                 self.moving = false;
             };
 
-            self.create_child_clicked = function () {
-                var modal = self._create_modal_window("labels", "Labels new code").modal("show");
+            self.create_child_clicked= function () {
 
-                $(".btn-primary", modal).click(self.save_label_changes_clicked.bind({
-                    new_code: true, parent: this
+		// WVA
+		var label = "[new code]";
+                $.ajax({
+		    headers: {"X-CSRFTOKEN": csrf_middleware_token},
+                    type: "POST",
+                    url: window.location.href + "new-code/",
+		    dataType: 'json',
+		    data: {
+			"label": label,
+			"parent": JSON.stringify(this.code_id),
+			"ordernr": this.children.length
+		    },
+                }).done(self.new_code_created.bind({
+                    "label": label,
+                    "parent": this
                 }));
-
-                // Create new labels table
-                self.labels_loaded({results: [
-                    {"language": 1, "label": "?"}
-                ]});
             };
 
             self.move_code_up_clicked = function () {

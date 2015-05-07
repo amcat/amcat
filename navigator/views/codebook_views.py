@@ -267,7 +267,28 @@ class CodebookSaveChangesetsView(CodebookFormActionView):
         # Check for any cycles. 
         CodebookHierarchyResource.get_tree(Codebook.objects.get(id=codebook.id), include_labels=False)
 
+class CodebookAddCodeView(CodebookFormActionView):
+    """
+    View called by code-editor to create new code
+    """
+    
+    url_fragment = "new-code"
+    class form_class(forms.Form):
+        parent = JSONFormField(required=False)
+        label = forms.CharField()
+        ordernr = JSONFormField(required=False)
 
+    def action(self, codebook, form):
+        label = form.cleaned_data["label"]
+        parent = form.cleaned_data["parent"]
+        ordernr = form.cleaned_data["ordernr"]
+        
+        code = Code.objects.create(label=label)
+        CodebookCode.objects.create(parent_id=parent, code=code, ordernr=ordernr, codebook=codebook)
+        
+        content = json.dumps(dict(code_id=code.id))
+        return HttpResponse(content=content, status=201, content_type="application/json")
+        
 class CodebookSaveLabelsView(CodebookFormActionView):
     """
     View called by code-editor to store new labels. It requests
@@ -275,32 +296,23 @@ class CodebookSaveLabelsView(CodebookFormActionView):
 
      - labels: an (json-encoded) list with label-objects
      - code: an (json-encoded) code object to which the labels belong
-
-    If an extra value 'parent' is included, this view will create
-    a new code and adds the given labels to it.
     """
     url_fragment = "save-labels"
     class form_class(forms.Form):
+        label = forms.CharField()
         labels = JSONFormField()
         parent = JSONFormField(required=False)
         code = JSONFormField(required=False)
-        ordernr = JSONFormField(required=False)
 
     def action(self, codebook, form):
+        code = Code.objects.get(id=form.cleaned_data["code"])
+        label = form.cleaned_data["label"]
         labels = form.cleaned_data["labels"]
-        parent = form.cleaned_data["parent"]
-        code = form.cleaned_data["code"]
-        ordernr = form.cleaned_data["ordernr"]
 
-        if parent or not code:
-            # This is a new code, because either
-            code = Code.objects.create()
-            CodebookCode.objects.create(parent_id=parent, code=code, ordernr=ordernr, codebook=codebook)
-        elif ordernr is not None:
-             return HttpResponseBadRequest(content="ordernr != null on existing codes not supported.")
-        else:
-            code = Code.objects.get(id=code)
-
+        if label:
+            code.label = label
+            code.save()
+        
         # Get changed, deleted and new labels
         changed_labels_map = { int(lbl.get("id")) : lbl for lbl in labels if lbl.get("id") is not None}
         changed_labels = set(Label.objects.filter(id__in=changed_labels_map.keys()))
