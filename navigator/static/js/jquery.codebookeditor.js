@@ -484,7 +484,7 @@ Array.prototype.remove=function(s){
             };
 
             self.update_label = function (code) {
-                $("> .parts .lbl", code.dom_element).html(code.label);
+                $("> .parts .lbl", code.dom_element).html("").append(document.createTextNode(code.label));
             };
 
             self.collapse = function (code, animation) {
