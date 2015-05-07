@@ -51,7 +51,7 @@ class TableExporter:
 
     @property
     def name(self):
-        return self._name or self.__class__.__name__
+        return getattr(self, '_name', None) or self.__class__.__name__
 
     def export(self, table, stream=None, encoding="utf-8", **kargs):
         """

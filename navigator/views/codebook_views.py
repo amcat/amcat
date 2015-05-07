@@ -78,14 +78,6 @@ class ExportCodebook(TableExportMixin, ProjectScriptView):
         form_class.base_fields['format'].choices.remove(("html", "HTML"))
         return form_class
 
-    def get_form(self, *args, **kargs):
-        form = super(ExportCodebook, self).get_form(*args, **kargs)
-        cid = self.kwargs["codebook_id"]
-        langs = Language.objects.filter(labels__code__codebook_codes__codebook_id=cid).distinct()
-        form.fields['language'].queryset = langs
-        form.fields['language'].initial = min(l.id for l in langs)
-        return form
-
     def form_valid(self, form):
         if form.cleaned_data['format'] == 'xml':
             return ExportCodebookXML.as_view()(self.request, **self.kwargs)
