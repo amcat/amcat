@@ -32,6 +32,7 @@ class ANALYSES:
     sources_nl = [{"module" : "xtas.tasks.single.alpino"},
                   {"module" : "xtas.tasks.single.sources_nl"}]
     tadpole = [{"module" : "xtas.tasks.single.tadpole"}]
+    frog = [{"module" : "xtas.tasks.single.frog"}]
     corenlp_lemmatize = [{"module" : "xtas.tasks.single.corenlp_lemmatize"}]
 
     semafor = [{"module" : "xtas.tasks.single.corenlp"},
