@@ -127,7 +127,8 @@ STATICFILES_DIRS = (
 # Examples: "http://foo.com/media/", "/media/".
 ADMIN_MEDIA_PREFIX = '/media/admin/'
 
-TEST_RUNNER = "django.test.runner.DiscoverRunner"
+#TEST_RUNNER = "django.test.runner.DiscoverRunner"
+TEST_RUNNER = 'djcelery.contrib.test_runner.CeleryTestSuiteRunner'
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
@@ -241,14 +242,13 @@ FIXTURE_DIRS = (os.path.join(ROOT, "amcat/models"),)
 
 REST_FRAMEWORK = {
     # Pagination
-    'PAGINATE_BY': 10,
-    'PAGINATE_BY_PARAM': 'page_size',
-    'DEFAULT_PAGINATION_SERIALIZER_CLASS': 'api.rest.serializer.AmCATPaginationSerializer',
+    'DEFAULT_PAGINATION_CLASS': 'api.rest.pagination.AmCATPageNumberPagination',
+    'DEFAULT_METADATA_CLASS': 'api.rest.metadata.AmCATMetadata',
 
     # Filtering / models
     'ORDERING_PARAM': 'order_by',
     'SEARCH_PARAM': 'search',
-    'DEFAULT_MODEL_SERIALIZER_CLASS': 'api.rest.serializer.AmCATModelSerializer',
+    'DEFAULT_SERIALIZER_CLASS': 'api.rest.serializer.AmCATModelSerializer',
     'DEFAULT_FILTER_BACKENDS': (
         'api.rest.filters.DjangoPrimaryKeyFilterBackend',
         'api.rest.filters.MappingOrderingFilter',

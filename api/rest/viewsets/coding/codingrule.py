@@ -47,19 +47,19 @@ class CodingRuleSerializer(AmCATModelSerializer):
         model = CodingRule
 
 class CodingRuleViewSetMixin(AmCATViewSetMixin):
-    model_serializer_class = CodingRuleSerializer
+    serializer_class = CodingRuleSerializer
     model_key = "coding_rule"
-    model = CodingRule
+    queryset = CodingRule.objects.all()
 
 
 class CodingRuleActionSerializer(AmCATModelSerializer):
     model = CodingRuleAction
 
 class CodingRuleActionViewSetMixin(AmCATViewSetMixin):
-    model_serializer_class = CodingRuleActionSerializer
+    serializer_class = CodingRuleActionSerializer
     model_key = "coding_rule_action"
-    model = CodingRuleAction
+    queryset = CodingRuleAction.objects.all()
 
 class CodingRuleActionViewSet(CodingRuleActionViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
-    model = CodingRuleAction
-    model_serializer_class = CodingRuleActionSerializer
+    serializer_class = CodingRuleActionSerializer
+    queryset = CodingRuleAction.objects.all()

@@ -22,7 +22,7 @@ from amcat.tools import amcattest
 
 class TestCoding(amcattest.AmCATTestCase):
     def setUp(self):
-        """Set up a simple coding schema with fields to use for testing"""
+        """Set up a simple codingschema with fields to use for testing"""
         super(TestCoding, self).setUp()
 
         self.schema, self.codebook, self.strfield, self.intfield, self.codefield = (

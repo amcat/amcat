@@ -98,7 +98,8 @@ class CodingJobSerializer(AmCATModelSerializer):
 
 
 class CodingJobViewSetMixin(AmCATViewSetMixin):
-    model_serializer_class = CodingJobSerializer
+    queryset = CodingJob.objects.all()
+    serializer_class = CodingJobSerializer
     model_key = "codingjob"
     model = CodingJob
     search_fields = (
@@ -107,8 +108,9 @@ class CodingJobViewSetMixin(AmCATViewSetMixin):
     )
 
 class CodingJobViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
-    model = CodingJob
-    model_serializer_class = CodingJobSerializer
+    queryset = CodingJob.objects.all()
+    serializer_class = CodingJobSerializer
+    base_name = "codingjob"
 
     def filter_queryset(self, jobs):
         jobs = super(CodingJobViewSet, self).filter_queryset(jobs)
@@ -116,7 +118,7 @@ class CodingJobViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, DatatablesMix
 
 class CodingJobArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, ArticleViewSetMixin,
                               DatatablesMixin, ReadOnlyModelViewSet):
-    model = Article
+    queryset = Article.objects.all()
 
     def filter_queryset(self, articles):
         articles = super(CodingJobArticleViewSet, self).filter_queryset(articles)
@@ -124,7 +126,7 @@ class CodingJobArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, Articl
 
 class CodingJobArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, ArticleViewSetMixin,
                                       SentenceViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
-    model = Sentence
+    queryset = Sentence.objects.all()
 
     def filter_queryset(self, sentences):
         sentences = super(CodingJobArticleSentenceViewSet, self).filter_queryset(sentences)
@@ -136,7 +138,7 @@ class HighlighterViewSetMixin(AmCATViewSetMixin):
 
 class CodingJobHighlighterViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, HighlighterViewSetMixin,
                                   DatatablesMixin, ReadOnlyModelViewSet):
-    model = Codebook
+    queryset = Codebook.objects.all()
 
     def filter_queryset(self, highlighters):
         highlighters = super(CodingJobHighlighterViewSet, self).filter_queryset(highlighters)
@@ -147,8 +149,8 @@ class CodingJobHighlighterViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, Hi
 
 class CodingJobCodingRuleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, CodingRuleViewSetMixin,
                                  DatatablesMixin, ReadOnlyModelViewSet):
-    model = CodingRule
-    model_serializer_class = CodingRuleSerializer
+    queryset = CodingRule.objects.all()
+    serializer_class = CodingRuleSerializer
 
     def filter_queryset(self, rules):
         rules = super(CodingJobCodingRuleViewSet, self).filter_queryset(rules)
@@ -156,8 +158,8 @@ class CodingJobCodingRuleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, Cod
 
 class CodingJobCodingSchemaFieldViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, CodingSchemaFieldViewSetMixin,
                                         DatatablesMixin, ReadOnlyModelViewSet):
-    model = CodingSchemaField
-    model_serializer_class = CodingSchemaFieldSerializer
+    queryset = CodingSchemaField.objects.all()
+    serializer_class = CodingSchemaFieldSerializer
 
     def filter_queryset(self, fields):
         return super(CodingJobCodingSchemaFieldViewSet, self).filter_queryset(fields).filter(

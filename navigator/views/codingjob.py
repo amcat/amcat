@@ -17,7 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-"""View for viewing all coding jobs (for a user)"""
+"""View for viewing all codingjobs (for a user)"""
 
 from django.shortcuts import render
 from api.rest.datatable import Datatable

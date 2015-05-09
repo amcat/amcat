@@ -31,7 +31,7 @@ __all__ = ("CodingSchemaViewSetMixin", "CodingSchemaSerializer", "CodingSchemaVi
 
 
 class CodingSchemaSerializer(AmCATModelSerializer):
-    highlighters = serializers.SerializerMethodField('get_highlighters')
+    highlighters = serializers.SerializerMethodField()
 
     def get_highlighters(self, obj):
         return [h.pk for h in obj.highlighters.all()]
@@ -40,7 +40,8 @@ class CodingSchemaSerializer(AmCATModelSerializer):
         model = CodingSchema
 
 class CodingSchemaViewSetMixin(AmCATViewSetMixin):
-    model_serializer_class = CodingSchemaSerializer
+    queryset = CodingSchema.objects.all()
+    serializer_class = CodingSchemaSerializer
     model_key = "codingschema"
     model = CodingSchema
 
@@ -48,8 +49,8 @@ class CodingSchemaViewSetMixin(AmCATViewSetMixin):
 class CodingJobCodingSchemaViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                                    CodingSchemaViewSetMixin, DatatablesMixin,
                                    ReadOnlyModelViewSet):
-    model = CodingSchema
-    model_serializer_class = CodingSchemaSerializer
+    queryset = CodingSchema.objects.all()
+    serializer_class = CodingSchemaSerializer
 
     def filter_queryset(self, codingschemas):
         return super(CodingJobCodingSchemaViewSet, self).filter_queryset(codingschemas).filter(
@@ -57,8 +58,9 @@ class CodingJobCodingSchemaViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
         )
 
 class CodingSchemaViewSet(ProjectViewSetMixin, CodingSchemaViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+    queryset = CodingSchema.objects.all()
+    serializer_class = CodingSchemaSerializer
     model = CodingSchema
-    model_serializer_class = CodingSchemaSerializer
 
     def filter_queryset(self, codingschemas):
         codingschemas = super(CodingSchemaViewSet, self).filter_queryset(codingschemas)
@@ -66,8 +68,9 @@ class CodingSchemaViewSet(ProjectViewSetMixin, CodingSchemaViewSetMixin, Datatab
 
 class _CodingSchemaFieldViewSet(ProjectViewSetMixin, CodingSchemaViewSetMixin, CodingSchemaFieldViewSetMixin,
                                 DatatablesMixin, ReadOnlyModelViewSet):
+    queryset = CodingSchemaField.objects.all()
+    serializer_class = CodingSchemaFieldSerializer
     model = CodingSchemaField
-    model_serializer_class = CodingSchemaFieldSerializer
 
     def filter_queryset(self, fields):
         return super(_CodingSchemaFieldViewSet, self).filter_queryset(fields).filter(codingschema=self.codingschema)

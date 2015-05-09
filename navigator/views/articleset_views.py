@@ -121,14 +121,16 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
             sets = list(sets.values_list("pk", flat=True))
             table = table.filter(pk__in=sets)
 
-        table = table.rowlink_reverse('article set-details', args=[self.project.id, '{id}'])
+        table = table.rowlink_reverse('navigator:articleset-details', args=[self.project.id, '{id}'])
         table = table.hide("project")
         table = table.hide("favourite")
         return table
 
     def get_datatable_kwargs(self):
         return {
-            "url_kwargs": {"project": self.project.id},
+            "url_kwargs": {
+                "project": self.project.id
+            },
             "checkboxes": True
         }
 
@@ -221,7 +223,7 @@ class ArticleSetImportView(ProjectScriptView):
 
     def get_success_url(self):
         project = self.form.cleaned_data["target_project"]
-        return reverse(ArticleSetListView.get_view_name(), kwargs={"project_id":project.id})
+        return reverse("navigator" + ArticleSetListView.get_view_name(), kwargs={"project":project.id})
 
     def get_form(self, form_class):
         form = super(ArticleSetImportView, self).get_form(form_class)
@@ -242,14 +244,14 @@ class ArticleSetSampleView(ProjectScriptView):
     url_fragment = 'sample'
 
     def get_success_url(self):
-        return self.parent._get_breadcrumb_url({'project_id' : self.project.id, 'articleset_id' : self.result.id}, self)
+        return self.parent._get_breadcrumb_url({'project' : self.project.id, 'articleset_id' : self.result.id}, self)
 
 
     def success_message(self, result=None):
         old = ArticleSet.objects.get(pk=self.kwargs['articleset_id'])
         return SafeText("Created sample set {newname} as shown below. "
                         "<a href='{oldurl}'>Return to original set {old.id} : {oldname}</a>"
-                        .format(newname=escape(self.result.name), oldurl=reverse('article set-details', kwargs=self.kwargs),
+                        .format(newname=escape(self.result.name), oldurl=reverse('navigator:articleset-details', kwargs=self.kwargs),
                                 oldname=escape(old.name), **locals()))
 
 class ArticleSetDeduplicateView(ProjectScriptView):
@@ -278,11 +280,11 @@ class ArticleSetUploadListView(HierarchicalViewMixin, ProjectViewMixin, BreadCru
     parent = ArticleSetListView
     model = Plugin
     resource = PluginResource
-    view_name = "article set-upload-list"
+    view_name = "articleset-upload-list"
     url_fragment = "upload"
 
     def filter_table(self, table):
-        table = table.rowlink_reverse('article set-upload', args=[self.project.id, '{id}'])
+        table = table.rowlink_reverse('navigator:articleset-upload', args=[self.project.id, '{id}'])
         return table.filter(plugin_type=UPLOAD_PLUGIN_TYPE).hide('id', 'class_name')#, 'plugin_type')
 
 class ArticleSetRedirectHandler(ScriptHandler):
@@ -290,10 +292,10 @@ class ArticleSetRedirectHandler(ScriptHandler):
         aset_ids = self.task._get_raw_result()
 
         if len(aset_ids) == 1:
-            return reverse("article set-details", args=[self.task.project.id, aset_ids[0]]), "View set"
+            return reverse("navigator:articleset-details", args=[self.task.project.id, aset_ids[0]]), "View set"
 
         # Multiple articlesets
-        url = reverse("article set-multiple", args=[self.task.project.id])
+        url = reverse("navigator:articleset-multiple", args=[self.task.project.id])
         return url + "?set=" + "&set=".join(map(str, aset_ids)), "View sets"
 
 class MultipleArticleSetDestinationView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
@@ -312,11 +314,11 @@ class MultipleArticleSetDestinationView(HierarchicalViewMixin, ProjectViewMixin,
 
 class ArticleSetUploadView(ProjectScriptView):
     parent = ArticleSetUploadListView
-    view_name = "article set-upload"
-    template_name = "project/article_set_upload.html"
+    view_name = "articleset-upload"
+    template_name = "project/articleset_upload.html"
 
     def get_script(self):
-        return Plugin.objects.get(pk=self.kwargs['plugin_id']).get_class()
+        return Plugin.objects.get(pk=self.kwargs['plugin']).get_class()
 
     def get_form(self, form_class):
         if self.request.method == 'GET':

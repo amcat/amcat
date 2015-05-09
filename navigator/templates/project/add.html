@@ -3,7 +3,7 @@
 {% block content %}
 
 {% if success %}
-<p class="green">{{ title|title }} succesfully added to <a href="{% url "project-details" project.id %}">project</a>.</p>
+<p class="green">{{ title|title }} succesfully added to <a href="{% url "navigator:project-details" project.id %}">project</a>.</p>
 {% endif %}
 
 <h1>Create new {{ title }}</h1>

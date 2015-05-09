@@ -115,15 +115,15 @@ class ProjectSerializer(AmCATModelSerializer):
 
 class ProjectViewSetMixin(AmCATViewSetMixin):
     permission_classes = (ProjectPermission,)
-    model_serializer_class = ProjectSerializer
+    serializer_class = ProjectSerializer
     model_key = "project"
-    model = Project
+    queryset = Project.objects.all()
 
     @classmethod
     def get_url(cls, base_name=None, view='list', **kwargs):
         if base_name is None:
-            base_name = cls.model._meta.object_name.lower()
-        name = '{base_name}-{view}'.format(**locals())
+            base_name = cls.get_default_basename()
+        name = 'api:{base_name}-{view}'.format(**locals())
         return reverse(name, kwargs=kwargs)
 
 class ProjectViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):

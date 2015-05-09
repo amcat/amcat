@@ -168,6 +168,7 @@ class UserForm(forms.ModelForm):
 
     class Meta:
         model = User
+        fields = ("affiliation", "role", "language", "theme")
 
 class UserDetailsForm(UserForm):
     def __init__(self, request, *args, **kwargs):
@@ -219,6 +220,7 @@ class ProjectForm(forms.ModelForm):
 
     class Meta:
         model = models.project.Project
+        exclude = ("codingschemas", "codebooks", "owner")
 
     def clean_owner(self):
         self.cleaned_data = User.objects.get(id=self.cleaned_data['owner'])
@@ -234,10 +236,12 @@ class AddProjectForm(ProjectForm):
 class MediumForm(forms.ModelForm):
     class Meta:
         model = models.medium.Medium
+        exclude = ()
 
 class MediumAliasForm(forms.ModelForm):
     class Meta:
         model = models.medium.MediumAlias
+        exclude = ()
 
 class CodingJobForm(forms.ModelForm):
     unitschema = forms.ModelChoiceField(CodingSchema.objects.none(), widget=widgets.JQuerySelect)
@@ -277,6 +281,7 @@ class CodingJobForm(forms.ModelForm):
 
     class Meta:
         model = CodingJob
+        exclude = ()
 
 
 class ImportCodingSchema(forms.Form):
@@ -339,3 +344,4 @@ class ArticleSetForm(forms.ModelForm):
 class CodingSchemaForm(forms.HideFieldsForm):
     class Meta:
         model = CodingSchema
+        exclude = ()

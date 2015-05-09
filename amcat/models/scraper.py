@@ -72,7 +72,7 @@ class Scraper(AmcatModel):
         Get the number of scraped articles per day for the given period.
         """
         if self.articleset is None:
-            raise Exception("Cannot count articles if scraper has no article set")
+            raise Exception("Cannot count articles if scraper has no articleset")
         # select and filter articles
         q = self.articleset.articles.all()
         if to_date: q = q.filter(date__lte=to_date)

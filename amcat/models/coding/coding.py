@@ -21,7 +21,7 @@
 Model module containing Codings
 
 A coding is a hook for the coding values on a specific article linked
-to a specific coding job set.
+to a specific codingjob set.
 """
 
 from __future__ import print_function
@@ -86,7 +86,7 @@ class Coding(AmcatModel):
 
     @property
     def schema(self):
-        """Get the coding schema that this coding is based on"""
+        """Get the codingschema that this coding is based on"""
         if self.sentence_id is None:
             return self.coded_article.codingjob.articleschema
         return self.coded_article.codingjob.unitschema

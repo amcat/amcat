@@ -20,11 +20,18 @@
 from amcat.models import User
 
 from api.rest.resources.amcatresource import AmCATResource
+from api.rest.serializer import AmCATModelSerializer
 
 
 class UserResource(AmCATResource):
     model = User
     extra_filters = ["userprofile__affiliation__id"]
+    queryset = User.objects.all()
+
+    class serializer_class(AmCATModelSerializer):
+        class Meta:
+            model = User
+            exclude = ("password",)
 
     @classmethod
     def get_label(cls):

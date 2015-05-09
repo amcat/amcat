@@ -48,16 +48,12 @@ class ArticleSetSerializer(AmCATModelSerializer):
 
     @cached
     def get_nn(self):
-        view = self.context["view"]
-        if hasattr(view, 'object_list'):
-            sets = list(view.object_list.values_list("id", flat=True))
-        else:
-            sets = [view.object.id]
+        sets = [s.id for s in self.instance]
         return dict(amcates.ES().aggregate_query(filters={'sets': sets}, group_by='sets'))
 
     def n_articles(self, articleset):
         if not articleset: return None
-        return self.get_nn().get(articleset.id)
+        return self.get_nn().get(articleset.id, 0)
 
     def is_favourite(self, articleset):
         if not articleset or not self.project: return None
@@ -79,49 +75,43 @@ class ArticleSetViewSetMixin(AmCATViewSetMixin):
     model_key = "articleset"
     model = ArticleSet
     search_fields = ordering_fields = ("id", "name", "provenance")
+    queryset = ArticleSet.objects.all()
 
 class ArticleSetViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
-    model_serializer_class = ArticleSetSerializer
+    serializer_class = ArticleSetSerializer
     model = ArticleSet
-    
+    queryset = ArticleSet.objects.all()
+
     def filter_queryset(self, queryset):
         queryset = super(ArticleSetViewSet, self).filter_queryset(queryset)
         return queryset.filter(id__in=self.project.all_articlesets())
 
 class FavouriteArticleSetViewSetMixin(AmCATViewSetMixin):
     model_key = "favourite_articleset"
-    base_name = "favourite_articleset"
     search_fields = ordering_fields = ("id", "name", "provenance")
     model = ArticleSet
+    queryset = ArticleSet.objects.all()
 
 class FavouriteArticleSetViewSet(ProjectViewSetMixin, FavouriteArticleSetViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
-    model_serializer_class = ArticleSetSerializer
+    serializer_class = ArticleSetSerializer
     model_key = "favourite_articleset"
-    model = ArticleSet
-
+    queryset = ArticleSet.objects.all()
 
     def filter_queryset(self, queryset):
         queryset = super(FavouriteArticleSetViewSet, self).filter_queryset(queryset)
         return queryset.filter(id__in=self.project.favourite_articlesets.all())
 
-    def get_url(cls, base_name=None, view='list', **kwargs):
-        return super(FavouriteArticleSetViewSet, cls).get_url(base_name=cls.base_name, view=view, **kwargs)
-
 class CodingjobArticleSetViewSetMixin(AmCATViewSetMixin):
     model_key = "codingjob_articleset"
-    base_name = "codingjob_articleset"
     search_fields = ordering_fields = ("id", "name", "provenance")
     model = ArticleSet
 
 
 class CodingjobArticleSetViewSet(ProjectViewSetMixin, CodingjobArticleSetViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
-    model_serializer_class = ArticleSetSerializer
+    serializer_class = ArticleSetSerializer
     model_key = "codingjob_articleset"
-    model = ArticleSet
+    queryset = ArticleSet.objects.all()
 
     def filter_queryset(self, queryset):
         queryset = super(CodingjobArticleSetViewSet, self).filter_queryset(queryset)
         return queryset.filter(id__in=self.project.all_articlesets(), codingjob_set__id__isnull=False)
-
-    def get_url(cls, base_name=None, view='list', **kwargs):
-        return super(CodingjobArticleSetViewSet, cls).get_url(base_name=cls.base_name, view=view, **kwargs)

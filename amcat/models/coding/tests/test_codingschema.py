@@ -21,6 +21,6 @@ from amcat.tools import amcattest
 
 class TestCodingSchema(amcattest.AmCATTestCase):
     def test_create(self):
-        """Test whether coding schema objects can be created"""
+        """Test whether codingschema objects can be created"""
         s = amcattest.create_test_schema(name='test')
         self.assertEqual(s.name, 'test')

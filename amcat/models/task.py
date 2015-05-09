@@ -86,7 +86,7 @@ class Task(AmcatModel):
     @cached
     def get_async_result(self):
         """Returns Celery AsyncResult object belonging to this Task."""
-        return AsyncResult(id=self.uuid, task_name=amcat_task.name)
+        return AsyncResult(id=str(self.uuid), task_name=amcat_task.name)
 
     def get_class(self):
         return classtools.import_attribute(self.class_name)

@@ -1,15 +1,15 @@
 {% extends "project/base.html" %}
 
 {% block content %}
-<legend>Please provide details for the new schema</legend>
+<legend>Edit schema properties</legend>
 <form method="POST" action="">
-    {% csrf_token %}
+{% csrf_token %}
 <table>
 {{ form.as_table }}
 </table>
 
 <div class="form-actions">
   <input type="submit" name="save" class="btn btn-primary"></input>
-  <a href="{% url 'coding schema-list' project.id  %}" name="save" class="btn">Cancel</a>
+  <a href="{% url 'navigator:codingschema-details' project.id object.id  %}" name="save" class="btn">Cancel</a>
 </div>
 {% endblock %}

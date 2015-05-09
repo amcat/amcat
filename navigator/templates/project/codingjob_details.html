@@ -2,7 +2,7 @@
 
 {% block actions %}
 {% if user == object.coder or is_admin %}
-<a class="btn btn-primary" href="{% url 'annotator-codingjob' project.id object.id %}"><i class="glyphicon glyphicon-list-alt"></i>
+<a class="btn btn-primary" href="{% url 'navigator:annotator-codingjob' project.id object.id %}"><i class="glyphicon glyphicon-list-alt"></i>
 {% if user == object.coder %}
   Code
 {% else %} 
@@ -12,8 +12,8 @@
 {% endif %}
 
 {% if can_edit %}
-<a class="btn btn-default" href="{% url "coding job-edit" project.id object.id %}"><i class="glyphicon glyphicon-edit"></i> Edit Settings</a>
-<a class="btn btn-danger confirm" href="{% url "coding job-delete" project.id  object.id %}" data-confirm="You're about to delete <i>{{ object.name }}</i>. This action is not reversible."> <i class="glyphicon glyphicon-trash"></i> Delete</a>
+<a class="btn btn-default" href="{% url "navigator:codingjob-edit" project.id object.id %}"><i class="glyphicon glyphicon-edit"></i> Edit Settings</a>
+<a class="btn btn-danger confirm" href="{% url "navigator:codingjob-delete" project.id  object.id %}" data-confirm="You're about to delete <i>{{ object.name }}</i>. This action is not reversible."> <i class="glyphicon glyphicon-trash"></i> Delete</a>
 {% endif %}
 {% endblock actions %}
 

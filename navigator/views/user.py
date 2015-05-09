@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from django.db.transaction import atomic
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 
@@ -94,7 +95,7 @@ def add(request):
     message = session_pop(request.session, "users_added")
     return render(request, "user_add.html", locals())
 
-@db.transaction.commit_on_success
+@atomic
 def _add_multiple_users(request):
     amf = forms.AddMultipleUsersForm(request, data=request.REQUEST, files=request.FILES)
 
@@ -116,7 +117,7 @@ def _add_multiple_users(request):
 
     return amf, forms.AddUserForm(request)
 
-@db.transaction.commit_on_success
+@atomic
 def _add_one_user(request):
     af = forms.AddUserForm(request, data=request.REQUEST)
 

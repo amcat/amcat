@@ -69,7 +69,7 @@ class CopyArticleSetScript(Script):
 
         if self.dest_project is None:
             if self.dest_set is None:
-                raise Exception("Please specify either destination project or article set id")
+                raise Exception("Please specify either destination project or articleset id")
             self.dest_project = self.dest_set.project
 
         log.info(
@@ -97,9 +97,9 @@ class CopyArticleSetScript(Script):
             if self.dest_set is None:
                 provenance = "Imported from {self.source_host} set {self.source_set_id}\n{provenance}".format(
                     **locals())
-                log.info("Creating destination article set {name!r} with provenance {provenance!r}".format(**locals()))
+                log.info("Creating destination articleset {name!r} with provenance {provenance!r}".format(**locals()))
                 self.dest_set = ArticleSet.objects.create(project=self.dest_project, name=name, provenance=provenance)
-                log.info("Created destination article set {self.dest_set.id}:{self.dest_set.name!r} "
+                log.info("Created destination articleset {self.dest_set.id}:{self.dest_set.name!r} "
                          "in project {self.dest_project.id}:{self.dest_project.name!r}"
                          .format(**locals()))
 

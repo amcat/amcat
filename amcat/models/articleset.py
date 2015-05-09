@@ -20,7 +20,7 @@
 """
 Model module for Article Sets. A Set is a generic collection of articles,
 either created manually or as a result of importing articles or assigning
-coding jobs.
+codingjobs.
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
@@ -86,7 +86,7 @@ class ArticleSet(AmcatModel):
 
     def add_articles(self, articles, add_to_index=True, monitor=ProgressMonitor()):
         """
-        Add the given articles to this article set. Implementation is exists of three parts:
+        Add the given articles to this articleset. Implementation is exists of three parts:
 
           1. Adding ArticleSetArticle objects
           2. Adding CodedArticle objects
@@ -179,7 +179,7 @@ class ArticleSet(AmcatModel):
         super(ArticleSet, self).save(*args, **kargs)
 
         if new:
-            # new article set, add as fav to parent project
+            # new articleset, add as fav to parent project
             # (I run parent first because I guess it needs a pk to add it, but didn't test whether
             #  this is needed...)
             self.project.favourite_articlesets.add(self)

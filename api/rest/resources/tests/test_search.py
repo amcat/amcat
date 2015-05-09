@@ -17,18 +17,18 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.models import CodingRule
+import datetime
+from api.rest.apitestcase import ApiTestCase
+from amcat.tools import amcattest, toolkit
+from amcat.tools import amcates
 
-from api.rest.resources.amcatresource import AmCATResource
-from api.rest.viewsets.coding.codingrule import CodingRuleSerializer
 
-
-class CodingRuleResource(AmCATResource):
-    model = CodingRule
-    serializer_class = CodingRuleSerializer
-    queryset = CodingRule.objects.all()
-    extra_filters = [
-        "codingschema__codingjobs_article__id",
-        "codingschema__codingjobs_unit__id"
-    ]
-
+class TestSearch(ApiTestCase):
+    @amcattest.use_elastic
+    def test_dates(self):
+        """Test whether date deserialization works, see #66"""
+        for d in ('2001-01-01', '1992-12-31T23:59', '2012-02-29T12:34:56.789', datetime.datetime.now()):
+            a = amcattest.create_test_article(date=d)
+            amcates.ES().flush()
+            res = self.get("/api/v4/search", ids=a.id)
+            self.assertEqual(toolkit.readDate(res['results'][0]['date']), toolkit.readDate(str(d)))

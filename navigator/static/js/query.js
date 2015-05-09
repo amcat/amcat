@@ -691,10 +691,10 @@ $((function(){
     }
 
     function load_extra_summary(){
-        $(".result .loading").show();
-        var data = $(".result .row.summary").data("form");
+        $("#result .loading").show();
+        var data = $("#result .row.summary").data("form");
         data["aggregations"] = false;
-        data["offset"] = $(".result .articles > li").length;
+        data["offset"] = $("#result .articles > li").length;
 
         $.ajax({
             type: "POST", dataType: "json",
@@ -705,10 +705,10 @@ $((function(){
         }).done(function(data){
             // Form accepted, we've been given a task uuid
             Poll(data.uuid).result(function(data){
-                $(".result .loading").hide();
+                $("#result .loading").hide();
                 var articles = $(".articles > li", $(data));
                 if (articles.length === 0) return;
-                $(".result .articles").append(articles);
+                $("#result .articles").append(articles);
                 bottom(load_extra_summary);
             });
         })
@@ -910,7 +910,7 @@ $((function(){
         message_element.text(message_element.attr("placeholder"));
 
         form_data = serializeForm($("#query-form"), SETS);
-        $(".result .panel-body").html("<i>No results yet</i>");
+        $("#result .panel-body").html("<i>No results yet</i>");
 
         var script = scripts_container.find(".active")[0].id.replace("script_","")
 
@@ -1047,7 +1047,7 @@ $((function(){
             progress_bar.css("width", "0%");
         }).result(function(data, textStatus, jqXHR){
             var contentType = jqXHR.getResponseHeader("Content-Type");
-            var body = $(".result .panel-body").html("");
+            var body = $("#result .panel-body").html("");
             var renderer = renderers[contentType];
 
             if(renderer === undefined){
@@ -1055,6 +1055,8 @@ $((function(){
             } else {
                 renderer(body, prepare_data(data));
             }
+
+            $("#result").attr("class", window.location.hash.slice(1));
         }).always(function() {
             loading_dialog.modal("hide");
             progress_bar.css("width", 0);

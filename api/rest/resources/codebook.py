@@ -29,6 +29,7 @@ from django.conf.urls import url
 
 import collections
 import itertools
+from api.rest.serializer import AmCATModelSerializer
 
 MAX_CODEBOOKS = 5
 CACHE_LABELS = (2, 1)
@@ -64,6 +65,7 @@ class CodebookHierarchyResource(AmCATResource):
     """
     # ^ Docstring displayed on API web-page as documentation
     model = Codebook
+    queryset = Codebook.objects.all()
 
     @classmethod
     def get_url_pattern(cls):
@@ -102,6 +104,10 @@ class CodebookHierarchyResource(AmCATResource):
 class CodebookResource(AmCATResource):
     model = Codebook
     extra_filters = ["codingschemafield__codingschema__id"]
+
+    class serializer_class(AmCATModelSerializer):
+        class Meta:
+            model = Codebook
 
 
 

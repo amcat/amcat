@@ -3,7 +3,7 @@
 <div class="row">
 
 
-    <div class="col-md-6">
+    <div id="active-articlesets" class="col-md-6">
         <h2>Active articlesets</h2>
         {{ articlesets_table|safe }}
 
@@ -19,12 +19,12 @@
             var wrapper = $(event.currentTarget).closest(".dataTables_wrapper");
             var api = wrapper.find(".dataTables_scrollBody > .dataTable").DataTable();
             var ids = $.map(api.rows('.active').data(), function(r){ return r.id; });
-            window.location = "{% url 'query' project.id %}?sets=" + ids.join(",");
+            window.location = "{% url 'navigator:query' project.id %}?sets=" + ids.join(",");
         });
 
     </script>
 
-    <div class="col-md-6">
+    <div id="saved-queries" class="col-md-6">
         <h2>Saved queries</h2>
         {{ saved_queries_table|safe }}
     </div>

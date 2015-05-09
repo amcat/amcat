@@ -1,5 +1,6 @@
 import itertools
 import collections
+from rest_framework.exceptions import ParseError
 
 from rest_framework.fields import CharField, IntegerField
 from rest_framework.serializers import Serializer
@@ -130,6 +131,11 @@ class AggregateResource(AmCATResource):
     def post(self, request, *args, **kwargs):
         # allow for POST requests
         return self.list(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        if not self.queries:
+            raise ParseError("You need to provide a non-empty query (q-parameter)")
+        return super(AggregateResource, self).get(request, *args, **kwargs)
 
     class serializer_class(Serializer):
         count = IntegerField()

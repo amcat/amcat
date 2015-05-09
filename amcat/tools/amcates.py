@@ -112,6 +112,7 @@ def get_article_dict(article, sets=None):
         date = datetime.datetime(date.year, date.month, date.day)
 
     article_dict["date"] = date.isoformat() if date is not None else None
+    article_dict["uuid"] = str(article_dict["uuid"])
     article_dict["sets"] = sets
 
     if settings.ES_USE_LEGACY_HASH_FUNCTION:
@@ -468,7 +469,7 @@ class ES(object):
 
     def synchronize_articleset(self, aset, full_refresh=False):
         """
-        Make sure the given article set is correctly stored in the index
+        Make sure the given articleset is correctly stored in the index
         @param full_refresh: if true, re-add all articles to the index. Use this
                              after changing properties of articles
         """

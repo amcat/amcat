@@ -3,10 +3,10 @@
 {% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
 
 {% block actions %}
-    <a data-confirm="This will delete all your finished tasks. Do you want to procede? <p><span class='label label-info'>note</span> Only affects own tasks</p>" class="btn btn-primary confirm"  href="{% url 'task-clean-ready' project.id %}" >
+    <a data-confirm="This will delete all your finished tasks. Do you want to procede? <p><span class='label label-info'>note</span> Only affects own tasks</p>" class="btn btn-primary confirm"  href="{% url 'navigator:task-clean-ready' project.id %}" >
         <i class="glyphicon glyphicon-trash"></i> Clean my finished tasks
     </a>
-    <a data-confirm="This will delete all tasks which are stuck in queue for more than 24 hours. Do you want to continue? <p><span class='label label-info'>note</span> Only affects own tasks</p>" class="btn btn-default confirm"  href="{% url 'task-clean-stuck' project.id %}" >
+    <a data-confirm="This will delete all tasks which are stuck in queue for more than 24 hours. Do you want to continue? <p><span class='label label-info'>note</span> Only affects own tasks</p>" class="btn btn-default confirm"  href="{% url 'navigator:task-clean-stuck' project.id %}" >
         Clean old tasks
     </a>
 
@@ -38,8 +38,8 @@
         <div class="alert alert-success">Successfully unlinked an articleset.</div>
     {% endif %}
     <ul class="nav nav-tabs nav-justified" style="margin-bottom: 1em">
-        <li {% if what == 'own' %}class="active"{% endif %}><a  href='{% url "task-list" project.id "own" %}'>My tasks</a></li>
-        <li {% if what == 'project' %}class="active"{% endif %}><a  href='{% url "task-list" project.id "project" %}'>All tasks</a></li>
+        <li {% if what == 'own' %}class="active"{% endif %}><a  href='{% url "navigator:task-list" project.id "own" %}'>My tasks</a></li>
+        <li {% if what == 'project' %}class="active"{% endif %}><a  href='{% url "navigator:task-list" project.id "project" %}'>All tasks</a></li>
     </ul>
 
     {{ table }}

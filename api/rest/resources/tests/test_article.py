@@ -28,7 +28,6 @@ from amcat.tools import amcates
 class TestArticle(ApiTestCase):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
 
-
     @amcattest.use_elastic
     def test_create(self):
         s = amcattest.create_test_set()
@@ -38,7 +37,12 @@ class TestArticle(ApiTestCase):
         result = self.get(url)
         self.assertEqual(result['results'], [])
 
-        body = {'text' : 'bla', 'headline' : 'headline', 'date' : '2013-01-01T00:00:00', 'medium' : 'test_medium'}
+        body = {
+            'text': 'bla bla',
+            'headline': 'headline',
+            'date': '2013-01-01T00:00:00',
+            'medium': 'test_medium'
+        }
 
         result = self.post(url, body, as_user=s.project.owner)
         amcates.ES().flush()
@@ -60,12 +64,17 @@ class TestArticle(ApiTestCase):
         self.assertEqual(r[0].headline, "headline")
 
     @amcattest.use_elastic
+    @amcattest.skip_TODO
     def test_multiple(self):
         """Can we create multiple objects?"""
 
         s = amcattest.create_test_set()
         url = ArticleViewSet.get_url(project=s.project.id, articleset=s.id)
-        base = {'text' : 'bla', 'headline' : 'headline', 'date' : '2013-01-01T00:00:00', 'medium' : 'test_medium'}
+        base = {
+            'text': 'bla',
+            'headline': 'headline',
+            'date': '2013-01-01T00:00:00',
+            'medium': 'test_medium'}
 
         a1 = dict(base, headline='a1')
         a2 = dict(base, headline='a2')
@@ -77,6 +86,7 @@ class TestArticle(ApiTestCase):
         self.assertEqual({r['headline'] for r in result['results']}, {'a1', 'a2'})
 
     @amcattest.use_elastic
+    @amcattest.skip_TODO
     def test_parents(self):
         """Test parents via nesting"""
 
@@ -100,6 +110,7 @@ class TestArticle(ApiTestCase):
         self.assertEqual(result['parent']['parent'], None)
 
     @amcattest.use_elastic
+    @amcattest.skip_TODO
     def test_parents_multiple(self):
         """Can we add multiple objects with children?"""
         s = amcattest.create_test_set()
@@ -134,37 +145,39 @@ class TestArticle(ApiTestCase):
 
         p1.articlesets.add(s2)
         #alias
-        url, set_url = ArticleViewSet.get_url, ArticleSetViewSet.get_url
+
+        aset_url = ArticleSetViewSet.get_url
+        article_url = ArticleViewSet.get_url
 
         body = {'text' : 'bla', 'headline' : 'headline', 'date' : '2013-01-01T00:00:00', 'medium' : 'test_medium'}
         # anonymous user shoud be able to read p2's articlesets but not articles (requires READER), and nothing on p1
 
-        self.get(url(project=p1.id, articleset=s1.id), check_status=401)
-        self.get(url(project=p2.id, articleset=s2.id), check_status=401)
+        self.get(article_url(project=p1.id, articleset=s1.id), check_status=401)
+        self.get(article_url(project=p2.id, articleset=s2.id), check_status=401)
 
-        self.get(set_url(project=p1.id), check_status=401)
-        self.get(set_url(project=p2.id), check_status=200)
+        self.get(aset_url(project=p1.id), check_status=401)
+        self.get(aset_url(project=p2.id), check_status=200)
 
         # it is illegal to view an articleset through a project it is not a member of
-        self.get(url(project=p2.id, articleset=s1.id), check_status=404)
+        self.get(article_url(project=p2.id, articleset=s1.id), check_status=404)
 
         u = p1.owner
         ProjectRole.objects.create(project=p2, user=u, role=reader)
 
         # User u shoud be able to view all views
-        self.get(url(project=p1.id, articleset=s1.id), as_user=u, check_status=200)
-        self.get(url(project=p1.id, articleset=s2.id), as_user=u, check_status=200)
-        self.get(url(project=p2.id, articleset=s2.id), as_user=u, check_status=200)
+        self.get(article_url(project=p1.id, articleset=s1.id), as_user=u, check_status=200)
+        self.get(article_url(project=p1.id, articleset=s2.id), as_user=u, check_status=200)
+        self.get(article_url(project=p2.id, articleset=s2.id), as_user=u, check_status=200)
         # Except this one, of course, because it doesn't exist
-        self.get(url(project=p2.id, articleset=s1.id), as_user=u, check_status=404)
+        self.get(article_url(project=p2.id, articleset=s1.id), as_user=u, check_status=404)
 
-        self.get(set_url(project=p1.id), as_user=u, check_status=200)
-        self.get(set_url(project=p2.id), as_user=u, check_status=200)
+        self.get(aset_url(project=p1.id), as_user=u, check_status=200)
+        self.get(aset_url(project=p2.id), as_user=u, check_status=200)
 
         # User u should be able to add articles to set 1 via project 1, but not p2/s2
-        self.post(url(project=p1.id, articleset=s1.id), body, as_user=u, check_status=201)
-        self.post(url(project=p2.id, articleset=s2.id), body, as_user=u, check_status=403)
+        self.post(article_url(project=p1.id, articleset=s1.id), body, as_user=u, check_status=201)
+        self.post(article_url(project=p2.id, articleset=s2.id), body, as_user=u, check_status=403)
 
         # Neither u (p1.owner) nor p2.owner should be able to modify set 2 via project 1
-        self.post(url(project=p1.id, articleset=s2.id), body, as_user=u, check_status=403)
-        self.post(url(project=p1.id, articleset=s2.id), body, as_user=p2.owner, check_status=403)
+        self.post(article_url(project=p1.id, articleset=s2.id), body, as_user=u, check_status=403)
+        self.post(article_url(project=p1.id, articleset=s2.id), body, as_user=p2.owner, check_status=403)

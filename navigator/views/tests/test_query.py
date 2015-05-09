@@ -16,17 +16,31 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from splinter import Browser
+from django.core.urlresolvers import reverse
+
 from amcat.tools import amcattest
 from amcat.tools.amcattest import AmCATLiveServerTestCase
 
 
 class TestQueryView(AmCATLiveServerTestCase):
-    def setUp(self):
+    def set_up(self):
         super(TestQueryView, self).setUp()
 
         self.project = amcattest.create_test_project()
         self.user = self.project.insert_user
+        self.aset1 = amcattest.create_test_set(2, project=self.project)
+        self.aset2 = amcattest.create_test_set(3, project=self.project)
+        self.project.favourite_articlesets.add(self.aset1)
+        self.project.favourite_articlesets.add(self.aset2)
 
-    def test_selenium(self):
+    @amcattest.use_elastic
+    def test_summary(self):
+        self.set_up()
         self.login(username=self.user.username, password="test")
+        self.browser.visit(self.get_url(reverse("query", args=[self.project.id])))
+        self.browser.find_by_css("#active-articlesets tbody tr")[1].click()
+        self.browser.find_by_css("#id_aggregations")
+        self.browser.find_by_css("#run-query")[0].viclick()
+        self.browser.find_by_css("#results.summary")
+
+        import time; time.sleep(2000)

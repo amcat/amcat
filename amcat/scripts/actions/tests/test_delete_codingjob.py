@@ -23,7 +23,7 @@ class TestDeleteCodingJob(amcattest.AmCATTestCase):
         from amcat.models import ArticleSet
         s = amcattest.create_test_set(articles=5)
         j = amcattest.create_test_job(articleset=s)
-        j2 = amcattest.create_test_job(articleset=s)# use same article set
+        j2 = amcattest.create_test_job(articleset=s)# use same articleset
         DeleteCodingJob(job=j.id).run()
         self.assertFalse(CodingJob.objects.filter(pk=j.id).exists())
         self.assertEquals(j2.articleset, s)

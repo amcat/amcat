@@ -21,7 +21,7 @@
 Model module containing CodingSchemaField and -Type.
 
 CodingSchemaFields are the concrete fields in an CodingSchema, e.g.
-the subject field in a net coding schema.
+the subject field in a net codingschema.
 
 CodingSchemaFieldTypes are the types of field, e.g. both subject and object
 are ontology coding types.
@@ -41,7 +41,7 @@ class CodingSchemaFieldType(AmcatModel):
     """
     Model for codingschemas_fieldtypes
 
-    Field Types are the types of fields available for coding schemas. They determine
+    Field Types are the types of fields available for codingschemas. They determine
     how values are (de)serialised and which options are available. Most functionality
     is handled by instantiating a Serialiser object using the SerialiserClass column and
     the concrete CodingSchemaField from which the serialiser can get details.
@@ -72,8 +72,8 @@ class CodingSchemaFieldType(AmcatModel):
 class CodingSchemaField(AmcatModel):
     """Model for codingschemas_fields
 
-    Fields are the concrete fields in an coding schema. Every value in an actual
-    coding is bound to an coding schema field, which can e.g. (de)serialise
+    Fields are the concrete fields in an codingschema. Every value in an actual
+    coding is bound to an codingschema field, which can e.g. (de)serialise
     and validate the coded values.
     """
     

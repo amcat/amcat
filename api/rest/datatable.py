@@ -207,20 +207,11 @@ class Datatable(object):
             # ViewSet
             fields = self.resource.get_serializer_class()().fields.keys()
 
-
-        fields = [f for f in fields if f not in self.hidden]
-
-        if not self.resource.get_serializer_class()().opts.fields and \
-                hasattr(self.resource, "model") and self.resource.model:
-            # Try to keep order defined on model if and only if fields
-            # is not explicitly defined.
-            for field in self.resource.model._meta.fields:
-                if field.name in fields:
-                    fields.remove(field.name)
-                    yield field.name
-
         if hasattr(self.resource, 'extra_fields'):
             fields += self.resource.extra_fields(self.extra_args)
+
+        for field in self.hidden:
+            fields.remove(field)
 
         for field in fields:
             yield str(field)

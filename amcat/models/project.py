@@ -20,6 +20,7 @@
 """ORM Module representing projects"""
 
 from __future__ import unicode_literals, print_function, absolute_import
+from django.conf import settings
 
 from django.contrib.auth.models import User
 from django.db import models
@@ -55,14 +56,14 @@ class Project(AmcatModel):
     description = models.CharField(max_length=200, null=True)
 
     insert_date = models.DateTimeField(db_column='insertdate', auto_now_add=True)
-    owner = models.ForeignKey(User, db_column='owner_id')
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, db_column='owner_id')
 
     # We need null=True to prevent djangorestframework from complaining about it, as
     # it asserts required=True and editable=False to be an error. This is probably
     # fine from an API point of view, but not really in combination with Django. Anyway,
     # here's the bug report:
     #    https://github.com/tomchristie/django-rest-framework/issues/1658
-    insert_user = models.ForeignKey(User, db_column='insertuser_id',
+    insert_user = models.ForeignKey(settings.AUTH_USER_MODEL, db_column='insertuser_id',
                                     related_name='inserted_project',
                                     editable=False, null=True)
 

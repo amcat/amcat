@@ -5,7 +5,7 @@
 {% block actions %}
 {% if is_admin %}
  <h2>Add, remove, or modify users:</h2>
- <form action="{% url "user-add" project.id %}" method="POST">
+ <form action="{% url "navigator:user-add" project.id %}" method="POST">
      {% csrf_token %}
   {{ add_user }}
   <input class="btn btn-primary" type="submit" value="Modify User(s)" />

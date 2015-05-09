@@ -189,6 +189,9 @@ class Article(AmcatModel):
         if self._highlighted:
             raise ValueError("Cannot save a highlighted article.")
 
+        if self.length is None:
+            self.length = word_len(self.text)
+
         super(Article, self).save(*args, **kwargs)
 
 

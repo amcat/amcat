@@ -3,7 +3,7 @@
 
 {% block actions %}
     {% if can_edit %}
-        <a class="btn btn-warning" href="{% url 'article-split' project.id article.id %}">Split article</a>
+        <a class="btn btn-warning" href="{% url 'navigator:article-split' project.id article.id %}">Split article</a>
     {% endif %}
 {% endblock %}
 
@@ -26,7 +26,7 @@
 		    at <a href="{{article.url}}">{{article.url|urlizetrunc:40}}</a></div>
 
 		    {% endif %}
-                    <div class="alert alert-warning">You do not have sufficient access to this project to view the full text of the article. Please contact an administrator of <a href="{% url "user-list" article.project_id %}">project {{article.project_id}} - {{article.project}}</a> to gain access</div>
+                    <div class="alert alert-warning">You do not have sufficient access to this project to view the full text of the article. Please contact an administrator of <a href="{% url "navigator:user-list" article.project_id %}">project {{article.project_id}} - {{article.project}}</a> to gain access</div>
                 {% endif %}
             </article>
         </div>
@@ -52,7 +52,7 @@
                 </tr>
                 <tr>
                     <td>Project:</td>
-                    <td><a href="{% url "project" article.project_id %}">{{article.project_id}} - {{article.project}}</a></td>
+                    <td><a href="{% url "navigator:project" article.project_id %}">{{article.project_id}} - {{article.project}}</a></td>
                 </tr>
                 {% if article.section %}
                     <tr>
@@ -94,9 +94,9 @@
                     <td>In&nbsp;articlesets:</td>
                     <td>
                         {% for aset in article.articlesets_set.all.distinct %}
-                            <a href="{% url "article set-details" project.id aset.id %}">{{aset.id}} - {{aset}}</a>
+                            <a href="{% url "navigator:articleset-details" project.id aset.id %}">{{aset.id}} - {{aset}}</a>
                             {% if can_edit %}
-                                <a href="{% url "article-removefromset" project.id article.id %}?remove_set={{aset.id}}&return_set={{articleset_id}}" class="btn btn-warning btn-xxs"><i class="glyphicon glyphicon-trash"></i></a>
+                                <a href="{% url "navigator:article-removefromset" project.id article.id %}?remove_set={{aset.id}}&return_set={{articleset_id}}" class="btn btn-warning btn-xxs"><i class="glyphicon glyphicon-trash"></i></a>
                             {% endif %}
                             <br/>
                         {% empty %}
@@ -112,7 +112,7 @@
                     <td>Preprocessed:</td>
                     <td>
                         {% for aa in article.analysedarticle_set.all.distinct %}
-                            <a href="{% url "analysedarticle" context.id aa.id %}">{{aa.plugin.id}} - {{aa.plugin}}</a><br/>
+                            <a href="{% url "navigator:analysedarticle" context.id aa.id %}">{{aa.plugin.id}} - {{aa.plugin}}</a><br/>
                         {% empty %}
                             This article does not occur in any set
                         {% endfor %}

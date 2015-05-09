@@ -53,12 +53,14 @@ class AmCATViewSetMixin(object):
         if self.serializer_class is None:
             self.serializer_class = self.get_serializer_class()
 
+        assert self.queryset.model == self.model, "{0}.model != {0}.queryset.model".format(self.__class__.__name__)
+
     def __getattr__(self, item):
         checked = []
         for model_key, viewset in self._get_model_keys():
             checked.append(model_key)
             if model_key is item:
-                return viewset.model.objects.get(pk=self.kwargs.get(model_key, self.kwargs.get("pk")))
+                return viewset.queryset.model.objects.get(pk=self.kwargs.get(model_key, self.kwargs.get("pk")))
         raise AttributeError("Cannot find attribute {item} in keys {checked}".format(**locals()))
 
     @classmethod
@@ -72,8 +74,13 @@ class AmCATViewSetMixin(object):
         return "/".join(cls._get_url_pattern())
 
     @classmethod
+    def get_default_basename(cls):
+        model_keys = list(mk.key for mk in cls._get_model_keys())
+        return "-".join(model_keys[:-1])
+
+    @classmethod
     def get_basename(cls):
-        return getattr(cls, "base_name", None)
+        return getattr(cls, "base_name", cls.get_default_basename())
 
     def finalize_response(self, request, response, *args, **kargs):
         response = super(AmCATViewSetMixin, self).finalize_response(request, response, *args, **kargs)
@@ -113,4 +120,3 @@ class AmCATViewSetMixin(object):
         for model_key in model_keys[:-1]:
             yield r"{model_key}s/(?P<{model_key}>\d+)".format(**locals())
         yield r"{model_key}s".format(model_key=model_keys[-1])
-

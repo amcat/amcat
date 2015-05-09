@@ -2,10 +2,10 @@
 
 {% block actions %}
 {% if can_edit %}
-  <a href="{% url "coding schema-new" context.id %}" class="btn btn-primary">
+  <a href="{% url "navigator:codingschema-new" context.id %}" class="btn btn-primary">
    <i class="glyphicon glyphicon-certificate"></i> New schema
   </a>
-  <a href="{% url "coding schema-link" project.id %}"  class="btn btn-default"><i class="glyphicon glyphicon-share"></i> Use schema from other project</a>
+  <a href="{% url "navigator:codingschema-link" project.id %}"  class="btn btn-default"><i class="glyphicon glyphicon-share"></i> Use schema from other project</a>
 {% endif %}
 {% endblock %}
 

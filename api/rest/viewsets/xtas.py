@@ -127,7 +127,7 @@ class ArticleLemmataSerializer(ArticleXTasSerializer):
 class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
     model_key = "token"
     model = Article
-    model_serializer_class = ArticleLemmataSerializer
+    serializer_class = ArticleLemmataSerializer
 
     def filter_queryset(self, queryset):
         queryset = super(XTasLemmataViewSet, self).filter_queryset(queryset)

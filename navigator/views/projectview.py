@@ -61,7 +61,7 @@ class ProjectViewMixin(object):
                                    for accessing this view
                                    (default: metareader)
     """
-    project_id_url_kwarg = 'project_id'
+    project_id_url_kwarg = 'project'
     required_project_permission = authorisation.ROLE_PROJECT_METAREADER
 
     def get_context_data(self, **kwargs):
@@ -117,7 +117,7 @@ class ProjectViewMixin(object):
 
     def get_breadcrumbs(self):
         bc = self._get_breadcrumbs(self.kwargs, self)
-        bc.insert(0, ("Projects", reverse("projects")))
+        bc.insert(0, ("Projects", reverse("navigator:projects")))
         return bc
 
     def get_template_names(self):
@@ -164,6 +164,13 @@ class HierarchicalViewMixin(object):
         # Accessing db_column may result in None, as it only appears when explicitly
         # set on model definition.
         _, db_column = cls.get_model()._meta.get_field("id").get_attname_column()
+
+        if db_column is None:
+            return None
+
+        if db_column.endswith("_id"):
+            return db_column[:-3]
+
         return db_column
 
     @classmethod
@@ -180,16 +187,19 @@ class HierarchicalViewMixin(object):
         return cls.get_model().objects.get(pk=pk)
 
     @classmethod
-    def get_view_name(cls):
-        if hasattr(cls, 'view_name'):
-            return cls.view_name
+    def _get_view_name(cls):
+        name = cls.get_model()._meta.object_name.lower()
+
+        if hasattr(cls, 'url_fragment'):
+            name += "-" + cls.url_fragment
         else:
-            name = cls.get_model()._meta.verbose_name
-            if hasattr(cls, 'url_fragment'):
-                name += "-" + cls.url_fragment
-            else:
-                name += ("-list" if issubclass(cls, ListView) else "-details")
-            return name
+            name += ("-list" if issubclass(cls, ListView) else "-details")
+
+        return name
+
+    @classmethod
+    def get_view_name(cls):
+        return getattr(cls, "view_name", cls._get_view_name())
 
     @classmethod
     def get_url_patterns(cls):
@@ -222,7 +232,7 @@ class HierarchicalViewMixin(object):
     def _get_breadcrumb_url(cls, kwargs, view):
         keys = re.findall("<([^>]+)>", cls.get_url_patterns()[0])
         kw = {k: v for (k, v) in kwargs.items() if k in keys}
-        url = reverse(cls.get_view_name(), kwargs=kw)
+        url = reverse("navigator:" + cls.get_view_name(), kwargs=kw)
         return url
 
     @classmethod

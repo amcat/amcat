@@ -91,7 +91,7 @@ class BaseSerialiser(object):
 
     def get_export_columns(self, **options):
         """
-        Return (label, function) pair for each column that a coding job export should include.
+        Return (label, function) pair for each column that a codingjob export should include.
         The function will be called with the serialised coded value as the only argument.
         The label need only be locally unique, it will be prepended with the field name.
         @param **options: the form values of the fields specified by get_export_fields

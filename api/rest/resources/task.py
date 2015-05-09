@@ -29,6 +29,7 @@ from api.rest.viewsets.task import TaskSerializer, TaskResultSerializer
 class TaskResource(AmCATResource):
     model = Task
     serializer_class = TaskSerializer
+    queryset = Task.objects.all()
 
 class TaskResultResource(AmCATResource):
     model = Task

@@ -232,7 +232,8 @@ amcat.datatables.create_rest_table = function (cont, rest_url, optional_args) {
         type: "POST",
         data: urldata[1],
         headers: {
-            "X-HTTP-METHOD-OVERRIDE": "OPTIONS"
+            "X-HTTP-METHOD-OVERRIDE": "OPTIONS",
+            "X-CSRFTOKEN": $.cookie('csrftoken')
         },
         url: urldata[0],
         success: amcat.datatables.fetched_initial_success.bind(state),

@@ -66,7 +66,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
         return [("Projects", "#")]
 
     def filter_table(self, table):
-        table = table.rowlink_reverse('article set-list', args=['{id}'])
+        table = table.rowlink_reverse('navigator:articleset-list', args=['{id}'])
         what = self.kwargs.get('what', 'favourites')
         if what == 'all':
             return table
@@ -103,7 +103,7 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
 
     @classmethod
     def _get_breadcrumb_url(cls, kwargs, view):
-        return reverse("article set-list", args=(kwargs['project_id'],))
+        return reverse("navigator:articleset-list", args=(kwargs['project'],))
 
 
     class form_class(forms.ModelForm):
@@ -122,7 +122,7 @@ class ProjectAddView(BreadCrumbMixin, ScriptView):
 
     def get_context_data(self, **kwargs):
         context = super(ProjectAddView, self).get_context_data(**kwargs)
-        context["cancel_url"] = reverse("projects")
+        context["cancel_url"] = reverse("navigator:projects")
         context["help_context"] = "Create_a_project"
         context["script_doc"] = (self.script.__doc__ and self.script.__doc__.replace("   ", ""))
         return context
@@ -139,4 +139,4 @@ class ProjectAddView(BreadCrumbMixin, ScriptView):
             "name": self.result.name, "description": self.result.description,
             "insert_user": self.result.insert_user.username
         }))
-        return reverse('article set-list', args=[self.result.id])
+        return reverse('navigator:articleset-list', args=[self.result.id])

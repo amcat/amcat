@@ -44,8 +44,6 @@ class PseudoSerializerMethodField(serializers.SerializerMethodField):
     queryset = Medium.objects.none()
 
 class CodedArticleSerializer(AmCATModelSerializer):
-    model = CodedArticle
-
     headline = serializers.SerializerMethodField("get_headline")
     date = serializers.SerializerMethodField("get_date")
     pagenr = serializers.SerializerMethodField("get_pagenr")
@@ -85,15 +83,16 @@ class CodedArticleSerializer(AmCATModelSerializer):
         model = CodedArticle
 
 class CodedArticleViewSetMixin(AmCATViewSetMixin):
-    model_serializer_class = CodedArticleSerializer
+    queryset = CodedArticle.objects.all()
+    serializer_class = CodedArticleSerializer
     model_key = "coded_article"
     model = CodedArticle
 
 class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                           CodedArticleViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
-    model = CodedArticle
-    model_serializer_class = CodedArticleSerializer
+    serializer_class = CodedArticleSerializer
     extra_filters = ("article__pagenr",)
+    queryset = CodedArticle.objects.all()
 
     ordering_mapping = {
         "headline": "article__headline",
@@ -116,8 +115,8 @@ class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
 class CodedArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                                   CodedArticleViewSetMixin, SentenceViewSetMixin,
                                   DatatablesMixin, ReadOnlyModelViewSet):
-    model = Sentence
-    model_serializer_class = SentenceSerializer
+    serializer_class = SentenceSerializer
+    queryset = Sentence.objects.all()
 
     def filter_queryset(self, queryset):
         qs = super(CodedArticleSentenceViewSet, self).filter_queryset(queryset)

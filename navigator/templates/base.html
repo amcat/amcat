@@ -40,6 +40,7 @@
         <script type="text/javascript" src="{% static 'components/bootstrap/dist/js/bootstrap.js' %}"></script>
         <script type="text/javascript" src="{% static 'components/datatables/media/js/jquery.dataTables.js' %}"></script>
         <script type="text/javascript" src="{% static 'components/datatables/extensions/TableTools/js/dataTables.tableTools.js' %}"></script>
+        <script type="text/javascript" src="{% static 'components/jquery-cookie/jquery.cookie.js' %}"></script>
         <script type="text/javascript" src="{% static 'js/dataTables.bootstrap.js' %}"></script>
         <script type="text/javascript" src="{% static 'components/bootstrap/js/scrollspy.js' %}"></script>
         <script type="text/javascript" src="{% static 'components/bootstrap/js/tooltip.js' %}"></script>
@@ -73,8 +74,8 @@
 
           <ul class="nav navbar-nav navbar-right">
 	    {% if status != 503 %}
-<li {% if main_active == 'Projects' %}class="active"{% endif %}><a href="{% url 'projects' %}">Projects</a></li>
-<li {% if main_active == 'Coding' %}class="active"{% endif %}><a href="{% url 'codingjobs' %}">Annotator</a></li>
+<li {% if main_active == 'Projects' %}class="active"{% endif %}><a href="{% url 'navigator:projects' %}">Projects</a></li>
+<li {% if main_active == 'Coding' %}class="active"{% endif %}><a href="{% url 'navigator:codingjobs' %}">Annotator</a></li>
 <li class="dropdown{% if main_active == 'Current User' %} active{% endif %}">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown">
 {% if request.user.first_name %}
@@ -84,7 +85,7 @@
 {% endif %}
 <b class="caret"></b></a>
   <ul class="dropdown-menu">
-    <li><a href="{% url 'user' %}">Account details</a></li>
+    <li><a href="{% url 'navigator:user' %}">Account details</a></li>
     <li><a href="{% url 'accounts-logout' %}">Log out</a></li>
   </ul>
 </li>
@@ -111,7 +112,7 @@
 	    {% block contextmenu %}
 	    {% endblock %}
           </ul>
-	  <a href="{% url 'index' %}">
+	  <a href="{% url 'navigator:index' %}">
             <div class="nav navbar-brand navbar-right">
 	      <h1>AmCAT Navigator</h1>
 	      <h2>3.3.2-rc1</h2>

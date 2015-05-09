@@ -17,13 +17,16 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import json
-from django.contrib.auth.models import User
-from django.db.models import Q, CharField
-from rest_framework import permissions, serializers
+
+from django.core.validators import BaseValidator
+from django.db.models import Q
+from rest_framework import permissions
+from rest_framework.exceptions import ValidationError
 from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.fields import Field
 
-from amcat.models import Query, ROLE_PROJECT_WRITER, Project
+from amcat.models import Query, ROLE_PROJECT_WRITER
 from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewsets import ProjectViewSetMixin, ProjectPermission
@@ -32,32 +35,28 @@ from api.rest.viewsets import ProjectViewSetMixin, ProjectPermission
 __all__ = ("QuerySerializer", "QueryViewSet")
 
 
-class QuerySerializer(AmCATModelSerializer):
-    user = PrimaryKeyRelatedField(read_only=True, queryset=User.objects.none())
-    project = PrimaryKeyRelatedField(read_only=True, queryset=Project.objects.none())
+class ParametersField(Field):
+    def __init__(self, *args, **kwargs):
+        super(ParametersField, self).__init__(*args, **kwargs)
 
-    def to_native(self, obj):
-        native = super(QuerySerializer, self).to_native(obj)
+    def to_representation(self, value):
+        if isinstance(value, basestring):
+            return value
+        return json.dumps(value)
 
-        if obj is not None:
-            native["parameters"] = json.dumps(obj.parameters)
-
-        return native
-
-    def is_valid(self):
-        # Hack? Hack.
-        if self.init_data is None:
-            return super(QuerySerializer, self).is_valid()
-
-        parameters = self.init_data.get("parameters")
-        if parameters is not None and isinstance(parameters, basestring):
+    def to_internal_value(self, data):
+        if isinstance(data, basestring):
             try:
-                json.loads(parameters)
+                return json.loads(data)
             except ValueError:
-                self._errors = {"parameters": ["Could not be decoded as JSON."]}
-                return False
+                raise ValidationError("No JSON object could be decoded")
+        return data
 
-        return super(QuerySerializer, self).is_valid()
+
+class QuerySerializer(AmCATModelSerializer):
+    user = PrimaryKeyRelatedField(read_only=True)
+    project = PrimaryKeyRelatedField(read_only=True)
+    parameters = ParametersField()
 
     class Meta:
         model = Query
@@ -69,9 +68,11 @@ class QueryPermission(permissions.BasePermission):
 
 
 class QueryViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
+    model = Query
     model_key = "query"
-    model_serializer_class = QuerySerializer
-    model = QuerySerializer.Meta.model
+    base_name = "query"
+    serializer_class = QuerySerializer
+    queryset = QuerySerializer.Meta.model.objects.all()
     search_fields = ordering_fields = ("id", "name", "user__username")
     http_method_names = ("get", "options", "post", "put", "patch", "delete")
     permission_classes = (QueryPermission, ProjectPermission)
@@ -81,11 +82,11 @@ class QueryViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
         "DELETE": ROLE_PROJECT_WRITER
     }
 
-    def pre_save(self, obj):
-        #self.check_object_permissions(self.request, obj)
-        obj.project = self.project
-        obj.user = self.request.user
-        return obj
+    def perform_create(self, serializer):
+        return serializer.save(user=self.request.user, project=self.project)
+
+    def perform_update(self, serializer):
+        return serializer.save(user=self.request.user, project=self.project)
 
     def filter_queryset(self, queryset):
         queryset = super(QueryViewSet, self).filter_queryset(queryset)

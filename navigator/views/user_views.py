@@ -53,11 +53,12 @@ class ProjectRoleForm(forms.ModelForm):
 
     class Meta:
         model = ProjectRole
+        exclude = ()
 
 class ProjectUserListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = User
     parent = None
-    base_url = "projects/(?P<project_id>[0-9]+)"
+    base_url = "projects/(?P<project>[0-9]+)"
     context_category = 'Settings'
     url_fragment = "users"
     resource = ProjectRoleResource

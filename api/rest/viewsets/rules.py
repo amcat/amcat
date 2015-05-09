@@ -1,39 +1,34 @@
-
 from rest_framework.viewsets import ReadOnlyModelViewSet
+
 from amcat.models import RuleSet, Rule
 from api.rest.viewset import AmCATViewSetMixin
-from api.rest.serializer import AmCATModelSerializer
-
 from api.rest.viewsets.articleset import ArticleSetViewSetMixin
 from api.rest.viewsets.article import ArticleViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
 from api.rest.mixins import DatatablesMixin
-from amcat.tools.amcatxtas import ANALYSES, get_result
+from amcat.tools.amcatxtas import get_result
+
 
 class RulesetViewSetMixin(AmCATViewSetMixin):
+    queryset = RuleSet.objects.all()
     model_key = "ruleset"
     model = RuleSet
 
 class RulesetViewSet(RulesetViewSetMixin, ReadOnlyModelViewSet):
-    model_serializer_class =  AmCATModelSerializer
-    model = RuleSet
-
-    def filter_queryset(self, queryset):
-        return queryset
+    queryset = RuleSet.objects.all()
 
 class RuleViewSetMixin(AmCATViewSetMixin):
+    queryset = Rule.objects.all()
     model_key = "rule"
     model = Rule
 
 class RuleViewSet(RulesetViewSetMixin, RuleViewSetMixin, ReadOnlyModelViewSet):
-    model_serializer_class =  AmCATModelSerializer
-    model = Rule
+    queryset = Rule.objects.all()
 
     def filter_queryset(self, queryset):
         return queryset.filter(ruleset_id=self.kwargs['ruleset'])
 
 
-from rest_framework.serializers import Serializer
 from api.rest.serializer import AmCATModelSerializer
 
 class RulesetSerializer(AmCATModelSerializer):
@@ -59,8 +54,8 @@ class RulesetSerializer(AmCATModelSerializer):
 
 class ArticleRulesetViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model_key = "ruleset"
-    model = RuleSet
-    model_serializer_class = RulesetSerializer
+    queryset = RuleSet.objects.all()
+    serializer_class = RulesetSerializer
 
     def get_serializer_context(self):
         ctx = super(ArticleRulesetViewSet, self).get_serializer_context()

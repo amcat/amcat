@@ -22,6 +22,7 @@ import logging
 
 from amcat.models import Plugin
 from api.rest.resources.amcatresource import AmCATResource
+from api.rest.serializer import AmCATModelSerializer
 
 log = logging.getLogger(__name__)
 
@@ -29,5 +30,10 @@ log = logging.getLogger(__name__)
 class PluginResource(AmCATResource):
     model = Plugin
     extra_filters = ["plugin_type"]
+    queryset = Plugin.objects.all()
+
+    class serializer_class(AmCATModelSerializer):
+        class Meta:
+            model = Plugin
 
 

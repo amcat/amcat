@@ -29,7 +29,7 @@ class SentenceSerializer(AmCATModelSerializer):
     model = Sentence
 
 class SentenceViewSetMixin(AmCATViewSetMixin):
-    model_serializer_class = SentenceSerializer
+    serializer_class = SentenceSerializer
     model_key = "sentence"
     model = Sentence
 

@@ -21,7 +21,7 @@
 Model module containing Codingjobs
 
 Coding Jobs are sets of articles assigned to users for manual coding.
-Each coding job has codingschemas for articles and/or sentences.
+Each codingjob has codingschemas for articles and/or sentences.
 """
 
 from django.db.models.signals import post_save

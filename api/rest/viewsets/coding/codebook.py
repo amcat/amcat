@@ -66,7 +66,8 @@ class CodebookSerializer(AmCATModelSerializer):
         return (serialize_codebook_code(codebook, ccode) for ccode in codebook.codebookcodes)
 
 class CodebookViewSetMixin(AmCATViewSetMixin):
-    model_serializer_class = CodebookSerializer
+    queryset = Codebook.objects.all()
+    serializer_class = CodebookSerializer
     model_key = "codebook"
     model = Codebook
     search_fields = ("id", "project__name", "name")
@@ -93,7 +94,7 @@ class CodebookLanguageViewSet(ProjectViewSetMixin, CodebookViewSetMixin,
 class CodingJobCodebookViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                       CodebookViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = Codebook
-    model_serializer_class = CodebookSerializer
+    serializer_class = CodebookSerializer
 
     def _get_codebook_ids(self):
         """

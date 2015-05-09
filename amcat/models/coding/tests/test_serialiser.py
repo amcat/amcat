@@ -4,7 +4,7 @@ from amcat.tools import amcattest
 
 
 class _DummyField(object):
-    """Dummy coding schema field object with codebook"""
+    """Dummy codingschema field object with codebook"""
 
     def __init__(self, codebook):
         self.codebook = codebook

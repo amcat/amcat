@@ -28,6 +28,7 @@ class ProjectResource(AmCATResource):
     extra_filters = ['projectrole__user__id']
     ordering_fields = ("id", "name", "description", "insert_date", "active")
     serializer_class = ProjectSerializer
+    queryset = Project.objects.all()
 
     def filter_queryset(self, queryset):
         qs = super(ProjectResource, self).filter_queryset(queryset)

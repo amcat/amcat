@@ -24,4 +24,5 @@ from api.rest.viewsets.articleset import ArticleSetSerializer
 
 class ArticleSetResource(AmCATResource):
     model = ArticleSet
+    queryset = ArticleSet.objects.all()
     serializer_class = ArticleSetSerializer

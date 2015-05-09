@@ -63,9 +63,9 @@ urlpatterns = patterns(
     url(r'^ruleset$', rule_views.RuleSetTableView.as_view(), name='ruleset-list'),
 
     # Task actions
-    url(r'^projects/(?P<project_id>[0-9]+)/tasks/clean_ready', clean_ready, name='task-clean-ready'),
-    url(r'^projects/(?P<project_id>[0-9]+)/tasks/clean_stuck', clean_stuck, name='task-clean-stuck'),
-    url(r'^projects/(?P<project_id>[0-9]+)/tasks/(?P<uuid>%s)' % UUID_RE, uuid_redirect, name='task-uuid'),
+    url(r'^projects/(?P<project>[0-9]+)/tasks/clean_ready', clean_ready, name='task-clean-ready'),
+    url(r'^projects/(?P<project>[0-9]+)/tasks/clean_stuck', clean_stuck, name='task-clean-stuck'),
+    url(r'^projects/(?P<project>[0-9]+)/tasks/(?P<uuid>%s)' % UUID_RE, uuid_redirect, name='task-uuid'),
 )
 
 _views = [
@@ -102,9 +102,9 @@ for view in _views:
                             )
 
 urlpatterns += patterns('',
-    url("^projects/(?P<project_id>[0-9]+)/$", ArticleSetListView.as_view(), name="project"),
+    url("^projects/(?P<project>[0-9]+)/$", ArticleSetListView.as_view(), name="project"),
     url("^projects/$", ProjectListView.as_view(), name="projects"),
-    url("^projects/add/$$", ProjectAddView.as_view(), name="projects-add"),
+    url("^projects/add/$", ProjectAddView.as_view(), name="projects-add"),
     url("^projects/(?P<what>[a-z]+)/$", ProjectListView.as_view(), name="projects"),
 )
 #    url(r'^projects(?P<what>/\w+)?$', 'navigator.views.project.projectlist', name='projects'),

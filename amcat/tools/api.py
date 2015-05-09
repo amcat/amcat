@@ -75,7 +75,7 @@ class AmcatAPI(object):
         return self.request(url, **filters)
     
     def create_set(self, project, json_data=None, **options):
-        """Create a new article set. Provide the needed arguments using the post_data or with key-value pairs"""
+        """Create a new articleset. Provide the needed arguments using the post_data or with key-value pairs"""
         url = articleset_url.format(**locals())
         if json_data is None:
             # form encoded request

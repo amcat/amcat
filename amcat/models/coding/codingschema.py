@@ -40,7 +40,7 @@ class RequiredValueError(ValidationError):
     pass
 
 class CodingSchema(AmcatModel):
-    """Model for table codingschemas: A coding schema used for manual coding"""
+    """Model for table codingschemas: A codingschema used for manual coding"""
     id = models.AutoField(db_column='codingschema_id', primary_key=True)
     __label__ = 'name'
     

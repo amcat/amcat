@@ -99,13 +99,13 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
         self.assertTrue(self.client.login(username=self.member.username, password="test"))
 
         status_code, results = self.json(self.get_url())
+
         self.assertEqual(200, status_code)
         self.assertEqual(1, len(results))
         self.assertEqual(
             json.loads(results[0]['parameters']),
             [1,2,"ab"]
         )
-
 
     def test_post_unauthenticated(self):
         """Anonymous users should not be able to use POST"""
@@ -164,12 +164,11 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
 
     def test_put_unauthorised(self):
         """PUT with an object which 'does not exist' for current user (but does in DB)
-        should result in new object."""
+        should result in a not found."""
         self.client.login(username=self.member.username, password="test")
         data = {"name": "test", "parameters": "[1,2,null]"}
         status_code, results =self.json(self.get_url(self.private_query.id), data=data, method="put")
-        self.assertEqual(201, status_code)
-        self.assertNotEqual(results["id"], self.private_query.id)
+        self.assertEqual(404, status_code)
 
     def test_put_empty(self):
         self.client.login(username=self.owner.username, password="test")

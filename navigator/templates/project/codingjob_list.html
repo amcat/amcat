@@ -5,7 +5,7 @@
 
 {% block actions %}
     {% if can_edit %}
-        <a href="{% url "coding job-add" context.id %}" class="btn btn-primary"><i class="icon-certificate"></i> New codingjob</a>
+        <a href="{% url "navigator:codingjob-add" context.id %}" class="btn btn-primary"><i class="icon-certificate"></i> New codingjob</a>
     {% endif %}
 {% endblock %}
 
@@ -26,7 +26,7 @@
 
         <!-- Because GET can only handle so much ids, we need to use POST. -->
         <form id="export-codingjobs" method="post"
-              action="{% url "coding job-export-select" context.id %}"
+              action="{% url "navigator:codingjob-export-select" context.id %}"
               data-id-field="[name=codingjobs]" data-table="#all-codingjobs">
 
             {% csrf_token %}
@@ -66,22 +66,22 @@
     </p>
 
  {% if deleted %}
-    <div class="alert alert-success">Successfully deleted the coding job. If this wasn't your intention, please contact your system administrator as it may still reside in the litter bin.</div>
+    <div class="alert alert-success">Successfully deleted the codingjob. If this wasn't your intention, please contact your system administrator as it may still reside in the litter bin.</div>
  {% endif %}
  {% if added %}
     <div class="alert alert-success">
       {% for job in added %}
-      Created job: <a href='{% url "coding job-details" context.id job.id %}'>{{job.id}} : {{job}}</a><br/>
+      Created job: <a href='{% url "navigator:codingjob-details" context.id job.id %}'>{{job.id}} : {{job}}</a><br/>
       {% endfor %}
     </div>
  {% endif %}
 
 
 <ul class="nav nav-tabs nav-justified" style="margin-bottom: 1em">
-  <li {% if what == 'favourites' %}class="active"{% endif %}><a href='{% url "coding job-list" project.id "favourites"%}'>
+  <li {% if what == 'favourites' %}class="active"{% endif %}><a href='{% url "navigator:codingjob-list" project.id "favourites"%}'>
     <i class="glyphicon glyphicon-star"></i>Active Jobs
   </a></li>
-  <li {% if what == 'archived' %}class="active"{% endif %}><a  href='{% url "coding job-list" project.id "archived"%}'>Archived Jobs</a></li>
+  <li {% if what == 'archived' %}class="active"{% endif %}><a  href='{% url "navigator:codingjob-list" project.id "archived"%}'>Archived Jobs</a></li>
 </ul>
 
 <div id="all-codingjobs">

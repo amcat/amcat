@@ -55,8 +55,8 @@ class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         context['headline'] = self.object.headline
 
         context['articleset'] = None
-        if 'articleset_id' in self.kwargs:
-            context['articleset'] = ArticleSet.objects.get(id=self.kwargs['articleset_id'])
+        if 'articleset' in self.kwargs:
+            context['articleset'] = ArticleSet.objects.get(id=self.kwargs['articleset'])
 
         tree = self.object.get_tree()
         if tree.children:
@@ -73,7 +73,7 @@ class ArticleSetArticleDetailsView(ArticleDetailsView):
 
     def get_context_data(self, **kwargs):
         context = super(ArticleSetArticleDetailsView, self).get_context_data(**kwargs)
-        context['articleset_id'] = self.kwargs['articleset_id']
+        context['articleset_id'] = self.kwargs['articleset']
         context['text'] = escape(self.object.text)
         return context
 
@@ -85,13 +85,14 @@ class ProjectArticleDetailsView(ArticleDetailsView):
     parent = ProjectDetailsView
     context_category = 'Articles'
     template_name = 'project/article_details.html'
-    url_fragment = "articles/(?P<article_id>[0-9]+)"
+    url_fragment = "articles/(?P<article>[0-9]+)"
 
     @classmethod
     def _get_breadcrumb_name(cls, kwargs, view):
-        aid = kwargs['article_id']
+        aid = kwargs['article']
         a = Article.objects.get(pk=aid)
         return "Article {a.id} : {a}".format(**locals())
+
     @classmethod
     def get_view_name(cls):
         return "project-article-details"
@@ -280,7 +281,7 @@ class ArticleSplitView(ProjectFormView):
 
     @property
     def article(self):
-        return Article.objects.get(pk=self.kwargs['article_id'])
+        return Article.objects.get(pk=self.kwargs['article'])
 
     def form_valid(self, form):
         selected_sentence_ids = set(get_sentence_ids(self.request.POST)) - {None,}

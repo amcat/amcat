@@ -53,7 +53,8 @@ MODELS = ['Article', 'AmCAT',
           'django.contrib.auth.models.Group', 'django.contrib.auth.models.Permission',
           'PluginType',
           "RuleSet",
-          "CodingRuleAction"]
+          "CodingRuleAction",
+          "Query"]
 
 # Automatically generate resources for these models
 for modelname in MODELS:
@@ -81,7 +82,7 @@ def get_resource_for_model(model):
 def get_all_resource_views(request):
     for r in all_resources():
         if hasattr(r, "get_model_name"):
-            yield (r.get_model_name(), reverse(r.get_view_name(), request=request))
+            yield (r.get_model_name(), reverse("api:" + r.get_view_name(), request=request))
 
 @api_view(['GET'])
 def api_root(request, format=None):

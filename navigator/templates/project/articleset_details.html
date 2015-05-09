@@ -8,20 +8,20 @@
 {% endblock %}
 
 {% block actions %}
-    <a class="btn btn-primary" href="{% url "query" project.id %}?sets={{ object.id }}"><i class="glyphicon glyphicon-cog"></i>Query</a>
+    <a class="btn btn-primary" href="{% url "navigator:query" project.id %}?sets={{ object.id }}"><i class="glyphicon glyphicon-cog"></i>Query</a>
     {% if can_edit %}
-        <a class="btn btn-default" data-confirm="You're about to refresh the index for <i>{{ object.name }}</i>. This action can take a while, and all articles in the index will be unavailable for search in the meantime." href="{% url "article set-refresh" project.id object.id %}"><i class="glyphicon glyphicon-refresh"></i> Refresh Index</a>
+        <a class="btn btn-default" data-confirm="You're about to refresh the index for <i>{{ object.name }}</i>. This action can take a while, and all articles in the index will be unavailable for search in the meantime." href="{% url "navigator:articleset-refresh" project.id object.id %}"><i class="glyphicon glyphicon-refresh"></i> Refresh Index</a>
     {% endif %}
-    <a class="btn btn-default" href="{% url "article set-import" project.id object.id %}"><i class="glyphicon glyphicon-share"></i> Use in another project</a>
+    <a class="btn btn-default" href="{% url "navigator:articleset-import" project.id object.id %}"><i class="glyphicon glyphicon-share"></i> Use in another project</a>
     {% if can_edit %}
-        <a class="btn btn-default" href="{% url "article set-sample" project.id object.id %}"><i class="glyphicon glyphicon-filter"></i> Sample</a>
+        <a class="btn btn-default" href="{% url "navigator:articleset-sample" project.id object.id %}"><i class="glyphicon glyphicon-filter"></i> Sample</a>
 
         {% if object.project.id == project.id %}
-            <a class="btn btn-default" href="{% url "article set-edit" project.id object.id %}"><i class="glyphicon glyphicon-edit"></i> Edit details</a>
-            <a class="btn btn-default" href="{% url "article set-deduplicate" project.id object.id %}?articleset_2={{ object.id }}&articleset_1={{ object.id }}">Deduplicate</a>
-            <a class="btn btn-danger confirm" href="{% url "article set-delete" project.id  object.id %}" data-confirm="You're about to delete <i>{{ object.name }}</i>. This action is not reversible."> <i class="glyphicon glyphicon-trash"></i> Delete</a>
+            <a class="btn btn-default" href="{% url "navigator:articleset-edit" project.id object.id %}"><i class="glyphicon glyphicon-edit"></i> Edit details</a>
+            <a class="btn btn-default" href="{% url "navigator:articleset-deduplicate" project.id object.id %}?articleset_2={{ object.id }}&articleset_1={{ object.id }}">Deduplicate</a>
+            <a class="btn btn-danger confirm" href="{% url "navigator:articleset-delete" project.id  object.id %}" data-confirm="You're about to delete <i>{{ object.name }}</i>. This action is not reversible."> <i class="glyphicon glyphicon-trash"></i> Delete</a>
         {% else %}
-            <a class="btn btn-warning confirm" data-confirm="You're about to unlink <i>{{ object.name }}</i>." href="{% url "article set-unlink" project.id object.id %}"><i class="glyphicon glyphicon-remove"></i> Unlink</a>
+            <a class="btn btn-warning confirm" data-confirm="You're about to unlink <i>{{ object.name }}</i>." href="{% url "navigator:articleset-unlink" project.id object.id %}"><i class="glyphicon glyphicon-remove"></i> Unlink</a>
         {% endif %}
 
     {% endif %}
@@ -82,7 +82,7 @@
                     </tr>
                     <tr>
                         <td>Project:</td>
-                        <td><a href="{% url 'article set-list' object.project_id %} ">{{object.project_id}} : {{object.project}}</a></td>
+                        <td><a href="{% url 'navigator:articleset-list' object.project_id %} ">{{object.project_id}} : {{object.project}}</a></td>
                     </tr>
                     <tr>
                         <td>Provenance:&nbsp;</td>

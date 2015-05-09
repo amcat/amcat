@@ -22,9 +22,10 @@ from __future__ import unicode_literals, print_function, absolute_import
 import re
 import itertools
 
-from django.http import QueryDict
+from django.http import QueryDict, HttpResponse
+from rest_framework.exceptions import ParseError
 
-from rest_framework.fields import DateField, CharField, IntegerField
+from rest_framework.fields import DateField, CharField, IntegerField, DateTimeField
 from rest_framework.serializers import Serializer
 from django_filters import filters, filterset
 
@@ -181,7 +182,7 @@ class ScoreField(IntegerField):
 
 class SearchResourceSerialiser(Serializer):
     id = IntegerField()
-    date = DateField()
+    date = DateTimeField()
     headline = HighlightField()
     mediumid = IntegerField()
     medium = CharField()
@@ -218,10 +219,18 @@ class SearchResourceSerialiser(Serializer):
             self.fields['keyword'] = KWICField(kwic='keyword')
             self.fields['right'] = KWICField(kwic='right')
 
+    class Meta:
+        model = Article
 
 class SearchResource(AmCATResource):
     model = Article
     serializer_class = SearchResourceSerialiser
+
+    def get(self, request, *args, **kwargs):
+        fq = self.filter_queryset(self.get_queryset())
+        if not fq.queries and not fq.filters:
+            raise ParseError("You need to provide a non-empty query (q-parameter) or other filters")
+        return super(SearchResource, self).get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         # allow for POST requests
@@ -254,8 +263,6 @@ class SearchResource(AmCATResource):
         if "kwic" in self.columns and "lead" not in fields: fields += ["lead"]
         hits = "hits" in self.columns
 
-        print(self.queries)
-        print(fields)
         return LazyES(self.request.user, self.queries, fields=fields, hits=hits)
 
     def filter_queryset(self, queryset):
@@ -319,27 +326,11 @@ class SearchResource(AmCATResource):
     @classmethod
     def extra_fields(cls, args):
         """Used by datatable.py for dynamic fields. Hack?"""
-        print(args)
         queries = [val for (name, val) in args if name == "q"]
         cols = [val for (name, val) in args if name == "col"]
         return list(cls._extra_fields(cols, queries))
 
+    class Meta:
+        model = Article
 
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
 
-from api.rest.apitestcase import ApiTestCase
-from amcat.tools import amcattest, toolkit
-
-class TestSearch(ApiTestCase):
-    @amcattest.use_elastic
-    def test_dates(self):
-        """Test whether date deserialization works, see #66"""
-        import datetime
-        from amcat.tools import amcates
-        for d in ('2001-01-01', '1992-12-31T23:59', '2012-02-29T12:34:56.789', datetime.datetime.now()):
-            a = amcattest.create_test_article(date=d)
-            amcates.ES().flush()
-            res = self.get("/api/v4/search", ids=a.id)
-            self.assertEqual(toolkit.readDate(res['results'][0]['date']), toolkit.readDate(str(d)))

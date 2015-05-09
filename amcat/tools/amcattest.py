@@ -118,7 +118,7 @@ def create_test_schema(**kargs):
     return CodingSchema.objects.create(**kargs)
 
 def create_test_schema_with_fields(codebook=None, **kargs):
-    """Set up a simple coding schema with fields to use for testing
+    """Set up a simple codingschema with fields to use for testing
     Returns codebook, schema, textfield, numberfield, codefield
     """
     from amcat.models import CodingSchemaFieldType, CodingSchemaField

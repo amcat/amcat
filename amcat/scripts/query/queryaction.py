@@ -85,7 +85,7 @@ class QueryActionHandler(TaskHandler):
 
     def run_task(self):
         query_action = self.get_query_action()
-        updater = CeleryProgressUpdater(self.task.uuid)
+        updater = CeleryProgressUpdater(str(self.task.uuid))
         query_action.monitor.add_listener(updater.update)
 
         msg = "Task started, running {query_action.__class__.__name__}..".format(**locals())
@@ -126,7 +126,7 @@ class QueryActionHandler(TaskHandler):
         return response
 
     def get_redirect(self):
-        return reverse("queryaction-index"), "No redirect"
+        return reverse("api:queryaction-index"), "No redirect"
 
 
 class QueryAction(object):

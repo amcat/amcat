@@ -16,12 +16,14 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-import collections
-import json
+from django.forms import ModelChoiceField
 
+from rest_framework.fields import ModelField, CharField
 from rest_framework.viewsets import ModelViewSet
 
-from amcat.models import Medium
+from amcat.models import Medium, Project
+from amcat.tools.amcates import ES
+from amcat.tools.caching import cached
 from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
@@ -35,113 +37,59 @@ import logging
 log = logging.getLogger(__name__)
 
 class ArticleViewSetMixin(AmCATViewSetMixin):
+    queryset = Article.objects.all()
     model_key = "article"
     model = Article
 
 
+class MediumField(ModelField):
+    def to_internal_value(self, data):
+        try:
+            int(data)
+        except ValueError:
+            return Medium.get_or_create(data)
+        else:
+            return super(MediumField, self).to_internal_value(data)
+
+    def to_representation(self, obj):
+        return obj.medium_id
+
+
 class ArticleSerializer(AmCATModelSerializer):
-    def __init__(self, instance=None, data=None, files=None, **kwargs):
-        kwargs['many'] = isinstance(data, list)
-        super(ArticleSerializer, self).__init__(instance, data, files, **kwargs)
-        media = self.context['view'].articleset.get_mediums()
-        self.medium_names = {m.id: m.name for m in media}
-        self.medium_ids = {m.name: m.id for m in media}
+    project = ModelChoiceField(queryset=Project.objects.all(), required=True)
+    medium = MediumField(ModelChoiceField(queryset=Medium.objects.all()))
+    uuid = CharField(read_only=False, required=False)
 
+    def validate(self, attrs):
+        validated_data = super(ArticleSerializer, self).validate(attrs)
+        validated_data["project"] = self.context["view"].project
+        return validated_data
 
-    def get_field(self, model_field):
-        f = super(ArticleSerializer, self).get_field(model_field)
-        if model_field.name == "uuid":
-            f.read_only = False
-            # set uuid to read_only False to allow inserting uuids
-        return f
-        
-    def restore_fields(self, data, files):
-        # convert media from name to id, if needed
-        data = data.copy() # make data mutable
-        if 'medium' in data:
-            try:
-                int(data['medium'])
-            except ValueError:
-                m = data['medium']
-                if m not in self.medium_ids:
-                    mid = Medium.get_or_create(m).id
-                    self.medium_ids[m] = mid
-                    self.medium_names[mid] = m
-                data['medium'] = self.medium_ids[m]
+    def create(self, validated_data):
+        try:
+            article = Article.objects.get(uuid=validated_data["uuid"])
+        except (Article.DoesNotExist, KeyError) as e:
+            article = super(ArticleSerializer, self).create(validated_data)
 
-        # add time part to date, if needed
-        if 'date' in data and len(data['date']) == 10:
-            data['date'] += "T00:00"
+        elastic = ES()
+        elastic.add_articles([article.id])
+        elastic.flush()
 
-        if 'project' not in data:
-            data['project'] = self.context['view'].project.id
+        self.context["view"].articleset.add_articles([article])
+        return article
 
-        return super(ArticleSerializer, self).restore_fields(data, files)
-
-    def from_native(self, data, files):
-        if "id" in data:
-            # add existing ID rather than new
-            id = int(data['id'])
-            try:
-                return Article.objects.get(pk=int(data["id"]))
-            except Article.DoesNotExist:
-                from rest_framework.exceptions import APIException
-                raise APIException("Requested article id {id} does not exist"
-                                   .format(**locals()))
-        result = super(ArticleSerializer, self).from_native(data, files)
-
-        # deserialize children (if needed)
-        children = data.get('children')# TODO: children can be a multi-value GET param as well, e.g. handle getlist
-
-        if isinstance(children, (str, unicode)):
-            children = json.loads(children)
-
-        if children:
-            self.many = True
-            def get_child(obj):
-                child = self.from_native(obj, None)
-                child.parent = result
-                return child
-            return [result] + [get_child(child) for child in children]
-
-        return result
-
-    def save(self, **kwargs):
-        def _flatten(l):
-            """Turn either an object or a (recursive/irregular/jagged) list-of-lists into a flat list"""
-            # inspired by http://stackoverflow.com/questions/2158395/flatten-an-irregular-list-of-lists-in-python
-            if isinstance(l, collections.Iterable) and not isinstance(l, basestring):
-                for el in l:
-                    for sub in _flatten(el):
-                        yield sub
-            else:
-                yield l
-
-        # flatten articles list (children in a many call yields a list of lists)
-        self.object = list(_flatten(self.object))
-
-        Article.create_articles(self.object, self.context['view'].articleset)
-
-        # make sure that self.many is True for serializing result
-        self.many = True
-        return self.object
-
-    def to_native(self, data):
-        result = super(ArticleSerializer, self).to_native(data)
-        mid = result['medium']
-        result['mediumid'] = mid
-        if mid not in self.medium_names:
-            # this should not occur, but happens e.g. if index is not flushed
-            self.medium_names[mid] = Medium.objects.get(pk=mid).name
-        result['medium'] = self.medium_names[mid]
-        return result
+    class Meta:
+        model = Article
+        read_only_fields = ('id', 'project', 'length', 'insertdate', 'insertscript')
 
 
 class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMixin, DatatablesMixin, ModelViewSet):
     model = Article
     model_key = "article"
     permission_map = {'GET': ROLE_PROJECT_READER}
-    model_serializer_class = ArticleSerializer
+    serializer_class = ArticleSerializer
+    queryset = Article.objects.all()
+    http_method_names = ("get", "post")
 
     def check_permissions(self, request):
         # make sure that the requested set is available in the projec, raise 404 otherwiset
@@ -156,94 +104,11 @@ class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSet
         return super(ArticleViewSet, self).check_permissions(request)
 
     @property
+    @cached
     def articleset(self):
-        if not hasattr(self, '_articleset'):
-            articleset_id = int(self.kwargs['articleset'])
-            self._articleset = ArticleSet.objects.get(pk=articleset_id)
-        return self._articleset
+        articleset_id = int(self.kwargs['articleset'])
+        return ArticleSet.objects.get(pk=articleset_id)
 
     def filter_queryset(self, queryset):
         queryset = super(ArticleViewSet, self).filter_queryset(queryset)
         return queryset.filter(articlesets_set=self.articleset)
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from api.rest.apitestcase import ApiTestCase
-from amcat.tools import amcattest, toolkit
-from amcat.tools import amcates
-
-class TestArticleViewSet(ApiTestCase):
-    @amcattest.use_elastic
-    def test_post(self):
-        """Test whether posting and retrieving an article works correctly"""
-        import datetime
-        p = amcattest.create_test_project()
-        s = amcattest.create_test_set(project=p)
-        a = {
-            'date': datetime.datetime.now().isoformat(),
-            'headline': 'Test child',
-            'medium': 'Fantasy',
-            'text': 'Hello Universe',
-            'pagenr': 1,
-            'url': 'http://example.org',
-            'uuid': 'c691fadf-3c45-4ed6-93fe-f035b5f500af',
-        }
-        url = "/api/v4/projects/{p.id}/articlesets/{s.id}/articles/".format(**locals())
-        self.post(url, a, as_user=self.user)
-
-        amcates.ES().flush()
-
-        res = self.get(url)["results"]
-        self.assertEqual(len(res), 1)
-        self.assertEqual(res[0]["headline"], a['headline'])
-        self.assertEqual(toolkit.readDate(res[0]["date"]), toolkit.readDate(a['date']))
-        self.assertEqual(res[0]["uuid"], a['uuid'])
-
-    @amcattest.use_elastic
-    def test_children(self):
-        p = amcattest.create_test_project()
-        s = amcattest.create_test_set(project=p)
-        # need to json dump the children because the django client does weird stuff with post data
-        children = json.dumps([{'date': '2001-01-02', 'headline': 'Test child',
-                                'medium': 'Fantasy', 'text': 'Hello Universe'}])
-        a = {
-            'date': '2001-01-01',
-            'headline': 'Test parent',
-            'medium': 'My Imagination',
-            'text': 'Hello World',
-            'children': children
-        }
-        url = "/api/v4/projects/{p.id}/articlesets/{s.id}/articles/".format(**locals())
-        self.post(url, a, as_user=self.user)
-        amcates.ES().flush()
-
-        res = self.get(url)["results"]
-
-        headlines = {a['headline'] : a for a in res}
-        self.assertEqual(set(headlines), {'Test parent', 'Test child'})
-        self.assertEqual(headlines['Test child']['parent'], headlines['Test parent']['id'])
-
-    @amcattest.use_elastic
-    def test_parent_attribute(self):
-        """Can we add an article as a child to a specific existing article?"""
-        s = amcattest.create_test_set()
-        a = amcattest.create_test_article(articleset=s, project=s.project, headline="parent")
-        b = {
-            'date': '2001-01-01',
-            'headline': 'child',
-            'medium': 'My Imagination',
-            'text': 'Hello World',
-            'parent' : a.id
-        }
-        
-        url = "/api/v4/projects/{a.project_id}/articlesets/{s.id}/articles/".format(**locals())
-        self.post(url, b, as_user=self.user)
-        
-        articles = {a.headline : a for a in s.articles.all()}
-        self.assertEqual(articles['child'].parent, articles['parent'])
-
-        
-
-        

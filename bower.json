@@ -14,6 +14,7 @@
     "bootstrap-datepicker": "",
     "highcharts": "",
     "moment": "",
+    "jquery-cookie": "",
     "papaparse": "4.1.0",
     "bootstrap-multiselect": "git://github.com/davidstutz/bootstrap-multiselect.git#c8351a6f0ab37dacfcebe52001ec22ca6c6896a0"
   },

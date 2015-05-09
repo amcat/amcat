@@ -96,7 +96,7 @@ class ScriptHandler(TaskHandler):
 
     def get_redirect(self):
         """Default: provide redirect to download location"""
-        return reverse("api-v4-taskresult") + "/" + self.task.uuid, "Download results"
+        return reverse("api:api-v4-taskresult") + "/" + self.task.uuid, "Download results"
 
     def get_response(self):
         """Default: instantiate the script and ask it to provide response"""
@@ -164,7 +164,7 @@ class ScriptMixin(FormMixin):
 
         task = handler.call(target_class=self.get_script(), arguments=kwargs,
                             project=project, user=self.request.user)
-        url = reverse("task-details", args=[project.id, task.task.id])
+        url = reverse("navigator:task-details", args=[project.id, task.task.id])
         next = urlencode(dict(next=self.request.get_full_path()))
         return redirect("{url}?{next}".format(**locals()), permanent=False)
 

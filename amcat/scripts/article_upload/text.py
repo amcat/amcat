@@ -110,11 +110,11 @@ class Text(UploadScript):
     """
     Plain text uploader.
 
-    Please provide either the text of the article or upload a file. If a file is uploaded, the article set name
+    Please provide either the text of the article or upload a file. If a file is uploaded, the articleset name
     and headline will be taken from the file automatically. The filename can start with a date, in which case
     the date field can be left blank, for example: 2014-01-01_headline.txt.
 
-    You can also upload a zip file containing multiple files. The article set will be named after the zip file name,
+    You can also upload a zip file containing multiple files. The articleset will be named after the zip file name,
     and the headlines (and optionally dates) will be taken from the individual file names. Any folders in the zip
     file will be entered in the 'section' field.
 

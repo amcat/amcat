@@ -8,7 +8,7 @@
  <script src="{% static 'js/jquery.schemaeditor.js' %}"></script>
  <script src="{% static 'components/TableDnD/js/jquery.tablednd.0.7.min.js' %}"></script>
 {% endcompress %}
- <script>$(function(){ jQuery.fn.schemaeditor("{% url "api" %}v4/", {{object.id}}, {{context.id}}, {{rules_valid}}).main(); });</script>
+ <script>$(function(){ jQuery.fn.schemaeditor("{% url "navigator:api" %}v4/", {{object.id}}, {{context.id}}, {{rules_valid}}).main(); });</script>
  {% endblock %}
 
 {% block actions %}
@@ -60,6 +60,6 @@ use arrow keys to move around.</p>
 
 <div class="form-actions">
 <div name="save" class="btn btn-primary disabled">Save</div>
-<a href="{% url "coding schema-details" context.id object.id %}" class="btn">Cancel</a>
+<a href="{% url "navigator:codingschema-details" context.id object.id %}" class="btn">Cancel</a>
 </div>
 {% endblock %}

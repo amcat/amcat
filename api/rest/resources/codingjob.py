@@ -24,5 +24,6 @@ from api.rest.viewsets.coding.codingjob import CodingJobSerializer
 class CodingJobResource(AmCATResource):
     model = CodingJob
     serializer_class = CodingJobSerializer
+    queryset = CodingJob.objects.all()
 
 

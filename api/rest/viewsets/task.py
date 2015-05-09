@@ -28,12 +28,13 @@ __all__ = ("TaskSerializer", "TaskResultSerializer")
 class TaskSerializer(AmCATModelSerializer):
     """Represents a Task object defined in amcat.models.task.Task. Adds two
     fields to the model: status and ready."""
-    description = serializers.SerializerMethodField('get_description')
-    status = serializers.SerializerMethodField('get_status')
-    ready = serializers.SerializerMethodField('get_ready')
-    progress = serializers.SerializerMethodField('get_progress')
-    redirect_url = serializers.SerializerMethodField('get_redirect_url')
-    redirect_message = serializers.SerializerMethodField('get_redirect_message')
+    description = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
+    ready = serializers.SerializerMethodField()
+    progress = serializers.SerializerMethodField()
+    redirect_url = serializers.SerializerMethodField()
+    redirect_message = serializers.SerializerMethodField()
+    uuid = serializers.SerializerMethodField()
 
     def __init__(self, *args, **kwargs):
         super(TaskSerializer, self).__init__(*args, **kwargs)
@@ -80,13 +81,16 @@ class TaskSerializer(AmCATModelSerializer):
         if redirect:
             return redirect[1]
 
+    def get_uuid(self, task):
+        return str(task.uuid)
+
     class Meta:
         model = Task
 
 
 class TaskResultSerializer(AmCATModelSerializer):
-    result = serializers.SerializerMethodField('get_result')
-    ready = serializers.SerializerMethodField('get_ready')
+    result = serializers.SerializerMethodField()
+    ready = serializers.SerializerMethodField()
 
     def get_ready(self, task):
         return task.ready

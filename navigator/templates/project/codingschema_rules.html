@@ -9,7 +9,7 @@
  <script src="{% static 'js/jquery.djangofields.js' %}"></script>
  <script src="{% static 'js/jquery.ruleeditor.js' %}"></script>
 {% endcompress %}
- <script>$(function(){ jQuery.fn.ruleeditor("{% url "api" %}v4/", {{codingschema.id}}, {{project.id}}).main(); });</script>
+ <script>$(function(){ jQuery.fn.ruleeditor("{% url "navigator:api" %}v4/", {{codingschema.id}}, {{project.id}}).main(); });</script>
 {% endblock %}
 
 {% block content %}
@@ -53,6 +53,6 @@
 
 <div class="form-actions">
 <div name="save" class="btn btn-primary disabled">Save</div>
-<a href="{% url "coding schema-details" project.id codingschema.id %}" class="btn">Cancel</a>
+<a href="{% url "navigator:codingschema-details" project.id codingschema.id %}" class="btn">Cancel</a>
 </div>
 {% endblock %}

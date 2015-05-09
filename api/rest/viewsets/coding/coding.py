@@ -30,7 +30,7 @@ from api.rest.viewsets.coding.coded_article import CodedArticleViewSetMixin
 
 __all__ = (
     "CodingSerializer", "CodingViewSetMixin", "CodingViewSet",
-    "CodingValueViewSet", "CodingValueSerializer",
+    "CodingValueViewSet",
 )
 
 class CodingSerializer(AmCATModelSerializer):
@@ -60,33 +60,28 @@ class CodingSerializer(AmCATModelSerializer):
         return self._get_coding_values()[coding.pk]
 
 class CodingViewSetMixin(AmCATViewSetMixin):
-    model_serializer_class = CodingSerializer
+    serializer_class = CodingSerializer
     model_key = "coding"
     model = Coding
+    queryset = Coding.objects.all()
 
 class CodingViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                     CodedArticleViewSetMixin, CodingViewSetMixin,
                     DatatablesMixin, ReadOnlyModelViewSet):
-    model = Coding
-    model_serializer_class = CodingSerializer
+    serializer_class = CodingSerializer
 
     def filter_queryset(self, queryset):
         qs = super(CodingViewSet, self).filter_queryset(queryset)
         return qs.filter(coded_article=self.coded_article)
 
 
-class CodingValueSerializer(AmCATModelSerializer):
-    model = CodingValue
-
 class CodingValueViewSetMixin(AmCATViewSetMixin):
-    model_serializer_class = CodingValueSerializer
     model_key = "codingvalue"
-    model = CodingValue
+    queryset = CodingValue.objects.all()
 
 class CodingValueViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                          CodedArticleViewSetMixin, CodingViewSetMixin,
                          CodingValueViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
-    model = CodingValue
 
     def filter_queryset(self, queryset):
         qs = super(CodingValueViewSet, self).filter_queryset(queryset)

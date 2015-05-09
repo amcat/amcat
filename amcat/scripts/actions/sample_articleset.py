@@ -39,7 +39,7 @@ class SampleSet(Script):
     class options_form(forms.Form):
         articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
         sample = forms.CharField(help_text="Sample in absolute number or percentage")
-        target_articleset_name = forms.CharField(help_text="Name for the new article set")
+        target_articleset_name = forms.CharField(help_text="Name for the new articleset")
 
         def clean_sample(self):
             sample = self.cleaned_data["sample"]

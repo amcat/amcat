@@ -1,21 +1,21 @@
 {% load menu %}
 
-<li {% is_active 'Articles' %}><a href="{% url 'article set-list' project.id %}">Articles</a></li>
-<li {% is_active 'Query' %}><a href="{% url 'query' project.id %}">Query</a></li>
+<li {% is_active 'Articles' %}><a href="{% url 'navigator:articleset-list' project.id %}">Articles</a></li>
+<li {% is_active 'Query' %}><a href="{% url 'navigator:query' project.id %}">Query</a></li>
 <li {% is_active 'Coding' classnames="dropdown" %}>
   <a href="#" class="dropdown-toggle" data-toggle="dropdown">Coding<b class="caret"></b></a>
   <ul class="dropdown-menu">
-    <li><a href="{% url 'coding job-list' project.id %}">Coding Jobs</a></li>
-    <li><a href="{% url 'coding schema-list' project.id %}">Coding Schemas</a></li>
-    <li><a href="{% url 'coding codebook-list' project.id %}">Codebooks</a></li>
+    <li><a href="{% url 'navigator:codingjob-list' project.id %}">Coding Jobs</a></li>
+    <li><a href="{% url 'navigator:codingschema-list' project.id %}">Coding Schemas</a></li>
+    <li><a href="{% url 'navigator:coding codebook-list' project.id %}">Codebooks</a></li>
  </ul>
 </li>
 
 <li {% is_active 'Settings' classnames="dropdown" %}>
   <a href="#" class="dropdown-toggle" data-toggle="dropdown">Advanced<b class="caret"></b></a>
   <ul class="dropdown-menu">
-    <li><a href="{% url 'project' project.id %}">Project details</a></li>
-    <li><a href="{% url 'user-list' project.id %}">Users</a></li>
-    <li><a href="{% url 'task-list' project.id %}">Tasks</a></li>
+    <li><a href="{% url 'navigator:project' project.id %}">Project details</a></li>
+    <li><a href="{% url 'navigator:user-list' project.id %}">Users</a></li>
+    <li><a href="{% url 'navigator:task-list' project.id %}">Tasks</a></li>
  </ul>
 </li>

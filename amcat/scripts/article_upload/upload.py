@@ -53,7 +53,7 @@ class UploadForm(RawFileUploadForm):
         required=False)
 
     def clean_articleset_name(self):
-        """If article set name not specified, use file base name instead"""
+        """If articleset name not specified, use file base name instead"""
         if self.files.get('file') and not (self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
             fn = os.path.basename(self.files['file'].name)
             return fn
@@ -172,7 +172,7 @@ class UploadScript(script.Script):
     def postprocess(self, articles):
         """
         Optional postprocessing of articles. Removing aricles from the list will exclude them from the
-        article set (if needed, list should be changed in place)
+        articleset (if needed, list should be changed in place)
         """
         pass
 

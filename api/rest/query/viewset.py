@@ -22,6 +22,7 @@ from operator import getitem, attrgetter
 from django.core.exceptions import ValidationError
 
 from rest_framework.exceptions import APIException
+from rest_framework.metadata import SimpleMetadata
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -36,8 +37,22 @@ def wrap_query_action(qaction):
     return AutoQueryActionViewSet
 
 
+class QueryActionMetadata(SimpleMetadata):
+    def determine_metadata(self, request, view):
+        field_names = view.get_form().fields.keys()
+        fields = map(partial(getitem, view.get_form()), field_names)
+
+        return {
+            "help_texts": dict(zip(field_names, [f.help_text.strip() or None for f in fields])),
+            "form": dict(zip(field_names, [f.as_widget() for f in fields])),
+            "labels": dict(zip(field_names, [f.label for f in fields])),
+            "help_text": view.get_view_description()
+        }
+
+
 class QueryActionView(APIView):
     query_action = None
+    metadata_class = QueryActionMetadata
 
     def __init__(self, **kwargs):
         super(QueryActionView, self).__init__(**kwargs)
@@ -99,13 +114,3 @@ class QueryActionView(APIView):
         else:
             return Response({"uuid": task_handler.task.uuid})
 
-    def metadata(self, request):
-        field_names = self.get_form().fields.keys()
-        fields = map(partial(getitem, self.get_form()), field_names)
-
-        return {
-            "help_texts": dict(zip(field_names, [f.help_text.strip() or None for f in fields])),
-            "form": dict(zip(field_names, [f.as_widget() for f in fields])),
-            "labels": dict(zip(field_names, [f.label for f in fields])),
-            "help_text": self.get_view_description()
-        }

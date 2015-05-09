@@ -35,8 +35,8 @@ from amcat.models import CodingJob
 PROJECT_ROLE_READER=11
 
 class DeleteCodingJob(Script):
-    """Delete the given job including all codings and article set unless the
-    article set is in use somewhere else"""
+    """Delete the given job including all codings and articleset unless the
+    articleset is in use somewhere else"""
     class options_form(forms.Form):
         job = forms.ModelChoiceField(queryset=CodingJob.objects.all())
 
@@ -44,7 +44,7 @@ class DeleteCodingJob(Script):
     def run(self, _input=None):
         j = self.options['job']
 
-        # remember article set so we can delete it later
+        # remember articleset so we can delete it later
         aset = j.articleset
         j.delete()
         if not CodingJob.objects.filter(articleset=aset).exists():

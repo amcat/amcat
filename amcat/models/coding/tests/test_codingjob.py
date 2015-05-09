@@ -21,7 +21,7 @@ from amcat.tools import amcattest
 
 class TestCodingJob(amcattest.AmCATTestCase):
     def test_create(self):
-        """Can we create a coding job with articles?"""
+        """Can we create a codingjob with articles?"""
         from amcat.models.project import Project
         p = amcattest.create_test_project()
         j = amcattest.create_test_job(project=p)
