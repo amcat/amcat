@@ -105,28 +105,6 @@ def get_all_related(modelclasses):
         for m2 in get_related(m):
             yield m2
 
-def get_related_models(modelnames, stoplist=set(), applabel='amcat'):
-    """Get related models
-
-    Finds all models reachable from the given model in the graph of
-    (foreign key) relations. If stoplist is given, don't consider edges
-    from these nodes.
-
-    @type modelnames: str
-    @param modelnames: the name of the model to start from
-    @type stoplist: sequence of str
-    @param stoplist: models whose children we don't care about
-    @return: sequence of model classes
-    """
-    _models = set([models.get_model(applabel, modelname) for modelname in modelnames])
-    stops = set([models.get_model(applabel, stop) for stop in stoplist])
-    while True:
-        related = set(get_all_related(_models - stops)) # seed from non-stop models
-        new = related - _models 
-        if not new: return _models
-        _models |= new
-
-
 def get_or_create(model_class, **attributes):
     """Retrieve the instance of model_class identified by the given attributes,
     or if not found, create a new instance with these attributes"""

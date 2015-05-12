@@ -1,22 +1,12 @@
 from django.http import QueryDict
+
 from amcat.tools import amcattest
 from amcat.tools.amcattest import create_test_medium, create_test_article
-from amcat.tools.djangotoolkit import get_related_models, list_queries, to_querydict, get_or_create, \
+from amcat.tools.djangotoolkit import list_queries, to_querydict, get_or_create, \
     db_supports_distinct_on, get_model_field
 
 
 class TestDjangoToolkit(amcattest.AmCATTestCase):
-    def test_related_models(self):
-        """Test get_related_models function. Note: depends on the actual amcat.models"""
-
-        for start, stoplist, result in [
-            (('Sentence',), ('Project',), ['Article', 'Language', 'Medium', 'Project', 'Sentence']),
-            ]:
-
-            related = get_related_models(start, stoplist)
-            related_names = set(r.__name__ for r in related)
-            self.assertEqual(related_names, set(result))
-
     def test_queries(self):
         """Test the list_queries context manager"""
         u = amcattest.create_test_user()
