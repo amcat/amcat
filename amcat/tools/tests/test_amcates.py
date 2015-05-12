@@ -279,7 +279,6 @@ class TestAmcatES(amcattest.AmCATTestCase):
         b = amcattest.create_test_article(text='noot mies wim zus', medium=m2)
         c = amcattest.create_test_article(text='mies bla bla bla wim zus jet', medium=m2)
         d = amcattest.create_test_article(text='ik woon in een sociale huurwoning, net als anderen', medium=m2)
-        ES().add_articles([a.id, b.id, c.id, d.id])
         ES().flush()
 
         self.assertEqual(set(ES().query_ids("no*")), {a.id, b.id})

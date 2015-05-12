@@ -54,6 +54,7 @@ ES_MAPPING = {
         "medium": ES_MAPPING_SIMPLE_STRING_OPTIONS,
         "creator": ES_MAPPING_SIMPLE_STRING_OPTIONS,
         "section": ES_MAPPING_SIMPLE_STRING_OPTIONS,
+        "uuid": ES_MAPPING_SIMPLE_STRING_OPTIONS,
         "page": {"type": "long"},
         "addressee": ES_MAPPING_SIMPLE_STRING_OPTIONS,
         "url": ES_MAPPING_SIMPLE_STRING_OPTIONS,
