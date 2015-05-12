@@ -95,7 +95,7 @@ class Coding(AmcatModel):
         """Return a sequence of field, (deserialized) value pairs"""
         return [(v.field, v.value) for v in (
             self.values.order_by('field__fieldnr')
-            .select_related("field__fieldtype", "value__strval", "value__intval"))]
+            .select_related("field__fieldtype"))]
 
     def get_value_object(self, field):
         """Return the Value object correspoding to this field"""
