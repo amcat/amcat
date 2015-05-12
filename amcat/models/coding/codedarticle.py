@@ -128,7 +128,7 @@ class CodedArticle(models.Model):
             query = sql.InsertQuery(Coding)
             query.insert_values(Coding._meta.fields[1:], new_coding_objects)
             raw_sql, params = query.sql_with_params()[0]
-            new_coding_objects = Coding.objects.raw("%s %s" % (raw_sql, "RETURNING coding_id"), params)
+            new_coding_objects = Coding.objects.raw("%s %s" % (raw_sql, "RETURNING coding_id AS id"), params)
         else:
             # Do naive O(n) approach
             for coding in new_coding_objects:
