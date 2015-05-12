@@ -80,7 +80,7 @@ class ExportCodebook(TableExportMixin, ProjectScriptView):
 
     def get_form(self, *args, **kargs):
         form = super(ExportCodebook, self).get_form(*args, **kargs)
-        cid = self.kwargs["codebook_id"]
+        cid = self.kwargs["codebook"]
         langs = Language.objects.filter(labels__code__codebook_codes__codebook_id=cid).distinct()
         form.fields['language'].queryset = langs
         form.fields['language'].initial = min(l.id for l in langs)
@@ -101,7 +101,7 @@ class ExportCodebookXML(ProjectScriptView):
         return "Codebook {c.id} {c}.xml".format(**locals())
 
     def get_initial(self):
-        return dict(codebook=self.kwargs["codebook_id"])
+        return dict(codebook=self.kwargs["codebook"])
 
     def form_valid(self, form):
         super(ExportCodebookXML, self).form_valid(form)
@@ -139,7 +139,7 @@ class CodebookAddView(ProjectActionRedirectView):
         self.object = Codebook.objects.create(project_id=project_id, name='New codebook')
         
     def get_redirect_url(self, **kwargs):
-        kwargs.update({"codebook_id" : self.object.id})
+        kwargs.update({"codebook" : self.object.id})
         return CodebookDetailsView._get_breadcrumb_url(kwargs, self)
 
         
@@ -203,7 +203,7 @@ class CodebookFormActionView(ProjectFormView):
                             status=500)
         
     def form_valid(self, form):
-        codebook = Codebook.objects.get(pk=self.kwargs["codebook_id"])
+        codebook = Codebook.objects.get(pk=self.kwargs["codebook"])
         result = self.action(codebook, form)
         return HttpResponse(content=result, status=200)
     def action(self, codebook, form):
