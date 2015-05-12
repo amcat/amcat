@@ -25,7 +25,7 @@ class TestSplitArticles(amcattest.AmCATTestCase):
 
         # Only test the very basic; if a simple split works we trust the view
         # to use handle_split(), which is tested more extensively below.
-        url = reverse(ArticleSplitView.get_view_name(), args=[aset.project.id, article.id])
+        url = reverse("navigator:" + ArticleSplitView.get_view_name(), args=[aset.project.id, article.id])
 
         client = Client()
         client.login(username="fred", password="secret")
