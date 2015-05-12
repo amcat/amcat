@@ -34,7 +34,7 @@ def _redirect_login(request):
         return redirect(next1)
 
     # Redirect to frontpage
-    return redirect("navigator.views.index.index")
+    return redirect("navigator:index")
 
 
 def login(request):
