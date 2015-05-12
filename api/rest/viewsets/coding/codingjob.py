@@ -110,7 +110,6 @@ class CodingJobViewSetMixin(AmCATViewSetMixin):
 class CodingJobViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     queryset = CodingJob.objects.all()
     serializer_class = CodingJobSerializer
-    base_name = "codingjob"
 
     def filter_queryset(self, jobs):
         jobs = super(CodingJobViewSet, self).filter_queryset(jobs)

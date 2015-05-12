@@ -31,14 +31,13 @@ class CodingSchemaFieldSerializer(AmCATModelSerializer):
         model = CodingSchemaField
 
 class CodingSchemaFieldViewSetMixin(AmCATViewSetMixin):
-    queryset = CodingSchemaField.objects.all()
-    serializer_class = CodingSchemaFieldSerializer
     model_key = "codingschemafield"
     model = CodingSchemaField
 
 class CodingSchemaFieldViewSet(ProjectViewSetMixin, CodingSchemaFieldViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = CodingSchemaField
     queryset = CodingSchemaField.objects.all()
+    serializer_class = CodingSchemaFieldSerializer
 
     def filter_queryset(self, fields):
         fields = super(CodingSchemaFieldViewSet, self).filter_queryset(fields)

@@ -223,10 +223,16 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
         // Handle default function parameters
         callback_error = (callback_error === undefined) ? self.standard_error : callback_error;
 
-        $.post(
-            self._get_api_url(resource, filters),
-            data, callback_success, 'json'
-        ).error(callback_error);
+        $.ajax({
+            url: self._get_api_url(resource, filters),
+            data: data,
+            success: callback_success,
+            error: callback_error,
+            contentType: 'json',
+            headers: {
+                "X-CSRFTOKEN": $.cookie("csrftoken")
+            }
+        });
 
         console.log("Getting (POST) " + self._get_api_url(resource, filters));
     }
@@ -241,7 +247,10 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
 	$.ajax({
 	    type: "OPTIONS",
 	    url: url,
-	    success: callback_success
+	    success: callback_success,
+        headers: {
+            "X-CSRFTOKEN": $.cookie("csrftoken")
+        }
 	});
 	    
 
@@ -797,12 +806,16 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
         });
 
         // Send data to server for checking / comitting
-        $.post(
-            window.location + '?commit=' + commit, {
-                fields : JSON.stringify(fields)                
+        $.ajax({
+            type: "POST",
+            url: window.location + '?format=json&commit=' + commit,
+            data: {
+                fields: JSON.stringify(fields)
             },
-            self.save_callback.bind(commit)
-        );
+            headers: {
+                "X-CSRFTOKEN": $.cookie("csrftoken")
+            }
+        }).success(self.save_callback.bind(commit));
 
         // Disable save button
         self.btn_save.text("Checking..");

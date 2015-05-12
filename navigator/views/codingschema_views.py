@@ -226,7 +226,7 @@ class CodingSchemaEditFieldsView(HierarchicalViewMixin, ProjectViewMixin, BreadC
                 "fields" : errors, "schema_url" : schema_url,
                 "rules_valid" : codingruletoolkit.schemarules_valid(schema)
             }),
-            mimetype='application/json'
+            content_type='application/json'
         )
 
     def _get_schemafield_forms(self, fields):

@@ -211,7 +211,8 @@ class Datatable(object):
             fields += self.resource.extra_fields(self.extra_args)
 
         for field in self.hidden:
-            fields.remove(field)
+            if field in fields:
+                fields.remove(field)
 
         for field in fields:
             yield str(field)

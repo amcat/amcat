@@ -70,7 +70,6 @@ class QueryPermission(permissions.BasePermission):
 class QueryViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     model = Query
     model_key = "query"
-    base_name = "query"
     serializer_class = QuerySerializer
     queryset = QuerySerializer.Meta.model.objects.all()
     search_fields = ordering_fields = ("id", "name", "user__username")
