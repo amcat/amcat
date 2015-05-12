@@ -40,6 +40,8 @@ install:
  - pip install -r requirements.txt
  - pip install coverage coveralls
  - celery -A amcat.amcatcelery worker -l DEBUG -Q amcat &
+ - npm install -g bower
+ - bower install
 
 script:
  - coverage run --source=. --omit=*/migrations/*,settings/* -m amcat.manage test
