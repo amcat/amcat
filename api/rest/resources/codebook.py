@@ -104,6 +104,7 @@ class CodebookHierarchyResource(AmCATResource):
 class CodebookResource(AmCATResource):
     model = Codebook
     extra_filters = ["codingschemafield__codingschema__id"]
+    queryset = Codebook.objects.all()
 
     class serializer_class(AmCATModelSerializer):
         class Meta:
@@ -118,3 +119,4 @@ from api.rest.resources.amcatresource import AmCATResource
 class LabelResource(AmCATResource):
     model = Label
     extra_filters = ["code__codebook_codes__codebook__id"]
+    queryset = Label.objects.all()
