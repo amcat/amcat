@@ -35,11 +35,12 @@ class AddCodingJob(Script):
         
         class Meta:
             model = CodingJob
-            exclude = ("archived", "project", "insertuser", "insertdate")
+            exclude = ("archived", "insertdate")
             
         def __init__(self, *args, **kargs):
             project = kargs.pop("project", None)
             forms.ModelForm.__init__(self, *args, **kargs)
+
             if project:
                 schema_qs = project.get_codingschemas()
                 self.fields["project"].initial = project
