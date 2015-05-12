@@ -37,10 +37,8 @@ class TestQueryView(AmCATLiveServerTestCase):
     def test_summary(self):
         self.set_up()
         self.login(username=self.user.username, password="test")
-        self.browser.visit(self.get_url(reverse("query", args=[self.project.id])))
+        self.browser.visit(self.get_url(reverse("navigator:query", args=[self.project.id])))
         self.browser.find_by_css("#active-articlesets tbody tr")[1].click()
         self.browser.find_by_css("#id_aggregations")
-        self.browser.find_by_css("#run-query")[0].viclick()
+        self.browser.find_by_css("#run-query")[0].click()
         self.browser.find_by_css("#results.summary")
-
-        import time; time.sleep(2000)

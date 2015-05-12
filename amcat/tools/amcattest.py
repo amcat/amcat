@@ -315,7 +315,7 @@ class AmCATLiveServerTestCase(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super(AmCATLiveServerTestCase, cls).setUpClass()
-        cls.browser = Browser()
+        cls.browser = Browser(driver_name=os.environ.get("DJANGO_WEBDRIVER", "firefox"))
 
     def setUp(self):
         self.browser.visit(self.live_server_url)
