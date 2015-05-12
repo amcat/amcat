@@ -2,6 +2,14 @@ import re
 from amcat.tools import amcattest
 from api.rest.datatable import Datatable, order_by
 
+from api.rest.viewsets import ArticleSetViewSet
+from api.rest.viewsets import CodingSchemaFieldViewSet
+from api.rest.resources import UserResource
+from api.rest.resources import ProjectResource
+from api.rest.resources.amcatresource import AmCATResource
+from api.rest.serializer import AmCATModelSerializer
+from amcat.models import Project
+
 
 class TestDatatable(amcattest.AmCATTestCase):
     PROJECT_FIELDS = {'id', 'name', 'description', 'insert_date', 'owner',
@@ -9,8 +17,6 @@ class TestDatatable(amcattest.AmCATTestCase):
 
     def test_viewset(self):
         """Can ViewSets also be used?"""
-        from api.rest.viewsets import CodingSchemaFieldViewSet
-
         dt = Datatable(CodingSchemaFieldViewSet, url_kwargs={"project": 1})
         self.assertTrue(dt.url.startswith("/api/v4/projects/1/codingschemafields/"))
         self.assertEqual(set(dt.fields), {
@@ -19,17 +25,10 @@ class TestDatatable(amcattest.AmCATTestCase):
         })
 
     def test_url(self):
-        from api.rest.resources import UserResource
-
         d = Datatable(UserResource)
         self.assertEqual(d.url, '/api/v4/user?format=json')
 
     def test_fields(self):
-        from api.rest.resources import ProjectResource
-        from api.rest.resources.amcatresource import AmCATResource
-        from api.rest.serializer import AmCATModelSerializer
-        from amcat.models import Project
-
         d = Datatable(ProjectResource)
         self.assertEqual(set(d.fields), TestDatatable.PROJECT_FIELDS)
 
@@ -48,8 +47,6 @@ class TestDatatable(amcattest.AmCATTestCase):
 
 
     def test_hide(self):
-        from api.rest.resources import ProjectResource
-
         d = Datatable(ProjectResource)
 
         # Nothing hidden by default
@@ -62,8 +59,6 @@ class TestDatatable(amcattest.AmCATTestCase):
         self.assertEqual(set(d.fields), TestDatatable.PROJECT_FIELDS - hide)
 
     def test_filter(self):
-        from api.rest.resources import UserResource
-
         d = Datatable(UserResource)
         s = '/api/v4/user?format=json'
 
@@ -87,14 +82,10 @@ class TestDatatable(amcattest.AmCATTestCase):
         self.assertEqual(d.url, s + "&q=1&q=2")
 
     def test_js(self):
-        from api.rest.resources import ProjectResource
-
         d = Datatable(ProjectResource)
         js = d.get_js()
 
     def test_get_name(self):
-        from api.rest.resources import ProjectResource
-
         d = Datatable(ProjectResource).filter(id=[1, "#$^"])
         self.assertTrue(len(d.get_name()) >= 1)
         self.assertFalse(re.match(r'[^0-9A-Za-z_:.-]', d.get_name()))
@@ -105,8 +96,6 @@ class TestDatatable(amcattest.AmCATTestCase):
         self.assertEquals(("f", "asc"), order_by("+f"))
 
     def test_order_by(self):
-        from api.rest.resources import ProjectResource
-
         d = Datatable(ProjectResource).order_by("name")
         self.assertTrue("name" in unicode(d))
         self.assertTrue('["name", "asc"]' in unicode(d))
@@ -119,9 +108,6 @@ class TestDatatable(amcattest.AmCATTestCase):
             d.order_by("?name")
 
     def test_search(self):
-        from api.rest.resources import ProjectResource
-        from api.rest.viewsets import ArticleSetViewSet
-
         # Resources are not searchable (yet?)
         d = Datatable(ProjectResource)
         self.assertIn('"searching": false', unicode(d))
