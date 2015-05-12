@@ -293,9 +293,9 @@ class Article(AmcatModel):
             else:
                 if a.parent:
                     a.parent_id = a.parent.id
+
                 sid = transaction.savepoint()
                 try:
-                    sid = transaction.savepoint()
                     a.save()
                     transaction.savepoint_commit(sid)
                 except (IntegrityError, ValidationError, DatabaseError) as e:
