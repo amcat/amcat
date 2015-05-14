@@ -302,6 +302,8 @@ class AmCATTestCase(TestCase):
         super(AmCATTestCase, cls).tearDownClass()
 
 class AmCATLiveServerTestCase(StaticLiveServerTestCase):
+    fixtures = ['_initial_data.json',]
+
     def get_url(self, relative_url):
         return urljoin(self.live_server_url, relative_url)
 
