@@ -23,25 +23,26 @@ articles database table.
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
-from collections import namedtuple
+from copy import copy
+from itertools import chain, count
+from operator import attrgetter
+import logging
+
 from django.template.loader import get_template
 from django.template import Context
-
-from amcat.tools.amcattest import create_test_article
+from django.db import models, transaction
+from django.db.utils import IntegrityError, DatabaseError
+from django.core.exceptions import ValidationError
+from django.template.defaultfilters import escape as escape_filter
+from amcat.tools.djangotoolkit import bulk_insert_returning_ids
 
 from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
 from amcat.tools import amcates
 from amcat.models.authorisation import Role
 from amcat.models.medium import Medium
 from amcat.tools.toolkit import splitlist
+from amcat.tools.tree import Tree
 
-from django.db import models, transaction
-from django.db.utils import IntegrityError, DatabaseError
-from django.core.exceptions import ValidationError
-
-from django.template.defaultfilters import escape as escape_filter
-
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -69,17 +70,13 @@ def unescape_em(txt):
             .replace("&lt;/em&gt;", "</em>"))
 
 
-class ArticleTree(namedtuple("ArticleTree", ["article", "children"])):
-    """
-    Represents a tree of articles, based on their
-    """
+class ArticleTree(Tree):
+    @property
+    def article(self):
+        return self.obj
 
     def get_ids(self):
-        """Returns a generator containing all ids in this tree"""
-        yield self.article.id
-        for child in self.children:
-            for id in child.get_ids():
-                yield id
+        return self.traverse(func=lambda t: t.obj.id)
 
     def get_html(self, active=None, articleset=None):
         """
@@ -324,6 +321,30 @@ class Article(AmcatModel):
             log.info("Added {} to elastic".format(len(add_to_set)))
 
         return result, errors
+
+    @classmethod
+    def save_trees(cls, trees):
+        """
+        Saves a list of article trees efficiently to database.
+
+        @type trees: [ArticleTree]
+        """
+        #trees = map(copy, trees)
+
+        for level in count():
+            level_trees = list(chain.from_iterable(tree.get_level(level) for tree in trees))
+
+            if not level_trees:
+                break
+
+            for tree in level_trees:
+                if tree.parent is None:
+                    continue
+                tree.obj.parent = tree.parent.obj
+
+            articles = bulk_insert_returning_ids(t.obj for t in level_trees)
+            for tree, article in zip(level_trees, articles):
+                tree.obj = article
 
     @classmethod
     def ordered_save(cls, articles, *args, **kwargs):

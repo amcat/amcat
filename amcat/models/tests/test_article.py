@@ -68,6 +68,59 @@ class TestArticleHighlighting(amcattest.AmCATTestCase):
 
 
 class TestArticle(amcattest.AmCATTestCase):
+    def test_save_trees(self):
+        articles = [create_test_article(create=False, length=0, headline=str(i)) for i in range(10)]
+
+        tree1 = (articles[0], [
+            (articles[1], [
+                (articles[2], []),
+                (articles[3], [])
+            ]),
+            (articles[4], [])
+        ])
+
+        tree2 = (articles[5], [
+            (articles[6], [
+                (articles[7], []),
+                (articles[8], [])
+            ]),
+            (articles[9], [])
+        ])
+
+        tree1 = ArticleTree.from_tuples(tree1)
+        tree2 = ArticleTree.from_tuples(tree2)
+
+        # Trees are 3 levels deep, so it should take 3 queries to complete this request
+        self.assertNumQueries(3, Article.save_trees, [tree1, tree2])
+
+        articles = [Article.objects.get(headline=str(i)) for i in range(10)]
+
+        # Is the hierachy / order preserved?
+        self.assertEqual(tree1.obj, articles[0])
+        self.assertEqual(tree1.children[0].obj, articles[1])
+        self.assertEqual(tree1.children[0].children[0].obj, articles[2])
+        self.assertEqual(tree1.children[0].children[1].obj, articles[3])
+        self.assertEqual(tree1.children[1].obj, articles[4])
+
+        self.assertEqual(tree2.obj, articles[5])
+        self.assertEqual(tree2.children[0].obj, articles[6])
+        self.assertEqual(tree2.children[0].children[0].obj, articles[7])
+        self.assertEqual(tree2.children[0].children[1].obj, articles[8])
+        self.assertEqual(tree2.children[1].obj, articles[9])
+
+        # Are the parent properties set correctly?
+        self.assertEqual(tree1.parent, None)
+        self.assertEqual(tree1.children[0].parent.obj, articles[0])
+        self.assertEqual(tree1.children[0].children[0].parent.obj, articles[1])
+        self.assertEqual(tree1.children[0].children[1].parent.obj, articles[1])
+        self.assertEqual(tree1.children[1].parent.obj, articles[0])
+
+        self.assertEqual(tree2.parent, None)
+        self.assertEqual(tree2.children[0].parent.obj, articles[5])
+        self.assertEqual(tree2.children[0].children[0].parent.obj, articles[6])
+        self.assertEqual(tree2.children[0].children[1].parent.obj, articles[6])
+        self.assertEqual(tree2.children[1].parent.obj, articles[5])
+
     @amcattest.use_elastic
     def test_create(self):
         """Can we create/store/index an article object?"""
@@ -153,20 +206,20 @@ class TestArticle(amcattest.AmCATTestCase):
         # Equals does not compare nested
         article2 = amcattest.create_test_article(parent=article1)
         self.assertEqual(
-            str(article1.get_tree()),
-            str(ArticleTree(article1, [ArticleTree(article2, [])]))
+            article1.get_tree(),
+            ArticleTree(article1, [ArticleTree(article2, [])])
         )
 
         # Test default include_parent = True
         self.assertEqual(
-            str(article2.get_tree()),
-            str(ArticleTree(article1, [ArticleTree(article2, [])]))
+            article2.get_tree(),
+            ArticleTree(article1, [ArticleTree(article2, [])])
         )
 
         # Test include_parents = False
         self.assertEqual(
-            str(article2.get_tree(include_parents=False)),
-            str(ArticleTree(article2, []))
+            article2.get_tree(include_parents=False),
+            ArticleTree(article2, [])
         )
 
 
