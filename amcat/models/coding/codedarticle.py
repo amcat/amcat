@@ -27,6 +27,7 @@ from functools import partial
 from django.db.models import sql
 from amcat.models.coding.codingschemafield import CodingSchemaField
 from amcat.models.coding.coding import CodingValue, Coding
+from amcat.tools.djangotoolkit import bulk_insert_returning_ids
 from amcat.tools.model import AmcatModel
 
 log = logging.getLogger(__name__)
@@ -121,18 +122,7 @@ class CodedArticle(models.Model):
         Coding.objects.filter(coded_article=self).delete()
 
         new_coding_objects = map(partial(_to_coding, self), new_codings)
-
-        # Saving each coding is pretty inefficient, but Django doesn't allow retrieving
-        # id's when using bulk_create. See Django ticket #19527.
-        if connection.vendor == "postgresql":
-            query = sql.InsertQuery(Coding)
-            query.insert_values(Coding._meta.fields[1:], new_coding_objects)
-            raw_sql, params = query.sql_with_params()[0]
-            new_coding_objects = Coding.objects.raw("%s %s" % (raw_sql, "RETURNING coding_id AS id"), params)
-        else:
-            # Do naive O(n) approach
-            for coding in new_coding_objects:
-                coding.save()
+        new_coding_objects = bulk_insert_returning_ids(new_coding_objects)
 
         coding_values = itertools.chain.from_iterable(
             _to_codingvalues(co, c["values"]) for c, co in itertools.izip(new_codings, new_coding_objects)

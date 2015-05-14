@@ -25,15 +25,17 @@ from __future__ import unicode_literals, print_function, absolute_import
 
 from datetime import datetime
 import collections
+from itertools import chain
 import re
 import time
 import json
 import urllib
+from django.db.models import sql
 
 from django.http import QueryDict
 
 from django.db.models.fields.related import ForeignKey, OneToOneField, ManyToManyField
-from django.db import models
+from django.db import models, connection
 from django.db import connections
 from contextlib import contextmanager
 from django.conf import settings
@@ -78,6 +80,29 @@ def db_supports_distinct_on(db='default'):
     @type db: str
     """
     return connections[db].features.can_distinct_on_fields
+
+
+def bulk_insert_returning_ids(new_objects):
+    """bulk_insert() does not set ids as per Django ticket #19527. However, postgres does
+    support this, so we implement this manually in this function."""
+    new_objects = list(new_objects)
+
+    if not new_objects:
+        return None
+
+    if connection.vendor == "postgresql":
+        model = new_objects[0].__class__
+        query = sql.InsertQuery(model)
+        query.insert_values(model._meta.fields[1:], new_objects)
+        raw_sql, params = query.sql_with_params()[0]
+        returning = "RETURNING {pk.db_column} AS {pk.name}".format(pk=model._meta.pk)
+        new_objects = list(model.objects.raw("%s %s" % (raw_sql, returning), params))
+    else:
+        # Do naive O(n) approach
+        for new_obj in new_objects:
+            new_obj.save()
+
+    return new_objects
 
 
 def distinct_args(*fields):

@@ -1,9 +1,10 @@
 from django.http import QueryDict
+from amcat.models import Medium
 
 from amcat.tools import amcattest
 from amcat.tools.amcattest import create_test_medium, create_test_article
 from amcat.tools.djangotoolkit import list_queries, to_querydict, get_or_create, \
-    db_supports_distinct_on, get_model_field
+    db_supports_distinct_on, get_model_field, bulk_insert_returning_ids
 
 
 class TestDjangoToolkit(amcattest.AmCATTestCase):
@@ -54,4 +55,21 @@ class TestDjangoToolkit(amcattest.AmCATTestCase):
         self.assertEqual(get_model_field(article, "medium__name"), "The Guardian")
         self.assertEqual(get_model_field(article, "medium"), article.medium)
         self.assertEqual(get_model_field(article, "text"), "abc")
+
+    def test_bulk_insert_returning_ids(self):
+        m1 = Medium(name="test_bi_1")
+        m2 = Medium(name="test_bi_2")
+
+        self.assertIsNone(m1.id)
+        self.assertIsNone(m2.id)
+
+        new_objects = bulk_insert_returning_ids([m1, m2])
+
+        self.assertIsNone(m1.id)
+        self.assertIsNone(m2.id)
+        self.assertIsNotNone(new_objects[0].id)
+        self.assertIsNotNone(new_objects[1].id)
+
+        self.assertEqual("test_bi_1", Medium.objects.get(id=new_objects[0].id).name)
+        self.assertEqual("test_bi_2", Medium.objects.get(id=new_objects[1].id).name)
 
