@@ -22,6 +22,7 @@ from rest_framework.urlpatterns import format_suffix_patterns
 from rest_framework.routers import DefaultRouter
 
 from api.rest import resources
+from api.rest.views.articleupload import ArticleUploadView
 from api.rest.viewsets import get_viewsets
 from api.rest.viewsets.xtas import get_adhoc_tokens
 
@@ -32,10 +33,12 @@ for vs in get_viewsets():
 urlpatterns = format_suffix_patterns(patterns('',
     url(r'^query/', include("api.rest.query.urls")),
     url(r'^$', resources.api_root),
+
     url(r'^taskresult/(?P<task_id>[0-9]+)$', resources.single_task_result, dict(uuid=False)),
     url(r'^taskresult/(?P<task_id>[0-9a-zA-Z-]+)$', resources.single_task_result, dict(uuid=True)),
     url(r'^get_token', 'api.rest.get_token.obtain_auth_token'),
     url(r'^tokens/', get_adhoc_tokens),
+    url(r'^article-upload/$', ArticleUploadView.as_view(), name="article-upload"),
 
     *tuple(r.get_url_pattern() for r in resources.all_resources())
 ))
