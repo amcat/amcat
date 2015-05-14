@@ -51,6 +51,8 @@ def surlencode(query, doseq=False):
     return "&".join(_surlencode())
 
 class ApiTestCase(TestCase):
+    fixtures = ['_initial_data.json',]
+
     def __init__(self, *args, **kargs):
         super(ApiTestCase, self).__init__(*args, **kargs)
         self._passwords = {} # user_id -> password

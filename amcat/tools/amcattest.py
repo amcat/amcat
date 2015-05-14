@@ -279,6 +279,8 @@ def create_test_plugin(**kargs):
     return Plugin.objects.create(**kargs)
 
 class AmCATTestCase(TestCase):
+    fixtures = ['_initial_data.json',]
+
     @contextmanager
     def checkMaxQueries(self, n=0, action="Query", **outputargs):
         """Check that the action took at most n queries (which should be collected in seq)"""
