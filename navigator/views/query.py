@@ -19,6 +19,7 @@
 from __future__ import unicode_literals
 import json
 
+from django import conf
 from django.core.urlresolvers import reverse
 from django.db.models.query_utils import Q
 from django.http import HttpResponseBadRequest, Http404
@@ -118,6 +119,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         )
 
         statistics = amcates.ES().statistics(filters={"sets": list(articleset_ids)})
+        settings = conf.settings
 
         saved_queries = Query.objects.filter(project=self.project)
         saved_user_queries = saved_queries.filter(user=self.request.user)[:SHOW_N_RECENT_QUERIES]

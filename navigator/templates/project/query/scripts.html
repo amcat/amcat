@@ -38,4 +38,19 @@
             </li>
         </ul>
     </div>
+
+    {% if settings.DEBUG %}
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm btn-warning dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                Debug <span class="caret"></span>
+            </button>
+
+            <ul class="dropdown-menu pull-right" role="menu">
+                <li>
+
+                    <a href="" class="script" id="script_statistics" name="statistics">Statistics</a>
+                </li>
+            </ul>
+        </div>
+    {% endif %}
 </div>

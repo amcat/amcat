@@ -361,6 +361,14 @@ $((function(){
     };
 
     var renderers = {
+        "application/json+debug": function(container, data){
+            renderjson.set_icons('', '');
+            renderjson.set_show_to_level("all");
+            var text = $(renderjson(data)).text().replace(/{...}|\[ ... \]/g, "");
+            var code = $("<code class='json'>").text(text);
+            $(container).append($('<pre style="background-color:#f8f8ff;">').append(code));
+            hljs.highlightBlock($("pre", container).get(0));
+        },
         "application/json+clustermap+table": function(container, data){
             var table = renderers["text/csv+table"](container, data.csv);
             table.addClass("table-hover")
@@ -777,7 +785,8 @@ $((function(){
         var url = get_api_url(name);
 
         $.ajax({
-            "type": "OPTIONS", url: url, dateType: "json"
+            "type": "OPTIONS", url: url, dateType: "json",
+            "data": {a : 12123}
         }).done(script_form_loaded).error(function(){
             show_error("Could not load form due to unkown server error. Try again after " +
             "refreshing this page (F5).");

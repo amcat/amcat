@@ -11,6 +11,10 @@
     <link href="{% static 'components/jqplot-bower/dist/jquery.jqplot.css' %}" rel="stylesheet" type="text/css" media="screen" />
     <link href="{% static 'components/bootstrap-datepicker/dist/css/bootstrap-datepicker3.css' %}" rel="stylesheet" type="text/css" media="screen" />
     <link href="{% static 'components/bootstrap-multiselect/dist/css/bootstrap-multiselect.css' %}" rel="stylesheet" type="text/css" media="screen" />
+
+    {% if settings.DEBUG %}
+        <link href="{% static 'components/highlight/src/styles/github.css' %}" rel="stylesheet" type="text/css" media="screen" />
+    {% endif %}
 {% endcompress %}
 {% endblock %}
 {% block javascript %}
@@ -37,6 +41,11 @@
       <script type="text/javascript" src="{% static 'components/highcharts/modules/exporting.js' %}"></script>
       <script type="text/javascript" src="{% static 'components/papaparse/papaparse.js' %}"></script>
       <script type="text/javascript" src="{% static 'components/bootstrap-multiselect/dist/js/bootstrap-multiselect.js' %}"></script>
+      {% endif %}
+
+      {% if settings.DEBUG %}
+          <script type="text/javascript" src="{% static 'components/renderjson/renderjson.js' %}"></script>
+          <script type="text/javascript" src="{% static 'components/highlight/build/highlight.pack.js' %}"></script>
       {% endif %}
   {% endcompress %}
 {% endblock %}
