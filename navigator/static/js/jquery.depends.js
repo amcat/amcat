@@ -35,56 +35,132 @@ String.prototype.format = function(args){
 };
 
 /**
+ * Depends allows dropdowns to dynamically fetch their options, depending on related
+ * input fields. The dropdown is constructed normally, but takes a properties as options:
  *
+ *  - data-depends-url: the url with data for this dropdown
+ *  - data-depends-value: string or function determining the value property of each <option>
+ *  - data-depends-label: string or function determining the text property of each <option>
+ *  - data-depends-on: list of other elements this dropdown depends on. An onchange is
+ *  registered on each of these elements, and each trigger an update.
+ *
+ *  For example, you could initialise a widget the following way in Python:
+ *
+ *     "data-depends-on": json.dumps(["project"]),
+ *     "data-depends-url": "/api/v4/projects/{project}/favourite_articlesets.json",
+ *     "data-depends-value": "{id}",
+ *     "data-depends-label": "{name} (id: {id})",
+ *
+ *  The plugin takes various options:
+ *
+ *  - onChange
+ *  - fetchData
+ *  - onSuccess
+ *  - afterSuccess
+ *  - toOptions
  */
 (function($){
-    $.fn.depends = function(){
-        return this.each(function() {
-            var select = $(this);
-
-            var form = $(this).closest("form");
-            var dependsOn = $(this).data("depends-on");
-            var urlTemplate = $(this).data("depends-url");
-
-            var labelProp = $(this).data("depends-label");
-            var valueProp = $(this).data("depends-value");
-
-            var dependsOnElement = $("[name={name}]".format({name: dependsOn}));
-
-            dependsOnElement.change(function(){
-                var formatter = {}
-                formatter[dependsOn] = dependsOnElement.val();
-
-                select.html("").multiselect("setOptions", {
+    $.fn.depends = function(options){
+        var defaults = {
+            /**
+             *
+             * @param options
+             * @param elements
+             * @param event
+             */
+            onChange: function(options, elements, event){
+                elements.select.html("").multiselect("setOptions", {
                     nonSelectedText: "Loading options.."
                 }).multiselect("rebuild");
 
-                var url = urlTemplate.format(formatter);
-                $.getJSON(url).success(function(options){
-                    var optionsElements = $.map(options.results, function(option){
-                        var el = $("<option>");
-                        el.attr("value", valueProp.format(option));
-                        el.text(labelProp.format(option));
-                        return el;
-                    });
+                var formatter = {};
+                formatter[elements.dependsOn] = $(event.currentTarget).val();
+                options.fetchData.bind(options.onSuccess)(
+                    options, elements, elements.url.format(formatter)
+                );
+            },
 
-                    select.html("").append(optionsElements).multiselect("setOptions", {
-                        nonSelectedText: "None selected",
-                        disableIfEmpty: true
-                    }).multiselect("rebuild");
+            /**
+             *
+             * @param options
+             * @param elements
+             * @param url
+             * @returns {*}
+             */
+            fetchData: function(options, elements, url) {
+                return $.getJSON(url).success((function(data){
+                    this(options, elements, data);
+                }).bind(this));
+            },
 
-                    // Hack for dynamically loading scripts in combination with saved queries
-                    var initial = $(select).data("initial");
+            /**
+             *
+             * @param options
+             * @param elements
+             * @param data
+             */
+            onSuccess: function(options, elements, data){
+                var optionsElements = options.toOptions(data, options, elements);
+                elements.select.html("").append(optionsElements).multiselect("setOptions", {
+                    nonSelectedText: "None selected",
+                    disableIfEmpty: true
+                }).multiselect("rebuild");
 
-                    if (initial) {
-                        select.multiselect("select", initial[0]);
-                    }
+                options.afterSuccess.bind(defaults.afterSuccess)(options, elements);
+            },
 
-                    select.data("initial", null);
-                })
-            });
+            /**
+             *
+             * @param options
+             * @param elements
+             */
+            afterSuccess: function(options, elements){
+                // Hack for dynamically loading scripts in combination with saved queries
+                var select = elements.select;
 
-            dependsOnElement.change();
+                if (select.data("initial")) {
+                    select.multiselect("select", select.data("initial")[0]);
+                }
+
+                select.data("initial", null);
+            },
+
+            /**
+             *
+             * @param data
+             * @param options
+             * @param elements
+             * @returns {*}
+             */
+            toOptions: function(data, options, elements){
+                return $.map(data.results, function(option){
+                    var el = $("<option>");
+                    el.attr("value", elements.value.format(option));
+                    el.text(elements.label.format(option));
+                    return el;
+                });
+            }
+        };
+
+        options = $.extend(defaults, options);
+
+        return this.each(function() {
+            var elements = {
+                select: $(this),
+                form: $(this).closest("form"),
+                dependsOn: $(this).data("depends-on"),
+                url: $(this).data("depends-url"),
+                label: $(this).data("depends-label"),
+                value: $(this).data("depends-value")
+            };
+
+            var dependsOn = function(event){
+                options.onChange.bind(defaults.onChange)(options, elements, event);
+            };
+
+            var dependsOnFormat = {name: elements.dependsOn};
+            var dependsOnElement = $("[name={name}]".format(dependsOnFormat), elements.form);
+            dependsOnElement.change(dependsOn).change();
         });
     };
 }(jQuery));
