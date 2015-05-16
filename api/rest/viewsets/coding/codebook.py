@@ -74,7 +74,8 @@ class CodebookViewSetMixin(AmCATViewSetMixin):
 
 class CodebookViewSet(ProjectViewSetMixin, CodebookViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = Codebook
-
+    queryset = Codebook.objects.all()
+    
     def filter_queryset(self, queryset):
         qs = super(CodebookViewSet, self).filter_queryset(queryset)
         return qs.filter(Q(project=self.project)|Q(projects_set=self.project))
