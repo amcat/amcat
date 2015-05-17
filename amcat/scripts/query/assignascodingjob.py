@@ -50,7 +50,7 @@ class AssignAsCodingjobAction(QueryAction):
     output_types = (("text/html", "Result"),)
 
     def run(self, form):
-        provenance = form.cleaned_data["provenance"]
+        provenance = None#form.cleaned_data["provenance"] #TODO: is dit correct?
         job_size = form.cleaned_data["job_size"]
 
         self.monitor.update(10, "Executing query..")
@@ -66,12 +66,12 @@ class AssignAsCodingjobAction(QueryAction):
 
         self.monitor.update(50, "Creating codingjobs..")
 
-        n_batches = len(article_ids) // job_size
-        n_batches += 1 if len(article_ids) % job_size else 0
-
         if job_size == 0:
             job_size = len(article_ids)
 
+        n_batches = len(article_ids) // job_size
+        n_batches += 1 if len(article_ids) % job_size else 0
+        
         for i, cid in enumerate(_create_codingjob_batches(cj, article_ids, job_size)):
             progress = int((i / float(n_batches)) * (100 // 2))
             msg = "Creating codingjob {} of {}..".format(i+1, n_batches)
