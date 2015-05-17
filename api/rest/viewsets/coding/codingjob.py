@@ -58,8 +58,8 @@ class CodingJobSerializer(AmCATModelSerializer):
 
     def _get_codingjobs(self):
         view = self.context["view"]
-        if hasattr(view, "object_list"):
-            return view.object_list.distinct()
+        if hasattr(view, "get_queryset"):
+            return view.get_queryset()
         return CodingJob.objects.filter(id=view.object.id)
 
     def _get_coded_articles(self):

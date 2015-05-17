@@ -78,6 +78,6 @@ def save(request, project_id, codingjob_id, coded_article_id):
 
 def redirect(request, codingjob_id):
     cj = CodingJob.objects.get(id=codingjob_id)
-    return HttpResponseRedirect(reverse(index, kwargs={
+    return HttpResponseRedirect(reverse("annotator:annotator-codingjob", kwargs={
         "codingjob_id" : codingjob_id, "project_id" : cj.project_id
     }))
