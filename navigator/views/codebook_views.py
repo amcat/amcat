@@ -135,8 +135,8 @@ class CodebookAddView(ProjectActionRedirectView):
     url_fragment = "add"
 
     
-    def action(self, project_id):
-        self.object = Codebook.objects.create(project_id=project_id, name='New codebook')
+    def action(self, project):
+        self.object = Codebook.objects.create(project_id=project, name='New codebook')
         
     def get_redirect_url(self, **kwargs):
         kwargs.update({"codebook" : self.object.id})
