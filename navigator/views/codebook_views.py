@@ -41,7 +41,7 @@ from amcat.forms import widgets
 
 
 
-class CodebookListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, ListView):
+class CodebookListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, ListView):
     model = Codebook
     parent = ProjectDetailsView
     context_category = 'Coding'
@@ -52,7 +52,7 @@ class CodebookListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, 
         ctx = super(CodebookListView, self).get_context_data(**kwargs)
         all_codebooks = Datatable(CodebookViewSet, rowlink='./{id}', url_kwargs={"project" : self.project.id})
         owned_codebooks = all_codebooks.filter(project=self.project)
-        linked_codebooks = all_codebooks.filter(projects_set=self.project)
+        #linked_codebooks = all_codebooks.filter(projects_set=self.project)
 
         ctx.update(locals())
         return ctx

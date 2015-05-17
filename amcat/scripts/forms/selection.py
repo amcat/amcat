@@ -94,7 +94,7 @@ class SelectionForm(forms.Form):
 
         self.project = project
 
-        codebooks = Codebook.objects.filter(Q(project_id=project.id)|Q(projects_set=project))
+        codebooks = Codebook.objects.filter(Q(project_id=project.id)|Q(projects_set=project)).distinct()
         self.fields['mediums'].queryset = self._get_mediums()
         self.fields['codebook'].queryset = codebooks
 
