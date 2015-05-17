@@ -78,13 +78,6 @@ class ExportCodebook(TableExportMixin, ProjectScriptView):
         form_class.base_fields['format'].choices.remove(("html", "HTML"))
         return form_class
 
-    def get_form(self, *args, **kargs):
-        form = super(ExportCodebook, self).get_form(*args, **kargs)
-        cid = self.kwargs["codebook"]
-        langs = Language.objects.filter(labels__code__codebook_codes__codebook_id=cid).distinct()
-        form.fields['language'].queryset = langs
-        form.fields['language'].initial = min(l.id for l in langs)
-        return form
 
     def form_valid(self, form):
         if form.cleaned_data['format'] == 'xml':
@@ -265,9 +258,30 @@ class CodebookSaveChangesetsView(CodebookFormActionView):
             ccode.save(validate=False)
 
         # Check for any cycles. 
-        CodebookHierarchyResource.get_tree(Codebook.objects.get(id=codebook.id), include_labels=False)
+        CodebookHierarchyResource.get_tree(Codebook.objects.get(id=codebook.id))
 
+class CodebookAddCodeView(CodebookFormActionView):
+    """
+    View called by code-editor to create new code
+    """
+    
+    url_fragment = "new-code"
+    class form_class(forms.Form):
+        parent = JSONFormField(required=False)
+        label = forms.CharField()
+        ordernr = JSONFormField(required=False)
 
+    def action(self, codebook, form):
+        label = form.cleaned_data["label"]
+        parent = form.cleaned_data["parent"]
+        ordernr = form.cleaned_data["ordernr"]
+        
+        code = Code.objects.create(label=label)
+        CodebookCode.objects.create(parent_id=parent, code=code, ordernr=ordernr, codebook=codebook)
+        
+        content = json.dumps(dict(code_id=code.id))
+        return HttpResponse(content=content, status=201, content_type="application/json")
+        
 class CodebookSaveLabelsView(CodebookFormActionView):
     """
     View called by code-editor to store new labels. It requests
@@ -275,55 +289,47 @@ class CodebookSaveLabelsView(CodebookFormActionView):
 
      - labels: an (json-encoded) list with label-objects
      - code: an (json-encoded) code object to which the labels belong
-
-    If an extra value 'parent' is included, this view will create
-    a new code and adds the given labels to it.
     """
     url_fragment = "save-labels"
     class form_class(forms.Form):
-        labels = JSONFormField()
+        code = JSONFormField()
+        label = forms.CharField()
+        labels = JSONFormField(required=False)
         parent = JSONFormField(required=False)
-        code = JSONFormField(required=False)
-        ordernr = JSONFormField(required=False)
 
     def action(self, codebook, form):
+        code = Code.objects.get(id=form.cleaned_data["code"])
+        label = form.cleaned_data["label"]
         labels = form.cleaned_data["labels"]
-        parent = form.cleaned_data["parent"]
-        code = form.cleaned_data["code"]
-        ordernr = form.cleaned_data["ordernr"]
 
-        if parent or not code:
-            # This is a new code, because either
-            code = Code.objects.create()
-            CodebookCode.objects.create(parent_id=parent, code=code, ordernr=ordernr, codebook=codebook)
-        elif ordernr is not None:
-             return HttpResponseBadRequest(content="ordernr != null on existing codes not supported.")
-        else:
-            code = Code.objects.get(id=code)
+        if label:
+            code.label = label
+            code.save()
+            
+        if labels:
+            # Get changed, deleted and new labels
+            changed_labels_map = { int(lbl.get("id")) : lbl for lbl in labels if lbl.get("id") is not None}
+            changed_labels = set(Label.objects.filter(id__in=changed_labels_map.keys()))
 
-        # Get changed, deleted and new labels
-        changed_labels_map = { int(lbl.get("id")) : lbl for lbl in labels if lbl.get("id") is not None}
-        changed_labels = set(Label.objects.filter(id__in=changed_labels_map.keys()))
+            created_labels = [Label(
+                language=Language.objects.get(id=lbl.get("language")), code=code, label=lbl["label"]
+            ) for lbl in labels if lbl.get("id", None) is None]
 
-        created_labels = [Label(
-            language=Language.objects.get(id=lbl.get("language")), code=code, label=lbl["label"]
-        ) for lbl in labels if lbl.get("id", None) is None]
+            current_labels = set(code.labels.all())
+            deleted_labels = current_labels - changed_labels
 
-        current_labels = set(code.labels.all())
-        deleted_labels = current_labels - changed_labels
+            # Deleting requested labels
+            for lbl in deleted_labels:
+                lbl.delete()
 
-        # Deleting requested labels
-        for lbl in deleted_labels:
-            lbl.delete()
+            # Create new labels
+            Label.objects.bulk_create(created_labels)
 
-        # Create new labels
-        Label.objects.bulk_create(created_labels)
-
-        # Update existing labels
-        for label in changed_labels:
-            label.language = Language.objects.get(id=changed_labels_map[label.id]["language"])
-            label.label = changed_labels_map[label.id]["label"]
-            label.save()
+            # Update existing labels
+            for label in changed_labels:
+                label.language = Language.objects.get(id=changed_labels_map[label.id]["language"])
+                label.label = changed_labels_map[label.id]["label"]
+                label.save()
 
         content = json.dumps(dict(code_id=code.id))
         return HttpResponse(content=content, status=201, content_type="application/json")

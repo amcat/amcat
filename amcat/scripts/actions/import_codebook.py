@@ -72,8 +72,6 @@ class ImportCodebook(Script):
 
     class options_form(CSVUploadForm):
         project = forms.ModelChoiceField(queryset=Project.objects.all())
-        default_language = forms.ModelChoiceField(queryset=Language.objects.all(),
-                                                  help_text="Language for new codes")
         codebook_name = forms.CharField(required=False)
         codebook = forms.ModelChoiceField(queryset=Codebook.objects.all(),
                                           help_text="Update existing codebook",
@@ -89,7 +87,7 @@ class ImportCodebook(Script):
             return self.cleaned_data.get('codebook_name')
 
     @transaction.atomic
-    def _run(self, file, project, codebook_name, default_language, codebook, **kargs):
+    def _run(self, file, project, codebook_name, codebook, **kargs):
         data = csv_as_columns(self.bound_form.get_reader())
 
         # build code, parent pairs
@@ -109,13 +107,21 @@ class ImportCodebook(Script):
             log.info("Updating {codebook.id} : {codebook}".format(**locals()))
 
         # create/retrieve codes
-        codes = {code: Code.get_or_create(uuid=uuid or None) for ((code, parent), uuid) in zip(parents, uuids)}
+        codes = {}
+        for ((code, parent), uuid) in zip(parents, uuids):
+            try:
+                c = Code.objects.get(uuid=uuid)
+                if c.label != code:
+                    c.label = code
+                    c.save()
+            except Code.DoesNotExist:
+                c = Code.objects.create(uuid=uuid, label=code)
+            codes[code] = c
 
         to_add = []
         for code, parent in parents:
             instance = codes[code]
             parent_instance = codes[parent] if parent else None
-            instance.add_label(default_language, code)
             cbc = codebook.get_codebookcode(instance)
             if cbc is None:
                 to_add.append((instance, parent_instance))
@@ -186,39 +192,4 @@ if __name__ == '__main__':
 
     result = cli.run_cli()
     #print result.output()
-
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-
-
-def _run_test(bytes, **options):
-    if 'project' not in options: options['project'] = amcattest.create_test_project().id
-    if 'codebook_name' not in options: options['codebook_name'] = 'test'
-    if 'default_language' not in options: options['default_language'] = 1
-    from tempfile import NamedTemporaryFile
-    from django.core.files import File
-
-    with NamedTemporaryFile(suffix=".txt") as f:
-        f.write(bytes)
-        f.flush()
-
-        return ImportCodebook(dict(file=File(open(f.name)), **options)).run()
-
-
-def _csv_bytes(rows, encoding="utf-8", **kargs):
-    def encode(x):
-        if x is None or isinstance(x, str): return x
-        return unicode(x).encode(encoding)
-
-    from cStringIO import StringIO
-
-    out = StringIO()
-    w = csv.writer(out, **kargs)
-    for row in rows:
-        w.writerow(map(encode, row))
-    return out.getvalue()
 

@@ -78,7 +78,7 @@ _views = [
 
     CodebookListView, CodebookDetailsView, CodebookImportView, CodebookLinkView,
     ExportCodebook, CodebookUnlinkView, CodebookDeleteView, CodebookAddView,
-    CodebookChangeNameView, CodebookSaveChangesetsView,CodebookSaveLabelsView,
+    CodebookChangeNameView, CodebookSaveChangesetsView,CodebookSaveLabelsView, CodebookAddCodeView,
 
     CodingSchemaListView, CodingSchemaDetailsView, CodingSchemaDeleteView, CodingSchemaCreateView,
     CodingSchemaEditView,CodingSchemaEditFieldsView,CodingSchemaEditRulesView, CodingSchemaNameView,

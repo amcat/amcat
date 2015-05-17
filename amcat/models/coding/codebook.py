@@ -234,7 +234,7 @@ class Codebook(AmcatModel):
         return OrderedDict((co.code_id, co.parent_id) for co in codes if not co.hide)
 
 
-    def _get_node(self, include_labels, children, node, seen, labels=None):
+    def _get_node(self, children, node, seen):
         """
         Return a namedtuple as described in get_tree(). Raises a CodebookCycleException
         when it detects a cycle.
@@ -248,14 +248,14 @@ class Codebook(AmcatModel):
         return TreeItem(
             code_id=node.id, codebookcode_id=cc.id if cc else None,
             hidden=cc.hide if cc else None, ordernr=cc.ordernr if cc else None,
-            children=self._walk(include_labels, children, children[node], seen),
-            label=node.get_label(*(labels or self._cached_labels), fallback=labels is None) if include_labels else None
+            children=self._walk(children, children[node], seen),
+            label=node.label
         )
 
-    def _walk(self, include_labels, children, nodes, seen, labels=None):
-        return tuple(self._get_node(include_labels, children, n, seen, labels=labels) for n in nodes)
+    def _walk(self, children, nodes, seen):
+        return tuple(self._get_node(children, n, seen) for n in nodes)
 
-    def get_tree(self, include_hidden=True, include_labels=True, get_labels=None, date=None, roots=None):
+    def get_tree(self, include_hidden=True, date=None, roots=None):
         """
         Get a tree representation of the tuples returned by get_hierarchy. For each root
         it yields a namedtuple("TreeItem", ["code_id", "children", "hidden"]) where
@@ -264,10 +264,6 @@ class Codebook(AmcatModel):
         This method will check for cycli and raise an error when one is detected.
 
         @param include_hidden: include hidden codes
-        @param include_labels: include .label property on each TreeItem
-        @param get_labels: fetch labels in this order. This will not use fallback,
-                            see docs Code.get_label().
-
         @param roots: start tree at given nodes.
         @type roots: List of CodebookCodes
         @requires: roots in self.codebookcodes
@@ -281,7 +277,7 @@ class Codebook(AmcatModel):
             if parent:
                 children[parent].append(child)
 
-        return self._walk(include_labels, children, nodes, seen, get_labels)
+        return self._walk(children, nodes, seen)
 
 
     def get_hierarchy(self, date=None, include_hidden=False):

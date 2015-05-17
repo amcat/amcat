@@ -231,15 +231,17 @@ def create_test_coding(**kargs):
     if "id" not in kargs: kargs["id"] = _get_next_id()
     return create_coding(**kargs)
 
-def create_test_code(label=None, language=None, codebook=None, parent=None, **kargs):
+def create_test_code(label=None, extra_label=None, extra_language=None, codebook=None, parent=None, **kargs):
     """Create a test code with a label"""
     from amcat.models.coding.code import Code
     from amcat.models.language import Language
-    if language is None: language = Language.objects.get(pk=1)
     if label is None: label = "testcode_%i" % len(Code.objects.all())
     if "id" not in kargs: kargs["id"] = _get_next_id()
-    o = Code.objects.create(**kargs)
-    o.add_label(language, label)
+    o = Code.objects.create(label=label, **kargs)
+
+    if extra_label is not None:
+        if extra_language is None: extra_language = Language.objects.get(pk=1)
+        o.add_label(extra_language, extra_label)
     if codebook is not None:
         codebook.add_code(o, parent=parent)
     return o
