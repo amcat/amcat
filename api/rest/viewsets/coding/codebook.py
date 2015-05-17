@@ -54,8 +54,10 @@ def serialize_codebook_code(codebook, ccode):
     }
 
 class CodebookSerializer(AmCATModelSerializer):
-    model = Codebook
-    codes = serializers.SerializerMethodField('get_codes')
+    codes = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Codebook
 
     def get_codes(self, codebook):
         # Hack: we pass `codebook` to serialize_codebook_code, so it can use codebook's
@@ -64,6 +66,7 @@ class CodebookSerializer(AmCATModelSerializer):
         codebook.cache(select_related=("function",))
         codebook.cache_labels()
         return (serialize_codebook_code(codebook, ccode) for ccode in codebook.codebookcodes)
+        
 
 class CodebookViewSetMixin(AmCATViewSetMixin):
     queryset = Codebook.objects.all()
@@ -96,6 +99,7 @@ class CodingJobCodebookViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                       CodebookViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = Codebook
     serializer_class = CodebookSerializer
+    queryset = Codebook.objects.all()
 
     def _get_codebook_ids(self):
         """

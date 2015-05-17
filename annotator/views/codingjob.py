@@ -51,7 +51,7 @@ def save(request, project_id, codingjob_id, coded_article_id):
     do check if the codingjob and logged in user correspond, but it's the users
     responsibilty to send correct data (we don't care!).
     """
-    coded_article = CodedArticle.objects.select_related("project", "codingjob", "article").get(id=coded_article_id)
+    coded_article = CodedArticle.objects.select_related("codingjob__project", "codingjob", "article").get(id=coded_article_id)
 
     # sanity checks
     if coded_article.codingjob.project_id != int(project_id):
