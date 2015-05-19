@@ -50,6 +50,7 @@ class Code(AmcatModel):
     """
 
     id = models.AutoField(primary_key=True, db_column='code_id')
+    label = models.TextField()
     uuid = PostgresNativeUUIDField(db_index=True, unique=True)
 
     class Meta():
@@ -62,8 +63,8 @@ class Code(AmcatModel):
         self._labelcache = {}
         self._all_labels_cached = False
 
-    @property
-    def label(self):
+
+    def get_lowest_label(self):
         """Get the (cached, not-None) label with the lowest language id, or a repr-like string"""
         repr_like_string = '<{0.__class__.__name__}: {0.id}>'.format(self)
 

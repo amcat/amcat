@@ -111,7 +111,7 @@
     <script type="text/javascript">
         $(document).ready(function(){
             var jqueryElement = $('#article-table-container');
-            var url = "{% url "codedarticle-list" project.id codingjob.id %}";
+            var url = "{% url "api:project-codingjob-article-list" project.id codingjob.id %}";
             var columns = [], column_order = [
                 "id", "article_id", "headline", "medium", "date", "pagenr",
                 "length", "status", "comments"

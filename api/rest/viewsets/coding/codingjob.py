@@ -34,7 +34,7 @@ from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.coding.codingschemafield import CodingSchemaFieldViewSetMixin, CodingSchemaFieldSerializer
 from api.rest.viewsets.coding.codingrule import CodingRuleViewSetMixin, CodingRuleSerializer
 from api.rest.viewsets.sentence import SentenceViewSetMixin
-from api.rest.viewsets.article import ArticleViewSetMixin
+from api.rest.viewsets.article import ArticleViewSetMixin, ArticleSerializer
 from api.rest.viewsets.project import ProjectViewSetMixin
 
 STATUS_DONE = (STATUS_COMPLETE, STATUS_IRRELEVANT)
@@ -58,8 +58,8 @@ class CodingJobSerializer(AmCATModelSerializer):
 
     def _get_codingjobs(self):
         view = self.context["view"]
-        if hasattr(view, "object_list"):
-            return view.object_list.distinct()
+        if hasattr(view, "get_queryset"):
+            return view.get_queryset()
         return CodingJob.objects.filter(id=view.object.id)
 
     def _get_coded_articles(self):
@@ -118,6 +118,8 @@ class CodingJobViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, DatatablesMix
 class CodingJobArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, ArticleViewSetMixin,
                               DatatablesMixin, ReadOnlyModelViewSet):
     queryset = Article.objects.all()
+    model = Article
+    serializer_class = ArticleSerializer
 
     def filter_queryset(self, articles):
         articles = super(CodingJobArticleViewSet, self).filter_queryset(articles)
@@ -126,6 +128,7 @@ class CodingJobArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, Articl
 class CodingJobArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, ArticleViewSetMixin,
                                       SentenceViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     queryset = Sentence.objects.all()
+    model = Sentence
 
     def filter_queryset(self, sentences):
         sentences = super(CodingJobArticleSentenceViewSet, self).filter_queryset(sentences)
@@ -150,6 +153,7 @@ class CodingJobCodingRuleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, Cod
                                  DatatablesMixin, ReadOnlyModelViewSet):
     queryset = CodingRule.objects.all()
     serializer_class = CodingRuleSerializer
+    model = CodingRule
 
     def filter_queryset(self, rules):
         rules = super(CodingJobCodingRuleViewSet, self).filter_queryset(rules)
@@ -159,6 +163,7 @@ class CodingJobCodingSchemaFieldViewSet(ProjectViewSetMixin, CodingJobViewSetMix
                                         DatatablesMixin, ReadOnlyModelViewSet):
     queryset = CodingSchemaField.objects.all()
     serializer_class = CodingSchemaFieldSerializer
+    model = CodingSchemaField
 
     def filter_queryset(self, fields):
         return super(CodingJobCodingSchemaFieldViewSet, self).filter_queryset(fields).filter(

@@ -82,11 +82,11 @@ class CodebookHierarchyResource(AmCATResource):
         return "codebookhierarchy"
 
     @classmethod
-    def get_tree(cls, codebook, include_labels=True, **kwargs):
+    def get_tree(cls, codebook, **kwargs):
         """Codebook.get_tree() with caching enabled"""
         codebook.cache()
         codebook.cache_labels()
-        return tuple(_walk(codebook.get_tree(include_labels=include_labels, **kwargs)))
+        return tuple(_walk(codebook.get_tree(**kwargs)))
 
 
     def _get(self, request, *args, **kwargs):

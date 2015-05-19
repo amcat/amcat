@@ -857,10 +857,14 @@ annotator = (function(self){
 
         // Send coding values to server
         self.show_loading("Saving codings..");
-        $.post("codedarticle/{0}/save".f(self.state.coded_article_id), JSON.stringify({
-            "coded_article" : self.pre_serialise_coded_article(),
-            "codings" : $.map(self.get_codings(), self.pre_serialise_coding)
-        })).done(function(data, textStatus, jqXHR){
+        $.ajax({url: "codedarticle/{0}/save".f(self.state.coded_article_id), 
+		data: JSON.stringify({
+		    "coded_article" : self.pre_serialise_coded_article(),
+		    "codings" : $.map(self.get_codings(), self.pre_serialise_coding)}),
+		type: "POST",
+		headers: {"X-CSRFTOKEN": csrf_middleware_token},
+		dataType: "json"
+               }).done(function(data, textStatus, jqXHR){
             self.hide_loading();
 
             new PNotify({

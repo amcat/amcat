@@ -70,20 +70,20 @@ class TestExportCodebook(AmCATTestCase):
     def test_parent(self):
         """Test parent format."""
         codes = self.export(structure="parent")
-        self.assertTrue(hasattr(codes.values()[0], "parent"))
+        self.assertTrue(hasattr(codes.values()[0], "parent_id"))
 
     def test_language(self):
         """Test if exporter renders correct labels"""
         codes = self.export(language=self.de)
 
         # Exporting structure format, thus no parent column
-        self.assertFalse(hasattr(codes.values()[0], "parent"))
+        self.assertFalse(hasattr(codes.values()[0], "parent_id"))
 
-        # Should export DE codes
+        # Should export default label, e.g. "A"
         de_code = codes[self.codes_list[0].id]
-        self.assertIn("Ein", (de_code.code1, de_code.code2, de_code.code3))
-
-        # Shouldn't export NL codes
+        self.assertIn("A", (de_code.code1, de_code.code2, de_code.code3))
+        # should not put 'languaged' labels in codeX columns
+        self.assertNotIn("Ein", (de_code.code1, de_code.code2, de_code.code3))
         nl_code = codes[self.codes_list[1].id]
         self.assertNotIn("Een", (nl_code.code1, nl_code.code2, nl_code.code3))
 

@@ -50,6 +50,7 @@ class CodingJobCodingSchemaViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                                    CodingSchemaViewSetMixin, DatatablesMixin,
                                    ReadOnlyModelViewSet):
     queryset = CodingSchema.objects.all()
+    model = CodingSchema
     serializer_class = CodingSchemaSerializer
 
     def filter_queryset(self, codingschemas):

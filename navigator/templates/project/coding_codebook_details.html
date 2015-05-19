@@ -70,5 +70,5 @@
         <script src="{% static 'js/jquery.djangofields.js' %}"></script>
         <script src="{% static 'js/jquery.codebookeditor.js' %}"></script>
     {% endcompress %}
-    <script>$(".codebook").codebookeditor("{% url "navigator:api" %}v4/");</script>
+    <script>$(".codebook").codebookeditor("{% url "api:api" %}v4/");</script>
 {% endblock %}

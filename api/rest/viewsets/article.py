@@ -57,7 +57,7 @@ class MediumField(ModelField):
 
 class ArticleSerializer(AmCATModelSerializer):
     project = ModelChoiceField(queryset=Project.objects.all(), required=True)
-    medium = MediumField(ModelChoiceField(queryset=Medium.objects.all()))
+    medium = MediumField(model_field=ModelChoiceField(queryset=Medium.objects.all()))
     uuid = CharField(read_only=False, required=False)
 
     def validate(self, attrs):

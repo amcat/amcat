@@ -37,12 +37,13 @@ class CodingSerializer(AmCATModelSerializer):
     """
     Serialises Coding-objects, including their values.
     """
-    model = Coding
     values = serializers.SerializerMethodField('get_coding_values')
-
+    class Meta:
+        model = Coding
+        
     @cached
     def _get_coding_values(self):
-        coding_values = CodingValue.objects.filter(coding__in=self.context["view"].object_list)
+        coding_values = CodingValue.objects.filter(coding__in=self.context["view"].queryset)
         coding_values_dict = defaultdict(list)
 
         for coding_value in coding_values:
@@ -69,6 +70,8 @@ class CodingViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                     CodedArticleViewSetMixin, CodingViewSetMixin,
                     DatatablesMixin, ReadOnlyModelViewSet):
     serializer_class = CodingSerializer
+    model = Coding
+    queryset = Coding.objects.all()
 
     def filter_queryset(self, queryset):
         qs = super(CodingViewSet, self).filter_queryset(queryset)

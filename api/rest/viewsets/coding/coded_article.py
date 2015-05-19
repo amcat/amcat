@@ -44,12 +44,12 @@ class PseudoSerializerMethodField(serializers.SerializerMethodField):
     queryset = Medium.objects.none()
 
 class CodedArticleSerializer(AmCATModelSerializer):
-    headline = serializers.SerializerMethodField("get_headline")
-    date = serializers.SerializerMethodField("get_date")
-    pagenr = serializers.SerializerMethodField("get_pagenr")
-    length = serializers.SerializerMethodField("get_length")
-    article_id = serializers.SerializerMethodField("get_article_id")
-    medium = PseudoSerializerMethodField("get_medium")
+    headline = serializers.SerializerMethodField()
+    date = serializers.SerializerMethodField()
+    pagenr = serializers.SerializerMethodField()
+    length = serializers.SerializerMethodField()
+    article_id = serializers.SerializerMethodField()
+    medium = PseudoSerializerMethodField()
 
     get_headline = article_property("headline")
     get_date = article_property("date")
@@ -64,7 +64,8 @@ class CodedArticleSerializer(AmCATModelSerializer):
 
     def _get_coded_articles(self):
         view = self.context["view"]
-        if hasattr(view, "object_list"): return view.object_list
+        if hasattr(view, "queryset"): return view.queryset
+        #if hasattr(view, "object_list"): return view.object_list
         return CodedArticle.objects.filter(id=view.object.id)
 
     @cached
@@ -93,6 +94,7 @@ class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
     serializer_class = CodedArticleSerializer
     extra_filters = ("article__pagenr",)
     queryset = CodedArticle.objects.all()
+    model = CodedArticle
 
     ordering_mapping = {
         "headline": "article__headline",
@@ -117,6 +119,7 @@ class CodedArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                                   DatatablesMixin, ReadOnlyModelViewSet):
     serializer_class = SentenceSerializer
     queryset = Sentence.objects.all()
+    model = Sentence
 
     def filter_queryset(self, queryset):
         qs = super(CodedArticleSentenceViewSet, self).filter_queryset(queryset)
