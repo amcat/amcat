@@ -231,7 +231,7 @@ class Result(object):
         result = Result(**kargs)
         result.count = stats['count']
         if result.count == 0:
-            result.start_date, result.end_data = None, None
+            result.start_date, result.end_date = None, None
         else:
             f = get_date if date else int
             result.min=f(stats['min'])
@@ -648,7 +648,7 @@ class ES(object):
         result = Result()
         result.n = stats['count']
         if result.n == 0:
-            result.start_date, result.end_data = None, None
+            result.start_date, result.end_date = None, None
         else:
             result.start_date = get_date(stats['min'])
             result.end_date = get_date(stats['max'])
