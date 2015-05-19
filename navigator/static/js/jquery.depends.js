@@ -62,6 +62,16 @@ String.prototype.format = function(args){
 (function($){
     $.fn.depends = function(options){
         var defaults = {
+            getFormatter: function(options, elements){
+                var formatter = {};
+
+                $.map(elements.dependsOnElements, function(el){
+                    formatter[el.attr("name")] = el.val();
+                });
+
+                return formatter;
+            },
+
             /**
              *
              * @param options
@@ -73,8 +83,7 @@ String.prototype.format = function(args){
                     nonSelectedText: "Loading options.."
                 }).multiselect("rebuild");
 
-                var formatter = {};
-                formatter[elements.dependsOn] = $(event.currentTarget).val();
+                var formatter = options.getFormatter(options, elements);
                 options.fetchData.bind(options.onSuccess)(
                     options, elements, elements.url.format(formatter)
                 );
@@ -158,9 +167,17 @@ String.prototype.format = function(args){
                 options.onChange.bind(defaults.onChange)(options, elements, event);
             };
 
-            var dependsOnFormat = {name: elements.dependsOn};
-            var dependsOnElement = $("[name={name}]".format(dependsOnFormat), elements.form);
-            dependsOnElement.change(dependsOn).change();
+            var dependsOnElements = $.map(elements.dependsOn, function(name){
+                return $("[name={name}]".format({name: name}));
+            });
+
+            $.map(dependsOnElements, function(el){
+                el.change(dependsOn)
+            });
+
+            elements.dependsOnElements = dependsOnElements;
+            dependsOnElements[0].change();
+
         });
     };
 }(jQuery));

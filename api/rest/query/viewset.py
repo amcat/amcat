@@ -39,14 +39,15 @@ def wrap_query_action(qaction):
 
 class QueryActionMetadata(SimpleMetadata):
     def determine_metadata(self, request, view):
-        field_names = view.get_form().fields.keys()
-        fields = map(partial(getitem, view.get_form()), field_names)
+        form = view.get_form()
+        field_names = form.fields.keys()
+        fields = map(partial(getitem, form), field_names)
 
         return {
             "help_texts": dict(zip(field_names, [f.help_text.strip() or None for f in fields])),
             "form": dict(zip(field_names, [f.as_widget() for f in fields])),
             "labels": dict(zip(field_names, [f.label for f in fields])),
-            "help_text": view.get_view_description()
+            "help_text": view.get_view_description(),
         }
 
 
@@ -87,7 +88,7 @@ class QueryActionView(APIView):
     def get_query_action(self):
         return self.query_action(
             user=self.request.user, project=self.get_project(),
-            articlesets=self.get_articlesets(), data=self.request.POST or None
+            articlesets=self.get_articlesets(), data=self.request.POST or self.request.DATA or None
         )
 
     def get_form(self):

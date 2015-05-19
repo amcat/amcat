@@ -17,7 +17,9 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import json
+from django.core.serializers.json import DjangoJSONEncoder
 from amcat.scripts.query import QueryAction
+from amcat.tools.keywordsearch import SelectionSearch
 
 
 class StatisticsAction(QueryAction):
@@ -33,12 +35,20 @@ class StatisticsAction(QueryAction):
     )
 
     def run(self, form):
+        selection = SelectionSearch(form)
+        queries = selection.get_queries()
+        articlesets = form.cleaned_data["articlesets"]
+        mediums = form.cleaned_data["mediums"]
+
+        statistics = selection.get_statistics()
+
         return json.dumps({
-            "ab": "cd",
-            "abc": {
-                "123": [1,2,3],
-                "789": {
-                    "abc": '123'
-                }
+            "queries": {q.label: q.query for q in queries},
+            "mediums": {m.id: m.name for m in mediums},
+            "articlesets": {a.id: a.name for a in articlesets},
+            "statistics": {
+                "start_date": statistics.start_date,
+                "end_date": statistics.end_date,
+                "narticles": statistics.n
             }
-        })
+        }, cls=DjangoJSONEncoder)

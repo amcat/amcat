@@ -360,6 +360,65 @@ $((function(){
         }
     };
 
+    var post_script_loaded = {
+        "aggregation": function(){
+            $("#script-form [name=relative_to]").depends({
+                fetchData: function(options, elements, url){
+                    var form_data = serializeForm($("#query-form"), SETS);
+                    var y_axis = form_data["y_axis"];
+                    form_data.output_type = "application/json";
+
+                    if (y_axis === "total"){
+                        $("#script-form [name=relative_to]").multiselect("disable").multiselect("setOptions", {
+                            nonSelectedText: "None selected"
+                        }).multiselect("rebuild");
+                        return;
+                    } else {
+                        $("#script-form [name=relative_to]").multiselect("enable");
+                    }
+
+                    $.ajax({
+                        type: "POST", dataType: "json",
+                        url: get_api_url("statistics"),
+                        data: form_data,
+                        traditional: true
+                    }).done(function(data){
+                        // Form accepted, we've been given a task uuid
+                        Poll(data.uuid).result(function(data){
+                            data = data[({
+                                medium: "mediums",
+                                term: "queries",
+                                "set": "articlesets"
+                            })[y_axis]];
+
+                            var ldata = [{id: "", label: "--------"}]
+                            $.each(data, function(id, label){
+                                if (y_axis === "term"){
+                                    ldata.push({id: id, label: id});
+                                } else {
+                                    ldata.push({id: id, label: label});
+                                }
+                            });
+
+                            ldata = (ldata.length === 1) ? [] : ldata;
+                            options.onSuccess(options, elements, {results: ldata});
+                        });
+                    }).fail(fail);
+                }
+            });
+
+            $("#script-form [name=relative_to]").parent().append(
+                $("<button data-toggle='tooltip' title='Refresh options manually' class='btn btn-default'>").append(
+                    $("<i class='glyphicon glyphicon-refresh'>")
+                ).tooltip().click(function(event){
+                    event.preventDefault();
+                    $("[name=y_axis]").change();
+                })
+            );
+
+        }
+    };
+
     var renderers = {
         "application/json+debug": function(container, data){
             renderjson.set_icons('', '');
@@ -440,7 +499,7 @@ $((function(){
                 .attr("src", "data:image/png;base64," + data.image)
                 .attr("usemap", "#clustermap");
 
-            var map = $("<map>").attr("name", "clustermap");
+            var map = $("<map>").attr("nam  e", "clustermap");
 
             // Store for each clickable coordinate its article id
             var area;
@@ -785,8 +844,7 @@ $((function(){
         var url = get_api_url(name);
 
         $.ajax({
-            "type": "OPTIONS", url: url, dateType: "json",
-            "data": {a : 12123}
+            "type": "OPTIONS", url: url, dateType: "json"
         }).done(script_form_loaded).error(function(){
             show_error("Could not load form due to unkown server error. Try again after " +
             "refreshing this page (F5).");
@@ -796,7 +854,7 @@ $((function(){
     }
 
     function script_form_loaded(data){
-	$("#script-line").show();
+        $("#script-line").show();
         if (data.help_text) {
             $("#script-help").text(data.help_text);
             $("#script-help").show();
@@ -818,7 +876,7 @@ $((function(){
             var widget = $("<div class='col-md-7'>").html(data.form[field_name]);
 
             var id = widget.children().first().attr("id");
-            label.attr("for", id)
+            label.attr("for", id);
 
             script_form.append(row.append(label).append(widget));
 
@@ -847,6 +905,10 @@ $((function(){
             fill_form();
             saved_query.loading = false;
         }
+
+
+        var post_func = post_script_loaded[window.location.hash.slice(1)];
+        if(post_func) post_func();
 
         $("#loading-dialog").modal("hide");
         $(".query-submit .btn").removeClass("disabled");
@@ -926,7 +988,7 @@ $((function(){
         $.ajax({
             type: "POST", dataType: "json",
             url: get_api_url(script),
-            data: serializeForm($("#query-form"), SETS),
+            data: form_data,
             headers: {
                 "X-Available-Renderers": get_accepted_mimetypes().join(",")
             },
@@ -1204,10 +1266,6 @@ $((function(){
 
                 inputs.data('initial', value);
                 inputs.multiselect("rebuild");
-
-                if (inputs.hasClass("depends")){
-
-                }
             } else if (tagName === "INPUT" && inputs.attr("type") == "checkbox"){
                 // Boolean fields
                 inputs.prop("checked", value);

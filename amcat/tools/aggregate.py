@@ -19,12 +19,17 @@
 
 import logging
 import itertools
-from amcat.models import ArticleSet
+from amcat.models import ArticleSet, Medium
 
 log = logging.getLogger(__name__)
 
+def _get_column(column):
+    if isinstance(column, Medium) or isinstance(column, ArticleSet):
+        return "{column.name}".format(column=column)
+    return column.label
 
 def _get_pivot(row, column):
+    column = _get_column(column)
     for c, value in row:
         if str(c) == column:
             return float(value)
@@ -32,13 +37,10 @@ def _get_pivot(row, column):
 
 
 def get_relative(aggregation, column):
-    # TODO: We should probably make aggregation an ordered dict of ordered
-    # TODO: dicts, thus making this algorithm run more cheaply.
     pivots = (_get_pivot(row[1], column) for row in aggregation)
     for pivot, (row, row_values) in zip(pivots, aggregation):
         if not pivot:
             continue
-
         yield row, tuple((col, value / pivot) for col, value in row_values)
 
 

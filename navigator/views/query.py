@@ -63,13 +63,15 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
             project_queries = queries.filter(~Q(user=self.request.user))
 
             query = queries.filter(id=query_id)
+
             if not query:
                 raise Http404("Query {query_id} not found".format(**locals()))
 
             if "sets" not in self.request.GET:
+                script_name = query[0].parameters["script"]
                 sets = ",".join(map(str, query[0].get_articleset_ids()))
-                url = reverse("query", args=[self.project.id])
-                url += "?query={query_id}&sets={sets}".format(**locals())
+                url = reverse("navigator:query", args=[self.project.id])
+                url += "?query={query_id}&sets={sets}#{script_name}".format(**locals())
                 return redirect(url)
 
         return super(QueryView, self).get(request, *args, **kwargs)

@@ -1,4 +1,4 @@
-# #########################################################################
+###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -20,7 +20,7 @@ import json
 from datetime import datetime
 from time import mktime
 from django.core.exceptions import ValidationError, MultipleObjectsReturned
-from django.forms import ChoiceField, CharField
+from django.forms import ChoiceField, CharField, Select
 from amcat.models import Medium, ArticleSet
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools.aggregate import get_relative
@@ -28,7 +28,7 @@ from amcat.tools.djangotoolkit import parse_date
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
 
 X_AXES = tuple((c, c.title()) for c in ("date", "medium", "term", "set"))
-Y_AXES = X_AXES + (("total", "Total"),)
+Y_AXES = tuple((c, c.title()) for c in ("medium", "term", "set", "total"))
 
 INTERVALS = tuple((c, c.title()) for c in ("day", "week", "month", "quarter", "year"))
 TRANSPOSE = {"text/json+aggregation+graph"}
@@ -67,9 +67,18 @@ class AggregationActionForm(QueryActionForm):
     x_axis = ChoiceField(label="X-axis (rows)", choices=X_AXES, initial="date")
     y_axis = ChoiceField(label="Y-axis (columns)", choices=Y_AXES, initial="medium")
     interval = ChoiceField(choices=INTERVALS, required=False, initial="day")
-    relative_to = CharField(required=False, help_text=(
-        "Enter medium, term or date for which to make the counts "
-        "relative to. Accepted: medium id, medium label, DD-MM-YYYY, term. "))
+    relative_to = CharField(widget=Select, required=False)
+
+    def __init__(self, *args, **kwargs):
+        super(AggregationActionForm, self).__init__(*args, **kwargs)
+
+        self.fields["relative_to"].widget.attrs = {
+            "class": "depends-will-be-added-by-query-js",
+            "data-depends-on": json.dumps(["y_axis", "query", "mediums"]),
+            "data-depends-url": "/api/v4/query/statistics/?project={project}&format=json",
+            "data-depends-value": "{id}",
+            "data-depends-label": "{label}",
+        }
 
     def clean_relative_to(self):
         column = self.cleaned_data['relative_to']
@@ -79,29 +88,21 @@ class AggregationActionForm(QueryActionForm):
             return None
 
         if y_axis == "medium":
-            medium = _get_medium(column)
-            if medium not in self.cleaned_data["mediums"]:
+            if int(column) not in (m.id for m in self.cleaned_data["mediums"]):
                 raise ValidationError(MEDIUM_ERR.format(column=column))
-            return medium.id
-
-        if y_axis == "date":
-            try:
-                date = parse_date(column)
-            except ValueError:
-                raise ValidationError("Not a valid date.")
-
-            if date is None:
-                raise ValidationError("Not a valid date.")
-
-            # TODO: We should check whether date is within bounds, but it is not certain
-            # TODO: those values are in cleaned_data yet. Just error upon rendering..?
-            return datetime.combine(date, datetime.min.time())
+            return Medium.objects.get(id=int(column))
 
         if y_axis == "term":
             queries = SelectionSearch(self).get_queries()
-            if column not in (q.label for q in queries):
+            queries = {q.label: q for q in queries}
+            if column not in queries:
                 raise ValidationError("Term '{column}' not found in search terms.".format(column=column))
-            return column
+            return queries[column]
+
+        if y_axis == "set":
+            if int(column) not in (aset.id for aset in self.articlesets):
+                raise ValidationError("Set '{column}' not available.".format(column=column))
+            return ArticleSet.objects.get(id=int(column))
 
         raise ValidationError("Not a valid column name.")
 
@@ -143,3 +144,6 @@ class AggregationAction(QueryAction):
         self.monitor.update(60, "Serialising..".format(**locals()))
         return json.dumps(list(aggregation), cls=AggregationEncoder, check_circular=False)
 
+
+class AggregationColumnAction(QueryAction):
+    pass
