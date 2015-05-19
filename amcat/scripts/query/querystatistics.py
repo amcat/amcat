@@ -42,13 +42,20 @@ class StatisticsAction(QueryAction):
 
         statistics = selection.get_statistics()
 
+        if hasattr(statistics, "start_date"):
+            start_date = statistics.start_date
+            end_date = statistics.end_date
+        else:
+            start_date = None
+            end_date = None
+
         return json.dumps({
             "queries": {q.label: q.query for q in queries},
             "mediums": {m.id: m.name for m in mediums},
             "articlesets": {a.id: a.name for a in articlesets},
             "statistics": {
-                "start_date": statistics.start_date,
-                "end_date": statistics.end_date,
+                "start_date": start_date,
+                "end_date": end_date,
                 "narticles": statistics.n
             }
         }, cls=DjangoJSONEncoder)
