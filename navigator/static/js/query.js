@@ -29,7 +29,7 @@ var MULTISELECT_DEFAULTS = {
         window.setTimeout(function(){input.focus()});
     },
     disableIfEmpty: true
-}
+};
 
 
 /**
@@ -42,7 +42,7 @@ String.prototype.format = function(args){
     }
 
     for (var key in args) {
-        var string_key = '{' + key + '}'
+        var string_key = '{' + key + '}';
         this_string = this_string.replace(new RegExp(string_key, 'g'), args[key]);
     }
     return this_string;
@@ -147,7 +147,7 @@ $((function(){
         name: null,
         private: true,
         user: null
-    }
+    };
 
     /**
      * At each query, data will be stored here to make sure we
@@ -196,7 +196,7 @@ $((function(){
     }
 
     function getSerie(aggr, x_key, x_type){
-        var serie = { obj: x_key, name: value_renderer[form_data["y_axis"]](x_key) }
+        var serie = { obj: x_key, name: value_renderer[form_data["y_axis"]](x_key) };
 
         if (x_type === "datetime"){
             serie.data = $.map(aggr.columns, function(column){
@@ -287,7 +287,7 @@ $((function(){
                                 "set": "articlesets"
                             })[y_axis]];
 
-                            var ldata = [{id: "", label: "--------"}]
+                            var ldata = [{id: "", label: "--------"}];
                             $.each(data, function(id, label){
                                 if (y_axis === "term"){
                                     ldata.push({id: id, label: id});
@@ -326,7 +326,7 @@ $((function(){
         },
         "application/json+clustermap+table": function(container, data){
             var table = renderers["text/csv+table"](container, data.csv);
-            table.addClass("table-hover")
+            table.addClass("table-hover");
 
             $("tr", table).click(function(event){
                 // Find column indices of relevant queries
@@ -382,7 +382,7 @@ $((function(){
                 })
             );
 
-            var table = $("<table class='table'>").append([thead, tbody])
+            var table = $("<table class='table'>").append([thead, tbody]);
             container.append(table);
             return table;
         },
@@ -426,7 +426,7 @@ $((function(){
         },
         "application/json+image+svg+multiple": function(container, data){
             console.log(data);
-            console.log(typeof(data))
+            console.log(typeof(data));
             $.map(data, function(table){
                 var table_container = $("<div>");
                 renderers["image/svg"](table_container, table[1]);
@@ -449,7 +449,7 @@ $((function(){
             return container.html(data);
         },
         "text/html+summary": function(container, data){
-            container = renderers["text/html"](container, data);
+            renderers["text/html"](container, data);
             bottom(load_extra_summary);
         },
 
@@ -531,8 +531,8 @@ $((function(){
 
                                 articles_popup(filters);
                             }
-                        },
-                    },
+                        }
+                    }
                 }
             };
 
@@ -664,7 +664,7 @@ $((function(){
             url: get_api_url("summary"),
             data: data,
             headers: { "X-Available-Renderers": get_accepted_mimetypes().join(",") },
-            traditional: true,
+            traditional: true
         }).done(function(data){
             // Form accepted, we've been given a task uuid
             Poll(data.uuid).result(function(data){
@@ -676,8 +676,7 @@ $((function(){
             });
         })
 
-    };
-
+    }
     /**
      * Renders popup with a list of articles, based on given filters.
      * @param filters mapping { type -> filter }. For example:
@@ -879,7 +878,7 @@ $((function(){
         form_data = serializeForm($("#query-form"), SETS);
         $("#result .panel-body").html("<i>No results yet</i>");
 
-        var script = scripts_container.find(".active")[0].id.replace("script_","")
+        var script = scripts_container.find(".active")[0].id.replace("script_","");
 
         $.ajax({
             type: "POST", dataType: "json",
@@ -913,7 +912,7 @@ $((function(){
     function save_query(event){
         event.preventDefault();
         var dialog = $("#save-query-dialog");
-        var name_btn = $("[name=name]", dialog)
+        var name_btn = $("[name=name]", dialog);
         var private_btn = $("[name=private]", dialog);
         var save_btn = $(".save", dialog);
 
@@ -964,7 +963,7 @@ $((function(){
             data: {
                 name: name,
                 private: _private ? true : false,
-                parameters: JSON.stringify(data),
+                parameters: JSON.stringify(data)
             },
             headers: {
                 "X-CSRFTOKEN": $("[name=csrfmiddlewaretoken]").attr("value")
@@ -1054,7 +1053,7 @@ $((function(){
 
     self.init_shortcuts = function initialise_shortcuts(){
         $.each(HOTKEYS, function(keys, callback){
-            console.log(keys)
+            console.log(keys);
             $(document).delegate('*', 'keydown.' + keys, function(event){
                 event.preventDefault();
                 event.stopPropagation();
@@ -1117,7 +1116,7 @@ $((function(){
             hash = location.hash.slice(1);
         }
 
-        console.log(hash)
+        console.log(hash);
 
         $("#script_" + hash).click();
     }
@@ -1157,7 +1156,7 @@ $((function(){
                 }
 
                 $.map(value, function(val){
-                    inputs.multiselect('select', value);
+                    inputs.multiselect('select', val);
                 });
 
                 inputs.data('initial', value);
@@ -1184,7 +1183,7 @@ $((function(){
     function init_saved_query(query_id){
         var url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: query_id});
         $("#loading-dialog").modal({keyboard: false, backdrop: "static"});
-        $("#loading-dialog .message").text("Loading saved query..")
+        $("#loading-dialog .message").text("Loading saved query..");
         progress_bar.css("width", "10%");
 
         $.ajax({
@@ -1315,7 +1314,7 @@ $((function(){
     $(function(){
         $("#codebooks").change(codebook_changed);
         $("#delete-query").click(delete_query);
-        $("#save-query-dialog .save").click(save_query.bind({confirm: false}))
+        $("#save-query-dialog .save").click(save_query.bind({confirm: false}));
         $("#run-query").click(run_query);
         $("#content > form").submit(run_query);
         $("#scripts .script").click(script_changed);
