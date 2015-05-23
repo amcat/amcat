@@ -1,5 +1,4 @@
 "use strict";
-
 /**************************************************************************
 *          (C) Vrije Universiteit, Amsterdam (the Netherlands)            *
 *                                                                         *
@@ -32,14 +31,6 @@ var MULTISELECT_DEFAULTS = {
     disableIfEmpty: true
 }
 
-
-function log(txt){
-    console.log(txt);
-}
-
-String.prototype.capitalize = function() {
-    return this.charAt(0).toUpperCase() + this.slice(1);
-}
 
 /**
  * http://stackoverflow.com/questions/4974238/javascript-equivalent-of-pythons-format-function
@@ -91,101 +82,6 @@ $.fn.serializeObject = function()
     return o;
 };
 
-
-var AGGR_HASH_FUCNTIONS = {
-    "equals": function (a, b) {
-        return (a.id === undefined) ? (a === b) : (a.id === b.id && a.label === b.label);
-    },
-    "hashCode": function (aggr) {
-        return (aggr.id === undefined) ? aggr.toString() : (aggr.id + "_" + aggr.label);
-    }
-}
-
-/**
- * Provides convience functions for aggregation-data returned by server
- * @param data returned by server (json)
- */
-function _Aggregation(data){
-    //////////////////////
-    // PUBLIC FUNCTIONS //
-    //////////////////////
-    this.transpose = function(){
-        var aggr_dict = new Hashtable(AGGR_HASH_FUCNTIONS);
-
-        var temp_column;
-        this.aggr.each(function(row, row_data){
-            row_data.each(function(column, article_count){
-                temp_column = aggr_dict.get(column);
-
-                if (temp_column === null){
-                    aggr_dict.put(column, [[row, article_count]]);
-                } else {
-                    temp_column.push([row, article_count]);
-                }
-            });
-        });
-
-        var aggr_list = [];
-        aggr_dict.each(function(k, v){ aggr_list.push([k, v]); });
-        return Aggregation(aggr_list);
-    };
-
-    //////////////////////////////////////
-    // PRIVATE INITIALISATION FUNCTIONS //
-    //////////////////////////////////////
-    this._getHashMap = function(){
-        var aggr_dict = new Hashtable(AGGR_HASH_FUCNTIONS);
-
-        $.map(data, (function(x_values){
-            aggr_dict.put(x_values[0], new Hashtable(AGGR_HASH_FUCNTIONS));
-
-            $.map(x_values[1], function(y_values){
-                aggr_dict.get(x_values[0]).put(y_values[0], y_values[1]);
-            });
-        }).bind(this));
-
-        return aggr_dict;
-    }
-
-    this._getColumns = function(aggr){
-        var columns = new HashSet(AGGR_HASH_FUCNTIONS);
-
-        $.each(aggr.values(), function(_, y_values) {
-            $.each(y_values.keys(), function(_, x_key) {
-                columns.add(x_key);
-            });
-        });
-
-        return columns.values();
-    }
-
-    this._getColumnIndices = function(columns){
-        var indices = new Hashtable(AGGR_HASH_FUCNTIONS);
-        $.each(columns, indices.put);
-        return indices;
-    }
-
-    ///////////////////////
-    // PUBLIC PROPERTIES //
-    ///////////////////////
-    this.aggr = this._getHashMap();
-    this.rows = this.aggr.keys();
-    this.columns = this._getColumns(this.aggr);
-    this.columnIndices = this._getColumnIndices(this.columns);
-
-    ///////////////////////////////////////////
-    // PUBLIC FUNCTIONS MAPPING TO HASHTABLE //
-    ///////////////////////////////////////////
-    this.get = this.aggr.get;
-    this.size = this.aggr.size;
-
-
-    return this;
-}
-
-var Aggregation = function(data){
-    return _Aggregation.bind({})(data);
-};
 
 $((function(){
     var query_screen = $("#query-screen");
