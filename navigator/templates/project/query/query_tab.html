@@ -25,15 +25,15 @@
 </div>
 
 <script>
-    $(function(){
+    require(["jquery", "bootstrap-multiselect"], function($){
         $("#codebooks").multiselect({
-            disableIfEmpty: true,
+            disableIfEmpty: true
         });
 
         $("#keywords").multiselect({
             disableIfEmpty: true,
             nonSelectedText: "Keyword language"
-        })
+        });
 
         $("#indicators").multiselect({
             disableIfEmpty: true,

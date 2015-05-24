@@ -23,13 +23,15 @@
                 </select>
 
                 <script>
-                    $("#change-articlesets-select").multiselect({
-                        enableFiltering: true,
-                        enableCaseInsensitiveFiltering: true,
-                        maxHeight:500,
-                        buttonWidth: '80%',
-                        numberDisplayed: 5
-                    })
+                    require(["jquery", "bootstrap-multiselect"], function($){
+                        $("#change-articlesets-select").multiselect({
+                            enableFiltering: true,
+                            enableCaseInsensitiveFiltering: true,
+                            maxHeight:500,
+                            buttonWidth: '80%',
+                            numberDisplayed: 5
+                        })
+                    });
                 </script>
             </div>
             <div class="modal-footer">

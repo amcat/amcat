@@ -31,6 +31,9 @@
     {% block css %}{% endblock %}
 
     <!--  Javascript -->
+    {% block base_javascript %}
+    {% comment %}Certain parts of AmCAT use requirejs to load their modules. By defining this
+    as block, these pages can explicitely disable these scripts{% endcomment %}
     <script src="{% static 'components/jquery/dist/jquery.js' %}"></script>
     <script src="{% static 'components/bootstrap/dist/js/bootstrap.js' %}"></script>
     <script src="{% static 'components/datatables/media/js/jquery.dataTables.js' %}"></script>
@@ -46,10 +49,12 @@
     <script src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
     <script src="{% static 'js/amcat.js' %}"></script>
     <script src="{% static 'js/amcat.datatables.js' %}"></script>
+    {% endblock %}
 
     <script>
         csrf_middleware_token = "{{ csrf_token }}";
         AMCAT_STATIC_URL = "{% static '' %}";
+        CACHE_BUST_TOKEN = "{{ cache_bust_token }}";
     </script>
 
     <script src="{% static 'components/requirejs/require.js' %}"></script>
