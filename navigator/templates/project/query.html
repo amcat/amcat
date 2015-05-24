@@ -8,47 +8,22 @@
 {% block css %}
 {% compress css %}
     <link href="{% static 'css/selection.css' %}" rel="stylesheet" type="text/css" media="screen" />
-    <link href="{% static 'components/jqplot-bower/dist/jquery.jqplot.css' %}" rel="stylesheet" type="text/css" media="screen" />
     <link href="{% static 'components/bootstrap-datepicker/dist/css/bootstrap-datepicker3.css' %}" rel="stylesheet" type="text/css" media="screen" />
     <link href="{% static 'components/bootstrap-multiselect/dist/css/bootstrap-multiselect.css' %}" rel="stylesheet" type="text/css" media="screen" />
-
-    {% if settings.DEBUG %}
-        <link href="{% static 'components/highlight/src/styles/github.css' %}" rel="stylesheet" type="text/css" media="screen" />
-    {% endif %}
+    <link href="{% static 'components/highlight/src/styles/github.css' %}" rel="stylesheet" type="text/css" media="screen" />
 {% endcompress %}
 {% endblock %}
 {% block javascript %}
-  <!--[if lt IE 9]>
-      <script type="text/javascript" src="{{MEDIA_URL}}js/jqplot/excanvas.min.js"></script>
-  <![endif]-->
+  <!-- Bower dependencies -->
+  {% if articlesets %}
+  <script src="{% static 'components/bootstrap-datepicker/dist/js/bootstrap-datepicker.js' %}"></script>
+  <script src="{% static 'js/jshashtable.js' %}"></script>
+  <script src="{% static 'js/jshashset.js' %}"></script>
+  <script src="{% static 'components/bootstrap-multiselect/dist/js/bootstrap-multiselect.js' %}"></script>
 
-  {% compress js %}
-      <!-- Bower dependencies -->
-      {% if articlesets %}
-      <script type="text/javascript" src="{% static 'components/jquery.hotkeys/jquery.hotkeys.js' %}"></script>
-      <script type="text/javascript" src="{% static 'components/bootstrap-datepicker/dist/js/bootstrap-datepicker.js' %}"></script>
-      <script type="text/javascript" src="{% static 'js/jshashtable-3.0.js' %}"></script>
-      <script type="text/javascript" src="{% static 'js/jshashset-3.0.js' %}"></script>
-      <script type="text/javascript" src="{% static 'components/moment/moment.js' %}"></script>
-      <script type="text/javascript" src="{% static 'js/jquery.depends.js' %}"></script>
-      <script type="text/javascript" src="{% static 'js/query/query_aggregation.js' %}"></script>
-      <script type="text/javascript" src="{% static 'js/query/query_dates.js' %}"></script>
-      <script type="text/javascript" src="{% static 'js/query/query.js' %}"></script>
-      <script type="text/javascript" src="{% static 'js/query/poll.js' %}"></script>
-      <script type="text/javascript" src="{% static 'components/jquery-csv/src/jquery.csv.js' %}"></script>
-      <script type="text/javascript" src="{% static 'components/highcharts/highcharts.js' %}"></script>
-      <script type="text/javascript" src="{% static 'components/highcharts/modules/data.js' %}"></script>
-      <script type="text/javascript" src="{% static 'components/highcharts/modules/heatmap.js' %}"></script>
-      <script type="text/javascript" src="{% static 'components/highcharts/modules/exporting.js' %}"></script>
-      <script type="text/javascript" src="{% static 'components/papaparse/papaparse.js' %}"></script>
-      <script type="text/javascript" src="{% static 'components/bootstrap-multiselect/dist/js/bootstrap-multiselect.js' %}"></script>
-      {% endif %}
-
-      {% if settings.DEBUG %}
-          <script type="text/javascript" src="{% static 'components/renderjson/renderjson.js' %}"></script>
-          <script type="text/javascript" src="{% static 'components/highlight/build/highlight.pack.js' %}"></script>
-      {% endif %}
-  {% endcompress %}
+  <!-- query.js and its dependencies are loaded through requirejs -->
+  <script data-main="{% static "js/query/main" %}" src="{% static 'components/requirejs/require.js' %}"></script>
+ {% endif %}
 {% endblock %}
 
 {% block title %}Project {{context.id}} - {{context.name}}{% endblock %}

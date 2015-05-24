@@ -1,4 +1,4 @@
-_Poll = (function(uuid, opts){
+_Poll = (function($, uuid, opts){
     var nop = function(){};
 
     // Statuses (stati? :-))
@@ -181,6 +181,9 @@ _Poll = (function(uuid, opts){
  * >>>     alert("Succesfully fetched task result!");
  * >>> });
  */
-Poll = function(uuid, opts){
-    return _Poll.call({}, uuid, opts === undefined ? {} : opts);
-};
+define(["jquery"], function($){
+    console.log($)
+    return function(uuid, opts){
+        return _Poll.call({}, $, uuid, opts === undefined ? {} : opts);
+    }
+});

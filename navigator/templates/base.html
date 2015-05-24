@@ -11,53 +11,52 @@
 
     <link rel="shortcut icon" href="{{ MEDIA_URL  }}img/amcat/favicon.png">
 
-    <!--  CSS -->
-    {% compress css %}
-        <!-- Bower dependencies -->
-        <link href="{% static 'components/bootstrap/dist/css/bootstrap.css' %}" rel="stylesheet" type="text/css"  />
-        <link href="{% static 'components/datatables/media/css/jquery.dataTables.css' %}" rel="stylesheet" type="text/css"  />
-        <link href="{% static 'components/pnotify/pnotify.core.css' %}" rel="stylesheet" type="text/css"  />
-        <link href="{% static 'components/datatables/extensions/TableTools/css/dataTables.tableTools.css' %}" rel="stylesheet" type="text/css"  />
-        <link href="{% static 'css/dataTables.bootstrap.css' %}" rel="stylesheet" type="text/css"  />
+    <!-- Bower dependencies -->
+    <link href="{% static 'components/bootstrap/dist/css/bootstrap.css' %}" rel="stylesheet" type="text/css"  />
+    <link href="{% static 'components/datatables/media/css/jquery.dataTables.css' %}" rel="stylesheet" type="text/css"  />
+    <link href="{% static 'components/pnotify/pnotify.core.css' %}" rel="stylesheet" type="text/css"  />
+    <link href="{% static 'components/datatables/extensions/TableTools/css/dataTables.tableTools.css' %}" rel="stylesheet" type="text/css"  />
+    <link href="{% static 'css/dataTables.bootstrap.css' %}" rel="stylesheet" type="text/css"  />
 
-        <!-- AmCAT code -->
-        <link href="{% static 'css/forms.css' %}" rel="stylesheet" type="text/css"  />
-        <link href="{% static 'css/tabs.css' %}" rel="stylesheet" type="text/css"  />
-        <link href="{% static 'css/jquery.multiselect.css' %}" rel="stylesheet" type="text/css"  />
-        <link href="{% static 'css/jquery.multiselect.filter.css' %}" rel="stylesheet" type="text/css"  />
-        <link href="{% static 'css/amcat.css' %}" rel="stylesheet" type="text/css"  />
-        <link href="{% static 'css/tables.css' %}" rel="stylesheet" type="text/css"  />
-    {% endcompress %}
+    <!-- AmCAT code -->
+    <link href="{% static 'css/forms.css' %}" rel="stylesheet" type="text/css"  />
+    <link href="{% static 'css/tabs.css' %}" rel="stylesheet" type="text/css"  />
+    <link href="{% static 'css/jquery.multiselect.css' %}" rel="stylesheet" type="text/css"  />
+    <link href="{% static 'css/jquery.multiselect.filter.css' %}" rel="stylesheet" type="text/css"  />
+    <link href="{% static 'css/amcat.css' %}" rel="stylesheet" type="text/css"  />
+    <link href="{% static 'css/tables.css' %}" rel="stylesheet" type="text/css"  />
+
     {% if theme %}
       <link href="{% static 'css/theme_' %}{{theme}}.css" rel="stylesheet" type="text/css"  />
     {% endif %}
+
     {% block css %}{% endblock %}
 
     <!--  Javascript -->
-    {% compress js %}
-        <script type="text/javascript" src="{% static 'components/jquery/dist/jquery.js' %}"></script>
-        <script type="text/javascript" src="{% static 'components/jquery-ui/ui/jquery-ui.js' %}"></script>
-        <script type="text/javascript" src="{% static 'components/bootstrap/dist/js/bootstrap.js' %}"></script>
-        <script type="text/javascript" src="{% static 'components/datatables/media/js/jquery.dataTables.js' %}"></script>
-        <script type="text/javascript" src="{% static 'components/datatables/extensions/TableTools/js/dataTables.tableTools.js' %}"></script>
-        <script type="text/javascript" src="{% static 'components/jquery-cookie/jquery.cookie.js' %}"></script>
-        <script type="text/javascript" src="{% static 'js/dataTables.bootstrap.js' %}"></script>
-        <script type="text/javascript" src="{% static 'components/bootstrap/js/scrollspy.js' %}"></script>
-        <script type="text/javascript" src="{% static 'components/bootstrap/js/tooltip.js' %}"></script>
-        <script type="text/javascript" src="{% static 'components/pnotify/pnotify.core.js' %}"></script>
-        <script type="text/javascript" src="{% static 'components/pnotify/pnotify.nonblock.js' %}"></script>
+    <script src="{% static 'components/jquery/dist/jquery.js' %}"></script>
+    <script src="{% static 'components/jquery-ui/ui/jquery-ui.js' %}"></script>
+    <script src="{% static 'components/bootstrap/dist/js/bootstrap.js' %}"></script>
+    <script src="{% static 'components/datatables/media/js/jquery.dataTables.js' %}"></script>
+    <script src="{% static 'components/datatables/extensions/TableTools/js/dataTables.tableTools.js' %}"></script>
+    <script src="{% static 'components/jquery-cookie/jquery.cookie.js' %}"></script>
+    <script src="{% static 'js/dataTables.bootstrap.js' %}"></script>
+    <script src="{% static 'components/bootstrap/js/scrollspy.js' %}"></script>
+    <script src="{% static 'components/bootstrap/js/tooltip.js' %}"></script>
+    <script src="{% static 'components/pnotify/pnotify.core.js' %}"></script>
+    <script src="{% static 'components/pnotify/pnotify.nonblock.js' %}"></script>
 
-        <!-- AmCAT code -->
-        <script type="text/javascript" src="{% static 'js/jquery.multiselect.js' %}"></script>
-        <script type="text/javascript" src="{% static 'js/jquery.multiselect.filter.js' %}"></script>
-        <script type="text/javascript" src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
-        <script type="text/javascript" src="{% static 'js/amcat.js' %}"></script>
-        <script type="text/javascript" src="{% static 'js/amcat.datatables.js' %}"></script>
+    <!-- AmCAT code -->
+    <script src="{% static 'js/jquery.multiselect.js' %}"></script>
+    <script src="{% static 'js/jquery.multiselect.filter.js' %}"></script>
+    <script src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
+    <script src="{% static 'js/amcat.js' %}"></script>
+    <script src="{% static 'js/amcat.datatables.js' %}"></script>
 
-	<script type="text/javascript">
-var csrf_middleware_token = "{{ csrf_token }}";
-	</script>
-    {% endcompress %}
+    <script type="text/javascript">
+        csrf_middleware_token = "{{ csrf_token }}";
+        AMCAT_STATIC_URL = "{% static '' %}";
+    </script>
+
     {% block javascript %}{% endblock %}
 
   </head>
