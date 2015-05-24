@@ -11,9 +11,11 @@
         <option value="before">Before</option>
     </select>
 
-    <script>$(function(){
-        $("#id_datetype").multiselect({});
-    })</script>
+    <script>
+        require(["jquery", "bootstrap-multiselect"], function($){
+            $("#id_datetype").multiselect({});
+        });
+    </script>
 
     <input disabled name="on_date" placeholder="On" class="input-sm form-control" type="text"/>
 
@@ -27,15 +29,17 @@
     </div>
 </div>
 
-<script type="text/javascript">
-    var opts = {
-        //format: "dd-mm-yyyy",
-        calendarWeeks: true,
-        todayHighlight: true,
-        startDate: "{{ statistics.start_date|date:"Y-m-d" }}",
-        endDate: "{{ statistics.end_date|date:"Y-m-d" }}"
-    };
+<script>
+    require(["jquery", "bootstrap-datepicker"], function($){
+        var opts = {
+            //format: "dd-mm-yyyy",
+            calendarWeeks: true,
+            todayHighlight: true,
+            startDate: "{{ statistics.start_date|date:"Y-m-d" }}",
+            endDate: "{{ statistics.end_date|date:"Y-m-d" }}"
+        };
 
-    $('.input-daterange').datepicker(opts);
-    $('[name=on_date]').datepicker(opts);
+        $('.input-daterange').datepicker(opts);
+        $('[name=on_date]').datepicker(opts);
+    });
 </script>

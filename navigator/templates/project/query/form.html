@@ -1,6 +1,5 @@
 {% include "project/query/syntax_help.html" %}
 
-
 <div id="query-options" class="btn-group">
     <select id="load-query-menu" role="menu">
         {% if saved_user_queries %}
@@ -35,28 +34,28 @@
 </div>
 
 <script>
-$(function(){
-    $("#load-query-menu").multiselect({
-        onChange: function(option, checked, select) {
-            window.location = $(option).attr("href");
-            $("#loading-dialog").modal({keyboard: false, backdrop: "static"});
-            $("#loading-dialog .message").text("Loading query..");
-        },
-        maxHeight: 400,
-        nonSelectedText: "Recent queries",
-        allSelectedText: "Recent queries",
-        disableIfEmpty: true,
-        buttonWidth: '150px',
-    }).multiselect("select", "load_query");
+    require(["jquery", "bootstrap-multiselect"], function($){
+        $("#load-query-menu").multiselect({
+            onChange: function(option, checked, select) {
+                window.location = $(option).attr("href");
+                $("#loading-dialog").modal({keyboard: false, backdrop: "static"});
+                $("#loading-dialog").find(".message").text("Loading query..");
+            },
+            maxHeight: 400,
+            nonSelectedText: "Recent queries",
+            allSelectedText: "Recent queries",
+            disableIfEmpty: true,
+            buttonWidth: '150px'
+        }).multiselect("select", "load_query");
 
-    $("#query-options .multiselect-container li.active").remove();
-    $("#load-query > button").attr("title", "");
+        $("#query-options").find(".multiselect-container li.active").remove();
+        $("#load-query > button").attr("title", "");
 
-    {% if not saved_user_queries and not saved_project_queries %}
-        $("#load-query-hack").remove();
-        $("#load-query-menu").multiselect("rebuild");
-    {% endif %}
-});
+        {% if not saved_user_queries and not saved_project_queries %}
+            $("#load-query-hack").remove();
+            $("#load-query-menu").multiselect("rebuild");
+        {% endif %}
+    });
 </script>
 
 <h4 data-toggle="tooltip" data-placement="bottom" title="Click to edit" id="query-name" class="name" style="float:right;"><i>Unsaved query</i></h4>
@@ -99,17 +98,19 @@ $(function(){
                     </div>
 
                     <script>
-                        /*$("#id_mediums,#id_articlesets").multiselect(
-                           $.extend({}, MULTISELECT_DEFAULTS, {
-                               nonSelectedText: 'All selected',
-                               buttonWidth: "100%"
-                           })
-                        );*/
+                        require(["jquery", "query/multiselect-defaults", "bootstrap-multiselect"], function($, MULTISELECT_DEFAULTS){
+                            $("#id_mediums,#id_articlesets").multiselect(
+                                    $.extend({}, MULTISELECT_DEFAULTS, {
+                                        nonSelectedText: 'All selected',
+                                        buttonWidth: "100%"
+                                    })
+                            );
 
-                        $("#id_articlesets")
-                                .multiselect("deselectAll")
-                                .multiselect("select", {{ articleset_ids_json }})
-                                .multiselect("disable");
+                            $("#id_articlesets")
+                                    .multiselect("deselectAll")
+                                    .multiselect("select", {{ articleset_ids_json }})
+                                    .multiselect("disable");
+                        });
                     </script>
                 </div>
                 <br/>
@@ -175,12 +176,14 @@ $(function(){
 </div>
 
 <script type="text/javascript">
-    $(function() {
+    require(["jquery", "bootstrap-tooltip"], function($){
         var inputs = [
             "#id_datetype", "[name=on_date]", "[name=start_date]", "[name=end_date]",
             "#id_mediums", "[type=query]", "[name=articleids]"
         ];
-        $.each(inputs, function (i, el) { $(el).prop("tabindex", i+1); });
+        $.each(inputs, function (i, el) {
+            $(el).prop("tabindex", i+1);
+        });
 
         $('[data-toggle="tooltip"]').tooltip()
     });

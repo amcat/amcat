@@ -21,8 +21,6 @@
     <!-- AmCAT code -->
     <link href="{% static 'css/forms.css' %}" rel="stylesheet" type="text/css"  />
     <link href="{% static 'css/tabs.css' %}" rel="stylesheet" type="text/css"  />
-    <link href="{% static 'css/jquery.multiselect.css' %}" rel="stylesheet" type="text/css"  />
-    <link href="{% static 'css/jquery.multiselect.filter.css' %}" rel="stylesheet" type="text/css"  />
     <link href="{% static 'css/amcat.css' %}" rel="stylesheet" type="text/css"  />
     <link href="{% static 'css/tables.css' %}" rel="stylesheet" type="text/css"  />
 
@@ -34,7 +32,6 @@
 
     <!--  Javascript -->
     <script src="{% static 'components/jquery/dist/jquery.js' %}"></script>
-    <script src="{% static 'components/jquery-ui/ui/jquery-ui.js' %}"></script>
     <script src="{% static 'components/bootstrap/dist/js/bootstrap.js' %}"></script>
     <script src="{% static 'components/datatables/media/js/jquery.dataTables.js' %}"></script>
     <script src="{% static 'components/datatables/extensions/TableTools/js/dataTables.tableTools.js' %}"></script>
@@ -46,16 +43,17 @@
     <script src="{% static 'components/pnotify/pnotify.nonblock.js' %}"></script>
 
     <!-- AmCAT code -->
-    <script src="{% static 'js/jquery.multiselect.js' %}"></script>
-    <script src="{% static 'js/jquery.multiselect.filter.js' %}"></script>
     <script src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
     <script src="{% static 'js/amcat.js' %}"></script>
     <script src="{% static 'js/amcat.datatables.js' %}"></script>
 
-    <script type="text/javascript">
+    <script>
         csrf_middleware_token = "{{ csrf_token }}";
         AMCAT_STATIC_URL = "{% static '' %}";
     </script>
+
+    <script src="{% static 'components/requirejs/require.js' %}"></script>
+    <script src="{% static 'js/require.config.js' %}"></script>
 
     {% block javascript %}{% endblock %}
 

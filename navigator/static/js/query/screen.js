@@ -23,9 +23,8 @@ var API = null;
 define([
     "jquery", "query/multiselect-defaults", "query/utils/serialize",
     "query/renderers", "query/utils/poll", "query/api", "query/query",
-    "query/utils/format", "jquery.hotkeys", "jquery.depends",
-    "bootstrap-multiselect", "bootstrap-modal/bootstrap-modal",
-    "bootstrap-tooltip"
+    "query/utils/format", "jquery.hotkeys", "jquery.depends", "bootstrap",
+    "bootstrap-multiselect", "bootstrap-tooltip"
     ], function($, MULTISELECT_DEFAULTS, serializeForm, renderers, Poll, api){
     var self = {};
     var form = $(this);
