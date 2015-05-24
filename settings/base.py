@@ -20,6 +20,7 @@
 # Django settings for amcatnavigator project.
 import os
 from os import path
+import datetime
 
 from amcat import __version__
 from amcat.tools.toolkit import random_alphanum
@@ -70,6 +71,11 @@ CACHES = {
         'LOCATION': '127.0.0.1:11211',
     }
 }
+
+if DEBUG:
+    CACHE_BUST_TOKEN = datetime.datetime.now().isoformat()
+else:
+    CACHE_BUST_TOKEN = os.environ.get("CACHE_BUST_TOKEN", "default_token")
 
 
 # Local time zone for this installation. Choices can be found here:

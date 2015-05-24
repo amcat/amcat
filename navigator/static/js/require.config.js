@@ -1,5 +1,6 @@
 requirejs.config({
     "baseUrl": AMCAT_STATIC_URL + "components",
+    "urlArgs": "cache=" + CACHE_BUST_TOKEN,
     "paths": {
         "query": AMCAT_STATIC_URL + "js/query",
         "amcat": AMCAT_STATIC_URL + "js",
@@ -25,6 +26,21 @@ requirejs.config({
         },
         "highcharts.heatmap":{
             deps: ['highcharts/highcharts']
+        },
+        "bootstrap":{
+            deps: ['jquery']
+        },
+        "bootstrap-multiselect":{
+            deps: ['bootstrap'],
+        },
+        "bootstrap-datepicker":{
+            deps: ['bootstrap']
+        },
+        "bootstrap-tooltip":{
+            deps: ['bootstrap']
+        },
+        "bootstrap-datepicker":{
+            deps: ['bootstrap']
         }
     }
 });
