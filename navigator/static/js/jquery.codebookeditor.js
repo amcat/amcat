@@ -1121,10 +1121,8 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
                 $(".modal-footer", loading_modal).remove();
                 $(".modal-body", loading_modal).html("Saving changesets..");
 
-
-
                 $.ajax({
-		    headers: {"X-CSRFTOKEN": csrf_middleware_token},
+                    headers: {"X-CSRFTOKEN": csrf_middleware_token},
                     type: "POST",
                     url: window.location.href + "save-changesets/",
                     data: {
