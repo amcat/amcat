@@ -821,8 +821,13 @@ Array.prototype.remove=function(s){
                 self.objects.push(new_code);
 
                 // Render new code
-                $($(".children", this.parent.dom_element)[0]).append(self.render_tree(new_code));
+                var tree_li = self.render_tree(new_code);
+                $($(".children", this.parent.dom_element)[0]).append(tree_li);
                 self._update_collapse_icons(new_code, this.parent);
+
+                // Set focus to new input label
+                var span = $('> .parts .lbl', tree_li);
+                span.trigger('click');
             };
 
             self.move_code_clicked = function(){
