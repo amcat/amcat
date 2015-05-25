@@ -1,10 +1,10 @@
 define([
     "jquery", "renderjson", "query/utils/aggregation",
-    "query/utils/poll", "moment",
+    "query/utils/poll", "moment", "query/utils/articlemodal", "query/valuerenderers",
     "highcharts/highcharts", "highcharts.data",
     "highcharts.heatmap", "highcharts.exporting",
     "papaparse", "highlight"
-    ], function($, renderjson, Aggregation, Poll, moment){
+    ], function($, renderjson, Aggregation, Poll, moment, articles_popup, value_renderers){
     var renderers = {};
 
     function getType(axis){
@@ -12,7 +12,7 @@ define([
     }
 
     function getSerie(form_data, aggr, x_key, x_type){
-        var serie = { obj: x_key, name: value_renderer[form_data["y_axis"]](x_key) };
+        var serie = { obj: x_key, name: value_renderers[form_data["y_axis"]](x_key) };
 
         if (x_type === "datetime"){
             serie.data = $.map(aggr.columns, function(column){
@@ -26,54 +26,6 @@ define([
 
         return serie;
     }
-
-    var elastic_filters = {
-        date: function(form_data, value){
-            var range = QueryDates.merge([
-                QueryDates.get_range_from_form(form_data),
-                QueryDates.get_range(value, form_data["interval"])
-            ]);
-
-            return {
-                datetype: "between",
-                start_date: range.start_date,
-                end_date: range.end_date
-            };
-        },
-        medium: function(form_data, value){
-            return {mediums: [value.id]};
-        },
-        total: function(){
-            return {};
-        },
-        term: function(form_data, value){
-            return {query: value.label};
-        },
-        set: function(form_data, value){
-            return {sets: value.id}
-        }
-    };
-
-
-
-
-    var value_renderer = {
-        "medium": function(medium){
-            return medium.id + " - " + medium.label;
-        },
-        "set": function(articleset){
-            return articleset.id + " - " + articleset.label;
-        },
-        "date": function(date){
-            return moment(date).format("DD-MM-YYYY");
-        },
-        "total": function(total){
-            return "Total";
-        },
-        "term": function(term){
-            return term.id;
-        }
-    };
 
     function bottom(callback){
         $(window).scroll(function() {
@@ -146,7 +98,9 @@ define([
                     return data.queries[query];
                 });
 
-                articles_popup({query: "(" + queries.join(") AND (") + ")"});
+                articles_popup().show(form_data, {
+                    query: "(" + queries.join(") AND (") + ")"
+                });
             }).css("cursor","pointer");
         },
         "text/csv+table": function(form_data, container, data){
@@ -217,7 +171,7 @@ define([
 
             // Register click event for each article
             $("area", map).click(function(event){
-                articles_popup({term: {
+                articles_popup().show(form_data, {term: {
                     label: $(event.currentTarget).data("query")
                 }})
             });
@@ -266,8 +220,8 @@ define([
                 });
             });
 
-            var x_renderer = value_renderer[form_data["x_axis"]];
-            var y_renderer = value_renderer[form_data["y_axis"]];
+            var x_renderer = value_renderers[form_data["x_axis"]];
+            var y_renderer = value_renderers[form_data["y_axis"]];
 
             container.highcharts({
                 title: "",
@@ -327,7 +281,7 @@ define([
                                 filters[y_type] = event.point.series.options.obj;
                                 filters[x_type] = columns[event.point.x];
 
-                                articles_popup(filters);
+                                articles_popup().show(form_data, filters);
                             }
                         }
                     }
@@ -336,7 +290,7 @@ define([
 
             // We need category labels if x_axis is not of type datetime
             if (x_type !== "datetime"){
-                var renderer = value_renderer[form_data["x_axis"]];
+                var renderer = value_renderers[form_data["x_axis"]];
                 chart.xAxis.categories = $.map(columns, renderer);
             }
 
@@ -389,7 +343,7 @@ define([
 
             // Adding header
             thead = $("<thead>").append($("<th>"));
-            renderer = value_renderer[form_data["y_axis"]];
+            renderer = value_renderers[form_data["y_axis"]];
             $.map(aggregation.columns, function(column){
                 thead.append($("<th>").text(renderer(column)).data("value", column));
             });
@@ -399,7 +353,7 @@ define([
             row_template = "<tr><th></th>" + row_template + "</tr>";
 
             tbody = $("<tbody>");
-            renderer = value_renderer[form_data["x_axis"]];
+            renderer = value_renderers[form_data["x_axis"]];
 
             $.map(aggregation.rows, function(row){
                 var row_element = $(row_template);
@@ -434,7 +388,7 @@ define([
                     var filters = {};
                     filters[x_type] = row.data('value');
                     filters[y_type] = col.data('value');
-                    articles_popup(filters);
+                    articles_popup().show(form_data, filters);
                 }
             });
 

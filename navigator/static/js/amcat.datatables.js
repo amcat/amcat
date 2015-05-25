@@ -865,3 +865,8 @@ amcat.datatables.fetched_initial_error = function (jqXHR, textStatus, errorThrow
 
     console.log([jqXHR, textStatus, errorThrown]);
 };
+
+// TODO: Make this module a 'real' requirejs module
+define(function(){
+    return amcat.datatables;
+});

@@ -256,3 +256,8 @@ $(function(){
         $.get("/navigator/?fluid=" + $("body > .container-fluid").length)
     });
 });
+
+// TODO: Make this module a 'real' requirejs module
+define(function(){
+    return amcat;
+});

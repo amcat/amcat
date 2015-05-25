@@ -19,7 +19,11 @@ requirejs.config({
         "pnotify": "pnotify/pnotify.core",
         "pnotify.nonblock": "pnotify/pnotify.nonblock",
         "moment": "moment/moment",
-        "renderjson": "renderjson/renderjson"
+        "renderjson": "renderjson/renderjson",
+        "datatables": "datatables/media/js/jquery.dataTables",
+        "datatables.tabletools": "datatables/extensions/TableTools/js/dataTables.tableTools",
+        "datatables.plugins": AMCAT_STATIC_URL + "js/jquery.dataTables.plugins",
+        "jquery.cookie": "jquery-cookie/jquery.cookie"
     },
     shim:{
         "highcharts.data":{
@@ -45,6 +49,19 @@ requirejs.config({
         },
         "renderjson":{
             exports: "renderjson"
+        },
+        "amcat/amcat.datatables":{
+            deps: ['amcat/amcat', 'datatables.plugins', 'datatables.tabletools', 'jquery.cookie']
+        },
+        "datatables.tabletools":{
+            deps: ["datatables"]
+        },
+        "datatables.plugins":{
+            deps: ["datatables"]
+        },
+        "datatables":{
+            deps: ["jquery"]
         }
     }
 });
+
