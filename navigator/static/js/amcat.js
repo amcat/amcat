@@ -17,20 +17,7 @@
 * License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
 ***************************************************************************/
 
-var amcat = {}
-
-if (!window.console){
-    window.console = {log: function() {}, assert: function() {}, error: function() {}, debug: function(){}, trace: function(){}, info: function(){}};
-}
-
-if(!window.console.debug){
-    window.console.debug = window.console.log; // fix for IE 7 (maybe 8?) debugging
-}
-if(!window.console.trace){
-    window.console.trace = function(){window.console.log('trace not supported');};
-}
-
-
+var amcat = {};
 
 /* Replace input-box with loading-image when clicked */
  $(function(){
@@ -98,136 +85,6 @@ amcat.multiselectCheckIfMatches = function(event, matches){
     }
 }
 
-
-amcat.doDatatableServerRequest = function(sSource, aoData, fnCallback, serverData){
-    var values = serverData;
-    var dataTableValues = {}
-
-    $.each(aoData, function(i, obj){
-        dataTableValues[obj.name] = obj.value;
-    });
-
-    values['start'] = dataTableValues['iDisplayStart'];
-    values['length'] = dataTableValues['iDisplayLength'];
-    values['sortColumnNr'] = dataTableValues['iSortCol_0']; 
-    values['sortOrder'] = dataTableValues['sSortDir_0'];
-    values['sEcho'] = dataTableValues['sEcho'];
-    values['search'] = dataTableValues['sSearch'];
-
-    var data = $.param(values, true);
-    
-    $.ajax( {
-        dataType: 'json',
-        type: "POST",
-        url: sSource,
-        data: data,
-        success: function(data, textStatus, jqXHR){
-            //data['sEcho'] = dataTableValues['sEcho'];
-            console.log(data);
-            fnCallback(data, textStatus, jqXHR);
-        },
-        error:function(jqXHR, textStatus, errorThrown){
-            console.error(textStatus, errorThrown);
-            throw new Exception('Error loading additional data');
-        }            
-    } );
-}
-
-
-amcat.createTableHeaders = function(columns){
-    var thead = $('<thead />');
-    var theadtr = $('<tr />').appendTo(thead);
-    $.each(columns, function(i, col){
-        theadtr.append($('<th>').text(col));
-    });
-    return thead;
-}
-
-
-amcat.createTable = function(jqueryElement, url, columns, additionalServerData, additionalDataTableOptions, oncreate){
-    var columnTitles = $.map(columns, function(col, i){ return col[1]});
-    var columnFields = $.map(columns, function(col, i){ return col[0]});
-    var columnDict = $.map(columns, function(col, i){ return col.length > 2 ? col[2] : {}});
-
-    var serverData = {};
-    serverData['columns'] = columnFields.join(',');
-    serverData['length'] = 5000;
-    serverData['output'] = 'datatables';
-    $.extend(serverData, additionalServerData);
-    
-    jqueryElement.html('<div class="loading">Loading table</div>');
-    
-    var data = $.param(serverData, true);
-    $.ajax( {
-        dataType: 'json',
-        type: "POST",
-        url: url,
-        data: data,
-        success: function(data, textStatus, jqXHR){
-            jqueryElement.html('<table cellpadding="0" cellspacing="0" border="0" class="display"></table>');
-
-            var columns = data['aoColumns'];
-            $.each(columns, function(i, col){
-                col['sTitle'] = columnTitles[i];
-                $.extend(col, columnDict[i]);
-            });
-
-            var dataTableOptions = {
-                'aoColumns':columns,
-                'aaData': data['aaData'],
-                "bScrollInfinite": true,
-                "bLengthChange": false,
-                "iDisplayLength":9999,
-                "sScrollY": "500",
-                "bScrollCollapse": true,
-                "bFilter": true,
-                "bSort": true,
-                "bInfo": false,
-                'bAutoWidth':false,
-                "bProcessing": false,
-                "bServerSide": false
-            }
-
-            $.extend(dataTableOptions, additionalDataTableOptions);
-            var dataTable = $('table', jqueryElement).dataTable(dataTableOptions);
-
-            if('rowlink' in additionalDataTableOptions){
-                dataTable.fnSetRowlink(additionalDataTableOptions['rowlink']).fnDraw();
-            }
-
-            $('.export-button', jqueryElement).click(function(){
-                amcat.showTableExportForm($(this), url);
-            });
-
-            if(oncreate){
-                oncreate(dataTable);
-            }
-        },
-        error:function(jqXHR, textStatus, errorThrown){
-            console.error(textStatus, errorThrown);
-            throw new Exception('Error loading additional data');
-        }            
-    } );
-}
-
-
-amcat.showTableExportForm = function(buttonEl, url){
-    buttonEl.after($('<div id="dialog-export" title="Export Table"></div>'));
-    $('#dialog-export').dialog({
-        autoOpen: true,
-        height: 300,
-        width: 350,
-        modal: true,
-        buttons: {
-            "Export": function() {
-                alert('export');
-            },
-            Cancel: function(){
-                $(this).dialog('close');
-            }
-       }
-   })
-}
 
 amcat.check_fetch_results = function(state){
     /*
@@ -379,23 +236,6 @@ amcat.fetch_labels = function(data, textStatus, jqXHR, callback, url){
     });
 }
 
-
-amcat.getFormDict = function(form){
-    // code from http://stackoverflow.com/questions/1184624/serialize-form-to-json-with-jquery
-    var o = {};
-    var a = form.serializeArray();
-    $.each(a, function() {
-        if (o[this.name] !== undefined) {
-            if (!o[this.name].push) {
-                o[this.name] = [o[this.name]];
-            }
-            o[this.name].push(this.value || '');
-        } else {
-            o[this.name] = this.value || '';
-        }
-    });
-    return o;
-}
 
 /* Switch layouts */
 $(function(){
