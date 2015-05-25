@@ -23,6 +23,7 @@ requirejs.config({
         "datatables": "datatables/media/js/jquery.dataTables",
         "datatables.tabletools": "datatables/extensions/TableTools/js/dataTables.tableTools",
         "datatables.plugins": AMCAT_STATIC_URL + "js/jquery.dataTables.plugins",
+        "datatables.bootstrap": AMCAT_STATIC_URL + "js/dataTables.bootstrap",
         "jquery.cookie": "jquery-cookie/jquery.cookie"
     },
     shim:{
@@ -51,9 +52,18 @@ requirejs.config({
             exports: "renderjson"
         },
         "amcat/amcat.datatables":{
-            deps: ['amcat/amcat', 'datatables.plugins', 'datatables.tabletools', 'jquery.cookie']
+            deps: [
+                'amcat/amcat',
+                'datatables.plugins',
+                'datatables.tabletools',
+                'datatables.bootstrap',
+                'jquery.cookie'
+            ]
         },
         "datatables.tabletools":{
+            deps: ["datatables"]
+        },
+        "datatables.bootstrap":{
             deps: ["datatables"]
         },
         "datatables.plugins":{

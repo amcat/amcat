@@ -23,7 +23,7 @@ var API = null;
 define([
     "jquery", "query/multiselect-defaults", "query/utils/serialize",
     "query/renderers", "query/utils/poll", "query/api", "pnotify",
-    "pnotify.nonblock", "query/query",
+    "pnotify.nonblock", "query/query", "amcat/amcat.datatables",
     "query/utils/format", "jquery.hotkeys", "jquery.depends", "bootstrap",
     "bootstrap-multiselect", "bootstrap-tooltip"
     ], function($, MULTISELECT_DEFAULTS, serializeForm, renderers, Poll, api, PNotify){
@@ -184,8 +184,15 @@ define([
         progress_bar.css("width", 0);
         message_element.text(message_element.attr("placeholder"));
 
+        var $result = $("#result")
+        var table = $result.find(".dataTables_scrollBody table")
+
+        if (table.length > 0){
+            table.DataTable().destroy();
+        }
+
         form_data = serializeForm($("#query-form"), SETS);
-        $("#result .panel-body").html("<i>No results yet</i>");
+        $result.find(".panel-body").html("<i>No results yet</i>");
 
         var script = scripts_container.find(".active")[0].id.replace("script_","");
 
