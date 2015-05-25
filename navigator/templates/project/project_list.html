@@ -39,7 +39,9 @@
 
 
 <script type="text/javascript">
-  exportids($("#set-favourite"));
+  require(["jquery"], function($){
+      exportids($("#set-favourite"));
+  });
 </script>
 
 {% endblock %}

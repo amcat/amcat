@@ -30,27 +30,6 @@
 
     {% block css %}{% endblock %}
 
-    <!--  Javascript -->
-    {% block base_javascript %}
-    {% comment %}Certain parts of AmCAT use requirejs to load their modules. By defining this
-    as block, these pages can explicitely disable these scripts{% endcomment %}
-    <script src="{% static 'components/jquery/dist/jquery.js' %}"></script>
-    <script src="{% static 'components/bootstrap/dist/js/bootstrap.js' %}"></script>
-    <script src="{% static 'components/datatables/media/js/jquery.dataTables.js' %}"></script>
-    <script src="{% static 'components/datatables/extensions/TableTools/js/dataTables.tableTools.js' %}"></script>
-    <script src="{% static 'components/jquery-cookie/jquery.cookie.js' %}"></script>
-    <script src="{% static 'js/dataTables.bootstrap.js' %}"></script>
-    <script src="{% static 'components/bootstrap/js/scrollspy.js' %}"></script>
-    <script src="{% static 'components/bootstrap/js/tooltip.js' %}"></script>
-    <script src="{% static 'components/pnotify/pnotify.core.js' %}"></script>
-    <script src="{% static 'components/pnotify/pnotify.nonblock.js' %}"></script>
-
-    <!-- AmCAT code -->
-    <script src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
-    <script src="{% static 'js/amcat.js' %}"></script>
-    <script src="{% static 'js/amcat.datatables.js' %}"></script>
-    {% endblock %}
-
     <script>
         csrf_middleware_token = "{{ csrf_token }}";
         AMCAT_STATIC_URL = "{% static '' %}";
@@ -173,13 +152,15 @@
 
 {% if notice %}
     <script type="text/javascript">
-        $(function(){ new PNotify({{ notice|safe }}); });
+        require(["pnotify"], function(PNotify){
+            new PNotify({{ notice|safe }});
+        });
     </script>
 {% endif %}
 
 {% if announcement %}
     <script type="text/javascript">
-        $(function(){
+        require(["pnotify"], function(PNotify){
             new PNotify({
                 title: 'AmCAT Announcement',
                 text: '{{announcement|safe}}',

@@ -64,13 +64,16 @@ requirejs.config({
             deps: ["datatables"]
         },
         "datatables.bootstrap":{
-            deps: ["datatables"]
+            deps: ["datatables", "bootstrap", "jquery", "datatables.tabletools"]
         },
         "datatables.plugins":{
-            deps: ["datatables"]
+            deps: ["datatables", "bootstrap", "jquery"]
         },
         "datatables":{
             deps: ["jquery"]
+        },
+        "amcat/amcat":{
+            deps: ["jquery", "bootstrap"]
         }
     }
 });
