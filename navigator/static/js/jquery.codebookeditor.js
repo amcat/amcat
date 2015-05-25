@@ -448,13 +448,13 @@ Array.prototype.remove=function(s){
                     action_icon.attr("src", self.NOACTION_ICON);
                 }
 
-		var label_span = $("<span>");
-		var label_text = $("<span>").addClass("lbl").append(document.createTextNode(object.label));
-		var label_input = $("<input>").val(object.label).css("display", "none");
-		d = {code: object, span: label_text, input: label_input};
-		label_text.attr("title", "Click to rename").click(self.rename_clicked.bind(d));
-		label_span.append(label_text).append(label_input)
-		
+                var label_span = $("<span>");
+                var label_text = $("<span>").addClass("lbl").append(document.createTextNode(object.label));
+                var label_input = $("<input>").val(object.label).css("display", "none");
+                d = {code: object, span: label_text, input: label_input};
+                label_text.attr("title", "Click to rename").click(self.rename_clicked.bind(d));
+                label_span.append(label_text).append(label_input)
+                
                 // Add action icon and label
                 code_el.append(
                     $("<span>").addClass("parts")
@@ -564,33 +564,33 @@ Array.prototype.remove=function(s){
 
             /* EVENTS */
 
-	    self.rename_clicked = function (event) {
-		if (self.moving) return;
-		
-		this.span.css("display", "none");		
-		this.input.css("display", "inline").val(this.code.label).select();
-		hide_input = function() {
-		    this.span.css("display", "inline");		
-		    this.input.css("display", "none");
-		}.bind(this);
-		save_results = function() {
-		    this.code.label = this.input.val();
+            self.rename_clicked = function (event) {
+                if (self.moving) return;
+                
+                this.span.css("display", "none");                
+                this.input.css("display", "inline").val(this.code.label).select();
+                hide_input = function() {
+                    this.span.css("display", "inline");                
+                    this.input.css("display", "none");
+                }.bind(this);
+                save_results = function() {
+                    this.code.label = this.input.val();
                     $.ajax({
-			headers: {"X-CSRFTOKEN": csrf_middleware_token},
-			type: "POST",
-			url: window.location.href + "save-labels/",
-			data: {"label": this.code.label, "code": this.code.code_id},
-			dataType: 'json'
+                        headers: {"X-CSRFTOKEN": csrf_middleware_token},
+                        type: "POST",
+                        url: window.location.href + "save-labels/",
+                        data: {"label": this.code.label, "code": this.code.code_id},
+                        dataType: 'json'
                     }).done(self.labels_updated.bind({"code": this.code}));
-		    hide_input()
-		}.bind(this);
-		this.input.keypress(function(e) {
-		    if (e.keyCode == 13) save_results();
-		    if (e.keyCode == 27) hide_input();
-		});
-		this.input.blur(save_results);
-	    };
-	    
+                    hide_input()
+                }.bind(this);
+                this.input.keypress(function(e) {
+                    if (e.keyCode == 13) save_results();
+                    if (e.keyCode == 27) hide_input();
+                });
+                this.input.blur(save_results);
+            };
+            
             self.collapse_clicked = function (event) {
                 /*
                  * Collapse icon clicked. Replace icon and collapse tree
@@ -687,7 +687,7 @@ Array.prototype.remove=function(s){
                 var table = self._create_label_table(labels);
                 $("#labels .modal-body").contents().remove();
                 $("#labels .modal-body").append($("<p>")).append("Label:")
-		$("#labels .modal-body").append($("<input id='code_label'>").val(this.label));
+                $("#labels .modal-body").append($("<input id='code_label'>").val(this.label));
                 $("#labels .modal-body").append(table);
 
             };
@@ -730,9 +730,9 @@ Array.prototype.remove=function(s){
                  * @return: error message if errors or null if successful
                  */
 
-		if (label.length == 0) {
-		    return ("Code label is empty");
-		}
+                if (label.length == 0) {
+                    return ("Code label is empty");
+                }
                 // Prevent empty labels
                 for (var i = 0; i < labels.length; i++) {
                     if (labels[i].label.length == 0) {
@@ -760,7 +760,7 @@ Array.prototype.remove=function(s){
                  * containing at least the boolean property "new_code". Depending on this
                  * value, it futher contains either "code" or "parent".
                  */
-		var label = $("#code_label").val();
+                var label = $("#code_label").val();
                 var labels = self._get_label_data($("#labels tbody tr"));
                 var error = self._validate_label_data(label, labels);
 
@@ -778,30 +778,30 @@ Array.prototype.remove=function(s){
                 $(".modal-footer", loading_modal).remove();
                 $(".modal-body", loading_modal).html("Saving labels..");
 
-		this.code.label = label;
-		
+                this.code.label = label;
+                
                 $(loading_modal).modal({
                     keyboard: false,
                     backdrop: "static"
                 });
                 $.ajax({
-		    headers: {"X-CSRFTOKEN": csrf_middleware_token},
+                    headers: {"X-CSRFTOKEN": csrf_middleware_token},
                     type: "POST",
                     url: window.location.href + "save-labels/",
                     data: {
-			"label": label,
-			"labels": JSON.stringify(labels),
-			"code": this.code.code_id},
-		    dataType: 'json'
+                        "label": label,
+                        "labels": JSON.stringify(labels),
+                        "code": this.code.code_id},
+                    dataType: 'json'
                 }).done(self.labels_updated.bind({"code": this.code}));
             };
 
-	    self.labels_updated = function () {
-		$("#loading_modal").modal("hide").remove();
-		self.update_label(this.code);
+            self.labels_updated = function () {
+                $("#loading_modal").modal("hide").remove();
+                self.update_label(this.code);
             };
 
-		
+                
 
             self.new_code_created = function (new_code) {
                 /*
@@ -926,18 +926,18 @@ Array.prototype.remove=function(s){
 
             self.create_child_clicked= function () {
 
-		// WVA
-		var label = "[new code]";
+                // WVA
+                var label = "[new code]";
                 $.ajax({
-		    headers: {"X-CSRFTOKEN": csrf_middleware_token},
+                    headers: {"X-CSRFTOKEN": csrf_middleware_token},
                     type: "POST",
                     url: window.location.href + "new-code/",
-		    dataType: 'json',
-		    data: {
-			"label": label,
-			"parent": JSON.stringify(this.code_id),
-			"ordernr": this.children.length
-		    },
+                    dataType: 'json',
+                    data: {
+                        "label": label,
+                        "parent": JSON.stringify(this.code_id),
+                        "ordernr": this.children.length
+                    },
                 }).done(self.new_code_created.bind({
                     "label": label,
                     "parent": this
@@ -1125,7 +1125,7 @@ Array.prototype.remove=function(s){
 
 
                 $.ajax({
-		    headers: {"X-CSRFTOKEN": csrf_middleware_token},
+                    headers: {"X-CSRFTOKEN": csrf_middleware_token},
                     type: "POST",
                     url: window.location.href + "save-changesets/",
                     data: {
@@ -1141,7 +1141,7 @@ Array.prototype.remove=function(s){
 
                         if (typeof(this) === "function") this();
                 }).bind(this));
-		
+                
             };
 
             self.btn_save_changes.click(self.btn_save_changes_clicked);
