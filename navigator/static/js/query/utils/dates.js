@@ -20,7 +20,7 @@
  * Module to ease the pain of merging and calulating date ranges.
  */
 
-define(["jquery", "moment/moment"], function($, moment){
+define(["jquery", "moment"], function($, moment){
     var QueryDates = {};
 
     $.extend(QueryDates, {

@@ -15,7 +15,11 @@ requirejs.config({
         "bootstrap": "bootstrap/dist/js/bootstrap",
         "bootstrap-multiselect": "bootstrap-multiselect/dist/js/bootstrap-multiselect",
         "bootstrap-tooltip": "bootstrap/js/tooltip",
-        "bootstrap-datepicker": "bootstrap-datepicker/dist/js/bootstrap-datepicker"
+        "bootstrap-datepicker": "bootstrap-datepicker/dist/js/bootstrap-datepicker",
+        "pnotify": "pnotify/pnotify.core",
+        "pnotify.nonblock": "pnotify/pnotify.nonblock",
+        "moment": "moment/moment",
+        "renderjson": "renderjson/renderjson"
     },
     shim:{
         "highcharts.data":{
@@ -31,7 +35,7 @@ requirejs.config({
             deps: ['jquery']
         },
         "bootstrap-multiselect":{
-            deps: ['bootstrap'],
+            deps: ['bootstrap']
         },
         "bootstrap-datepicker":{
             deps: ['bootstrap']
@@ -39,8 +43,8 @@ requirejs.config({
         "bootstrap-tooltip":{
             deps: ['bootstrap']
         },
-        "bootstrap-datepicker":{
-            deps: ['bootstrap']
+        "renderjson":{
+            exports: "renderjson"
         }
     }
 });

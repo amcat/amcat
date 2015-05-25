@@ -1,11 +1,79 @@
 define([
-    "jquery", "renderjson/renderjson", "query/utils/aggregation",
-    "query/utils/poll",
+    "jquery", "renderjson", "query/utils/aggregation",
+    "query/utils/poll", "moment",
     "highcharts/highcharts", "highcharts.data",
     "highcharts.heatmap", "highcharts.exporting",
     "papaparse", "highlight"
-    ], function($, renderjson, Aggregation, Poll){
+    ], function($, renderjson, Aggregation, Poll, moment){
     var renderers = {};
+
+    function getType(axis){
+        return (axis === "date") ? "datetime" : "category";
+    }
+
+    function getSerie(form_data, aggr, x_key, x_type){
+        var serie = { obj: x_key, name: value_renderer[form_data["y_axis"]](x_key) };
+
+        if (x_type === "datetime"){
+            serie.data = $.map(aggr.columns, function(column){
+                return [[column, aggr.get(x_key).get(column) || 0]];
+            });
+        } else {
+            serie.data = $.map(aggr.columns, function(column){
+                return aggr.get(x_key).get(column) || 0;
+            });
+        }
+
+        return serie;
+    }
+
+    var elastic_filters = {
+        date: function(form_data, value){
+            var range = QueryDates.merge([
+                QueryDates.get_range_from_form(form_data),
+                QueryDates.get_range(value, form_data["interval"])
+            ]);
+
+            return {
+                datetype: "between",
+                start_date: range.start_date,
+                end_date: range.end_date
+            };
+        },
+        medium: function(form_data, value){
+            return {mediums: [value.id]};
+        },
+        total: function(){
+            return {};
+        },
+        term: function(form_data, value){
+            return {query: value.label};
+        },
+        set: function(form_data, value){
+            return {sets: value.id}
+        }
+    };
+
+
+
+
+    var value_renderer = {
+        "medium": function(medium){
+            return medium.id + " - " + medium.label;
+        },
+        "set": function(articleset){
+            return articleset.id + " - " + articleset.label;
+        },
+        "date": function(date){
+            return moment(date).format("DD-MM-YYYY");
+        },
+        "total": function(total){
+            return "Total";
+        },
+        "term": function(term){
+            return term.id;
+        }
+    };
 
     function bottom(callback){
         $(window).scroll(function() {
@@ -48,7 +116,7 @@ define([
     }
 
     return $.extend(renderers, {
-        "application/json+debug": function(container, data){
+        "application/json+debug": function(form_data, container, data){
             renderjson.set_icons('', '');
             renderjson.set_show_to_level("all");
             var text = $(renderjson(data)).text().replace(/{...}|\[ ... \]/g, "");
@@ -56,7 +124,7 @@ define([
             $(container).append($('<pre style="background-color:#f8f8ff;">').append(code));
             hljs.highlightBlock($("pre", container).get(0));
         },
-        "application/json+clustermap+table": function(container, data){
+        "application/json+clustermap+table": function(form_data, container, data){
             var table = renderers["text/csv+table"](container, data.csv);
             table.addClass("table-hover");
 
@@ -81,23 +149,23 @@ define([
                 articles_popup({query: "(" + queries.join(") AND (") + ")"});
             }).css("cursor","pointer");
         },
-        "text/csv+table": function(container, data){
+        "text/csv+table": function(form_data, container, data){
             var table_data = Papa.parse(data, {skipEmptyLines: true}).data;
-            return renderers["application/json+table"](container, table_data);
+            return renderers["application/json+table"](form_data, container, table_data);
         },
-        "application/json+tables": function(container, data){
+        "application/json+tables": function(form_data, container, data){
             $.map(data, function(table){
                 var table_name = table[0];
                 var table_data = table[1];
                 var table_container = $("<div>");
-                renderers["application/json+table"](table_container, table_data);
+                renderers["application/json+table"](form_data, table_container, table_data);
                 $(table_container).prepend($("<h1>").text(table_name));
                 $(container).append(table_container);
             });
 
             return container;
         },
-        "application/json+table": function(container, table_data){
+        "application/json+table": function(form_data, container, table_data){
             var thead = $("<thead>").append(
                 $.map(table_data[0], function(label){
                     return $("<th>").text(label);
@@ -118,11 +186,11 @@ define([
             container.append(table);
             return table;
         },
-        "application/json+crosstables": function(container, data){
-            renderers["application/json+tables"](container, data);
+        "application/json+crosstables": function(form_data, container, data){
+            renderers["application/json+tables"](form_data, container, data);
             $("tr td:first-child", container).css("font-weight", "bold");
         },
-        "application/json+clustermap": function(container, data){
+        "application/json+clustermap": function(form_data, container, data){
             var img = $("<img>")
                 .attr("src", "data:image/png;base64," + data.image)
                 .attr("usemap", "#clustermap");
@@ -156,32 +224,30 @@ define([
 
             container.append(img).append(map);
         },
-        "application/json+image+svg+multiple": function(container, data){
-            console.log(data);
-            console.log(typeof(data));
+        "application/json+image+svg+multiple": function(form_data, container, data){
             $.map(data, function(table){
                 var table_container = $("<div>");
-                renderers["image/svg"](table_container, table[1]);
+                renderers["image/svg"](form_data, table_container, table[1]);
                 $(table_container).prepend($("<h1>").text(table[0]));
                 $(container).append(table_container);
             });
 
             return container;
         },
-        "image/svg": function(container, data){
+        "image/svg": function(form_data, container, data){
             return container.html(data);
         },
-        "image/png+base64": function(container, data){
+        "image/png+base64": function(form_data, container, data){
             container.append($("<img>").attr("src", "data:image/png;base64," + data));
         },
         /**
          * Inserts given html into container, without processing it further.
          */
-        "text/html": function(container, data){
+        "text/html": function(form_data, container, data){
             return container.html(data);
         },
-        "text/html+summary": function(container, data){
-            renderers["text/html"](container, data);
+        "text/html+summary": function(form_data, container, data){
+            renderers["text/html"](form_data, container, data);
             bottom(load_extra_summary);
         },
 
@@ -189,7 +255,7 @@ define([
          * Renders aggregation as stacked column chart
          *   http://www.highcharts.com/demo/heatmap
          */
-        "text/json+aggregation+heatmap": function(container, data){
+        "text/json+aggregation+heatmap": function(form_data, container, data){
             var aggregation = Aggregation(data);
             var heatmap_data = [];
             var columnIndices = aggregation.getColumnIndices();
@@ -226,16 +292,16 @@ define([
             });
         },
 
-        "text/json+aggregation+line": function(container, data){
-            return renderers["text/json+aggregation+barplot"](container, data, "line");
+        "text/json+aggregation+line": function(form_data, container, data){
+            return renderers["text/json+aggregation+barplot"](form_data, container, data, "line");
         },
 
 
-        "text/json+aggregation+scatter": function(container, data){
-            return renderers["text/json+aggregation+barplot"](container, data, "scatter");
+        "text/json+aggregation+scatter": function(form_data, container, data){
+            return renderers["text/json+aggregation+barplot"](form_data, container, data, "scatter");
         },
 
-        "text/json+aggregation+barplot": function(container, data, type){
+        "text/json+aggregation+barplot": function(form_data, container, data, type){
             var x_type = getType(form_data["x_axis"]);
             var aggregation = Aggregation(data).transpose();
             var columns = aggregation.columns;
@@ -248,7 +314,7 @@ define([
                 xAxis: { allowDecimals: false, type: x_type},
                 yAxis: { allowDecimals: false, title: "total", min: 0 },
                 series: $.map(aggregation.rows, function(x_key){
-                    return getSerie(aggregation, x_key, x_type);
+                    return getSerie(form_data, aggregation, x_key, x_type);
                 }),
                 plotOptions: {
                     series: {
@@ -317,7 +383,7 @@ define([
          *
          *    1371160800000
          */
-        "text/json+aggregation+table": function(container, data){
+        "text/json+aggregation+table": function(form_data, container, data){
             var row_template, table, thead, tbody, renderer;
             var aggregation = Aggregation(data);
 

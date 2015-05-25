@@ -53,7 +53,7 @@ define(["amcat/jshashset", "amcat/jshashtable"], function(){
 
             var aggr_list = [];
             aggr_dict.each(function(k, v){ aggr_list.push([k, v]); });
-            return Aggregation(aggr_list);
+            return _Aggregation.bind({})(aggr_list);
         };
 
         //////////////////////////////////////

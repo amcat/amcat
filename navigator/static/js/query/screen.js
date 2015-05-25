@@ -22,10 +22,11 @@ var API = null;
 
 define([
     "jquery", "query/multiselect-defaults", "query/utils/serialize",
-    "query/renderers", "query/utils/poll", "query/api", "query/query",
+    "query/renderers", "query/utils/poll", "query/api", "pnotify",
+    "pnotify.nonblock", "query/query",
     "query/utils/format", "jquery.hotkeys", "jquery.depends", "bootstrap",
     "bootstrap-multiselect", "bootstrap-tooltip"
-    ], function($, MULTISELECT_DEFAULTS, serializeForm, renderers, Poll, api){
+    ], function($, MULTISELECT_DEFAULTS, serializeForm, renderers, Poll, api, PNotify){
     var self = {};
     var form = $(this);
 
@@ -389,7 +390,7 @@ define([
             if(renderer === undefined){
                 show_error("Server replied with unknown datatype: " + contentType);
             } else {
-                renderer(body, self.prepare_data(data));
+                renderer(form_data, body, self.prepare_data(data));
             }
 
             $("#result").attr("class", window.location.hash.slice(1));
