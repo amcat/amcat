@@ -36,6 +36,17 @@
           {% include "project/query/form.html" %}
       </form>
 
+      <div class="row">
+          <div class="col-md-12">
+              <div id="result">
+                  <div class="panel panel-default">
+                      <div class="panel-heading">Results</div>
+                      <div class="panel-body"><i>No results yet</i></div>
+                  </div>
+              </div>
+          </div>
+      </div>
+
       {% include "project/query/loading_dialog.html" %}
       {% include "project/query/articlelist_dialog.html" %}
       {% include "project/query/save_dialog.html" %}
