@@ -1079,6 +1079,7 @@ Array.prototype.remove=function(s){
 
                 // Send name to server
                 $.ajax({
+                    headers: {"X-CSRFTOKEN": csrf_middleware_token},
                     type: "POST",
                     url: window.location.href + "change-name/",
                     data: { codebook_name: name }
