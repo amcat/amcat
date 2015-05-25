@@ -17,7 +17,9 @@
 * License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
 ***************************************************************************/
 
-rules = (function(self){
+define(["jquery"], function($){
+    var self = {};
+
     self.OPERATORS = {
         OR: "OR", AND: "AND", EQUALS: "EQ",
         NOT_EQUALS: "NEQ", NOT: "NOT",
@@ -234,4 +236,4 @@ rules = (function(self){
     };
 
     return self;
-})({});
+});

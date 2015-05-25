@@ -35,6 +35,7 @@ from amcat.forms import widgets
 from amcat.models import CodingSchema, authorisation, CodingSchemaField, CodingSchemaFieldType, CodingRule, Code, Project
 from amcat.models.coding.serialiser import CodebookSerialiser, BooleanSerialiser
 from api.rest.viewsets import _CodingSchemaFieldViewSet, CodingSchemaViewSet
+from navigator.forms import CodingSchemaForm
 from navigator.views.project_views import ProjectDetailsView
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectFormView, ProjectActionRedirectView
 from navigator.views.datatableview import DatatableMixin
@@ -151,8 +152,8 @@ class CodingSchemaCreateView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumb
     parent = CodingSchemaListView
     url_fragment = "new"
     model = CodingSchema
+    form_class = CodingSchemaForm
 
-    fields = ["name", "description", "isarticleschema", "subsentences", "highlighters", "highlight_language", "project"]
 
     def get_form(self, form_class):
         form = super(CodingSchemaCreateView, self).get_form(form_class)
@@ -164,10 +165,12 @@ class CodingSchemaCreateView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumb
     def get_success_url(self):
         return reverse("navigator:codingschema-details", args=(self.project.id, self.object.id))
 
+
 class CodingSchemaEditView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, UpdateView):
     required_project_permission = authorisation.ROLE_PROJECT_WRITER
     parent = CodingSchemaDetailsView
     url_fragment = "edit"
+    form_class = CodingSchemaForm
 
     def get_form(self, form_class):
         form = super(CodingSchemaEditView, self).get_form(form_class)
@@ -255,6 +258,7 @@ def _get_form(data, schema, form):
 
 def _get_forms(datas, schema, form):
     return itertools.imap(partial(_get_form, form=form, schema=schema), datas)
+
 
 class CodingSchemaFieldForm(forms.ModelForm):
     label = forms.CharField()
@@ -376,6 +380,7 @@ class CodingSchemaEditRulesView(HierarchicalViewMixin, ProjectViewMixin, BreadCr
     required_project_permission = authorisation.ROLE_PROJECT_WRITER
     parent = CodingSchemaDetailsView
     url_fragment = "rules"
+    form_class = CodingSchemaForm
 
     def get_context_data(self, **kwargs):
         ctx = super(CodingSchemaEditRulesView, self).get_context_data(**kwargs)

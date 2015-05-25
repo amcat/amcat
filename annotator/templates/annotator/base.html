@@ -1,32 +1,13 @@
 {% extends "base.html" %}
 
 {% load staticfiles %}
-{% load compress %}
 
 {% block title %}Annotator{% endblock %}
 
 {% block css %}
-      {% compress css %}
-          <link href="{% static 'css/annotator.css' %}" rel="stylesheet" type="text/css" media="screen" />
-          <link href="{% static 'css/dashboard.css' %}" rel="stylesheet" type="text/css">
-      {% endcompress %}
+      <link href="{% static 'css/annotator.css' %}" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{% static 'css/dashboard.css' %}" rel="stylesheet" type="text/css">
 {% endblock %}
-
-{% block javascript %}
-      {% compress js %}
-          <script type="text/javascript" src="{% static 'components/jquery.scrollTo/jquery.scrollTo.js' %}"></script>
-          <script type="text/javascript" src="{% static 'components/jquery.hotkeys/jquery.hotkeys.js' %}"></script>
-
-          <script type="text/javascript" src="{% static 'js/annotator/jquery.highlight.js' %}"></script>
-          <script type="text/javascript" src="{% static 'js/annotator/functional.js' %}"></script>
-          <script type="text/javascript" src="{% static 'js/annotator/annotator.js' %}"></script>
-          <script type="text/javascript" src="{% static 'js/annotator/annotator.utils.js' %}"></script>
-          <script type="text/javascript" src="{% static 'js/annotator/annotator.widgets.js' %}"></script>
-          <script type="text/javascript" src="{% static 'js/annotator/annotator.rules.js' %}"></script>
-          <script type="text/javascript" src="{% static 'js/annotator/annotator.autocomplete.js' %}"></script>
-      {% endcompress %}
-{% endblock %}
-
 
 {% block contextmenu %}
             <li><a data-toggle="modal" data-target="#help-dialog" href="#">Help</a></li>

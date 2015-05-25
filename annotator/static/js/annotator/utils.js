@@ -16,7 +16,6 @@
 * You should have received a copy of the GNU Affero General Public        *
 * License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
 ***************************************************************************/
-
 /*
  * Given model data ( [{ id : 5, prop1 : "asd", .. }] ), create a mapping with
  * the prop as key, and the object as value.

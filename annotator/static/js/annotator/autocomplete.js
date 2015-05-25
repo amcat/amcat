@@ -17,15 +17,18 @@
 * License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
 ***************************************************************************/
 
-autocomplete = (function(self){
+define(["jquery", "jquery-ui"], function($){
+    var self = {};
+
     // TODO: Fetch from server
     self.AUTOCOMPLETE_LANGUAGE = 0;
+    self.EMPTY_INTVAL = "null";
 
     /*
      * Sets intval attribute and sets correct label
      */
     self.on_change = function(event, ui){
-        var label, intval = widgets.EMPTY_INTVAL;
+        var label, intval = self.EMPTY_INTVAL;
 
         if (ui.item !== null){
             intval = ui.item.intval;
@@ -83,7 +86,7 @@ autocomplete = (function(self){
         // Are we a codebook descendant?
         if (input_element.hasClass("codebook_descendant")){
             var parent_id = input_element.parent().find("input.codebook_root").attr("intval");
-            if (parent_id === widgets.EMPTY_INTVAL) return callback([]);
+            if (parent_id === self.EMPTY_INTVAL) return callback([]);
 
             parent_id = parseInt(parent_id);
             choices = $.grep(choices, function(item){
@@ -194,4 +197,4 @@ autocomplete = (function(self){
     };
 
     return self;
-})({});
+});

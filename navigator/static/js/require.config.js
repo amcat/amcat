@@ -2,8 +2,10 @@ requirejs.config({
     "baseUrl": AMCAT_STATIC_URL + "components",
     "urlArgs": "cache=" + CACHE_BUST_TOKEN,
     "paths": {
-        "query": AMCAT_STATIC_URL + "js/query",
         "amcat": AMCAT_STATIC_URL + "js",
+        "query": AMCAT_STATIC_URL + "js/query",
+        "annotator": AMCAT_STATIC_URL + "js/annotator",
+
         "jquery": "jquery/dist/jquery",
         "jquery.hotkeys": "jquery.hotkeys/jquery.hotkeys",
         "papaparse": "papaparse/papaparse",
@@ -24,7 +26,10 @@ requirejs.config({
         "datatables.tabletools": "datatables/extensions/TableTools/js/dataTables.tableTools",
         "datatables.plugins": AMCAT_STATIC_URL + "js/jquery.dataTables.plugins",
         "datatables.bootstrap": AMCAT_STATIC_URL + "js/dataTables.bootstrap",
-        "jquery.cookie": "jquery-cookie/jquery.cookie"
+        "jquery.cookie": "jquery-cookie/jquery.cookie",
+        "jquery.highlight": AMCAT_STATIC_URL + "js/annotator/jquery.highlight",
+        "jquery.scrollTo": "jquery.scrollTo/jquery.scrollTo",
+        "jquery-ui": "jquery-ui/ui/jquery-ui"
     },
     shim:{
         "highcharts.data":{
@@ -76,6 +81,27 @@ requirejs.config({
             deps: ["jquery", "bootstrap"]
         },
         "amcat/jquery.djangofields":{
+            deps: ["jquery"]
+        },
+        "annotator/utils":{
+            deps: ["jquery"]
+        },
+        "annotator/jquery.highlight":{
+            deps: ["jquery"]
+        },
+        "annotator/functional":{
+            deps: ["jquery"]
+        },
+        "jquery.hotkeys":{
+            deps: ["jquery"]
+        },
+        "jquery.highlight":{
+            deps: ["jquery"]
+        },
+        "jquery.scrollTo":{
+            deps: ["jquery"]
+        },
+        "jquery-ui":{
             deps: ["jquery"]
         }
     }

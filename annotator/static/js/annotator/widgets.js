@@ -30,7 +30,9 @@ function get_input(widget){
     return widget.find(".codingvalue");
 }
 
-widgets = (function(self){
+define(["jquery", "annotator/autocomplete"], function($, autocomplete){
+    var self = {};
+
     self.EMPTY_INTVAL = "null";
     self.SCHEMATYPES = {
         1: "text",
@@ -96,8 +98,6 @@ widgets = (function(self){
         }
     };
 
-
-
     /* SENTENCE TYPE */
     self.sentence = $.extend({}, self.default, {
         get_html : function(){
@@ -121,7 +121,7 @@ widgets = (function(self){
             var parnr = parseInt(value.split(".")[0]);
             var sentnr = parseInt(value.split(".")[1]);
 
-            return $.grep($.values(annotator.state.sentences), function(sentence){
+            return $.grep(annotator.values(annotator.state.sentences), function(sentence){
                 return sentence.parnr == parnr && sentence.sentnr == sentnr;
             })[0];
 
@@ -406,4 +406,4 @@ widgets = (function(self){
     };
 
     return self;
-})({});
+});

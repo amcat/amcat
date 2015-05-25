@@ -26,7 +26,8 @@ from api.rest.viewset import AmCATViewSetMixin
 __all__ = ("SentenceSerializer", "SentenceViewSetMixin", "SentenceViewSet")
 
 class SentenceSerializer(AmCATModelSerializer):
-    model = Sentence
+    class Meta:
+        model = Sentence
 
 class SentenceViewSetMixin(AmCATViewSetMixin):
     serializer_class = SentenceSerializer

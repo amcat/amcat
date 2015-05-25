@@ -103,13 +103,13 @@
     </div>
 
     <script type="text/javascript">
-        $(document).ready(function(){
+        require(["annotator/annotator"], function(annotator){
             annotator.initialise({{ project.id }}, {{ codingjob.id }}, {{ coder.id }}, {{ coder.userprofile.language_id }});
         });
     </script>
 
     <script type="text/javascript">
-        $(document).ready(function(){
+        require(["jquery", "annotator/annotator", "amcat/amcat.datatables"], function($, annotator){
             var jqueryElement = $('#article-table-container');
             var url = "{% url "api:project-codingjob-article-list" project.id codingjob.id %}";
             var columns = [], column_order = [

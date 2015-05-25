@@ -33,25 +33,46 @@ String.prototype.format = String.prototype.f = function() {
     return s;
 };
 
-$.values = function(obj) {
-    return $.map(obj, function(value, _) {
-        return value;
-    });
-};
-
 // Workaround: focus events don't carry *Key properties, so we don't
 // know for sure if shift is pressed.
 shifted = false;
-$(document).keydown(function(event){
-    shifted = event.shiftKey;
+
+require(["jquery"], function($){
+    $(document).keydown(function(event){
+        shifted = event.shiftKey;
+    });
+
+    $(document).keyup(function(){
+        shifted = false;
+    });
 });
 
-$(document).keyup(function(){
-    shifted = false;
-});
+// TODO: Remove annotator as global variable. At the moment widgets.js, autoomplete.js still need it.
+annotator = null;
 
 
-annotator = (function(self){
+define([
+    "jquery",
+    "annotator/widgets",
+    "annotator/autocomplete",
+    "annotator/rules",
+    "pnotify",
+    "jquery.highlight",
+    "annotator/functional",
+    "annotator/utils",
+    "jquery.hotkeys",
+    "jquery.scrollTo",
+    "bootstrap"
+    ], function($, widgets, autocomplete, rules, PNotify){
+    var self = {};
+    annotator = self;
+
+    self.values = function(obj) {
+        return $.map(obj, function(value, _) {
+            return value;
+        });
+    };
+
     self.log = function(data){
         var date = new Date();
         var datetime = date.toUTCString().split(" GMT")[0];
@@ -130,19 +151,6 @@ annotator = (function(self){
     self.SCROLL_TIMEOUT = 100;
     self.scroll_timeout = null;
     self.last_scroll = null;
-
-    self.dialog_ok = {
-        OK : function(){
-            $(this).dialog("close");
-        }
-    };
-
-    self.dialog_defaults = {
-        resizable: false,
-        modal: true,
-        autoOpen: false,
-        buttons : self.dialog_ok
-    };
 
     /* Containers & dialogs. These can only be set if DOM is ready. */
     self.initialise_containers = function initialise_containers(){
@@ -738,7 +746,7 @@ annotator = (function(self){
         for (var i=0; i < codings.length; i++){
             if (codings[i].sentence !== null) continue;
 
-            if ($.map($.values(codings[i].values), function(cv){
+            if ($.map(self.values(codings[i].values), function(cv){
                 return (!self.is_empty_codingvalue(cv)) || null;
             }).length){
                 return "Cannot save data.\n 1) Make sure all coded sentences have a sentence number.2) Make sure no codings are left empty if your project does not allow this.";
@@ -770,7 +778,7 @@ annotator = (function(self){
     };
 
     self.is_empty_coding = function is_empty_coding(coding){
-        return all($.values(coding.values), self.is_empty_codingvalue)
+        return all(self.values(coding.values), self.is_empty_codingvalue)
     };
 
     /*
@@ -780,7 +788,7 @@ annotator = (function(self){
         return {
             start : coding.start, end : coding.end,
             sentence_id : (coding.sentence === null) ? null : coding.sentence.id,
-            values : $.map($.grep($.values(coding.values), self.is_empty_codingvalue, true), self.pre_serialise_codingvalue)
+            values : $.map($.grep(self.values(coding.values), self.is_empty_codingvalue, true), self.pre_serialise_codingvalue)
         }
     };
 
@@ -857,14 +865,14 @@ annotator = (function(self){
 
         // Send coding values to server
         self.show_loading("Saving codings..");
-        $.ajax({url: "codedarticle/{0}/save".f(self.state.coded_article_id), 
-		data: JSON.stringify({
-		    "coded_article" : self.pre_serialise_coded_article(),
-		    "codings" : $.map(self.get_codings(), self.pre_serialise_coding)}),
-		type: "POST",
-		headers: {"X-CSRFTOKEN": csrf_middleware_token},
-		dataType: "json"
-               }).done(function(data, textStatus, jqXHR){
+        $.ajax({url: "codedarticle/{0}/save".f(self.state.coded_article_id),
+            data: JSON.stringify({
+                "coded_article" : self.pre_serialise_coded_article(),
+                "codings" : $.map(self.get_codings(), self.pre_serialise_coding)}),
+            type: "POST",
+            headers: {"X-CSRFTOKEN": csrf_middleware_token},
+            dataType: "text"
+        }).done(function(data, textStatus, jqXHR){
             self.hide_loading();
 
             new PNotify({
@@ -912,7 +920,7 @@ annotator = (function(self){
 
     self._select = function _select(row){
         if (row.length === 0){
-            self.loading_dialog.text("Last article finished, coding done!").dialog("open");
+            self.show_loading("Last article finished, coding done!");
             return;
         }
 
@@ -1166,13 +1174,13 @@ annotator = (function(self){
     /******** EVENTS *******/
     // TODO: Only initialise article coding html once.
     self.codings_fetched = function codings_fetched(){
-        self.state.sentence_codings = $.grep($.values(self.state.codings), self.is_article_coding, true);
+        self.state.sentence_codings = $.grep(self.values(self.state.codings), self.is_article_coding, true);
         self.state.sentence_codings.sort(function(a,b){
             return self.sentence_greater_than(a.sentence, b.sentence);
         });
 
         // Determine article coding
-        var article_coding = $.grep($.values(self.state.codings), self.is_article_coding);
+        var article_coding = $.grep(self.values(self.state.codings), self.is_article_coding);
 
         if (article_coding.length === 0){
             self.state.article_coding = self.get_empty_coding();
@@ -1270,7 +1278,7 @@ annotator = (function(self){
 
     self.find_hidden = function find_hidden(codes){
         return Array.prototype.concat.apply([], $.map(codes, function(c){
-            return c.hide ? [c].concat($.values(c.get_descendants())) : null;
+            return c.hide ? [c].concat(self.values(c.get_descendants())) : null;
         }));
     };
 
@@ -1393,7 +1401,6 @@ annotator = (function(self){
         // We need to adjust to the new browser width
         self.previous_width = width;
         self.datatable.fnAdjustColumnSizing();
-        self.width_warning_dialog.dialog((width < 1000) ? "open" : "close");
     };
 
     self.initialise_shortcuts = function initialise_shortcuts(){
@@ -1472,7 +1479,7 @@ annotator = (function(self){
             clearTimeout(self.scroll_timeout);
             self.scroll_timeout = setTimeout(self.stopped_scrolling.bind(e), self.SCROLL_TIMEOUT);
         }
-    }
+    };
 
     self.initialise = function initialise(project_id, codingjob_id, coder_id, language_id){
         $("#lost-codes").hide();
@@ -1489,30 +1496,30 @@ annotator = (function(self){
         self.initialise_fields();
         self.initialise_wordcount();
 
+        /**
+         * For all AJAX errors, display a generic error messages. This eliminates
+         * lots of boiler-plate code in functions which use AJAX calls.
+         */
+        $(document).ajaxError(function(event, xhr, ajaxOptions) {
+            var message = "An error occured while requesting: {0}. Server responded: {1} {2}.";
+            message = message.f(ajaxOptions.url, xhr.status, xhr.statusText);
+            self.hide_loading();
+            self.show_message("AJAX error", message);
+        });
+
+        /*
+         * Ask user to confirm quitting in the case of unsaved changes
+         */
+        $(window).bind("beforeunload", function(){
+            return self.modified() ? "Unsaved changes present. Continue quitting?" : undefined;
+        });
+
+
         window.onbeforeunload = self.on_unload;
         $(window).on("scroll", self.on_scroll);
     };
 
-
     return self;
-})({});
-
-
-/************* Storing data *************/
-/*
- * For all AJAX errors, display a generic error messages. This eliminates
- * lots of boiler-plate code in functions which use AJAX calls.
- */
-$(document).ajaxError(function(event, xhr, ajaxOptions) {
-    var message = "An error occured while requesting: {0}. Server responded: {1} {2}.";
-    message = message.f(ajaxOptions.url, xhr.status, xhr.statusText);
-    annotator.hide_loading();
-    annotator.show_message("AJAX error", message);
 });
 
-/*
- * Ask user to confirm quitting in the case of unsaved changes
- */
-$(window).bind("beforeunload", function(){
-    return annotator.modified() ? "Unsaved changes present. Continue quitting?" : undefined;
-});
+
