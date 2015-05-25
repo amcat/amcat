@@ -83,7 +83,7 @@ amcat.multiselectCheckIfMatches = function(event, matches){
     } else {
         $(event.target).multiselect('widget').find('.ui-multiselect-filter-msg').empty();
     }
-}
+};
 
 
 amcat.check_fetch_results = function(state){
@@ -98,7 +98,7 @@ amcat.check_fetch_results = function(state){
     $.each(state.ajax_call_results.options, function(fieldname, data){
         if (done === false) return;
 
-        if (data === null | state.ajax_call_results.labels[fieldname] === null){
+        if (data === null || state.ajax_call_results.labels[fieldname] === null){
             done = false;
         }
     });
@@ -117,7 +117,7 @@ amcat.check_fetch_results = function(state){
       * "1"
       */
       return s.replace(re, function(_, match){ return args[match]; });
-    }
+    };
 
     /*
      * For every fieldname do:
@@ -138,7 +138,7 @@ amcat.check_fetch_results = function(state){
     });
 
     state.callback(state.data);
-}
+};
 
 amcat.single_fetch_finished = function(data, textStatus, jqXHR){
     /*
@@ -157,7 +157,7 @@ amcat.single_fetch_finished = function(data, textStatus, jqXHR){
 
     state.ajax_call_results.labels[fieldname] = data_by_id;
     amcat.check_fetch_results(state);
-}
+};
 
 amcat.fetch_labels = function(data, textStatus, jqXHR, callback, url){
     /*
@@ -180,7 +180,7 @@ amcat.fetch_labels = function(data, textStatus, jqXHR, callback, url){
             labels : {
                 // fieldname : fetched_data || null
             }
-        },
+        }
     };
 
     $.ajax({
@@ -234,7 +234,7 @@ amcat.fetch_labels = function(data, textStatus, jqXHR, callback, url){
             amcat.check_fetch_results(state);
         })
     });
-}
+};
 
 
 /* Switch layouts */
@@ -243,7 +243,7 @@ $(function(){
         event.preventDefault();
         // Switch classes, etc.
         $(".container,.container-fluid").toggleClass("container container-fluid");
-        $("#layout-switcher i").toggleClass("glyphicon-resize-small glyphicon-resize-full")
+        $("#layout-switcher").find("i").toggleClass("glyphicon-resize-small glyphicon-resize-full");
         $("body").focus();
 
         // Resize datatables
