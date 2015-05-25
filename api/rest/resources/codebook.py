@@ -115,8 +115,12 @@ class CodebookResource(AmCATResource):
 from amcat.models import Label
 from api.rest.resources.amcatresource import AmCATResource
 
+class LabelSerializer(AmCATModelSerializer):
+    class Meta:
+        model = Label
 
 class LabelResource(AmCATResource):
     model = Label
     extra_filters = ["code__codebook_codes__codebook__id"]
     queryset = Label.objects.all()
+    serializer_class = LabelSerializer
