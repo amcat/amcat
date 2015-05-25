@@ -66,9 +66,9 @@
         <div class="loading-codebook">Loading..</div>
     </div>
 
-    {% compress js %}
-        <script src="{% static 'js/jquery.djangofields.js' %}"></script>
-        <script src="{% static 'js/jquery.codebookeditor.js' %}"></script>
-    {% endcompress %}
-    <script>$(".codebook").codebookeditor("{% url "api:api" %}v4/");</script>
+    <script>
+        require(["jquery", "amcat/jquery.codebookeditor"], function($){
+            $(".codebook").codebookeditor("{% url "api:api" %}v4/");
+        });
+    </script>
 {% endblock %}

@@ -74,6 +74,9 @@ requirejs.config({
         },
         "amcat/amcat":{
             deps: ["jquery", "bootstrap"]
+        },
+        "amcat/jquery.djangofields":{
+            deps: ["jquery"]
         }
     }
 });

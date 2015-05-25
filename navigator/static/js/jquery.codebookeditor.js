@@ -25,7 +25,7 @@ Array.prototype.remove=function(s){
     }
 };
 
-(function($){
+define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
     $.fn.codebookeditor = function(api_url){
         return this.each(function(){
             /*
@@ -1150,5 +1150,4 @@ Array.prototype.remove=function(s){
             $.getJSON(api_url + 'language?format=json&order_by=id&paginate=false&page_size=100', self._initialize_languages);
         });
     };
-})(jQuery);
-
+});
