@@ -3,7 +3,7 @@
   "dependencies": {
     "jquery": "~2.1.1",
     "bootstrap": "3.1.1",
-    "datatables": "http://hmbastiaan.nl/martijn/downloads/DataTables-1.10.0.zip",
+    "datatables": "http://hmbastiaan.nl/martijn/downloads/DataTables-1.10.7.zip",
     "pnotify": "2.0.1",
     "jquery-ui": "1.10.4",
     "jquery.scrollTo": "1.4.12",
