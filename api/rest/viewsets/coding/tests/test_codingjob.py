@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from django.db.models import QuerySet
 from amcat.models import STATUS_COMPLETE, STATUS_IRRELEVANT, CodingJob
 from amcat.tools.amcattest import AmCATTestCase
 from api.rest.viewsets import CodingJobSerializer
@@ -24,11 +25,18 @@ from api.rest.viewsets import CodingJobSerializer
 class TestCodingJobSerializer(AmCATTestCase):
     # Simulating request
     class View(object):
+        def get_queryset(self):
+            return self.queryset
+
+        def filter_queryset(self, queryset):
+            return queryset
+
         def __init__(self, objs):
-            if isinstance(objs, CodingJob):
-                self.object = objs
+            if not isinstance(objs, QuerySet):
+                self.queryset = CodingJob.objects.filter(id=objs.id)
             else:
-                self.object_list = objs
+                self.queryset = objs
+
 
     def _get_serializer(self, codingjob):
         return CodingJobSerializer(context={"view": self.View(codingjob)})

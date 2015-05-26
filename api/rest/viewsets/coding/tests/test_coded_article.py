@@ -6,11 +6,14 @@ from api.rest.viewsets import CodedArticleSerializer
 class TestCodedArticleSerializer(amcattest.AmCATTestCase):
     # Simulating request
     class View(object):
+        def get_queryset(self):
+            return self.queryset
+
+        def filter_queryset(self, queryset):
+            return queryset
+
         def __init__(self, objs):
-            if isinstance(objs, CodedArticle):
-                self.object = objs
-            else:
-                self.object_list = objs
+            self.queryset = objs
 
     def _get_serializer(self, coded_article):
         return CodedArticleSerializer(context={"view" : self.View(coded_article)})

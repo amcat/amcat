@@ -64,9 +64,7 @@ class CodedArticleSerializer(AmCATModelSerializer):
 
     def _get_coded_articles(self):
         view = self.context["view"]
-        if hasattr(view, "queryset"): return view.queryset
-        #if hasattr(view, "object_list"): return view.object_list
-        return CodedArticle.objects.filter(id=view.object.id)
+        return CodedArticle.objects.filter(id__in=view.filter_queryset(view.get_queryset()))
 
     @cached
     def _get_articles(self):
