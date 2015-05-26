@@ -1,18 +1,16 @@
 {% extends "project/base.html" %}
-{% load compress %}
 {% load staticfiles %}
 
 {% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
 
-{% block javascript %}
-{% compress js %}
- <script src="{% static 'js/jquery.djangofields.js' %}"></script>
- <script src="{% static 'js/jquery.ruleeditor.js' %}"></script>
-{% endcompress %}
- <script>$(function(){ jQuery.fn.ruleeditor("{% url "navigator:api" %}v4/", {{codingschema.id}}, {{project.id}}).main(); });</script>
-{% endblock %}
 
 {% block content %}
+<script>
+    require(["amcat/ruleeditor"], function(editor){
+        editor("{% url "api:api" %}v4/", {{codingschema.id}}, {{project.id}}).main();
+    });
+</script>
+
 <h1>Editing rules of codingschema {{schema.id}}: {{schema.name}}</h1>
 <p>
 <div name="add-field" class="btn btn-primary disabled"><i class="glyphicon glyphicon-plus"></i> Add field</div>
@@ -55,4 +53,11 @@
 <div name="save" class="btn btn-primary disabled">Save</div>
 <a href="{% url "navigator:codingschema-details" project.id codingschema.id %}" class="btn">Cancel</a>
 </div>
+
+<script>
+    require(["bootstrap"], function(){
+        // Make sure bootstrap dialogs work.
+    });
+</script>
+
 {% endblock %}

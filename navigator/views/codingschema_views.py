@@ -414,7 +414,7 @@ class CodingSchemaEditRulesView(HierarchicalViewMixin, ProjectViewMixin, BreadCr
 
         return HttpResponse(
             json.dumps(dict(fields=errors, schema_url=schema_url)),
-            mimetype='application/json'
+            content_type='application/json'
         )
 
 

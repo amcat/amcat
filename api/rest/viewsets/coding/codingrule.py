@@ -34,8 +34,7 @@ __all__ = (
 
 
 class CodingRuleSerializer(AmCATModelSerializer):
-    model = CodingRule
-    parsed_condition = serializers.SerializerMethodField('get_parsed_condition')
+    parsed_condition = serializers.SerializerMethodField()
 
     def get_parsed_condition(self, obj):
         try:

@@ -70,7 +70,6 @@ class CodebookSerializer(AmCATModelSerializer):
 
 class CodebookViewSetMixin(AmCATViewSetMixin):
     queryset = Codebook.objects.all()
-    serializer_class = CodebookSerializer
     model_key = "codebook"
     model = Codebook
     search_fields = ("id", "project__name", "name")
@@ -78,7 +77,8 @@ class CodebookViewSetMixin(AmCATViewSetMixin):
 class CodebookViewSet(ProjectViewSetMixin, CodebookViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = Codebook
     queryset = Codebook.objects.all()
-    
+    serializer_class = CodebookSerializer
+
     def filter_queryset(self, queryset):
         qs = super(CodebookViewSet, self).filter_queryset(queryset)
         return qs.filter(Q(project=self.project)|Q(projects_set=self.project))

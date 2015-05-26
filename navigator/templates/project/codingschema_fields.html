@@ -2,14 +2,6 @@
 {% load compress %}
 {% load staticfiles %}
 
-{% block javascript %}
-{% compress js %}
- <script src="{% static 'js/jquery.djangofields.js' %}"></script>
- <script src="{% static 'js/jquery.schemaeditor.js' %}"></script>
- <script src="{% static 'components/TableDnD/js/jquery.tablednd.0.7.min.js' %}"></script>
-{% endcompress %}
- <script>$(function(){ jQuery.fn.schemaeditor("{% url "api:api" %}v4/", {{object.id}}, {{context.id}}, {{rules_valid}}).main(); });</script>
- {% endblock %}
 
 {% block actions %}
 <div name="add-field" class="btn btn-primary disabled"><i class="glyphicon glyphicon-plus"></i> Add field</div>
@@ -19,8 +11,14 @@
 {% endblock %}
 
 {% block content %}
+<script>
+    require(["amcat/schemaeditor"], function(editor){
+        editor("{% url "api:api" %}v4/", {{object.id}}, {{context.id}}, {{rules_valid}}).main();
+    });
+</script>
+
 <style type="text/css">
-    td.active{ background-color: #60A3FF !important; color:white; }
+td.active{ background-color: #60A3FF !important; color:white; }
 </style>
 
 <p><span class="label label-warning">Resetting</span> Resetting only reverts changes which are not saved.</p>
@@ -62,4 +60,10 @@ use arrow keys to move around.</p>
 <div name="save" class="btn btn-primary disabled">Save</div>
 <a href="{% url "navigator:codingschema-details" context.id object.id %}" class="btn">Cancel</a>
 </div>
+
+<script>
+    require(["bootstrap"], function(){
+        // Make sure bootstrap dialogs work
+    });
+</script>
 {% endblock %}

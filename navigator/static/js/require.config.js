@@ -29,7 +29,8 @@ requirejs.config({
         "jquery.cookie": "jquery-cookie/jquery.cookie",
         "jquery.highlight": AMCAT_STATIC_URL + "js/annotator/jquery.highlight",
         "jquery.scrollTo": "jquery.scrollTo/jquery.scrollTo",
-        "jquery-ui": "jquery-ui/ui/jquery-ui"
+        "jquery-ui": "jquery-ui/ui/jquery-ui",
+        "jquery.tablednd": "TableDnD/js/jquery.tablednd.0.7.min"
     },
     shim:{
         "highcharts.data":{
@@ -102,6 +103,9 @@ requirejs.config({
             deps: ["jquery"]
         },
         "jquery-ui":{
+            deps: ["jquery"]
+        },
+        "jquery.tablednd":{
             deps: ["jquery"]
         }
     }

@@ -48,11 +48,11 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
             self.objects = null; // Flat list of all objects
             self.root = null; // Artificial (non existent in db) root code
             self.changesets = {
-               "moves" : {},
-               "hides" : {},
-               "reorders" : {}
+                "moves" : {},
+                "hides" : {},
+                "reorders" : {}
             }; // Changed objects go in here
- 
+
             /* ELEMENTS */
             self.root_el = this;
             self.searchbox = $("input[type=search]");
@@ -132,7 +132,7 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
              *
              * @param node: apply function to children of this node
              * @param recusive (default:true): call this function for each child
-             */ 
+             */
             self._ensure_order = function (node, recursive) {
                 // No ordering applicable
                 if (node.children.length <= 1) return;
@@ -163,7 +163,7 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
                 tree.children.sort(function(a,b){ return a.ordernr - b.ordernr; });
                 $.map(self._sort_tree, tree.children);
             };
-            
+
             self._initialize = function (objects) {
                 /*
                  * Callback function for getJSON(api_url)
@@ -218,7 +218,7 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
 
                 for (var i = 0; i < object.children.length; i++) {
                     result.push.apply(result, self._get_descendents(
-                        object.children[i])
+                            object.children[i])
                     );
                 }
 
@@ -240,35 +240,35 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
 
             self._create_options_span = function (obj) {
                 var opt_span = $("<span>").addClass("options").append(
-                        // Move code button
-                        $("<i>").addClass("glyphicon glyphicon-move").attr("title", "Move this code")
-                            .click(self.move_code_clicked.bind(obj))
-                    ).append(
-                        // Unhide button
-                        $("<i>").addClass("glyphicon glyphicon-eye-open")
-                            .attr("title", "Unhide this code")
-                            .click(self.unhide_code_clicked.bind(obj))
-                    ).append(
-                        $("<i>").addClass("glyphicon glyphicon-eye-close")
-                            .attr("title", "Hide this code")
-                            .click(self.hide_code_clicked.bind(obj))
-                    ).append(
-                        // Labels button
-                        $("<i>").addClass("glyphicon glyphicon-tags").attr("title", "Show labels")
-                            .click(self.show_labels_clicked.bind(obj))
-                    ).append(
-                        // Create new child button
-                        $("<i>").addClass("glyphicon glyphicon-asterisk").attr("title", "Create new child")
-                            .click(self.create_child_clicked.bind(obj))
-                    ).append(
-                        // Move up button
-                        $("<i>").addClass("glyphicon glyphicon-arrow-up").attr("title", "Move code up")
-                            .click(self.move_code_up_clicked.bind(obj))
-                    ).append(
-                        // Move down button
-                        $("<i>").addClass("glyphicon glyphicon-arrow-down").attr("title", "Move code down")
-                            .click(self.move_code_down_clicked.bind(obj))
-                    );
+                    // Move code button
+                    $("<i>").addClass("glyphicon glyphicon-move").attr("title", "Move this code")
+                        .click(self.move_code_clicked.bind(obj))
+                ).append(
+                    // Unhide button
+                    $("<i>").addClass("glyphicon glyphicon-eye-open")
+                        .attr("title", "Unhide this code")
+                        .click(self.unhide_code_clicked.bind(obj))
+                ).append(
+                    $("<i>").addClass("glyphicon glyphicon-eye-close")
+                        .attr("title", "Hide this code")
+                        .click(self.hide_code_clicked.bind(obj))
+                ).append(
+                    // Labels button
+                    $("<i>").addClass("glyphicon glyphicon-tags").attr("title", "Show labels")
+                        .click(self.show_labels_clicked.bind(obj))
+                ).append(
+                    // Create new child button
+                    $("<i>").addClass("glyphicon glyphicon-asterisk").attr("title", "Create new child")
+                        .click(self.create_child_clicked.bind(obj))
+                ).append(
+                    // Move up button
+                    $("<i>").addClass("glyphicon glyphicon-arrow-up").attr("title", "Move code up")
+                        .click(self.move_code_up_clicked.bind(obj))
+                ).append(
+                    // Move down button
+                    $("<i>").addClass("glyphicon glyphicon-arrow-down").attr("title", "Move code down")
+                        .click(self.move_code_down_clicked.bind(obj))
+                );
 
                 // Hide (un)hide button
                 $(".glyphicon-eye-" + (obj.is_hidden() ? 'close' : 'open'), opt_span).hide();
@@ -281,21 +281,21 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
                  * Create base modal window (hidden by default).
                  */
                 var dialog = $(
-                 '<div class="modal" tabindex="-1">' +
-                  '<div class="modal-dialog">' +
+                    '<div class="modal" tabindex="-1">' +
+                    '<div class="modal-dialog">' +
                     '<div class="modal-content">' +
-                      '<div class="modal-header">' +
-                        '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>' +
-                        '<h4 class="modal-title"></h4>' +
-                      '</div>' +
-                      '<div class="modal-body"></div>' +
-                      '<div class="modal-footer">' +
-                        '<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>' +
-                        '<button type="button" class="btn btn-primary">Save changes</button>' +
-                      '</div>' +
+                    '<div class="modal-header">' +
+                    '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>' +
+                    '<h4 class="modal-title"></h4>' +
                     '</div>' +
-                  '</div>' +
-                '</div>');
+                    '<div class="modal-body"></div>' +
+                    '<div class="modal-footer">' +
+                    '<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>' +
+                    '<button type="button" class="btn btn-primary">Save changes</button>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>');
 
                 $("#"+id).remove();
 
@@ -339,15 +339,15 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
                 label = (label === undefined) ? {} : label;
 
                 return $("<tr>").attr("label_id", label.id).append(
-                        $("<td>").append(self._create_label_languages(label.language))
-                    ).append(
-                        $("<td>").append($("<input>").val(label.label))
-                    ).append($(
+                    $("<td>").append(self._create_label_languages(label.language))
+                ).append(
+                    $("<td>").append($("<input>").val(label.label))
+                ).append($(
                         "<td>" +
-                            "<div class='btn btn-mini btn-danger'>" +
-                            "<i class='glyphicon glyphicon-trash'></i>" +
-                            "</div>" +
-                            "</td>"
+                        "<div class='btn btn-mini btn-danger'>" +
+                        "<i class='glyphicon glyphicon-trash'></i>" +
+                        "</div>" +
+                        "</td>"
                     ).click(function (event) {
                             // Delete row!
                             $(event.currentTarget).parent().remove()
@@ -366,15 +366,15 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
 
                 // Base table
                 table = $("<table>").append($("<thead>").append(
-                            $("<th>Language</th>")
-                        ).append(
-                            $("<th>Label</th>")
-                        ).append(
-                            // Empty label for delete icon
-                            $("<th>")
-                        )).append(
-                        (tbody = $("<tbody>"))
-                    ).addClass("table table-bordered");
+                    $("<th>Language</th>")
+                ).append(
+                    $("<th>Label</th>")
+                ).append(
+                    // Empty label for delete icon
+                    $("<th>")
+                )).append(
+                    (tbody = $("<tbody>"))
+                ).addClass("table table-bordered");
 
                 // Add rows
                 $.each(labels, function (i, label) {
@@ -386,12 +386,12 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
                     $("<tr>").append(
                         $("<td>").attr("colspan", 3).css("text-align", "center").append(
                             $("<button>").addClass("btn").append(
-                                    $("<i>").addClass("glyphicon glyphicon-plus")
-                                ).append(
-                                    $(document.createTextNode(" Add label"))
-                                ).click(
-                                    self.add_label_row_clicked
-                                )
+                                $("<i>").addClass("glyphicon glyphicon-plus")
+                            ).append(
+                                $(document.createTextNode(" Add label"))
+                            ).click(
+                                self.add_label_row_clicked
+                            )
                         )
                     )
                 );
@@ -448,13 +448,13 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
                     action_icon.attr("src", self.NOACTION_ICON);
                 }
 
-		var label_span = $("<span>");
-		var label_text = $("<span>").addClass("lbl").append(document.createTextNode(object.label));
-		var label_input = $("<input>").val(object.label).css("display", "none");
-		d = {code: object, span: label_text, input: label_input};
-		label_text.attr("title", "Click to rename").click(self.rename_clicked.bind(d));
-		label_span.append(label_text).append(label_input)
-		
+                var label_span = $("<span>");
+                var label_text = $("<span>").addClass("lbl").append(document.createTextNode(object.label));
+                var label_input = $("<input>").val(object.label).css("display", "none");
+                d = {code: object, span: label_text, input: label_input};
+                label_text.attr("title", "Click to rename").click(self.rename_clicked.bind(d));
+                label_span.append(label_text).append(label_input)
+
                 // Add action icon and label
                 code_el.append(
                     $("<span>").addClass("parts")
@@ -564,33 +564,33 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
 
             /* EVENTS */
 
-	    self.rename_clicked = function (event) {
-		if (self.moving) return;
-		
-		this.span.css("display", "none");		
-		this.input.css("display", "inline").val(this.code.label).select();
-		hide_input = function() {
-		    this.span.css("display", "inline");		
-		    this.input.css("display", "none");
-		}.bind(this);
-		save_results = function() {
-		    this.code.label = this.input.val();
+            self.rename_clicked = function (event) {
+                if (self.moving) return;
+
+                this.span.css("display", "none");
+                this.input.css("display", "inline").val(this.code.label).select();
+                hide_input = function() {
+                    this.span.css("display", "inline");
+                    this.input.css("display", "none");
+                }.bind(this);
+                save_results = function() {
+                    this.code.label = this.input.val();
                     $.ajax({
-			headers: {"X-CSRFTOKEN": csrf_middleware_token},
-			type: "POST",
-			url: window.location.href + "save-labels/",
-			data: {"label": this.code.label, "code": this.code.code_id},
-			dataType: 'json'
+                        headers: {"X-CSRFTOKEN": csrf_middleware_token},
+                        type: "POST",
+                        url: window.location.href + "save-labels/",
+                        data: {"label": this.code.label, "code": this.code.code_id},
+                        dataType: 'json'
                     }).done(self.labels_updated.bind({"code": this.code}));
-		    hide_input()
-		}.bind(this);
-		this.input.keypress(function(e) {
-		    if (e.keyCode == 13) save_results();
-		    if (e.keyCode == 27) hide_input();
-		});
-		this.input.blur(save_results);
-	    };
-	    
+                    hide_input()
+                }.bind(this);
+                this.input.keypress(function(e) {
+                    if (e.keyCode == 13) save_results();
+                    if (e.keyCode == 27) hide_input();
+                });
+                this.input.blur(save_results);
+            };
+
             self.collapse_clicked = function (event) {
                 /*
                  * Collapse icon clicked. Replace icon and collapse tree
@@ -687,7 +687,7 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
                 var table = self._create_label_table(labels);
                 $("#labels .modal-body").contents().remove();
                 $("#labels .modal-body").append($("<p>")).append("Label:")
-		$("#labels .modal-body").append($("<input id='code_label'>").val(this.label));
+                $("#labels .modal-body").append($("<input id='code_label'>").val(this.label));
                 $("#labels .modal-body").append(table);
 
             };
@@ -730,9 +730,9 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
                  * @return: error message if errors or null if successful
                  */
 
-		if (label.length == 0) {
-		    return ("Code label is empty");
-		}
+                if (label.length == 0) {
+                    return ("Code label is empty");
+                }
                 // Prevent empty labels
                 for (var i = 0; i < labels.length; i++) {
                     if (labels[i].label.length == 0) {
@@ -760,7 +760,7 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
                  * containing at least the boolean property "new_code". Depending on this
                  * value, it futher contains either "code" or "parent".
                  */
-		var label = $("#code_label").val();
+                var label = $("#code_label").val();
                 var labels = self._get_label_data($("#labels tbody tr"));
                 var error = self._validate_label_data(label, labels);
 
@@ -778,30 +778,30 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
                 $(".modal-footer", loading_modal).remove();
                 $(".modal-body", loading_modal).html("Saving labels..");
 
-		this.code.label = label;
-		
+                this.code.label = label;
+
                 $(loading_modal).modal({
                     keyboard: false,
                     backdrop: "static"
                 });
                 $.ajax({
-		    headers: {"X-CSRFTOKEN": csrf_middleware_token},
+                    headers: {"X-CSRFTOKEN": csrf_middleware_token},
                     type: "POST",
                     url: window.location.href + "save-labels/",
                     data: {
-			"label": label,
-			"labels": JSON.stringify(labels),
-			"code": this.code.code_id},
-		    dataType: 'json'
+                        "label": label,
+                        "labels": JSON.stringify(labels),
+                        "code": this.code.code_id},
+                    dataType: 'json'
                 }).done(self.labels_updated.bind({"code": this.code}));
             };
 
-	    self.labels_updated = function () {
-		$("#loading_modal").modal("hide").remove();
-		self.update_label(this.code);
+            self.labels_updated = function () {
+                $("#loading_modal").modal("hide").remove();
+                self.update_label(this.code);
             };
 
-		
+
 
             self.new_code_created = function (new_code) {
                 /*
@@ -839,17 +839,17 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
 
                 // Add help
                 code.append(
-                        $(document.createTextNode(" "))
-                    ).append(
-                        $("<i>").addClass("glyphicon glyphicon-question-sign move-help").click(
-                            self.move_help_clicked
-                        )
-                    );
+                    $(document.createTextNode(" "))
+                ).append(
+                    $("<i>").addClass("glyphicon glyphicon-question-sign move-help").click(
+                        self.move_help_clicked
+                    )
+                );
 
                 // Mark destinations as such
                 $(".parts", self.root_el)
-                        .addClass("moving_destination")
-                        .click(self.move_destination_clicked.bind(this))
+                    .addClass("moving_destination")
+                    .click(self.move_destination_clicked.bind(this))
             };
 
             self.move_help_clicked = function(){
@@ -926,18 +926,18 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
 
             self.create_child_clicked= function () {
 
-		// WVA
-		var label = "[new code]";
+                // WVA
+                var label = "[new code]";
                 $.ajax({
-		    headers: {"X-CSRFTOKEN": csrf_middleware_token},
+                    headers: {"X-CSRFTOKEN": csrf_middleware_token},
                     type: "POST",
                     url: window.location.href + "new-code/",
-		    dataType: 'json',
-		    data: {
-			"label": label,
-			"parent": JSON.stringify(this.code_id),
-			"ordernr": this.children.length
-		    },
+                    dataType: 'json',
+                    data: {
+                        "label": label,
+                        "parent": JSON.stringify(this.code_id),
+                        "ordernr": this.children.length
+                    },
                 }).done(self.new_code_created.bind({
                     "label": label,
                     "parent": this
@@ -1131,14 +1131,14 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
                         "reorders": JSON.stringify(reorders)
                     }
                 }).done((function () {
-                        $("#loading_modal").modal("hide").remove();
-                        self.changesets.moves = {};
-                        self.changesets.hides = {};
-                        self.changesets.reorders = {};
+                    $("#loading_modal").modal("hide").remove();
+                    self.changesets.moves = {};
+                    self.changesets.hides = {};
+                    self.changesets.reorders = {};
 
-                        if (typeof(this) === "function") this();
+                    if (typeof(this) === "function") this();
                 }).bind(this));
-		
+
             };
 
             self.btn_save_changes.click(self.btn_save_changes_clicked);
