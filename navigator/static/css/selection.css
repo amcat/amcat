@@ -125,3 +125,7 @@ h4.name:hover{
     cursor: pointer;
     background-color: #f0f0f0;
 }
+
+#result tbody tr > th{
+    white-space: nowrap;
+}
