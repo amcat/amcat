@@ -16,11 +16,17 @@
 
                 <label>Articlesets:</label>
 
+                <div class="btn-group">
+
                 <select multiple="multiple" id="change-articlesets-select">
                     {% for aset in all_articlesets %}
                         <option {% if aset.id in articleset_ids %}selected="selected"{% endif %} value="{{ aset.id }}">{{ aset.name }}</option>
                     {% endfor %}
                 </select>
+
+                <button type="reset" id="deselect-all-articlesets" class="btn btn-default">Deselect all</button>
+
+                </div>
 
                 <script>
                     require(["jquery", "bootstrap-multiselect"], function($){
@@ -28,9 +34,15 @@
                             enableFiltering: true,
                             enableCaseInsensitiveFiltering: true,
                             maxHeight:500,
-                            buttonWidth: '80%',
+                            buttonWidth: '300px',
                             numberDisplayed: 5
-                        })
+                        });
+
+                        $("#deselect-all-articlesets").click(function(){
+                            $("#change-articlesets-select")
+                                    .multiselect('deselectAll', false)
+                                    .multiselect("rebuild");
+                        });
                     });
                 </script>
             </div>
