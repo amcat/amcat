@@ -354,7 +354,7 @@ define([
     /*
      * Called when 'run query' is clicked.
      */
-    function save_query(event){
+    self.save_query = function save_query(event){
         event.preventDefault();
         var dialog = $("#save-query-dialog");
         var name_btn = $("[name=name]", dialog);
@@ -400,6 +400,7 @@ define([
 
         var data = serializeForm($("#query-form"), SETS);
         data["script"] = window.location.hash.slice(1);
+        delete data['csrfmiddlewaretoken'];
 
         $.ajax({
             type: method,
@@ -411,7 +412,7 @@ define([
                 parameters: JSON.stringify(data)
             },
             headers: {
-                "X-CSRFTOKEN": $("[name=csrfmiddlewaretoken]").attr("value")
+                "X-CSRFTOKEN": $.cookie("csrftoken")
             }
         }).done(function(data){
             dialog.modal("hide");
@@ -431,7 +432,7 @@ define([
         }).fail(self.fail);
 
         save_btn.addClass("disabled");
-    }
+    };
 
     self.init_delete_query_button = function init_delete_query_button(){
         $("#delete-query").addClass("disabled");
@@ -461,7 +462,7 @@ define([
             url: url,
             dataType: "json",
             headers: {
-                "X-CSRFTOKEN": $("[name=csrfmiddlewaretoken]").attr("value")
+                "X-CSRFTOKEN": $.cookie("csrftoken")
             }
         }).done(function(data){
             $("#load-query-menu li[query={id}]".format(saved_query)).remove();
@@ -492,7 +493,7 @@ define([
         }).fail(self.fail);
 
         $("#delete-query").addClass("disabled");
-    }
+    };
 
     self.save_query_clicked = function save_query_clicked(event){
         var args = {};
@@ -506,12 +507,12 @@ define([
         }
 
         self.save_query.bind(args)(event);
-    }
+    };
 
     self.change_articlesets_clicked = function change_articlesets_clicked(event){
         event.preventDefault();
         $("#change-articlesets-query-dialog").modal();
-    }
+    };
 
     self.change_articlesets_confirmed_clicked = function change_articlesets_confirmed_clicked(event){
         var options = $('#change-articlesets-select option:selected');
@@ -520,7 +521,7 @@ define([
             return parseInt($(option).val());
         });
 
-        var url = get_window_url(SETS, window.location.hash.slice(1));
+        var url = self.get_window_url(SETS, window.location.hash.slice(1));
         history.replaceState({}, document.title, url);
 
         $("#id_articlesets")
@@ -549,7 +550,7 @@ define([
             inputs += ",select[name={name}]";
             inputs = $(inputs.format({name: name}));
 
-            if (inputs.length === 0 || name == "articlesets"){
+            if (inputs.length === 0 || name == "articlesets" || name == "csrfmiddlewaretoken"){
                 return;
             }
 
@@ -767,23 +768,23 @@ define([
         $("#content").find("> form").submit(self.run_query);
         $("#scripts").find(".script").click(self.script_changed);
 
-        //$("#delete-query").click(delete_query);
-        //$("#save-query-dialog").find(".save").click(save_query.bind({confirm: false}));
-        //$("h4.name").click(save_query.bind({confirm: true, method: "patch"}));
-        //$("#save-query").click(save_query_clicked);
-        //$("#change-articlesets").click(change_articlesets_clicked);
-        //$("#change-articlesets-confirm").click(change_articlesets_confirmed_clicked);
+        $("#delete-query").click(self.delete_query);
+        $("#save-query-dialog").find(".save").click(self.save_query.bind({confirm: false}));
+        $("h4.name").click(self.save_query.bind({confirm: true, method: "patch"}));
+        $("#save-query").click(self.save_query_clicked);
+        $("#change-articlesets").click(self.change_articlesets_clicked);
+        $("#change-articlesets-confirm").click(self.change_articlesets_confirmed_clicked);
 
-        /*$("#load-query").find("> button").click(function() {
+        $("#load-query").find("> button").click(function() {
             window.setTimeout(function () {
                 $("#load-query").find("input.multiselect-search").focus();
             });
-        });*/
+        });
 
-        /*$("#new-query").click(function(event){
+        $("#new-query").click(function(event){
             event.preventDefault();
 
-            var url = get_window_url(SETS, window.location.hash.slice(1));
+            var url = self.get_window_url(SETS, window.location.hash.slice(1));
 
             if (window.location.search + window.location.hash === url){
                 window.location.reload();
@@ -793,7 +794,7 @@ define([
 
             $("#loading-dialog").modal({keyboard: false, backdrop: "static"});
             $("#loading-dialog").find(".message").text("Refreshing..");
-        });*/
+        });
 
         self.init_dates();
         self.init_scripts();
