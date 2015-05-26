@@ -179,7 +179,8 @@ Array.prototype.remove=function(s){
                     "label": "Codebook: ",
                     "code_id": null,
                     "hidden": false,
-                    "children": objects
+                    "children": objects,
+                    "read_only": true
                 };
 
                 // Create convenience pointers
@@ -450,11 +451,15 @@ Array.prototype.remove=function(s){
 
                 var label_span = $("<span>");
                 var label_text = $("<span>").addClass("lbl").append(document.createTextNode(object.label));
-                var label_input = $("<input>").val(object.label).css("display", "none");
-                d = {code: object, span: label_text, input: label_input};
-                label_text.attr("title", "Click to rename").click(self.rename_clicked.bind(d));
-                label_span.append(label_text).append(label_input)
-                
+                label_span.append(label_text);
+
+                if(!object.read_only)
+                {
+                    var label_input = $("<input>").val(object.label).css("display", "none");
+                    d = {code: object, span: label_text, input: label_input};
+                    label_text.attr("title", "Click to rename").click(self.rename_clicked.bind(d));
+                    label_span.append(label_input)
+                }
                 // Add action icon and label
                 code_el.append(
                     $("<span>").addClass("parts")
