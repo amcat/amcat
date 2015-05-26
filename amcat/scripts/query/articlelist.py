@@ -83,6 +83,7 @@ class ArticleListAction(QueryAction):
 
         table = Datatable(SearchResource, url="/api/v4/search")
         table = table.add_arguments(minimal="1")
+        table = table.add_arguments(project=str(self.project.id))
 
         for k, vs in data.items():
             for v in vs:

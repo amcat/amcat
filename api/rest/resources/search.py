@@ -18,21 +18,20 @@
 ###########################################################################
 
 from __future__ import unicode_literals, print_function, absolute_import
-
+import copy
 import re
 import itertools
 
-from django.http import QueryDict, HttpResponse
-from rest_framework.exceptions import ParseError
-
-from rest_framework.fields import DateField, CharField, IntegerField, DateTimeField
+from django.http import QueryDict
+from rest_framework.exceptions import ParseError, NotFound, PermissionDenied
+from rest_framework.fields import CharField, IntegerField, DateTimeField
 from rest_framework.serializers import Serializer
 from django_filters import filters, filterset
 
 from amcat.tools import amcates, keywordsearch
 from api.rest.resources.amcatresource import AmCATResource
 from amcat.tools.caching import cached
-from amcat.models import Project, authorisation, Article
+from amcat.models import Project, Article, ROLE_PROJECT_METAREADER
 
 
 # NOTE: Adding 'page' to filter fields introduces ambiguity (article-page vs. API page)
@@ -76,9 +75,6 @@ class LazyES(object):
 
         fields = [f for f in self.fields if f != "lead"]
 
-        if "text" in fields and "projectid" not in fields:
-            fields.append("projectid")
-
         result = self.es.query(
             query=self.query,
             filters=self.filters,
@@ -101,26 +97,6 @@ class LazyES(object):
             for q in self.queries:
                 for hit in self.es.query_all(q.query, filters=filters, fields=[]):
                     result_dict[hit.id].hits[q.label] = hit.score
-
-        cache = {} # projectid -> is_reader
-        def _check_text_permission(user, row):
-            if user is None:
-                is_reader = False
-            else:
-                try:
-                    is_reader = cache[row.projectid]
-                except KeyError:
-                    is_reader = user.userprofile.has_role(
-                        authorisation.ROLE_PROJECT_READER,
-                        Project.objects.get(pk=row.projectid)
-                    )
-                    cache[row.projectid] = is_reader
-            if not is_reader:
-                row.text = None
-            return row
-
-        if "text" in fields:
-            result = [_check_text_permission(self.user, row) for row in result]
 
         return result
 
@@ -226,15 +202,38 @@ class SearchResource(AmCATResource):
     model = Article
     serializer_class = SearchResourceSerialiser
 
+    def __init__(self, *args, **kwargs):
+        super(SearchResource, self).__init__(*args, **kwargs)
+        self.project = None
+
+    def _check_text_permission(self, user, project_id):
+        try:
+            self.project = Project.objects.get(id=int(project_id))
+        except Project.DoesNotExist:
+            raise NotFound("Project(id={project_id}) not found".format(project_id=project_id))
+        except ValueError:
+            raise ParseError("{project_id} is not a valid integer".format(project_id=project_id))
+
+        role_id = self.project.get_role_id(self.request.user)
+        if role_id <= ROLE_PROJECT_METAREADER:
+            raise PermissionDenied("You're not allowed to see full texts")
+
+
     def get(self, request, *args, **kwargs):
         fq = self.filter_queryset(self.get_queryset())
         if not fq.queries and not fq.filters:
             raise ParseError("You need to provide a non-empty query (q-parameter) or other filters")
+
+        if "text" in self.columns and "project" not in self.params:
+            raise ParseError("You need to provide 'project' as a parameter if you need 'text'")
+        elif "text" in self.columns:
+            self._check_text_permission(request.user, self.params["project"])
+
         return super(SearchResource, self).get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         # allow for POST requests
-        return self.list(request, *args, **kwargs)
+        return self.get(request, *args, **kwargs)
 
     @property
     @cached
@@ -243,7 +242,6 @@ class SearchResource(AmCATResource):
         q.update(self.request.QUERY_PARAMS)
         q.update(self.request.DATA)
         return QueryDict(q.urlencode())
-
 
     @property
     @cached
@@ -272,12 +270,30 @@ class SearchResource(AmCATResource):
         if ids:
             queryset.filter("ids", ids)
 
+        # Create a shallow, mutable copy of params
+        params = self.params
+
+        # Project given (possibly requesting text property of articles, so we need to check if
+        # given sets are in this project OR query all sets if not sets are given). User permission
+        # has already been checked in _check_text_permission.
+        if self.project is not None:
+            params = copy.copy(self.params)
+            given_set_ids = set(map(int, params.getlist("sets")))
+            valid_set_ids = set(self.project.all_articlesets().values_list("id", flat=True))
+            invalid_set_ids = given_set_ids - valid_set_ids
+
+            if invalid_set_ids:
+                raise PermissionDenied("Sets {invalid_set_ids} not in {self.project}".format(**locals()))
+
+            if not given_set_ids:
+                params.setlist("sets", map(str, valid_set_ids))
+
         for k in FILTER_FIELDS:
-            if k in self.params:
+            if k in params:
                 if k in FILTER_SINGLE_FIELDS:
-                    queryset.filter(k, self.params.get(k))
+                    queryset.filter(k, params.get(k))
                 else:
-                    queryset.filter(k, self.params.getlist(k))
+                    queryset.filter(k, params.getlist(k))
 
         return queryset
 
