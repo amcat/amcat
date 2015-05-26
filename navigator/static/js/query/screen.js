@@ -23,10 +23,13 @@ var API = null;
 define([
     "jquery", "query/multiselect-defaults", "query/utils/serialize",
     "query/renderers", "query/utils/poll", "query/api", "pnotify",
-    "pnotify.nonblock", "query/query", "amcat/amcat.datatables",
+    "pnotify.nonblock", "amcat/amcat.datatables",
     "query/utils/format", "jquery.hotkeys", "jquery.depends", "bootstrap",
     "bootstrap-multiselect", "bootstrap-tooltip"
     ], function($, MULTISELECT_DEFAULTS, serializeForm, renderers, Poll, api, PNotify){
+    // TODO: Make it prettier:
+    $.fn.datepicker.defaults.format = "yyyy-mm-dd";
+
     var self = {};
     var form = $(this);
 
@@ -93,6 +96,31 @@ define([
         private: true,
         user: null
     };
+
+
+    self.form_invalid = function form_invalid(data){
+        // Add error class to all
+        $.each(data, function(field_name, errors){
+            $("[name=" + field_name + "]", $("#query-form"))
+                .addClass("error")
+                .prop("title", errors[0])
+                .data("toggle", "tooltip")
+                .tooltip();
+
+            if (field_name === '__all__'){
+                var ul = $("#global-error").show().find("ul").html("");
+                $.each(errors, function(i, error){
+                    ul.append($("<li>").text(error));
+                });
+            }
+        });
+
+        loading_dialog.modal("hide");
+        progress_bar.css("width", "0%");
+        self.show_error("Invalid form. Please change the red input fields" +
+            " to contain valid values.", true)
+    };
+
 
     /**
      * Massages given data into a format easily parseable by renderers.
@@ -224,15 +252,15 @@ define([
 
         $.ajax({
             "type": "OPTIONS", url: url, dateType: "json"
-        }).done(script_form_loaded).error(function(){
-            show_error("Could not load form due to unkown server error. Try again after " +
+        }).done(self.script_form_loaded).error(function(){
+            self.show_error("Could not load form due to unkown server error. Try again after " +
             "refreshing this page (F5).");
         });
 
         script_form.text("Loading script form..");
     };
 
-    function script_form_loaded(data){
+    self.script_form_loaded = function script_form_loaded(data){
         $("#script-line").show();
         if (data.help_text) {
             $("#script-help").text(data.help_text);
@@ -281,7 +309,7 @@ define([
         });
 
         if (saved_query.loading){
-            fill_form();
+            self.fill_form();
             saved_query.loading = false;
         }
 
@@ -291,7 +319,267 @@ define([
 
         $("#loading-dialog").modal("hide");
         $(".query-submit .btn").removeClass("disabled");
+    };
+
+    self.init_saved_query = function init_saved_query(query_id){
+        var url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: query_id});
+        $("#loading-dialog").modal({keyboard: false, backdrop: "static"});
+        $("#loading-dialog .message").text("Loading saved query..");
+        progress_bar.css("width", "10%");
+
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            url: url + "?format=json"
+        }).done(function(data){
+            data.parameters = JSON.parse(data.parameters);
+            saved_query = data;
+            saved_query.loading = true;
+
+            $("#loading-dialog .message").html("Retrieved <i class='name'></i>. Loading script..");
+            $("#loading-dialog .message .name").text(data.name);
+            progress_bar.css("width", "50%");
+            self.fill_form();
+
+            window.location.hash = "#" + data.parameters.script;
+            $(window).trigger("hashchange");
+
+            loading_dialog.modal("hide");
+            progress_bar.css("width", "0%");
+            self.init_delete_query_button();
+            $("#query-name").text(data.name);
+        }).fail(self.fail);
+    };
+
+    /*
+     * Called when 'run query' is clicked.
+     */
+    function save_query(event){
+        event.preventDefault();
+        var dialog = $("#save-query-dialog");
+        var name_btn = $("[name=name]", dialog);
+        var private_btn = $("[name=private]", dialog);
+        var save_btn = $(".save", dialog);
+
+        save_btn.removeClass("disabled");
+        name_btn.removeClass('error');
+
+        var dialog_visible = $("#save-query-dialog").is(":visible");
+
+        if (this.method !== undefined){
+            saved_query.method = this.method;
+        }
+
+        if (!dialog_visible){
+            name_btn.val(saved_query.name);
+            private_btn.prop("checked", saved_query.private);
+        }
+
+        if (!dialog_visible && this.confirm === true) {
+            dialog.modal();
+            return $(dialog.find("input").get(0)).focus();
+        }
+
+        var method = saved_query.method.toUpperCase();
+
+        // Save query in modal clicked
+        var _private = private_btn.is(":checked");
+        var name = name_btn.val();
+
+        // Must have non-empty name
+        if (name === ""){
+            return name_btn.addClass("error");
+        }
+
+        var url;
+        if (method === "PATCH"){
+            url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: saved_query.id})
+        } else {
+            url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: ''})
+        }
+
+        var data = serializeForm($("#query-form"), SETS);
+        data["script"] = window.location.hash.slice(1);
+
+        $.ajax({
+            type: method,
+            dataType: "json",
+            url: url + "?format=json",
+            data: {
+                name: name,
+                private: _private ? true : false,
+                parameters: JSON.stringify(data)
+            },
+            headers: {
+                "X-CSRFTOKEN": $("[name=csrfmiddlewaretoken]").attr("value")
+            }
+        }).done(function(data){
+            dialog.modal("hide");
+            progress_bar.css("width", "0%");
+            $("#query-name").text(data.name);
+
+            saved_query = data;
+            saved_query["parameters"] = JSON.parse(saved_query["parameters"]);
+
+            new PNotify({
+                type: "success",
+                text: "Query saved as <i>{name}</i>.".format(data),
+                delay: 1500
+            });
+
+            $("#delete-query").removeClass("disabled");
+        }).fail(self.fail);
+
+        save_btn.addClass("disabled");
     }
+
+    self.init_delete_query_button = function init_delete_query_button(){
+        $("#delete-query").addClass("disabled");
+
+        if (saved_query.user === USER){
+            $("#delete-query").removeClass("disabled");
+        }
+    };
+
+    self.delete_query = function delete_query(event){
+        event.preventDefault();
+
+        $("#loading-dialog").modal({keyboard: false, backdrop: "static"});
+        $("#loading-dialog").find(".message").text("Deleting saved query..");
+        $("#loading-dialog").find(".message .name").text(saved_query.name);
+        progress_bar.css("width", "20%");
+
+        var url = SAVED_QUERY_API_URL.format({
+            project_id: PROJECT,
+            query_id: saved_query.id
+        });
+
+        url += "/";
+
+        $.ajax({
+            type: "DELETE",
+            url: url,
+            dataType: "json",
+            headers: {
+                "X-CSRFTOKEN": $("[name=csrfmiddlewaretoken]").attr("value")
+            }
+        }).done(function(data){
+            $("#load-query-menu li[query={id}]".format(saved_query)).remove();
+
+            saved_query = {
+                parameters: null,
+                name: null,
+                id: null,
+                private: true,
+                user: null
+            };
+
+            loading_dialog.modal("hide");
+            progress_bar.css("width", "0%");
+            self.init_delete_query_button();
+            $("#query-name").html("<i>Unsaved query</i>");
+
+            new PNotify({
+                type: "success",
+                text: "Query deleted.",
+                delay: 1500
+            });
+
+            history.replaceState({}, document.title, "?sets={sets}#{hash}".format({
+                sets: SETS.join(","),
+                hash: window.location.hash.slice(1)
+            }));
+        }).fail(self.fail);
+
+        $("#delete-query").addClass("disabled");
+    }
+
+    self.save_query_clicked = function save_query_clicked(event){
+        var args = {};
+
+        if (saved_query.id === null || saved_query.user !== USER) {
+            args.confirm = true;
+            args.method = "post";
+        } else {
+            args.confirm = false;
+            args.method = "patch";
+        }
+
+        self.save_query.bind(args)(event);
+    }
+
+    self.change_articlesets_clicked = function change_articlesets_clicked(event){
+        event.preventDefault();
+        $("#change-articlesets-query-dialog").modal();
+    }
+
+    self.change_articlesets_confirmed_clicked = function change_articlesets_confirmed_clicked(event){
+        var options = $('#change-articlesets-select option:selected');
+
+        SETS = $.map(options, function(option){
+            return parseInt($(option).val());
+        });
+
+        var url = get_window_url(SETS, window.location.hash.slice(1));
+        history.replaceState({}, document.title, url);
+
+        $("#id_articlesets")
+            .multiselect('deselectAll', false)
+            .multiselect('select', SETS)
+            .multiselect('rebuild')
+            .multiselect('disable');
+
+        $("#change-articlesets-query-dialog").modal("hide");
+        $("#script_{script}".format({
+            script: window.location.hash.slice(1)
+        })).click();
+    };
+
+    self.get_window_url = function get_window_url(sets, hash){
+        return "?sets={sets}#{hash}".format({
+            sets: sets.join(","),
+            hash: hash
+        });
+    };
+
+    self.fill_form = function fill_form(){
+        $.each(saved_query.parameters, function(name, value){
+            var inputs = "input[name={name}]";
+            inputs += ",textarea[name={name}]";
+            inputs += ",select[name={name}]";
+            inputs = $(inputs.format({name: name}));
+
+            if (inputs.length === 0 || name == "articlesets"){
+                return;
+            }
+
+            var tagName = inputs.get(0).tagName;
+
+            if (tagName === "SELECT"){
+                // Bootstrap (multi)select
+                inputs.multiselect("deselectAll", false);
+
+                if (!inputs.attr("multiple") || typeof(value) !== "object"){
+                    value = [value];
+                }
+
+                $.map(value, function(val){
+                    inputs.multiselect('select', val);
+                });
+
+                inputs.data('initial', value);
+                inputs.multiselect("rebuild");
+            } else if (tagName === "INPUT" && inputs.attr("type") == "checkbox"){
+                // Boolean fields
+                inputs.prop("checked", value);
+            } else {
+                inputs.val(value);
+            }
+
+            inputs.trigger("change");
+        });
+    };
+
 
     self.datetype_changed = function datetype_changed(){
         date_inputs.prop("disabled", true).addClass("hidden");
@@ -308,19 +596,19 @@ define([
 
     var post_script_loaded = {
         "aggregation": function(){
-            $("#script-form [name=relative_to]").depends({
+            $("#script-form").find("[name=relative_to]").depends({
                 fetchData: function(options, elements, url){
                     var form_data = serializeForm($("#query-form"), SETS);
                     var y_axis = form_data["y_axis"];
                     form_data.output_type = "application/json";
 
                     if (y_axis === "total"){
-                        $("#script-form [name=relative_to]").multiselect("disable").multiselect("setOptions", {
+                        $("#script-form").find("[name=relative_to]").multiselect("disable").multiselect("setOptions", {
                             nonSelectedText: "None selected"
                         }).multiselect("rebuild");
                         return;
                     } else {
-                        $("#script-form [name=relative_to]").multiselect("enable");
+                        $("#script-form").find("[name=relative_to]").multiselect("enable");
                     }
 
                     $.ajax({
@@ -353,7 +641,7 @@ define([
                 }
             });
 
-            $("#script-form [name=relative_to]").parent().append(
+            $("#script-form").find("[name=relative_to]").parent().append(
                 $("<button data-toggle='tooltip' title='Refresh options manually' class='btn btn-default'>").append(
                     $("<i class='glyphicon glyphicon-refresh'>")
                 ).tooltip().click(function(event){
@@ -368,10 +656,10 @@ define([
     self.fail = function fail(jqXHR, textStatus, errorThrown){
         if(jqXHR.status === 400){
             // Form not accepted or other type of error
-            form_invalid(JSON.parse(jqXHR.responseText));
+            self.form_invalid(JSON.parse(jqXHR.responseText));
         } else {
             // Unknown error
-            show_jqXHR_error(jqXHR, errorThrown);
+            self.show_jqXHR_error(jqXHR, errorThrown);
         }
 
         $("#loading-dialog").modal("hide");
@@ -385,7 +673,7 @@ define([
             progress_bar.css("width", "100%");
             message_element.text("Fetching results..")
         }).fail(function(data, textStatus, _){
-            show_error("Server replied with " + data.status + " error: " + data.responseText);
+            self.show_error("Server replied with " + data.status + " error: " + data.responseText);
             $("#loading-dialog").modal("hide");
             progress_bar.css("width", "0%");
         }).result(function(data, textStatus, jqXHR){
@@ -394,7 +682,7 @@ define([
             var renderer = renderers[contentType];
 
             if(renderer === undefined){
-                show_error("Server replied with unknown datatype: " + contentType);
+                self.show_error("Server replied with unknown datatype: " + contentType);
             } else {
                 renderer(form_data, body, self.prepare_data(data));
             }
@@ -423,11 +711,10 @@ define([
         // If we cannot render the selected output type, we should offer download option
         var outputType = $("#query-form [name=output_type]").val();
         return $.inArray(outputType.split(";")[0], self.get_accepted_mimetypes()) === -1;
-    }
-
+    };
 
     self.show_jqXHR_error = function show_jqXHR_error(jqXHR, error, hide){
-        show_error(
+        self.show_error(
             "Unknown error. Server replied with status code " +
             jqXHR.status + ": " + error
         );
@@ -437,7 +724,6 @@ define([
     self.show_error = function show_error(msg, hide){
         new PNotify({type: "error", hide: (hide === undefined) ? false : hide, text: msg});
     };
-
 
 
     ////////////////////////////////////////////////
@@ -459,7 +745,7 @@ define([
         $("#load-query").removeClass("disabled");
 
         if (saved_query.id !== null){
-            init_saved_query(saved_query.id);
+            self.init_saved_query(saved_query.id);
         } else {
             $(window).trigger("hashchange");
         }
