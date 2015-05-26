@@ -136,7 +136,7 @@ define([
                 })
             );
 
-            var table = $("<table class='table'>").append([thead, tbody]);
+            var table = $("<table class='table table-striped'>").append([thead, tbody]);
             container.append(table);
             return table;
         },
@@ -371,7 +371,7 @@ define([
             });
 
             // Putting it together
-            table = $("<table class='aggregation dataTable'>");
+            table = $("<table class='aggregation dataTable table-striped'>");
             table.append(thead).append(tbody);
             container.html(table);
 

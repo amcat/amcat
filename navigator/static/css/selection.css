@@ -129,3 +129,7 @@ h4.name:hover{
 #result tbody tr > th{
     white-space: nowrap;
 }
+
+#result table.aggregation th{
+    padding:0;
+}
