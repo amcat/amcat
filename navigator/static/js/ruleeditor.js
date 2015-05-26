@@ -75,7 +75,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
         self.model_choices = {
             action : [], // CodingRuleAction
             field : [] // CodingSchemaField
-        }
+        };
 
         // Statekeeping values
         self.loading_percent = 0;
@@ -92,7 +92,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
                 $("[name=loading]").remove();
                 self.initialising_done();
             }
-        }
+        };
 
         self._reverse_dict_lookup = function(dict, val){
             var res = [];
@@ -122,7 +122,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             }
 
             throw "Value '" + value + "' not found in dictlist";
-        }
+        };
 
         self._find_parent = function(el, tagName){
             /*
@@ -144,7 +144,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             }
 
             return null;
-        }
+        };
 
         self._get_api_url = function(resource, filters){
             filters = (filters === undefined) ? {} : filters;
@@ -157,7 +157,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             // Calculate url
             return self.API_URL + resource + "?" +
                 self.encode_url_params(filters);
-        }
+        };
 
         self._create_delete_button = function(){
             var btn = $(
@@ -168,7 +168,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
 
             btn.click(self.delete_button_clicked);
             return btn;
-        }
+        };
 
         self._get_tr_by_fieldnr = function(fieldnr){
             var trs = $("tbody tr", self.table);
@@ -180,20 +180,20 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             }
 
             throw "Error: No field with fieldnr " + fieldnr + " found!"
-        }
+        };
 
         // PUBLIC FUNCTIONS //
         self.increase_progress = function(){
             self.loading_percent += 100 / self.LOADING_STEPS;
             self._set_progress();
-        }
+        };
 
         self._escape = function(str){
             return str.replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;');
-        }
+        };
 
         self.encode_url_params = function(params){
             var res = "";
@@ -210,18 +210,18 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             }
 
             return res;
-        }
+        };
 
 
         self.api_get = function(resource, callback_success, filters, callback_error){
             // Handle default function parameters
             callback_error = (callback_error === undefined) ? self.standard_error : callback_error;
 
-            var url = self._get_api_url(resource, filters)
+            var url = self._get_api_url(resource, filters);
             $.getJSON(url).success(callback_success).error(callback_error);
 
             // console.log("Getting " + url);
-        }
+        };
 
         self.api_post = function(resource, callback_success, data, filters, callback_error){
             // Handle default function parameters
@@ -238,7 +238,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             });
 
             console.log("Getting (POST) " + self._get_api_url(resource, filters));
-        }
+        };
 
         self.api_options = function(resource, callback_success, filters, callback_error) {
             // Handle default function parameters
@@ -255,7 +255,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             });
 
 
-        }
+        };
 
         self.add_row = function(field, add_to_state){
             /*
@@ -268,7 +268,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
 
             var defaults = {
                 "delete" : self._create_delete_button
-            }
+            };
 
             tr = $("<tr>").attr("id", field.id);
 
@@ -300,7 +300,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
 
             $("tbody", self.table).append(tr);
             return tr.get(0);
-        }
+        };
 
         self.initialise_table = function(){
             // Add each field to table
@@ -309,7 +309,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             });
 
             $("tbody", self.table).css("cursor", "pointer");
-        }
+        };
 
         self.initialise_buttons = function(){
             self.btn_save.removeClass("disabled");
@@ -317,7 +317,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             self.btn_add_field.removeClass("disabled");
             self.btn_add_field.click(self.btn_add_field_clicked);
             $("html").click(self.document_clicked);
-        }
+        };
 
         self.initialise_shortcuts = function(){
             document.addEventListener('keydown', function(event) {
@@ -325,7 +325,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             });
 
             self.update_active_cell();
-        }
+        };
 
         /*
          * Repaints active cell.
@@ -336,7 +336,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             // Remove all active cell markups
             $("td.active", self.table).removeClass("active");
             return $(self.get_active_cell()).addClass("active");
-        }
+        };
 
         /* Moves n cells forward. Does not wrap around top and bottom borders. */
         self.move_cells = function(n){
@@ -359,29 +359,29 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             } else if (cell.offset().top + cell.height() >= document.body.scrollTop + window.innerHeight) {
                 window.scrollBy(0,4*cell.height());
             }
-        }
+        };
 
         self.down_pressed = function(event){
             if(self.editing) return;
             self.move_cells(self.N_COLS);
             event.preventDefault();
-        }
+        };
 
         self.up_pressed = function(event){
             if(self.editing) return;
             self.move_cells(-self.N_COLS);
             event.preventDefault();
-        }
+        };
 
         self.left_pressed = function(event){
             if(self.editing) return;
             self.move_cells(-1);
-        }
+        };
 
         self.right_pressed = function(event){
             if(self.editing) return;
             self.move_cells(1);
-        }
+        };
 
         self.insert_pressed = function(event){
             if(self.editing) return;
@@ -392,7 +392,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             self.active_cell.x = 0;
             self.update_active_cell();
             $(self.get_active_cell()).dblclick();
-        }
+        };
 
         self.delete_pressed = function(event){
             var row = $(self.get_active_cell()).parent();
@@ -404,18 +404,18 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
                 self.update_active_cell();
             }
 
-        }
+        };
 
         self.done_pressed = function(event){
             $("html").click();
-        }
+        };
 
         self.save_pressed = function(event){
             if(event.ctrlKey){
                 event.preventDefault();
                 self.btn_save.click();
             }
-        }
+        };
 
         self.tab_pressed = function(event){
             event.preventDefault();
@@ -428,17 +428,17 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             }
 
             $(self.get_active_cell()).dblclick();
-        }
+        };
 
         self.start_pressed = function(event){
             if(self.editing) return;
             event.preventDefault();
             $(self.get_active_cell()).dblclick();
-        }
+        };
 
         self.undefined_pressed = function(event){
             // Other key pressed. Handle?
-        }
+        };
 
         self.initialising_done = function(){
             /* This function is called when all data is ready */
@@ -450,7 +450,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             self.initialise_buttons();
             self.initialise_shortcuts();
             self.initialising_done = true;
-        }
+        };
 
         // CALLBACK FUNCTIONS //
         self.td_hovered = function(event){
@@ -490,7 +490,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
                     nonblock: true, hide: false,closer: false, sticker: false
                 });
             }
-        }
+        };
 
         self.save_callback = function(all_errors){
             // Errors found?
@@ -555,22 +555,22 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
                     $(td).hover(self.td_hovered.bind(["error", error]));
                 });
             });
-        }
+        };
 
         self.standard_error = function(data){
             console.log(data);
-        }
+        };
 
         // EVENTS //
         self.delete_button_clicked = function(event){
             // Delete row
             $(event.currentTarget).parent().parent().remove();
             self.update_active_cell();
-        }
+        };
 
         self.btn_save_clicked = function(event){
             self.save();
-        }
+        };
 
         self.btn_add_field_clicked = function(event){
             self.add_row({
@@ -579,11 +579,11 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             }, true);
 
             self.save(false);
-        }
+        };
 
         self._get_fieldnr = function(td){
             return parseInt($(td).parent().children(":first-child").text()) - 1;
-        }
+        };
 
         self.document_clicked = function(event){
             /*
@@ -595,16 +595,16 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             }
 
             self.widget_focusout();
-        }
+        };
 
         self.get_td = function(x, y){
             var tr = $("tbody > tr", self.table)[y];
             return $("td", tr)[x+1];
-        }
+        };
 
         self.get_active_cell = function(){
             return self.get_td(self.active_cell.x, self.active_cell.y);
-        }
+        };
 
         self.cell_clicked = function(event){
             var target = $(event.currentTarget);
@@ -653,10 +653,10 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
             });
 
             self.editing = widget;
-        }
+        };
 
         self.widget_focusout = function(event, value){
-            var td = self._find_parent(self.editing, "td")
+            var td = self._find_parent(self.editing, "td");
             var th = $($("th", self.table)[td[0].cellIndex]);
             var tr = self._find_parent(td, "tr").get(0);
             var field = self._dictlist_lookup(self.rules, "tr", tr);
@@ -698,42 +698,42 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
 
             self.save(false);
             self.editing = false;
-        }
+        };
 
         self.widget_null_clicked = function(event){
             self.widget_focusout(event, null);
-        }
+        };
 
         // OPTIONS INITIALISED //
         self.codingschemafield_options_initialised = function(options){
             self.increase_progress();
-        }
+        };
 
         self.codingrule_options_initialised = function(options){
             self.fieldtypes = options["fields"];
             self.increase_progress();
-        }
+        };
 
         self.codingruleaction_options_initialised = function(options){
             // ??
             self.increase_progress();
-        }
+        };
 
         // API_GETS INITIALISED //
         self.codingrules_initialised = function(rules){
             self.rules = rules["results"];
             self.increase_progress();
-        }
+        };
 
         self.codingruleactions_initialised = function(actions){
             self.model_choices["action"] = actions["results"];
             self.increase_progress();
-        }
+        };
 
         self.codingschemafields_initialised = function(schemafields){
             self.model_choices["field"] = schemafields["results"];
             self.increase_progress();
-        }
+        };
 
         // MAIN FUNCTIONS //
         self.main = function(){
@@ -751,7 +751,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
 
             // Initialising 'done'
             self.increase_progress();
-        }
+        };
 
         self.save = function(commit){
             /*
@@ -782,12 +782,12 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
                 data: { rules : JSON.stringify(rules) },
                 headers: {"X-CSRFTOKEN": csrf_middleware_token},
                 success: self.save_callback.bind(commit)
-            })
+            });
 
             // Disable save button
             self.btn_save.text("Checking..");
             self.btn_save.addClass("disabled");
-        }
+        };
 
         return self;
     }
