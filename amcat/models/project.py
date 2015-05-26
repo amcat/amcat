@@ -20,14 +20,13 @@
 """ORM Module representing projects"""
 
 from __future__ import unicode_literals, print_function, absolute_import
-from django.conf import settings
+import itertools
 
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.db import models
 from django.db.models import Q
-import itertools
-from amcat.models import Medium, ProjectRole, get_mediums
 
+from amcat.models import ProjectRole, get_mediums
 from amcat.tools.model import AmcatModel
 from amcat.models.coding.codebook import Codebook
 from amcat.models.coding.codingschema import CodingSchema
