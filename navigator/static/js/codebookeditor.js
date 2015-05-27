@@ -25,7 +25,7 @@ Array.prototype.remove=function(s){
     }
 };
 
-define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
+define(["jquery", "amcat/djangofields", "bootstrap"], function($){
     $.fn.codebookeditor = function(api_url){
         return this.each(function(){
             /*
@@ -179,7 +179,8 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
                     "label": "Codebook: ",
                     "code_id": null,
                     "hidden": false,
-                    "children": objects
+                    "children": objects,
+                    "read_only": true,
                 };
 
                 // Create convenience pointers
@@ -450,10 +451,15 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
 
                 var label_span = $("<span>");
                 var label_text = $("<span>").addClass("lbl").append(document.createTextNode(object.label));
-                var label_input = $("<input>").val(object.label).css("display", "none");
-                d = {code: object, span: label_text, input: label_input};
-                label_text.attr("title", "Click to rename").click(self.rename_clicked.bind(d));
-                label_span.append(label_text).append(label_input)
+
+                label_span.append(label_text);
+
+                if(!object.read_only){
+                    var label_input = $("<input>").val(object.label).hide();
+                    var d = {code: object, span: label_text, input: label_input};
+                    label_text.attr("title", "Click to rename").click(self.rename_clicked.bind(d));
+                    label_span.append(label_input)
+                }
 
                 // Add action icon and label
                 code_el.append(
@@ -484,7 +490,14 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
             };
 
             self.update_label = function (code) {
-                $("> .parts .lbl", code.dom_element).html("").append(document.createTextNode(code.label));
+                if(code === self.root)
+                {
+                    $("> .parts .lbl", code.dom_element).html(code.label);
+                }
+                else
+                {
+                    $("> .parts .lbl", code.dom_element).text(code.label);                    
+                }
             };
 
             self.collapse = function (code, animation) {
@@ -566,11 +579,10 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
 
             self.rename_clicked = function (event) {
                 if (self.moving) return;
-
                 this.span.css("display", "none");
                 this.input.css("display", "inline").val(this.code.label).select();
                 hide_input = function() {
-                    this.span.css("display", "inline");
+                    this.span.css("display", "inline");                
                     this.input.css("display", "none");
                 }.bind(this);
                 save_results = function() {
@@ -801,8 +813,6 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
                 self.update_label(this.code);
             };
 
-
-
             self.new_code_created = function (new_code) {
                 /*
                  * Called when new code is created in tree.  This function
@@ -821,8 +831,13 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
                 self.objects.push(new_code);
 
                 // Render new code
-                $($(".children", this.parent.dom_element)[0]).append(self.render_tree(new_code));
+                var tree_li = self.render_tree(new_code);
+                $($(".children", this.parent.dom_element)[0]).append(tree_li);
                 self._update_collapse_icons(new_code, this.parent);
+
+                // Set focus to new input label
+                var span = $('> .parts .lbl', tree_li);
+                span.trigger('click');
             };
 
             self.move_code_clicked = function(){
@@ -1079,6 +1094,7 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
 
                 // Send name to server
                 $.ajax({
+                    headers: {"X-CSRFTOKEN": csrf_middleware_token},
                     type: "POST",
                     url: window.location.href + "change-name/",
                     data: { codebook_name: name }
@@ -1138,7 +1154,6 @@ define(["jquery", "amcat/jquery.djangofields", "bootstrap"], function($){
 
                     if (typeof(this) === "function") this();
                 }).bind(this));
-
             };
 
             self.btn_save_changes.click(self.btn_save_changes_clicked);
