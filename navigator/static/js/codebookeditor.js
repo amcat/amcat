@@ -490,12 +490,9 @@ define(["jquery", "amcat/djangofields", "bootstrap"], function($){
             };
 
             self.update_label = function (code) {
-                if(code === self.root)
-                {
+                if(code === self.root){
                     $("> .parts .lbl", code.dom_element).html(code.label);
-                }
-                else
-                {
+                } else {
                     $("> .parts .lbl", code.dom_element).text(code.label);                    
                 }
             };
