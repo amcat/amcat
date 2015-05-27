@@ -180,7 +180,7 @@ Array.prototype.remove=function(s){
                     "code_id": null,
                     "hidden": false,
                     "children": objects,
-                    "read_only": true
+                    "read_only": true,
                 };
 
                 // Create convenience pointers
@@ -489,7 +489,14 @@ Array.prototype.remove=function(s){
             };
 
             self.update_label = function (code) {
-                $("> .parts .lbl", code.dom_element).html(code.label);
+                if(code === self.root)
+                {
+                    $("> .parts .lbl", code.dom_element).html(code.label);
+                }
+                else
+                {
+                    $("> .parts .lbl", code.dom_element).text(code.label);                    
+                }
             };
 
             self.collapse = function (code, animation) {
