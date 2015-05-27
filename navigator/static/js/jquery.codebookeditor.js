@@ -455,8 +455,8 @@ Array.prototype.remove=function(s){
 
                 if(!object.read_only)
                 {
-                    var label_input = $("<input>").val(object.label).css("display", "none");
-                    d = {code: object, span: label_text, input: label_input};
+                    var label_input = $("<input>").val(object.label).hide();
+                    var d = {code: object, span: label_text, input: label_input};
                     label_text.attr("title", "Click to rename").click(self.rename_clicked.bind(d));
                     label_span.append(label_input)
                 }
