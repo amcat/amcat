@@ -20,30 +20,22 @@
 
 /**
  * This module should include all functionality for making API calls. It is more
- * or less the equivalent of amcatclient.py in javascript. Examples:
+ * or less the equivalent of amcatclient.py in javascript. Example:
  *
- * <script>
- *     require("api", function(Api){
- *         var api = Api({
- *             username: "amcat",
- *             password: "amcat",
- *             authSuccess: function(){
- *                 alert("horaay!");
- *             }
- *        });
+       require(["amcat/api"], function(Api){
+          Api({
+              username: "amcat",
+              password: "amcat",
+              host: "http://localhost:8000",
+              csrf: csrf_middleware_token,
+              authDone: function(api){
+                  api.getSavedQuery(1, 1, function(data){
+                      console.log(data);
+                  });
+              }
+          });
+      });*
  *
- *        // Assuming authSuccess was executed
- *        api.search({
- *            project: 1,
- *            articlesets: [1, 2, 3],
- *            columns: ["text", "headline"],
- *            minimal: true,
- *            success: function(data){
- *                alert(data);
- *            }
- *        });
- *     });
- * </script>
  */
 define(["jquery", "query/utils/poll", "query/utils/format"], function($, poll){
     var nop = function(){};
@@ -72,8 +64,10 @@ define(["jquery", "query/utils/poll", "query/utils/format"], function($, poll){
             authSuccess: nop,
             authError: nop,
             urls: {
-                get_token: 'get_token',
-                search: 'search'
+                get_token: 'get_token/',
+                search: 'search/',
+                action: '/query/summary/{action}/',
+                saved_query: 'projects/{project}/querys/{query}/'
             }
         }, options);
 
@@ -93,7 +87,7 @@ define(["jquery", "query/utils/poll", "query/utils/format"], function($, poll){
              * @param component: one of options.urls's attributes
              * @returns: url (string)
              */
-            get_url: function(component){
+            getUrl: function(component){
                 return options.api.format({host: options.host, component: component});
             },
 
@@ -102,8 +96,49 @@ define(["jquery", "query/utils/poll", "query/utils/format"], function($, poll){
              * @param action
              * @returns: url (string)
              */
-            get_action_url: function(action){
+            getActionUrl: function(action){
+                return options.urls.action.format({action: action});
+            },
 
+            getSavedQueryUrl: function(projectId, queryId){
+                return api.getUrl(options.urls.saved_query.format({project: projectId, query: queryId}));
+            },
+
+            getSavedQuery: function(projectId, queryId, success, error){
+                var url = api.getSavedQueryUrl(projectId, queryId);
+                return api.get({url: url}).success(success).error(error);
+            },
+
+            /**
+             * @param requestOptions: options passed to jQuery.ajax()
+             * @param method: HTTP method
+             */
+            request: function(method, requestOptions){
+                requestOptions = $.extend({}, {
+                    type: "POST",
+                    dataType: "json",
+                    headers: {
+                        "X-CSRFTOKEN": options.csrf,
+                        "X-HTTP-METHOD-OVERRIDE": method
+                    }
+                }, requestOptions);
+
+                if (token !== null){
+                    requestOptions.headers["AUTHORIZATION"] = "Token {}".format({token: token})
+                }
+
+                console.log(requestOptions)
+                return $.ajax(requestOptions);
+            },
+
+            get: function(opts){
+                opts = (opts === undefined) ? {} : opts;
+                return api.request("GET", $.extend({}, opts));
+            },
+
+            post: function(opts){
+                opts = (opts === undefined) ? {} : opts;
+                return api.request("POST", $.extend({}, opts));
             },
 
             /**
@@ -112,24 +147,22 @@ define(["jquery", "query/utils/poll", "query/utils/format"], function($, poll){
              * authError is called.
              */
             get_token: function(){
-                var url = api.get_url(options.urls.get_token);
+                var url = api.getUrl(options.urls.get_token);
 
-                $.ajax({
-                    type: "POST",
+                var data = {
+                    username: options.username,
+                    password: options.password
+                };
+
+                api.post({
                     url: url,
-                    data: {
-                        username: options.username,
-                        password: options.password
-                    },
-                    headers: {
-                        "X-CSRFTOKEN": options.csrf
-                    },
-                    success: function(data){
-                        // I haz token!
-                        token = data.token;
-                        options.authSuccess();
-                    },
-                    error: options.authError
+                    data: data
+                }).done(function(data){
+                    // I haz token!
+                    token = data.token;
+                    options.authDone(api);
+                }).fail(function(){
+                    options.authFail(api);
                 });
 
                 // (Hopefully) remove sensitive data from memory
