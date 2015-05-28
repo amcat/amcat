@@ -17,7 +17,8 @@
     "papaparse": "4.1.0",
     "bootstrap-multiselect": "0.9.13",
     "renderjson": "",
-    "highlight": ""
+    "highlight": "",
+    "amcat-query-js": "git://github.com/amcat/amcat-query-js.git"
   },
   "resolutions": {
     "jquery": ">= 1.9.1",

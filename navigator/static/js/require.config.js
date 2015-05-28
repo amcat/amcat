@@ -3,7 +3,7 @@ requirejs.config({
     "urlArgs": "cache=" + CACHE_BUST_TOKEN,
     "paths": {
         "amcat": AMCAT_STATIC_URL + "js",
-        "query": AMCAT_STATIC_URL + "js/query",
+        "query": AMCAT_STATIC_URL + "components/amcat-query-js/query",
         "annotator": AMCAT_STATIC_URL + "js/annotator",
 
         "jquery": "jquery/dist/jquery",

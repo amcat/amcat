@@ -18,9 +18,11 @@
     {% block base_javascript %}{% endblock %}
 
     <script>
-      require(["query/screen"], function(queryScreen){
+      require(["amcat/query"], function(queryScreen){
           queryScreen.init();
       });
+
+
     </script>
   {% endif %}
 {% endblock %}
