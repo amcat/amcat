@@ -25,7 +25,7 @@ Array.prototype.remove=function(s){
     }
 };
 
-define(["jquery", "amcat/djangofields", "bootstrap"], function($){
+define(["jquery", "amcat/djangofields", "bootstrap", "amcat/keylistener"], function($){
     $.fn.codebookeditor = function(api_url){
         return this.each(function(){
             /*
@@ -33,7 +33,6 @@ define(["jquery", "amcat/djangofields", "bootstrap"], function($){
              * url (must point to a codebookhierarchy).
              */
             var self = this;
-
             /* CONSTANTS */
             self.COLLAPSE_ICON = "/media/img/navigator/collapse-small-silver.png";
             self.EXPAND_ICON = "/media/img/navigator/expand-small-silver.png";
@@ -196,7 +195,7 @@ define(["jquery", "amcat/djangofields", "bootstrap"], function($){
                 $(self).append($("<ul>").append(self.render_tree(self.root)).addClass("root").css("margin-left", "-30px"));
 
                 self.searchbox.keyup(self.searchbox_keyup);
-
+                self._keyListener = 
                 // Remove unneeded icons from root
                 $.each(["glyphicon-move", "glyphicon-eye-close", "glyphicon-tags", "glyphicon-arrow-up", "glyphicon-arrow-down"], function (i, cls) {
                     $($("." + cls, self.root_el)[0]).remove();
