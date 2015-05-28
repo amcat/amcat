@@ -123,7 +123,6 @@ define(["jquery"], function($) {
          * Binds the internal handler function to the appropriate keyboard event.
          */
         KeyListener.prototype._bindKeyEventHandler = function(keyup) {
-            var bindevent = keyup ? this._jqObject.keyup : this._jqObject.keydown;
             var self = this;
             var handler = function() {
                 console.log(event);
@@ -133,7 +132,11 @@ define(["jquery"], function($) {
                     });
                 }
             };
-            this._jqObject.bindevent(handler);
+            if (keyup) {
+                this._jqObject.keyup(handler);
+            } else {
+                this._jqObject.keydown(handler);
+            }
         }
 
 
