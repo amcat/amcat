@@ -195,7 +195,6 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/keylistener"], funct
                 $(self).append($("<ul>").append(self.render_tree(self.root)).addClass("root").css("margin-left", "-30px"));
 
                 self.searchbox.keyup(self.searchbox_keyup);
-                self._keyListener = 
                 // Remove unneeded icons from root
                 $.each(["glyphicon-move", "glyphicon-eye-close", "glyphicon-tags", "glyphicon-arrow-up", "glyphicon-arrow-down"], function (i, cls) {
                     $($("." + cls, self.root_el)[0]).remove();

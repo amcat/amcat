@@ -21,7 +21,7 @@
 define(["jquery"], function($) {
 
     /**
-     * Binds a KeyListener object to the jQuery object(s).
+     * Binds a KeyListener object to the jQuery object(s)
      *
      * @param {Object} [options] A collection of options.
      * @param {boolean} options.useKeyUp Whether to use keyup instead of keydown.
@@ -125,7 +125,6 @@ define(["jquery"], function($) {
         KeyListener.prototype._bindKeyEventHandler = function(keyup) {
             var self = this;
             var handler = function() {
-                console.log(event);
                 if (self._binds[event.keyCode]) {
                     self._binds[event.keyCode].forEach(function(fn) {
                         fn.call(this, event);
@@ -157,7 +156,7 @@ define(["jquery"], function($) {
             if (typeof key === "number") {
                 return key % 1 === 0 ? key : undefined;
             }
-            if (key && key.keyCode) {
+            if (key instanceof Key) {
                 return key.keyCode;
             }
             return undefined;
@@ -171,8 +170,12 @@ define(["jquery"], function($) {
     /*
      */
     var Key = function(keyCode, keyName) {
-        this.keyCode = keyCode;
-        this.keyName = keyName;
+        Object.defineProperty(this, "keyCode", {
+            value: keyCode
+        });
+        Object.defineProperty(this, "keyName", {
+            value: keyName
+        });
     };
 
 
@@ -290,9 +293,10 @@ define(["jquery"], function($) {
          * A mapping from key to keyCodes.
          */
         $.keyListener.Keys = new(function() {
-
             for (var k in _map) {
-                this[k] = new Key(_map[k], k);
+                Object.defineProperty(this, k, {
+                    value: new Key(_map[k], k)
+                });
             }
         })();
     })();
