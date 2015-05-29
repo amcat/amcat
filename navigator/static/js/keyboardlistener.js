@@ -259,7 +259,6 @@ define(["jquery"], function($) {
     KeyboardListener.prototype._bindKeyEventHandler = function(keyup) {
         var self = this;
         var handler = function(e) {
-            console.log('keydown', e);
             var mod = 0;
             mod += e.ctrlKey ? CTRL : 0;
             mod += e.altKey ? ALT : 0;
