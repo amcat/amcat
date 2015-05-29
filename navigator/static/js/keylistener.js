@@ -19,217 +19,15 @@
  ***************************************************************************/
 
 define(["jquery"], function($) {
-    
+
     //Constants
     var SHIFT = 1
     var CTRL = 2;
     var ALT = 4;
-    
-    /**
-     * Binds a KeyListener object to the jQuery object(s)
-     *
-     * @param {Object} [options] A collection of options.
-     * @param {boolean} options.useKeyUp Whether to use keyup instead of keydown.
-     * @param {Object.<string, function>} options.bindings
-     *  A dictionary of bindings with the key as string as a key, and the handler as value.
-     * @returns {KeyListener} The KeyListener object.
-     */
-    $.fn.keyListener = function(options) {
-        var keyListener = new KeyListener(this, options);
-        return keyListener;
-    };
-
-
-
-    /** 
-     * A KeyListener object
-     * @class
-     *
-     * @param {JQuery} jqObject the jQuery `this` element(s).
-     * @param {Object} options A collection of options.
-     * @param {Object.<string, function>} options.bindings
-     *  A dictionary of bindings with the key as string as a key, and the handler as value.
-     */
-    function KeyListener(jqObject, options) {
-        this._ctrl = this._alt = this._shift = false;
-
-        this._binds = [];
-        this._jqObject = jqObject;
-        this._bindKeyEventHandler(options ? options.keyup : false);
-        if (options && options.bindings) {
-
-            for (k in options) {
-                bind(k, options[k]);
-            }
-
-        }
-    }
-
-
-    /**
-     * Binds a handler to a keystroke.
-     *
-     * @param {KeyStroke|Key|string|number} key The key to bind the handler to. It should be either
-     *  the name of the key in `Keys` as a string, a `KeyStroke` containing the key and optional modifiers,
-     *  a `Key` object from `Keys`, or the raw `keyCode` as a number.
-     * @param {function} handler The handler function. The function is called with the
-     *  calling `Element` as the `this` object, and the jQuery `KeyboardEvent` parameter.
-     */
-    KeyListener.prototype.bind = function(key, handler) {
-        var keyCode = this._getKeyCode(key);
-        if (!keyCode) {
-            throw new Error("Invalid key: " + key);
-        }
-        this._binds[keyCode] = this._binds[keyCode] || [];
-        this._binds[keyCode].push(handler);
-    };
-
-
-    /**
-     * Removes a binding of a handler to a keystroke. If the same function is bound multiple
-     *  times to the same key, all of these instances are removed.
-     *
-     * @param {KeyStroke|Key|string|number} key The key to bind the handler to. It should be either
-     *  the name of the key in `Keys` as a string, a `KeyStroke` containing the key and optional modifiers,
-     *  a `Key` object from `Keys`, or the raw `keyCode` as a number.
-     * @param {function} handler The handler function to be removed.
-     */
-    KeyListener.prototype.unbind = function(key, handler) {
-        var keyCode = this._getKeyCode(key);
-        if (!keyCode) {
-            throw new Error("Invalid key: " + key);
-        }
-        if (this._binds[keyCode]) {
-            var idx;
-            while ((idx = this._binds[keyCode].indexOf(handler)) >= 0) {
-                delete this._binds[keyCode][idx];
-            }
-        }
-    }; 
-
-
-    /**
-     * Removes all bindings to a given key. If no key is given, all bindings are removed from all keys.
-     *
-     * @param {KeyStroke|Key|string|number} key The key to bind the handler to. It should be either
-     *  the name of the key in `Keys` as a string, a `KeyStroke` containing the key and optional modifiers,
-     *  a `Key` object from `Keys`, or the raw `keyCode` as a number.
-     */
-    KeyListener.prototype.unbindAll = function(key) {
-        if (key === undefined) {
-            this._binds = [];
-            return;
-        }
-        var keyCode = this._getKeyCode(key);
-        if (!keyCode) {
-            throw new Error("Invalid key: " + key);
-        }
-        this._binds[keyCode] = [];
-    };
-
-
-    /*
-     * Binds the internal handler function to the appropriate keyboard event.
-     */
-    KeyListener.prototype._bindKeyEventHandler = function(keyup) {
-        var self = this;
-        var handler = function(e) {
-            var mod = 0;
-            mod += this._ctrl ? CTRL : 0;
-            mod += this._alt ? ALT : 0;
-            mod += this._shift ? SHIFT : 0;
-            var keyCode = e.keyCode + (mod << 8);
-            if (self._binds[keyCode]) {
-                self._binds[keyCode].forEach(function(fn) {
-                    fn.call(this, e);
-                });
-            }
-        };
-        if (keyup) {
-            this._jqObject.keyup(handler);
-        } else {
-            this._jqObject.keydown(handler);
-        }
-
-        var modifierHandler = function(e)
-        {
-            var isDown = e.type === "keydown";
-            switch(e.keyCode)
-            {
-                case Keys.shift.keyCode:
-                    this._shift = isDown;
-                    break;
-                case Keys.ctrl.keyCode:
-                    this._ctrl = isDown;
-                    break;
-                case Keys.alt.keyCode:
-                    this._alt = isDown;
-                    break;
-            }
-        }
-        this._jqObject.keydown(modifierHandler);
-        this._jqObject.keyup(modifierHandler);
-    };
-
-
-    /*
-     * Gets the keycode belonging to the key.
-     *
-     * @param {KeyStroke|Key|string|number} key The key to bind the handler to. It should be either
-     *  the name of the key in `Keys` as a string, a `KeyStroke` containing the key and optional modifiers,
-     *  a `Key` object from `Keys`, or the raw `keyCode` as a number.
-     * @returns {number} The keyCode belonging to `key` or `key` itself if it is a valid code.
-     *  `undefined` if `key` is not valid.
-     */
-    KeyListener.prototype._getKeyCode = function(key) {
-        if (typeof key === "string") {
-            var key = Keys[key];
-            return key ? key.keyCode : undefined;
-        }
-        if (typeof key === "number") {
-            return key % 1 === 0 ? key : undefined;
-        }
-        if (key instanceof Key) {
-            return key.keyCode;
-        }
-        if (key instanceof KeyStroke) {
-            var modifier = 0;
-            if (key.modifiers) {
-                modifier += key.modifiers.shift ? SHIFT : 0;
-                modifier += key.modifiers.ctrl ? CTRL : 0;
-                modifier += key.modifiers.alt ? ALT : 0;
-            }
-            if (key.key instanceof KeyStroke) {
-                return undefined;
-            }
-            return this._getKeyCode(key.key) + (modifier << 8);
-        }
-        return undefined;
-    };
-
-
-
-    function Key(keyCode, keyName, keyText) {
-        Object.defineProperty(this, "keyCode", {
-            value: keyCode
-        });
-        Object.defineProperty(this, "keyName", {
-            value: keyName
-        });
-        Object.defineProperty(this, "keyText", {
-            value: keyText
-        });
-    };
-
-    Key.prototype.toHtml = function()
-    {
-        return $('<kbd>').text(this.keyText)[0].outerHTML;
-    };
-
     /*
      * A key map that is used to instantiate the Keys object
      */
-    var _map = {
+    var KEYCODES = {
         backspace: [8, "Backspace"],
         tab: [9, "Tab"],
         enter: [13, "Enter"],
@@ -239,6 +37,7 @@ define(["jquery"], function($) {
         pauseBreak: [19, "Pause"],
         capsLock: [20, "CapsLock"],
         escape: [27, "Escape"],
+        spacebar: [32, "Spacebar"],
 
         pageUp: [33, "Page Up"],
         pageDown: [34, "Page Down"],
@@ -337,12 +136,210 @@ define(["jquery"], function($) {
         singleQuote: [222, "'"]
     };
     /**
+     * Instantiates and binds a KeyboardListener object to the jQuery object(s), or returns the existing keylistener.
+     *
+     * @param {Object} [options] A collection of options. Ignored if the listener is already instantiated.
+     * @param {boolean} options.useKeyUp Whether to use keyup instead of keydown.
+     * @param {Object.<string, function>} options.bindings
+     *  A dictionary of bindings with the key as string as a key, and the handler as value.
+     * @returns {KeyboardListener} The KeyboardListener object.
+     */
+    $.fn.keyboardListener = function(options) {
+        var keyboardListener = this.data('_keyboardListener') || new keyboardListener(this, options);
+        this.data('_keyboardListener', keyboardListener);
+        return keyboardListener;
+    };
+
+
+
+    /** 
+     * A KeyboardListener object
+     * @class
+     *
+     * @param {JQuery} jqObject the jQuery `this` element(s).
+     * @param {Object} options A collection of options.
+     * @param {Object.<string, function>} options.bindings
+     *  A dictionary of bindings with the key as string as a key, and the handler as value.
+     */
+    function KeyboardListener(jqObject, options) {
+
+
+        this._binds = [];
+        this._jqObject = jqObject;
+        this._bindKeyEventHandler(options ? options.keyup : false);
+        if (options && options.bindings) {
+
+            for (k in options) {
+                bind(k, options[k]);
+            }
+
+        }
+    }
+
+    /**
+     * Binds a key binding to the keydown event.
+     *
+     * @param {Binding} binding The binding.
+     * @param {boolean} dontPreventDefault If this is set to true, the preventDefault function
+     *  won't be called.
+     */
+    KeyboardListener.prototype.addBinding = function(binding, dontPreventDefault) {
+        var self = this;
+        var handler = function(e) {
+            if (e.target === document.body && typeof binding.action === "function") {
+                if (!dontPreventDefault) {
+                    e.preventDefault();
+                }
+                binding.action.call(this, e, self);
+            }
+        }
+        this._bindfn(binding.key, handler);
+    };
+
+
+    /**
+     * Binds a list of bindings to the keydown event.
+     *
+     * @param {Binding[]} binding The bindings.
+     * @param {boolean} dontPreventDefault If this is set to true, the preventDefault function
+     *  won't be called.
+     */
+    KeyboardListener.prototype.addBindings = function(bindings, dontPreventDefault) {
+        var self = this;
+        bindings.forEach(function(binding) {
+            self.addBinding(binding, dontPreventDefault);
+        });
+    };
+
+    /**
+     * Binds a handler to a keystroke.
+     *
+     * @param {KeyStroke|Key|string|number} key The key to bind the handler to. It should be either
+     *  the name of the key in `Keys` as a string, a `KeyStroke` containing the key and optional modifiers,
+     *  a `Key` object from `Keys`, or the raw `keyCode` as a number.
+     * @param {function} handler The handler function. The function is called with the
+     *  calling `Element` as the `this` object, and the jQuery `KeyboardEvent` parameter.
+     */
+    KeyboardListener.prototype._bindfn = function(key, handler) {
+        var keyCode = this._getKeyCode(key);
+        if (!keyCode) {
+            throw new Error("Invalid key: " + key);
+        }
+        this._binds[keyCode] = this._binds[keyCode] || [];
+        this._binds[keyCode].push(handler);
+    };
+
+
+    /**
+     * Removes a binding of a handler to a keystroke. If the same function is bound multiple
+     *  times to the same key, all of these instances are removed.
+     *
+     * @param {KeyStroke|Key|string|number} key The key to bind the handler to. It should be either
+     *  the name of the key in `Keys` as a string, a `KeyStroke` containing the key and optional modifiers,
+     *  a `Key` object from `Keys`, or the raw `keyCode` as a number.
+     * @param {function} handler The handler function to be removed.
+     */
+    KeyboardListener.prototype._unbindfn = function(key, handler) {
+        var keyCode = this._getKeyCode(key);
+        if (!keyCode) {
+            throw new Error("Invalid key: " + key);
+        }
+        if (this._binds[keyCode]) {
+            var idx;
+            while ((idx = this._binds[keyCode].indexOf(handler)) >= 0) {
+                delete this._binds[keyCode][idx];
+            }
+        }
+    };
+
+
+    /*
+     * Binds the internal handler function to the appropriate keyboard event.
+     */
+    KeyboardListener.prototype._bindKeyEventHandler = function(keyup) {
+        var self = this;
+        var handler = function(e) {
+            console.log('keydown', e);
+            var mod = 0;
+            mod += e.ctrlKey ? CTRL : 0;
+            mod += e.altKey ? ALT : 0;
+            mod += e.shiftKey ? SHIFT : 0;
+            var keyCode = e.keyCode + (mod << 8);
+            if (self._binds[keyCode]) {
+                self._binds[keyCode].forEach(function(fn) {
+                    fn.call(this, e);
+                });
+            }
+        };
+        if (keyup) {
+            this._jqObject.keyup(handler);
+        } else {
+            this._jqObject.keydown(handler);
+        }
+    };
+
+
+    /*
+     * Gets the keycode belonging to the key.
+     *
+     * @param {KeyStroke|Key|string|number} key The key to bind the handler to. It should be either
+     *  the name of the key in `Keys` as a string, a `KeyStroke` containing the key and optional modifiers,
+     *  a `Key` object from `Keys`, or the raw `keyCode` as a number.
+     * @returns {number} The keyCode belonging to `key` or `key` itself if it is a valid code.
+     *  `undefined` if `key` is not valid.
+     */
+    KeyboardListener.prototype._getKeyCode = function(key) {
+        if (typeof key === "string") {
+            var key = Keys[key];
+            return key ? key.keyCode : undefined;
+        }
+        if (typeof key === "number") {
+            return key % 1 === 0 ? key : undefined;
+        }
+        if (key instanceof Key) {
+            return key.keyCode;
+        }
+        if (key instanceof KeyStroke) {
+            var modifier = 0;
+            if (key.modifiers) {
+                modifier += key.modifiers.shift ? SHIFT : 0;
+                modifier += key.modifiers.ctrl ? CTRL : 0;
+                modifier += key.modifiers.alt ? ALT : 0;
+            }
+            if (key.key instanceof KeyStroke) {
+                return undefined;
+            }
+            return this._getKeyCode(key.key) + (modifier << 8);
+        }
+        return undefined;
+    };
+
+
+
+    function Key(keyCode, keyName, keyText) {
+        Object.defineProperty(this, "keyCode", {
+            value: keyCode
+        });
+        Object.defineProperty(this, "keyName", {
+            value: keyName
+        });
+        Object.defineProperty(this, "keyText", {
+            value: keyText
+        });
+    }
+
+    Key.prototype.toHtml = function() {
+        return $('<kbd>').text(this.keyText)[0].outerHTML;
+    };
+
+
+    /**
      * Static readonly mapping from key names to Key objects.
      */
     var Keys = new(function() {
-        for (var k in _map) {
+        for (var k in KEYCODES) {
             Object.defineProperty(this, k, {
-                value: new Key(_map[k][0], k, _map[k][1])
+                value: new Key(KEYCODES[k][0], k, KEYCODES[k][1])
             });
         }
     })();
@@ -369,28 +366,39 @@ define(["jquery"], function($) {
      * Converts KeyStroke to readable HTML, wrapped in a `<kbd>` tag, following bootstrap style advice.
      * @returns {string} the HTML
      */
-    KeyStroke.prototype.toHtml = function()
-    {
+    KeyStroke.prototype.toHtml = function() {
         var text = this.key.toHtml();
-        if(this.modifiers.shift)
-        {
+        if (this.modifiers.shift) {
             text = Keys.shift.toHtml() + " + " + text;
         }
-        if(this.modifiers.ctrl)
-        {
+        if (this.modifiers.ctrl) {
             text = Keys.ctrl.toHtml() + " + " + text;
         }
-        if(this.modifiers.alt)
-        {
+        if (this.modifiers.alt) {
             text = Keys.alt.toHtml() + " + " + text;
         }
         return $('<kbd>').html(text)[0].outerHTML;
     };
 
+    /** 
+     * A Binding object represents either a single key, or a combination of a key with modifiers (ctrl, alt, shift).
+     * @class
+     *
+     * @param {KeyStroke|Key|string} key The key or keystroke to bind the handler to. It should be either
+     *  the name of the key in `Keys` as a string or a `Key` object from `Keys`.
+     * @param {function} handler The event handler.
+     * @param {string} [description] The readable description, used to display the binding. 
+     */
+    function Binding(key, action, description) {
+        this.key = key instanceof KeyStroke ? key : new KeyStroke(key);
+        this.action = action;
+        this.description = description;
+    }
 
     return {
+        Binding: Binding,
         Keys: Keys,
         KeyStroke: KeyStroke,
-        KeyListener: KeyListener
+        KeyboardListener: KeyboardListener
     };
 });
