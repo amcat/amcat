@@ -44,6 +44,7 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
             self.codebook = null;
             self.languages = null;
             self.moving = false; // Indicates wether the user is moving a code
+            self.movingCode = null; //The code that is being moved
             self.objects = null; // Flat list of all objects
             self.root = null; // Artificial (non existent in db) root code
             self.changesets = {
@@ -858,6 +859,7 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
                     )
                 );
 
+                self.movingCode = this;
                 // Mark destinations as such
                 $(".parts", self.root_el)
                     .addClass("moving_destination")
@@ -905,35 +907,11 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
                 /*
                  * A move destination was clicked. Update relevant codes.
                  */
-                if (!self.moving) {
-                    return (self.moving = true);
-                }
 
                 var new_parent_el = $(event.currentTarget.parentNode);
                 var new_parent_obj = new_parent_el.get(0).object;
-                var old_parent_obj = this.parent;
+                return self.move_code_to(this, new_parent_obj);
 
-                if (new_parent_obj == this) {
-                    // Self clicked, do nothing.
-                    return (self.moving = false);
-                }
-
-                // Update state
-                this.parent.children.remove(this);
-                this.parent = new_parent_obj;
-                this.parent.children.push(this);
-
-                self._update_collapse_icons(old_parent_obj, new_parent_obj);
-
-                // Update GUI
-                $(".moving_destination").off("click").removeClass("moving_destination");
-                $(".moving").removeClass("moving");
-                $(".move-help", this.dom_element).remove();
-                $(this.dom_element).prependTo($(".children", new_parent_el).get(0));
-                self.expand(this.dom_element, "slow");
-
-                self.changesets.moves[this.code_id] = this;
-                self.moving = false;
             };
 
             self.create_child_clicked= function () {
@@ -999,6 +977,36 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
                 // Add to changeset
                 self.changesets.reorders[code.code_id] = code;
                 self.changesets.reorders[swap_with.code_id] = swap_with;
+            };
+
+            self.move_code_to = function(code, newParent){
+                if (!self.moving) {
+                    return (self.moving = true);
+                }
+                var new_parent_el = $(newParent.dom_element);
+                var old_parent_obj = code.parent;
+
+                if (newParent == code) {
+                    // Moving to self, do nothing.
+                    return (self.moving = false);
+                }
+
+                // Update state
+                code.parent.children.remove(code);
+                code.parent = newParent;
+                code.parent.children.unshift(code);//prepend code to children
+
+                self._update_collapse_icons(old_parent_obj, newParent);
+
+                // Update GUI
+                $(".moving_destination").off("click").removeClass("moving_destination");
+                $(".moving").removeClass("moving");
+                $(".move-help", code.dom_element).remove();
+                $(code.dom_element).prependTo($(".children", new_parent_el).get(0));
+                self.expand(code.dom_element, "slow");
+
+                self.changesets.moves[code.code_id] = code;
+                self.moving = false;
             };
 
             self.btn_reorder_by_alpha_clicked = function () {
