@@ -82,7 +82,7 @@ define(["jquery"], function($) {
         }
         this._binds[keyCode] = this._binds[keyCode] || [];
         this._binds[keyCode].push(handler);
-    }
+    };
 
 
     /**
@@ -105,7 +105,7 @@ define(["jquery"], function($) {
                 delete this._binds[keyCode][idx];
             }
         }
-    }
+    }; 
 
 
     /**
@@ -125,7 +125,7 @@ define(["jquery"], function($) {
             throw new Error("Invalid key: " + key);
         }
         this._binds[keyCode] = [];
-    }
+    };
 
 
     /*
@@ -134,7 +134,6 @@ define(["jquery"], function($) {
     KeyListener.prototype._bindKeyEventHandler = function(keyup) {
         var self = this;
         var handler = function(e) {
-            console.log(e);
             var mod = 0;
             mod += this._ctrl ? CTRL : 0;
             mod += this._alt ? ALT : 0;
@@ -170,7 +169,7 @@ define(["jquery"], function($) {
         }
         this._jqObject.keydown(modifierHandler);
         this._jqObject.keyup(modifierHandler);
-    }
+    };
 
 
     /*
@@ -206,7 +205,7 @@ define(["jquery"], function($) {
             return this._getKeyCode(key.key) + (modifier << 8);
         }
         return undefined;
-    }
+    };
 
 
 
@@ -222,6 +221,10 @@ define(["jquery"], function($) {
         });
     };
 
+    Key.prototype.toHtml = function()
+    {
+        return $('<kbd>').text(this.keyText)[0].outerHTML;
+    };
 
     /*
      * A key map that is used to instantiate the Keys object
@@ -348,20 +351,41 @@ define(["jquery"], function($) {
      * A KeyStroke object represents either a single key, or a combination of a key with modifiers (ctrl, alt, shift).
      * @class
      *
-     * @param {KeyStroke|Key|string|number} key The key to bind the handler to. It should be either
-     *  the name of the key in `Keys` as a string, a `Key` object from `Keys`, or the raw `keyCode` as a number.
+     * @param {Key|string} key The key to bind the handler to. It should be either
+     *  the name of the key in `Keys` as a string or a `Key` object from `Keys`.
      * @param {Object} [modifiers] An object with 3 optional booleans `ctrl`, `alt`, or `shift`, representing
      *  their respective modifiers.
      */
     function KeyStroke(key, modifiers) {
         Object.defineProperty(this, "key", {
-            value: key
+            value: key instanceof Key ? key : Keys[key]
         });
         Object.defineProperty(this, "modifiers", {
             value: modifiers
         });
     }
 
+    /**
+     * Converts KeyStroke to readable HTML, wrapped in a `<kbd>` tag, following bootstrap style advice.
+     * @returns {string} the HTML
+     */
+    KeyStroke.prototype.toHtml = function()
+    {
+        var text = this.key.toHtml();
+        if(this.modifiers.shift)
+        {
+            text = Keys.shift.toHtml() + " + " + text;
+        }
+        if(this.modifiers.ctrl)
+        {
+            text = Keys.ctrl.toHtml() + " + " + text;
+        }
+        if(this.modifiers.alt)
+        {
+            text = Keys.alt.toHtml() + " + " + text;
+        }
+        return $('<kbd>').html(text)[0].outerHTML;
+    };
 
 
     return {
