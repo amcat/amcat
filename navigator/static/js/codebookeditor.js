@@ -207,6 +207,8 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
                 // Get codebook name
                 $.getJSON(self.API_URL + 'codebook?format=json&paginate=false&id=' +
                     $(self.root_el).attr("name"), self._codebook_name_initialized);
+
+                $(document.body).codebookKeyListener(self);
             };
 
             self._get_descendents = function (object) {
