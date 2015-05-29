@@ -25,7 +25,7 @@ Array.prototype.remove=function(s){
     }
 };
 
-define(["jquery", "amcat/djangofields", "bootstrap", "amcat/keylistener"], function($){
+define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"], function($){
     $.fn.codebookeditor = function(api_url){
         return this.each(function(){
             /*

@@ -19,7 +19,12 @@
  ***************************************************************************/
 
 define(["jquery"], function($) {
-
+    
+    //Constants
+    var SHIFT = 1
+    var CTRL = 2;
+    var ALT = 4;
+    
     /**
      * Binds a KeyListener object to the jQuery object(s)
      *
@@ -30,274 +35,338 @@ define(["jquery"], function($) {
      * @returns {KeyListener} The KeyListener object.
      */
     $.fn.keyListener = function(options) {
-        var keyListener = new KeyListener(this);
+        var keyListener = new KeyListener(this, options);
         return keyListener;
     };
 
-    var KeyListener = (function() {
 
 
-        /*
-         * @param {JQuery} jqObject the jQuery `this` element(s).
-         * @param {Object} options A collection of options.
-         * @param {Object.<string, function>} options.bindings
-         *  A dictionary of bindings with the key as string as a key, and the handler as value.
-         */
-        var KeyListener = function(jqObject, options) {
+    /** 
+     * A KeyListener object
+     * @class
+     *
+     * @param {JQuery} jqObject the jQuery `this` element(s).
+     * @param {Object} options A collection of options.
+     * @param {Object.<string, function>} options.bindings
+     *  A dictionary of bindings with the key as string as a key, and the handler as value.
+     */
+    function KeyListener(jqObject, options) {
+        this._ctrl = this._alt = this._shift = false;
+
+        this._binds = [];
+        this._jqObject = jqObject;
+        this._bindKeyEventHandler(options ? options.keyup : false);
+        if (options && options.bindings) {
+
+            for (k in options) {
+                bind(k, options[k]);
+            }
+
+        }
+    }
+
+
+    /**
+     * Binds a handler to a keystroke.
+     *
+     * @param {KeyStroke|Key|string|number} key The key to bind the handler to. It should be either
+     *  the name of the key in `Keys` as a string, a `KeyStroke` containing the key and optional modifiers,
+     *  a `Key` object from `Keys`, or the raw `keyCode` as a number.
+     * @param {function} handler The handler function. The function is called with the
+     *  calling `Element` as the `this` object, and the jQuery `KeyboardEvent` parameter.
+     */
+    KeyListener.prototype.bind = function(key, handler) {
+        var keyCode = this._getKeyCode(key);
+        if (!keyCode) {
+            throw new Error("Invalid key: " + key);
+        }
+        this._binds[keyCode] = this._binds[keyCode] || [];
+        this._binds[keyCode].push(handler);
+    }
+
+
+    /**
+     * Removes a binding of a handler to a keystroke. If the same function is bound multiple
+     *  times to the same key, all of these instances are removed.
+     *
+     * @param {KeyStroke|Key|string|number} key The key to bind the handler to. It should be either
+     *  the name of the key in `Keys` as a string, a `KeyStroke` containing the key and optional modifiers,
+     *  a `Key` object from `Keys`, or the raw `keyCode` as a number.
+     * @param {function} handler The handler function to be removed.
+     */
+    KeyListener.prototype.unbind = function(key, handler) {
+        var keyCode = this._getKeyCode(key);
+        if (!keyCode) {
+            throw new Error("Invalid key: " + key);
+        }
+        if (this._binds[keyCode]) {
+            var idx;
+            while ((idx = this._binds[keyCode].indexOf(handler)) >= 0) {
+                delete this._binds[keyCode][idx];
+            }
+        }
+    }
+
+
+    /**
+     * Removes all bindings to a given key. If no key is given, all bindings are removed from all keys.
+     *
+     * @param {KeyStroke|Key|string|number} key The key to bind the handler to. It should be either
+     *  the name of the key in `Keys` as a string, a `KeyStroke` containing the key and optional modifiers,
+     *  a `Key` object from `Keys`, or the raw `keyCode` as a number.
+     */
+    KeyListener.prototype.unbindAll = function(key) {
+        if (key === undefined) {
             this._binds = [];
-            this._jqObject = jqObject;
-            this._bindKeyEventHandler(options ? options.keyup : false);
-            if (options && options.bindings) {
-
-                for (k in options) {
-                    bind(k, options[k]);
-                }
-
-            }
+            return;
         }
-
-
-        /**
-         * Binds a handler to a keystroke.
-         *
-         * @param {Key|string|number} key The key to bind the handler to. It should be either
-         *  the name of the key in `$.keyListener.Keys` as a string, a Key object from `$.keyListener.Keys`,
-         *  or the raw `keyCode` as a number.
-         * @param {function} handler The handler function. The function is called with the
-         *  calling `Element` as the `this` object, and the jQuery `KeyboardEvent` parameter.
-         */
-        KeyListener.prototype.bind = function(key, handler) {
-            var keyCode = this._getKeyCode(key);
-            if (!keyCode) {
-                throw new Error("Invalid key: " + key);
-            }
-            this._binds[keyCode] = this._binds[keyCode] || [];
-            this._binds[keyCode].push(handler);
+        var keyCode = this._getKeyCode(key);
+        if (!keyCode) {
+            throw new Error("Invalid key: " + key);
         }
-
-
-        /**
-         * Removes a binding of a handler to a keystroke. If the same function is bound multiple
-         *  times to the same key, all of these instances are removed.
-         *
-         * @param {Key|string|number} key The key to bind the handler to. It should be either
-         *  the name of the key in `$.keyListener.Keys` as a string, a `Key` object from `$.keyListener.Keys`,
-         *  or the raw `keyCode` as a number.
-         * @param {function} handler The handler function to be removed.
-         */
-        KeyListener.prototype.unbind = function(key, handler) {
-            var keyCode = this._getKeyCode(key);
-            if (!keyCode) {
-                throw new Error("Invalid key: " + key);
-            }
-            if (this._binds[keyCode]) {
-                var idx;
-                while ((idx = this._binds[keyCode].indexOf(handler)) >= 0) {
-                    delete this._binds[keyCode][idx];
-                }
-            }
-        }
-
-
-        /**
-         * Removes all bindings to a given key. If no key is given, all bindings are removed from all keys.
-         *
-         * @param {Key|string|number} [key] The key to bind the handler to. It should be either
-         *  the name of the key in $.keyListener.Keys as a string, a Key object from $.keyListener.Keys,
-         *  or the raw keyCode as a number.
-         */
-        KeyListener.prototype.unbindAll = function(key) {
-            if (key === undefined) {
-                this._binds = [];
-                return;
-            }
-            var keyCode = this._getKeyCode(key);
-            if (!keyCode) {
-                throw new Error("Invalid key: " + key);
-            }
-            this._binds[keyCode] = [];
-        }
-
-
-        /*
-         * Binds the internal handler function to the appropriate keyboard event.
-         */
-        KeyListener.prototype._bindKeyEventHandler = function(keyup) {
-            var self = this;
-            var handler = function() {
-                if (self._binds[event.keyCode]) {
-                    self._binds[event.keyCode].forEach(function(fn) {
-                        fn.call(this, event);
-                    });
-                }
-            };
-            if (keyup) {
-                this._jqObject.keyup(handler);
-            } else {
-                this._jqObject.keydown(handler);
-            }
-        }
-
-
-        /*
-         * Gets the keycode belonging to the key.
-         *
-         * @param {Key|string|number} [key] The key to bind the handler to. It should be either
-         *  the name of the key in $.keyListener.Keys as a string, a Key object from $.keyListener.Keys,
-         *  or the raw keyCode as a number.
-         * @returns {number} The keyCode belonging to `key` or `key` itself if it is a valid code.
-         *  `undefined` if `key` is not valid.
-         */
-        KeyListener.prototype._getKeyCode = function(key) {
-            if (typeof key === "string") {
-                var key = $.keyListener.Keys[key];
-                return key ? key.keyCode : undefined;
-            }
-            if (typeof key === "number") {
-                return key % 1 === 0 ? key : undefined;
-            }
-            if (key instanceof Key) {
-                return key.keyCode;
-            }
-            return undefined;
-        }
-
-
-        return KeyListener;
-    })();
+        this._binds[keyCode] = [];
+    }
 
 
     /*
+     * Binds the internal handler function to the appropriate keyboard event.
      */
-    var Key = function(keyCode, keyName) {
+    KeyListener.prototype._bindKeyEventHandler = function(keyup) {
+        var self = this;
+        var handler = function(e) {
+            console.log(e);
+            var mod = 0;
+            mod += this._ctrl ? CTRL : 0;
+            mod += this._alt ? ALT : 0;
+            mod += this._shift ? SHIFT : 0;
+            var keyCode = e.keyCode + (mod << 8);
+            if (self._binds[keyCode]) {
+                self._binds[keyCode].forEach(function(fn) {
+                    fn.call(this, e);
+                });
+            }
+        };
+        if (keyup) {
+            this._jqObject.keyup(handler);
+        } else {
+            this._jqObject.keydown(handler);
+        }
+
+        var modifierHandler = function(e)
+        {
+            var isDown = e.type === "keydown";
+            switch(e.keyCode)
+            {
+                case Keys.shift.keyCode:
+                    this._shift = isDown;
+                    break;
+                case Keys.ctrl.keyCode:
+                    this._ctrl = isDown;
+                    break;
+                case Keys.alt.keyCode:
+                    this._alt = isDown;
+                    break;
+            }
+        }
+        this._jqObject.keydown(modifierHandler);
+        this._jqObject.keyup(modifierHandler);
+    }
+
+
+    /*
+     * Gets the keycode belonging to the key.
+     *
+     * @param {KeyStroke|Key|string|number} key The key to bind the handler to. It should be either
+     *  the name of the key in `Keys` as a string, a `KeyStroke` containing the key and optional modifiers,
+     *  a `Key` object from `Keys`, or the raw `keyCode` as a number.
+     * @returns {number} The keyCode belonging to `key` or `key` itself if it is a valid code.
+     *  `undefined` if `key` is not valid.
+     */
+    KeyListener.prototype._getKeyCode = function(key) {
+        if (typeof key === "string") {
+            var key = Keys[key];
+            return key ? key.keyCode : undefined;
+        }
+        if (typeof key === "number") {
+            return key % 1 === 0 ? key : undefined;
+        }
+        if (key instanceof Key) {
+            return key.keyCode;
+        }
+        if (key instanceof KeyStroke) {
+            var modifier = 0;
+            if (key.modifiers) {
+                modifier += key.modifiers.shift ? SHIFT : 0;
+                modifier += key.modifiers.ctrl ? CTRL : 0;
+                modifier += key.modifiers.alt ? ALT : 0;
+            }
+            if (key.key instanceof KeyStroke) {
+                return undefined;
+            }
+            return this._getKeyCode(key.key) + (modifier << 8);
+        }
+        return undefined;
+    }
+
+
+
+    function Key(keyCode, keyName, keyText) {
         Object.defineProperty(this, "keyCode", {
             value: keyCode
         });
         Object.defineProperty(this, "keyName", {
             value: keyName
         });
+        Object.defineProperty(this, "keyText", {
+            value: keyText
+        });
     };
 
 
-    (function() {
+    /*
+     * A key map that is used to instantiate the Keys object
+     */
+    var _map = {
+        backspace: [8, "Backspace"],
+        tab: [9, "Tab"],
+        enter: [13, "Enter"],
+        shift: [16, "Shift"],
+        ctrl: [17, "Ctrl"],
+        alt: [18, "Alt"],
+        pauseBreak: [19, "Pause"],
+        capsLock: [20, "CapsLock"],
+        escape: [27, "Escape"],
 
-        var _map = {
-            Backspace: 8,
-            Tab: 9,
-            Enter: 13,
-            Shift: 16,
-            Ctrl: 17,
-            Alt: 18,
-            PauseBreak: 19,
-            CapsLock: 20,
-            Escape: 27,
+        pageUp: [33, "Page Up"],
+        pageDown: [34, "Page Down"],
+        end: [35, "End"],
+        home: [36, "Home"],
 
-            PageUp: 33,
-            PageDown: 34,
-            End: 35,
-            Home: 36,
+        left: [37, "\u2190"],
+        up: [38, "\u2191"],
+        right: [39, "\u2192"],
+        down: [40, "\u2193"],
 
-            Left: 37,
-            Up: 38,
-            Right: 39,
-            Down: 40,
+        insert: [45, "Insert"],
+        delete: [46, "Delete"],
 
-            Insert: 45,
-            Delete: 46,
+        key0: [48, "0"],
+        key1: [49, "1"],
+        key2: [50, "2"],
+        key3: [51, "3"],
+        key4: [52, "4"],
+        key5: [53, "5"],
+        key6: [54, "6"],
+        key7: [55, "7"],
+        key8: [56, "8"],
+        key9: [57, "9"],
 
-            Key0: 48,
-            Key1: 49,
-            Key2: 50,
-            Key3: 51,
-            Key4: 52,
-            Key5: 53,
-            Key6: 54,
-            Key7: 55,
-            Key8: 56,
-            Key9: 57,
+        a: [65, "A"],
+        b: [66, "B"],
+        c: [67, "C"],
+        d: [68, "D"],
+        e: [69, "E"],
+        f: [70, "F"],
+        g: [71, "G"],
+        h: [72, "H"],
+        i: [73, "I"],
+        j: [74, "J"],
+        k: [75, "K"],
+        l: [76, "L"],
+        m: [77, "M"],
+        n: [78, "N"],
+        o: [79, "O"],
+        p: [80, "P"],
+        q: [81, "Q"],
+        r: [82, "R"],
+        s: [83, "S"],
+        t: [84, "T"],
+        u: [85, "U"],
+        v: [86, "V"],
+        w: [87, "W"],
+        x: [88, "X"],
+        y: [89, "Y"],
+        z: [90, "Z"],
 
-            A: 65,
-            B: 66,
-            C: 67,
-            D: 68,
-            E: 69,
-            F: 70,
-            G: 71,
-            H: 72,
-            I: 73,
-            J: 74,
-            K: 75,
-            L: 76,
-            M: 77,
-            N: 78,
-            O: 79,
-            P: 80,
-            Q: 81,
-            R: 82,
-            S: 83,
-            T: 84,
-            U: 85,
-            V: 86,
-            W: 87,
-            X: 88,
-            Y: 89,
-            Z: 90,
+        num0: [96, "Numpad 0"],
+        num1: [97, "Numpad 1"],
+        num2: [98, "Numpad 2"],
+        num3: [99, "Numpad 3"],
+        num4: [100, "Numpad 4"],
+        num5: [101, "Numpad 5"],
+        num6: [102, "Numpad 6"],
+        num7: [103, "Numpad 7"],
+        num8: [104, "Numpad 8"],
+        num9: [105, "Numpad 9"],
 
-            Num0: 96,
-            Num1: 97,
-            Num2: 98,
-            Num3: 99,
-            Num4: 100,
-            Num5: 101,
-            Num6: 102,
-            Num7: 103,
-            Num8: 104,
-            Num9: 105,
+        multiply: [106, "Numpad *"],
+        add: [107, "Numpad +"],
+        subtract: [109, "Numpad -"],
+        decimalPoint: [110, "Numpad ."],
+        divide: [111, "Numpad /"],
 
-            Multiply: 106,
-            Add: 107,
-            Subtract: 109,
-            DecimalPoint: 110,
-            Divide: 111,
+        f1: [112, "F1"],
+        f2: [113, "F2"],
+        f3: [114, "F3"],
+        f4: [115, "F4"],
+        f5: [116, "F5"],
+        f6: [117, "F6"],
+        f7: [118, "F7"],
+        f8: [119, "F8"],
+        f9: [120, "F9"],
+        f10: [121, "F10"],
+        f11: [122, "F11"],
+        f12: [123, "F13"],
 
-            F1: 112,
-            F2: 113,
-            F3: 114,
-            F4: 115,
-            F5: 116,
-            F6: 117,
-            F7: 118,
-            F8: 119,
-            F9: 120,
-            F10: 121,
-            F11: 122,
-            F12: 123,
+        numLock: [144, "Num Lock"],
+        scrollLock: [145, "Scroll Lock"],
 
-            NumLock: 144,
-            ScrollLock: 145,
-
-            Semicolon: 186,
-            EqualSign: 187,
-            Comma: 188,
-            Dash: 189,
-            Period: 190,
-            ForwardSlash: 191,
-            GraveAccent: 192,
-            OpeningBracket: 219,
-            Backslash: 220,
-            ClosingBracket: 221,
-            SingleQuote: 222
-        };
-        $.keyListener = $.keyListener || {};
-        /**
-         * A mapping from key to keyCodes.
-         */
-        $.keyListener.Keys = new(function() {
-            for (var k in _map) {
-                Object.defineProperty(this, k, {
-                    value: new Key(_map[k], k)
-                });
-            }
-        })();
+        semicolon: [186, ";"],
+        equalSign: [187, "="],
+        comma: [188, ","],
+        dash: [189, "-"],
+        period: [190, "."],
+        forwardSlash: [191, "/"],
+        graveAccent: [192, "`"],
+        openingBracket: [219, "["],
+        backslash: [220, "\\"],
+        closingBracket: [221, "]"],
+        singleQuote: [222, "'"]
+    };
+    /**
+     * Static readonly mapping from key names to Key objects.
+     */
+    var Keys = new(function() {
+        for (var k in _map) {
+            Object.defineProperty(this, k, {
+                value: new Key(_map[k][0], k, _map[k][1])
+            });
+        }
     })();
+
+    /** 
+     * A KeyStroke object represents either a single key, or a combination of a key with modifiers (ctrl, alt, shift).
+     * @class
+     *
+     * @param {KeyStroke|Key|string|number} key The key to bind the handler to. It should be either
+     *  the name of the key in `Keys` as a string, a `Key` object from `Keys`, or the raw `keyCode` as a number.
+     * @param {Object} [modifiers] An object with 3 optional booleans `ctrl`, `alt`, or `shift`, representing
+     *  their respective modifiers.
+     */
+    function KeyStroke(key, modifiers) {
+        Object.defineProperty(this, "key", {
+            value: key
+        });
+        Object.defineProperty(this, "modifiers", {
+            value: modifiers
+        });
+    }
+
+
+
+    return {
+        Keys: Keys,
+        KeyStroke: KeyStroke,
+        KeyListener: KeyListener
+    };
 });
