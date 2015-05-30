@@ -17,13 +17,16 @@
 * License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
 ***************************************************************************/
 
-Array.prototype.remove=function(s){
-    var i = this.indexOf(s);
+Object.defineProperty(Array.prototype, "remove", {
+    value: function(s) {
+        var i = this.indexOf(s);
 
-    if(this.indexOf(s) != -1){
-        this.splice(i, 1);
-    }
-};
+        if (this.indexOf(s) != -1) {
+            this.splice(i, 1);
+        }
+    },
+    enumerable: false
+});
 
 define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"], function($){
     $.fn.codebookeditor = function(api_url){
