@@ -159,14 +159,21 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
     };
 
     CodebookKeyListener.prototype._onCancel = function(e, self) {
-        if (self.codebookEditor.moving) {
+        if (self._codebookEditor.moving) {
             self._codebookEditor.cancel_move();
         }
     };
 
-    function NavigationState(rootCode) {
+
+    /**
+     * The Navigation State, keeps track of the current node being navigated. 
+     * @class
+     * @param rootCode  The root code
+     * @param [activeCode]  The initial active code, defaults to rootCode.
+     */
+    function NavigationState(rootCode, activeCode) {
         this.root = rootCode;
-        this._active = rootCode;
+        this._active = activeCode || rootCode;
     }
 
     Object.defineProperty(NavigationState.prototype, "active", {
@@ -183,13 +190,26 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
         configurable: true
     });
 
+    /**
+     * Move to the next visible code in the tree. The new active code is it's next visible sibling if it has one.
+     * Otherwise, the tree is traversed upwards until an ancestor with a next visible sibling is reached.
+     * This next sibling will be the new active ecode.
+     */
     NavigationState.prototype.toNextCode = function() {
-        var visibleChildren = _filter_visible(this.active.children);
+        var node = this.active;
+        var lowestVisible = this.active;
+        while (node !== this.root) {
+            if (!node.dom_element.is_visible) {
+                lowestVisible = node;
+            }
+            node = node.parent;
+        }
+        var visibleChildren = _filter_visible(lowestVisible.children);
         if (visibleChildren.length > 0) {
             this.active = visibleChildren[0];
             return;
         }
-        var node = this.active;
+        var node = lowestVisible;
         while (node !== this.root) {
             if (node.parent) {
                 var visibleSiblings = _filter_visible(node.parent.children);
@@ -202,6 +222,13 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
             node = node.parent;
         }
     };
+
+
+    /**
+     * Move to the previous code in the tree. The new active code is the last
+     * visible successor of the previous sibling, or the nearest visible ancestor
+     * of the current active code if it has no previous siblings.
+     */
     NavigationState.prototype.toPreviousCode = function() {
         if (this.active !== this.root) {
             var visibleSiblings = _filter_visible(this.active.parent.children);
@@ -216,7 +243,15 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
                 this.active = node;
                 return;
             }
-            this.active = this.active.parent;
+            var node = this.active.parent;
+            var lowestVisible = this.active.parent;
+            while (node !== this.root) {
+                if (!node.dom_element.is_visible) {
+                    lowestVisible = node;
+                }
+                node = node.parent;
+            }
+            this.active = lowestVisible;
         }
 
     };

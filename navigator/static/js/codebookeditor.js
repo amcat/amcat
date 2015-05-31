@@ -767,6 +767,21 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
                 return null;
             };
 
+            /**
+             * Quit the current move action.
+             */
+            self._exit_move = function()
+            {
+
+                $(".moving_destination").off("click").removeClass("moving_destination");
+                $(".moving").removeClass("moving");
+                $(".move-help", self.movingCode.dom_element).remove();
+                self.expand(self.movingCode.dom_element, "slow");
+
+                self.movingCode = null;
+                self.moving = false;
+            }
+
             self.save_label_changes_clicked = function () {
                 /*
                  * Called if button "save labels" is clicked. Must be bound to an object
@@ -1001,17 +1016,22 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
 
                 self._update_collapse_icons(old_parent_obj, newParent);
 
-                // Update GUI
-                $(".moving_destination").off("click").removeClass("moving_destination");
-                $(".moving").removeClass("moving");
-                $(".move-help", code.dom_element).remove();
-                $(code.dom_element).prependTo($(".children", new_parent_el).get(0));
-                self.expand(code.dom_element, "slow");
+                
                 self.changesets.moves[code.code_id] = code;
-                self.movingCode = null;
-                self.moving = false;
+
+                // Update GUI
+                $(self.movingCode.dom_element).prependTo($(".children", new_parent_el).get(0));
+
+                self._exit_move()
             };
 
+            self.cancel_move = function()
+            {
+                if(self.moving)
+                {
+                    self._exit_move();
+                }
+            }
             self.btn_reorder_by_alpha_clicked = function () {
                 self.reorder(function (a, b) {
                     if (a.label.toLowerCase() < b.label.toLowerCase()) return -1;
