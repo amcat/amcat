@@ -22,8 +22,7 @@
 define(["jquery", "amcat/keyboardlistener"], function($, kl) {
     var DATA_ID = "__codebookKeyListener";
 
-    function instantiate(jqObject, codebookEditor)
-    {
+    function instantiate(jqObject, codebookEditor){
         var listener = new CodebookKeyListener(jqObject, codebookEditor);
         jqObject.data(DATA_ID, listener);
         return listener;
@@ -87,7 +86,7 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
             new kl.Binding(kl.Keys.a      , this._onInsert       , "New Item" ),
             new kl.Binding(kl.Keys.enter  , this._onRename       , "Rename" ),
             new kl.Binding(kl.Keys.m      , this._onMoveCode     , "Move Code" ),
-            new kl.Binding(kl.Keys.t      , this._onDisplayLabels, "Move Code" )
+            new kl.Binding(kl.Keys.t      , this._onDisplayLabels, "Tags/Labels" )
         ]);
     };
      
@@ -238,7 +237,6 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
             return this._active;
         },
         set: function(value) {
-            //TODO: add an 'active' class
             this._active = value;
             var part = $('> .parts', this._active.dom_element)[0];
             if(part !== document.activeElement){
