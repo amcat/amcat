@@ -46,6 +46,7 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
         this._navigationState = new NavigationState(codebookEditor.root);
         var bindings = this._getCodebookCommonBindings();
         bindings = bindings.concat(this._getCodebookDefaultBindings());
+        this._renderCheatSheet();
         this.addBindings(bindings);
     }
 
@@ -216,10 +217,36 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
         }
     };
 
+    /** 
+     * Whether the event should not be triggered.
+     * @override
+     */
     CodebookKeyListener.prototype._shouldCancel = function(event){
         return event.target.tagName === "INPUT" || $(event.target).closest('.modal').length > 0;
     }
+    /**
+     * Called when bindings are added or removed
+     * @override
+     */
+    CodebookKeyListener.prototype._onBindingsChanged = function(){
+        this._cheatsheet.html(this.getBindingsHelpTextHtml());
+    }
 
+    CodebookKeyListener.prototype._renderCheatSheet = function(){
+        var button = $('<button>').addClass('btn btn-default pull-right')
+            .append($("<span>").addClass("glyphicon glyphicon-info-sign"))
+            .append(" Hotkeys");
+
+        var wrapper = $('<div>').addClass('pull-right')
+            .append(button)
+            .append($('<div>').hide())
+            .insertAfter($('.btn-group',this._codebookEditor.root_el).first());
+
+        button.click(function(){
+            $('> div', wrapper).toggle("fast");
+        });
+        this._cheatsheet = $("> div", wrapper);
+    }
 
     /**
      * The Navigation State, keeps track of the current node being navigated. 

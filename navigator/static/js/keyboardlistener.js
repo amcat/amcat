@@ -228,7 +228,7 @@ define(["jquery"], function($) {
 
     KeyboardListener.prototype.getBindingsHelpTextHtml = function()
     {
-        var dl = $('<dl>');
+        var table = $('<table>');
         for (var description in this._bindingDescriptionMap) {
             var keystrokes = this._bindingDescriptionMap[description].map(function(binding) {
                 return binding.key.toHtml();
@@ -238,11 +238,11 @@ define(["jquery"], function($) {
             {
                 continue;
             }
-            var dt = $('<dt>').text(description);
-            var dd = $('<dd>').html(keyText);
-            dl.append(dt, dd);
+            var desc = $('<td>').text(description);
+            var key  = $('<td>').html(keyText);
+            table.append($('<tr>').append(desc, key));
         }
-        return dl;
+        return table;
     }
 
     /**
