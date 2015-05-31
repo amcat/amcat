@@ -40,9 +40,14 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
      *  The Codebook KeyboardListener, adds bindings to the 
      */
     function CodebookKeyListener(jqObject, codebookEditor) {
-
+        var self = this;
         kl.KeyboardListener.call(this, jqObject);
-
+        $('.parts', jqObject).attr('tabindex', '0').focus(function(){
+            if(self._navigationState.active !== $(this).closest('.code').get(0).object)
+            {
+                self._navigationState.active = $(this).closest('.code').get(0).object;
+            }
+        });
         this._codebookEditor = codebookEditor;
         this._navigationState = new NavigationState(codebookEditor.root);
         var bindings = this._getCodebookCommonBindings();
@@ -68,9 +73,7 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
             new kl.Binding(kl.Keys.k      , this._onUp       , "Navigate Up"),
             new kl.Binding(kl.Keys.j      , this._onDown     , "Navigate Down"),
             new kl.Binding(kl.Keys.l      , this._onExpand   , "Expand"),
-            new kl.Binding(kl.Keys.h      , this._onCollapse , "Collapse"),
-            new kl.Binding(kl.Keys.tab    , this._onDown     , "Navigate Down"),
-            new kl.Binding(new kl.KeyStroke(kl.Keys.tab).shift(), this._onUp    , "Navigate Up"),
+            new kl.Binding(kl.Keys.h      , this._onCollapse , "Collapse")
         ]);
     }
 
@@ -79,15 +82,15 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
      */
     CodebookKeyListener.prototype._getCodebookDefaultBindings = function() {
         return this._defaultBindings || (this._defaultBindings = [
-            new kl.Binding(new kl.KeyStroke(kl.Keys.up  ).ctrl().shift(), this._onMoveUp  , "Move code up"),
-            new kl.Binding(new kl.KeyStroke(kl.Keys.down).ctrl().shift(), this._onMoveDown, "Move code down"),     
+            new kl.Binding(new kl.KeyStroke(kl.Keys.up  ).ctrl().shift(), this._onMoveCodeUp  , "Move code up"),
+            new kl.Binding(new kl.KeyStroke(kl.Keys.down).ctrl().shift(), this._onMoveCodeDown, "Move code down"),     
 
-            new kl.Binding(new kl.KeyStroke(kl.Keys.k).ctrl().shift(), this._onMoveUp  , "Move code up"),
-            new kl.Binding(new kl.KeyStroke(kl.Keys.j).ctrl().shift(), this._onMoveDown, "Move code down"),    
+            new kl.Binding(new kl.KeyStroke(kl.Keys.k).ctrl().shift(), this._onMoveCodeUp  , "Move code up"),
+            new kl.Binding(new kl.KeyStroke(kl.Keys.j).ctrl().shift(), this._onMoveCodeDown, "Move code down"),    
 
-            new kl.Binding(kl.Keys.insert , this._onInsert    , "New Item" ),
-            new kl.Binding(kl.Keys.enter  , this._onRename    , "Rename" ),
-            new kl.Binding(kl.Keys.m      , this._onMove      , "Move Code" ),
+            new kl.Binding(kl.Keys.insert , this._onInsert       , "New Item" ),
+            new kl.Binding(kl.Keys.enter  , this._onRename       , "Rename" ),
+            new kl.Binding(kl.Keys.m      , this._onMoveCode     , "Move Code" ),
             new kl.Binding(kl.Keys.t      , this._onDisplayLabels, "Move Code" )
         ]);
     };
@@ -97,9 +100,9 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
      */
     CodebookKeyListener.prototype._getCodebookMovingBindings = function() {
         return this._movingBindings || (this._movingBindings = [
-            new kl.Binding(kl.Keys.enter  , this._onMoveTo   , "Move Here" ),
-            new kl.Binding(kl.Keys.m      , this._onMoveTo   , "Move Here" ),
-            new kl.Binding(kl.Keys.escape , this._onCancel   , "Cancel Current Action" )
+            new kl.Binding(kl.Keys.enter  , this._onMoveCodeTo   , "Move Here" ),
+            new kl.Binding(kl.Keys.m      , this._onMoveCodeTo   , "Move Here" ),
+            new kl.Binding(kl.Keys.escape , this._onCancel       , "Cancel Current Action" )
         ]);
     };
 
@@ -161,22 +164,22 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
         self._codebookEditor.rename_clicked.call(d);
     };
 
-    CodebookKeyListener.prototype._onMoveUp = function(e, self) {
+    CodebookKeyListener.prototype._onMoveCodeUp = function(e, self) {
         self._codebookEditor.move_code(self._navigationState.active, -1);
         self._scrollToActive();
 
     };
 
-    CodebookKeyListener.prototype._onMoveDown = function(e, self) {
+    CodebookKeyListener.prototype._onMoveCodeDown = function(e, self) {
         self._codebookEditor.move_code(self._navigationState.active, 1);
         self._scrollToActive();
     };
 
-    CodebookKeyListener.prototype._onMoveTo = function(e, self) {
+    CodebookKeyListener.prototype._onMoveCodeTo = function(e, self) {
         self._codebookEditor.move_code_to(self._codebookEditor.movingCode, self._navigationState.active);
     };
 
-    CodebookKeyListener.prototype._onMove = function(e, self) {
+    CodebookKeyListener.prototype._onMoveCode= function(e, self) {
         self._codebookEditor.move_code_clicked.call(self._navigationState.active);
     };
 
@@ -188,7 +191,9 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
         self._codebookEditor.show_labels_clicked.call(self._navigationState.active);
     }
 
-
+    /**
+     * Scroll to the current active element
+     */
     CodebookKeyListener.prototype._scrollToActive = function() {
         var clientRect = this._navigationState.active.dom_element.getBoundingClientRect();
 
@@ -226,9 +231,10 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
         },
         set: function(value) {
             //TODO: add an 'active' class
-            $(this._active.dom_element).children(".parts").css("background-color", "");
             this._active = value;
-            $(this._active.dom_element).children(".parts").css("background-color", "silver");
+            
+            $('> .parts', this._active.dom_element).focus();
+            
         },
         enumerable: true,
         configurable: true
