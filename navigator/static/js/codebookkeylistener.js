@@ -68,7 +68,8 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
             new kl.Binding(kl.Keys.enter  , this._onRename   , "Rename" ),
             new kl.Binding(kl.Keys.enter  , this._onMoveTo   , "Move Here" ),
             new kl.Binding(kl.Keys.m      , this._onMove     , "Move Code/Move Here" ),
-            new kl.Binding(kl.Keys.delete , this._onDelete   , "Delete" )
+            new kl.Binding(kl.Keys.delete , this._onDelete   , "Delete" ),
+            new kl.Binding(kl.Keys.escape , this._onCancel   , "Cancel Current Action" )
         ];
     };
 
@@ -143,21 +144,23 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
         self._codebookEditor.move_code(self._navigationState.active, 1);
     };
 
-    CodebookKeyListener.prototype._onMoveTo = function(e, self){
-        if(self._codebookEditor.moving)
-        {
+    CodebookKeyListener.prototype._onMoveTo = function(e, self) {
+        if (self._codebookEditor.moving) {
             self._codebookEditor.move_code_to(self._codebookEditor.movingCode, self._navigationState.active);
         }
     };
 
-    CodebookKeyListener.prototype._onMove = function(e, self){
-        if(!self._codebookEditor.moving)
-        {
+    CodebookKeyListener.prototype._onMove = function(e, self) {
+        if (!self._codebookEditor.moving) {
             self._codebookEditor.move_code_clicked.call(self._navigationState.active);
-        }
-        else
-        {
+        } else {
             self._codebookEditor.move_code_to(self._codebookEditor.movingCode, self._navigationState.active);
+        }
+    };
+
+    CodebookKeyListener.prototype._onCancel = function(e, self) {
+        if (self.codebookEditor.moving) {
+            self._codebookEditor.cancel_move();
         }
     };
 
