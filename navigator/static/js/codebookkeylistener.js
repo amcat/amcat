@@ -20,23 +20,33 @@
 
 
 define(["jquery", "amcat/keyboardlistener"], function($, kl) {
+    var DATA_ID = "__codebookKeyListener";
 
-
+    function instantiate(jqObject, codebookEditor)
+    {
+        var listener = new CodebookKeyListener(jqObject, codebookEditor);
+        jqObject.data(DATA_ID, listener);
+    }
 
     $.fn.codebookKeyListener = function(codebookEditor) {
-        var keyListener = this.data("_codebookKeyListener") || 
-            new CodebookKeyListener(this, codebookEditor);
-        this.data("_codebookKeyListener", keyListener);
-        return keyListener;
+        return this.map(function(idx, el){
+            var obj = $(this);
+            return obj.data(DATA_ID) || instantiate(obj, codebookEditor);
+        });
     };
 
+
+    /**
+     *  The Codebook KeyboardListener, adds bindings to the 
+     */
     function CodebookKeyListener(jqObject, codebookEditor) {
 
         kl.KeyboardListener.call(this, jqObject);
 
         this._codebookEditor = codebookEditor;
         this._navigationState = new NavigationState(codebookEditor.root);
-        var bindings = this._getCodebookBindings();
+        var bindings = this._getCodebookCommonBindings();
+        bindings = bindings.concat(this._getCodebookDefaultBindings());
         this.addBindings(bindings);
     }
 
@@ -44,16 +54,12 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
     CodebookKeyListener.prototype = Object.create(kl.KeyboardListener.prototype);
     CodebookKeyListener.prototype.constructor = CodebookKeyListener;
 
-    CodebookKeyListener.prototype._getCodebookBindings = function() {
-        return [
+    /**
+     * Bindings that stay the same in both modes.
+     */
+    CodebookKeyListener.prototype._getCodebookCommonBindings = function(){
+        return this._commonBindings || (this._commonBindings = [
             new kl.Binding(new kl.KeyStroke(kl.Keys.s).ctrl(), this._onSave, "Save"),
-
-            new kl.Binding(new kl.KeyStroke(kl.Keys.up  ).ctrl().shift(), this._onMoveUp  , "Move code up"),
-            new kl.Binding(new kl.KeyStroke(kl.Keys.down).ctrl().shift(), this._onMoveDown, "Move code down"),     
-
-            new kl.Binding(new kl.KeyStroke(kl.Keys.k).ctrl().shift(), this._onMoveUp  , "Move code up"),
-            new kl.Binding(new kl.KeyStroke(kl.Keys.j).ctrl().shift(), this._onMoveDown, "Move code down"),    
-
 
             new kl.Binding(kl.Keys.up     , this._onUp       , "Navigate Up"),
             new kl.Binding(kl.Keys.down   , this._onDown     , "Navigate Down"),
@@ -63,14 +69,50 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
             new kl.Binding(kl.Keys.k      , this._onUp       , "Navigate Up"),
             new kl.Binding(kl.Keys.j      , this._onDown     , "Navigate Down"),
             new kl.Binding(kl.Keys.l      , this._onExpand   , "Expand"),
-            new kl.Binding(kl.Keys.h      , this._onCollapse , "Collapse"),
+            new kl.Binding(kl.Keys.h      , this._onCollapse , "Collapse")
+        ]);
+    }
+
+    /**
+     * The default bindings for the codebook editor
+     */
+    CodebookKeyListener.prototype._getCodebookDefaultBindings = function() {
+        return this._defaultBindings || (this._defaultBindings = [
+            new kl.Binding(new kl.KeyStroke(kl.Keys.up  ).ctrl().shift(), this._onMoveUp  , "Move code up"),
+            new kl.Binding(new kl.KeyStroke(kl.Keys.down).ctrl().shift(), this._onMoveDown, "Move code down"),     
+
+            new kl.Binding(new kl.KeyStroke(kl.Keys.k).ctrl().shift(), this._onMoveUp  , "Move code up"),
+            new kl.Binding(new kl.KeyStroke(kl.Keys.j).ctrl().shift(), this._onMoveDown, "Move code down"),    
+
             new kl.Binding(kl.Keys.insert , this._onInsert   , "New Item" ),
             new kl.Binding(kl.Keys.enter  , this._onRename   , "Rename" ),
+            new kl.Binding(kl.Keys.m      , this._onMove     , "Move Code" )
+        ]);
+    };
+     
+    /**
+     * The bindings for the code movement mode.
+     */
+    CodebookKeyListener.prototype._getCodebookMovingBindings = function() {
+        return this._movingBindings || (this._movingBindings = [
             new kl.Binding(kl.Keys.enter  , this._onMoveTo   , "Move Here" ),
-            new kl.Binding(kl.Keys.m      , this._onMove     , "Move Code/Move Here" ),
-            new kl.Binding(kl.Keys.delete , this._onDelete   , "Delete" ),
+            new kl.Binding(kl.Keys.m      , this._onMoveTo   , "Move Here" ),
             new kl.Binding(kl.Keys.escape , this._onCancel   , "Cancel Current Action" )
-        ];
+        ]);
+    };
+
+    /**
+     * Toggles between Moving bindings and default bindings depending on the 
+     * state of the editor.
+     */
+    CodebookKeyListener.prototype.updateMovingBindings = function() {
+        if (this._codebookEditor.moving) {
+            this.addBindings(this._getCodebookMovingBindings());
+            this.removeBindings(this._getCodebookDefaultBindings());
+        } else {
+            this.addBindings(this._getCodebookDefaultBindings());
+            this.removeBindings(this._getCodebookMovingBindings());
+        }
     };
 
 
@@ -79,25 +121,12 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
      */
     CodebookKeyListener.prototype._onUp = function(e, self) {
         self._navigationState.toPreviousCode();
-        var clientRect = self._navigationState.active.dom_element.getBoundingClientRect();
-        var top = clientRect.top - $('.navbar').height();
-        if (top < 0) {
-            $(document.body).stop().animate({
-                scrollTop: window.pageYOffset + 2 * top
-            }, "fast");
-        }
+        self._scrollToActive();
     };
 
     CodebookKeyListener.prototype._onDown = function(e, self) {
         self._navigationState.toNextCode();
-        var clientRect = self._navigationState.active.dom_element.getBoundingClientRect();
-        var bottom = window.innerHeight - (clientRect.top + 40);
-        if (bottom < 0) {
-            $(document.body).stop().animate({
-                scrollTop: window.pageYOffset - 2 * bottom
-            }, "fast");
-            
-        }
+        self._scrollToActive();
     };
 
     CodebookKeyListener.prototype._onCollapse = function(e, self) {
@@ -130,41 +159,51 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
         self._codebookEditor.rename_clicked.call(d);
     };
 
-    CodebookKeyListener.prototype._onDelete = function(e, self) {
-        //Not implemented
-        //TODO: Implement delete method in the codebook editor, 
-        //      call from here
-    };
-
     CodebookKeyListener.prototype._onMoveUp = function(e, self) {
         self._codebookEditor.move_code(self._navigationState.active, -1);
+        self._scrollToActive();
+
     };
 
-    CodebookKeyListener.prototype._onMoveDown = function(e, self){
+    CodebookKeyListener.prototype._onMoveDown = function(e, self) {
         self._codebookEditor.move_code(self._navigationState.active, 1);
+        self._scrollToActive();
     };
 
     CodebookKeyListener.prototype._onMoveTo = function(e, self) {
-        if (self._codebookEditor.moving) {
-            self._codebookEditor.move_code_to(self._codebookEditor.movingCode, self._navigationState.active);
-        }
+        self._codebookEditor.move_code_to(self._codebookEditor.movingCode, self._navigationState.active);
     };
 
     CodebookKeyListener.prototype._onMove = function(e, self) {
-        if (!self._codebookEditor.moving) {
-            self._codebookEditor.move_code_clicked.call(self._navigationState.active);
-        } else {
-            self._codebookEditor.move_code_to(self._codebookEditor.movingCode, self._navigationState.active);
-        }
+        self._codebookEditor.move_code_clicked.call(self._navigationState.active);
     };
 
     CodebookKeyListener.prototype._onCancel = function(e, self) {
-        if (self._codebookEditor.moving) {
-            self._codebookEditor.cancel_move();
-        }
+        self._codebookEditor.cancel_move();
     };
 
 
+
+    CodebookKeyListener.prototype._scrollToActive = function() {
+        var clientRect = this._navigationState.active.dom_element.getBoundingClientRect();
+
+        //scroll down if too high
+        var bottom = window.innerHeight - (clientRect.top + 40);
+        if (bottom < 0) {
+            $(document.body).stop().animate({
+                scrollTop: window.pageYOffset - 2 * bottom
+            }, "fast");
+            return;
+        }
+
+        // Scroll up if too low
+        var top = clientRect.top - $('.navbar').height();
+        if (top < 0) {
+            $(document.body).stop().animate({
+                scrollTop: window.pageYOffset + 2 * top
+            }, "fast");
+        }
+    };
     /**
      * The Navigation State, keeps track of the current node being navigated. 
      * @class

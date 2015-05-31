@@ -780,6 +780,7 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
 
                 self.movingCode = null;
                 self.moving = false;
+                $(document.body).codebookKeyListener()[0].updateMovingBindings();
             }
 
             self.save_label_changes_clicked = function () {
@@ -876,12 +877,14 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
                         self.move_help_clicked
                     )
                 );
+
                 self.moving = true;
                 self.movingCode = this;
+                $(document.body).codebookKeyListener()[0].updateMovingBindings();
                 // Mark destinations as such
                 $(".parts", self.root_el)
                     .addClass("moving_destination")
-                    .click(self.move_destination_clicked.bind(this))
+                    .click(self.move_destination_clicked.bind(this));
             };
 
             self.move_help_clicked = function(){
