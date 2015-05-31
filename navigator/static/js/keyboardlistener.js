@@ -142,6 +142,7 @@ define(["jquery"], function($) {
     {
         var listener = new KeyboardListener(jqObject, options);
         jqObject.data(DATA_ID, listener);
+        return listener;
     }
 
     /**

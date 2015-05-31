@@ -193,7 +193,9 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
                 self._ensure_order(self.root);
                 self.objects = self._get_descendents(self.root);
 
-
+                // Should be instantiated before render_tree
+                self._key_listener = $(document.body).codebookKeyListener(self)[0];
+                
                 // Add main action buttons
                 $(".loading-codebook", self).contents().remove();
                 $(self).append($("<ul>").append(self.render_tree(self.root)).addClass("root").css("margin-left", "-30px"));
@@ -212,7 +214,6 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
                 $.getJSON(self.API_URL + 'codebook?format=json&paginate=false&id=' +
                     $(self.root_el).attr("name"), self._codebook_name_initialized);
 
-                $(document.body).codebookKeyListener(self);
             };
 
             self._get_descendents = function (object) {
@@ -468,6 +469,8 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
                 // Add action icon and label
                 code_el.append(
                     $("<span>").addClass("parts")
+                        .attr('tabindex', '0')
+                        .focus(self._key_listener.focusChanged.bind(object, self._key_listener))
                         .append(action_icon)
                         .append(label_span)
                         .append(options_el)
@@ -780,7 +783,7 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
 
                 self.movingCode = null;
                 self.moving = false;
-                $(document.body).codebookKeyListener()[0].updateMovingBindings();
+                self._key_listener.updateMovingBindings();
             }
 
             self.save_label_changes_clicked = function () {
@@ -880,7 +883,7 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
 
                 self.moving = true;
                 self.movingCode = this;
-                $(document.body).codebookKeyListener()[0].updateMovingBindings();
+                self._key_listener.updateMovingBindings();
                 // Mark destinations as such
                 $(".parts", self.root_el)
                     .addClass("moving_destination")
