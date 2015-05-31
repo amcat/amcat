@@ -46,26 +46,13 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
 
     CodebookKeyListener.prototype._getCodebookBindings = function() {
         return [
-            new kl.Binding(new kl.KeyStroke(kl.Keys.s, {
-                    ctrl: true
-                }), this._onSave, "Save"),
+            new kl.Binding(new kl.KeyStroke(kl.Keys.s).ctrl(), this._onSave, "Save"),
 
-            new kl.Binding(new kl.KeyStroke(kl.Keys.up, {
-                    ctrl: true, shift:true
-                }), this._onMoveUp, "Move code up"),
+            new kl.Binding(new kl.KeyStroke(kl.Keys.up  ).ctrl().shift(), this._onMoveUp  , "Move code up"),
+            new kl.Binding(new kl.KeyStroke(kl.Keys.down).ctrl().shift(), this._onMoveDown, "Move code down"),     
 
-            new kl.Binding(new kl.KeyStroke(kl.Keys.down, {
-                    ctrl: true, shift:true
-                }), this._onMoveDown, "Move code down"),     
-
-            new kl.Binding(new kl.KeyStroke(kl.Keys.k, {
-                    ctrl: true, shift:true
-                }),
-                this._onMoveUp, "Move code up"),
-
-            new kl.Binding(new kl.KeyStroke(kl.Keys.j, {
-                    ctrl: true, shift:true
-                }), this._onMoveDown, "Move code down"),    
+            new kl.Binding(new kl.KeyStroke(kl.Keys.k).ctrl().shift(), this._onMoveUp  , "Move code up"),
+            new kl.Binding(new kl.KeyStroke(kl.Keys.j).ctrl().shift(), this._onMoveDown, "Move code down"),    
 
 
             new kl.Binding(kl.Keys.up     , this._onUp       , "Navigate Up"),
@@ -80,6 +67,7 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
             new kl.Binding(kl.Keys.insert , this._onInsert   , "New Item" ),
             new kl.Binding(kl.Keys.enter  , this._onRename   , "Rename" ),
             new kl.Binding(kl.Keys.enter  , this._onMoveTo   , "Move Here" ),
+            new kl.Binding(kl.Keys.m      , this._onMove     , "Move Code/Move Here" ),
             new kl.Binding(kl.Keys.delete , this._onDelete   , "Delete" )
         ];
     };
@@ -90,11 +78,25 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
      */
     CodebookKeyListener.prototype._onUp = function(e, self) {
         self._navigationState.toPreviousCode();
-        console.log(self._navigationState.active.dom_element.getBoundingClientRect());
+        var clientRect = self._navigationState.active.dom_element.getBoundingClientRect();
+        var top = clientRect.top - $('.navbar').height();
+        if (top < 0) {
+            $(document.body).stop().animate({
+                scrollTop: window.pageYOffset + 2 * top
+            }, "fast");
+        }
     };
 
     CodebookKeyListener.prototype._onDown = function(e, self) {
         self._navigationState.toNextCode();
+        var clientRect = self._navigationState.active.dom_element.getBoundingClientRect();
+        var bottom = window.innerHeight - (clientRect.top + 40);
+        if (bottom < 0) {
+            $(document.body).stop().animate({
+                scrollTop: window.pageYOffset - 2 * bottom
+            }, "fast");
+            
+        }
     };
 
     CodebookKeyListener.prototype._onCollapse = function(e, self) {
@@ -129,6 +131,8 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
 
     CodebookKeyListener.prototype._onDelete = function(e, self) {
         //Not implemented
+        //TODO: Implement delete method in the codebook editor, 
+        //      call from here
     };
 
     CodebookKeyListener.prototype._onMoveUp = function(e, self) {
@@ -141,6 +145,17 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
 
     CodebookKeyListener.prototype._onMoveTo = function(e, self){
         if(self._codebookEditor.moving)
+        {
+            self._codebookEditor.move_code_to(self._codebookEditor.movingCode, self._navigationState.active);
+        }
+    };
+
+    CodebookKeyListener.prototype._onMove = function(e, self){
+        if(!self._codebookEditor.moving)
+        {
+            self._codebookEditor.move_code_clicked.call(self._navigationState.active);
+        }
+        else
         {
             self._codebookEditor.move_code_to(self._codebookEditor.movingCode, self._navigationState.active);
         }

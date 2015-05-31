@@ -861,7 +861,7 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
                         self.move_help_clicked
                     )
                 );
-
+                self.moving = true;
                 self.movingCode = this;
                 // Mark destinations as such
                 $(".parts", self.root_el)
@@ -991,7 +991,7 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
 
                 if (newParent == code) {
                     // Moving to self, do nothing.
-                    return (self.moving = false);
+                    return;
                 }
 
                 // Update state
@@ -1007,8 +1007,8 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
                 $(".move-help", code.dom_element).remove();
                 $(code.dom_element).prependTo($(".children", new_parent_el).get(0));
                 self.expand(code.dom_element, "slow");
-
                 self.changesets.moves[code.code_id] = code;
+                self.movingCode = null;
                 self.moving = false;
             };
 

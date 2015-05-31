@@ -30,12 +30,12 @@ define(["jquery"], function($) {
     var KEYCODES = {
         backspace: [8, "Backspace"],
         tab: [9, "Tab"],
-        enter: [13, "Enter"],
+        enter: [13, "\u23CE"],
         shift: [16, "Shift"],
         ctrl: [17, "Ctrl"],
         alt: [18, "Alt"],
         pauseBreak: [19, "Pause"],
-        capsLock: [20, "CapsLock"],
+        capsLock: [20, "Caps Lock"],
         escape: [27, "Escape"],
         spacebar: [32, "Spacebar"],
 
@@ -52,16 +52,16 @@ define(["jquery"], function($) {
         insert: [45, "Insert"],
         delete: [46, "Delete"],
 
-        key0: [48, "0"],
-        key1: [49, "1"],
-        key2: [50, "2"],
-        key3: [51, "3"],
-        key4: [52, "4"],
-        key5: [53, "5"],
-        key6: [54, "6"],
-        key7: [55, "7"],
-        key8: [56, "8"],
-        key9: [57, "9"],
+        0: [48, "0"],
+        1: [49, "1"],
+        2: [50, "2"],
+        3: [51, "3"],
+        4: [52, "4"],
+        5: [53, "5"],
+        6: [54, "6"],
+        7: [55, "7"],
+        8: [56, "8"],
+        9: [57, "9"],
 
         a: [65, "A"],
         b: [66, "B"],
@@ -118,7 +118,7 @@ define(["jquery"], function($) {
         f9: [120, "F9"],
         f10: [121, "F10"],
         f11: [122, "F11"],
-        f12: [123, "F13"],
+        f12: [123, "F12"],
 
         numLock: [144, "Num Lock"],
         scrollLock: [145, "Scroll Lock"],
@@ -163,7 +163,7 @@ define(["jquery"], function($) {
      */
     function KeyboardListener(jqObject, options) {
 
-
+        this._bindingDescriptionMap = [];
         this._binds = [];
         this._jqObject = jqObject;
         this._bindKeyEventHandler(options ? options.keyup : false);
@@ -194,6 +194,11 @@ define(["jquery"], function($) {
             }
         }
         this._bindfn(binding.key, handler);
+        if(this._bindingDescriptionMap[binding.description] === undefined)
+        {
+            this._bindingDescriptionMap[binding.description] = [];
+        }
+        this._bindingDescriptionMap[binding.description].push(binding);
     };
 
 
@@ -210,6 +215,24 @@ define(["jquery"], function($) {
             self.addBinding(binding, dontPreventDefault);
         });
     };
+
+
+    KeyboardListener.prototype.getBindingsHelpTextHtml = function()
+    {
+        var dl = $('<dl>');
+        for(var description in this._bindingDescriptionMap)
+        {
+            console.log(this._bindingDescriptionMap[description]);
+            var keystrokes = this._bindingDescriptionMap[description].map(function(binding){
+                return binding.key.toHtml();
+            });
+            var keyText = keystrokes.join(", ");
+            var dt = $('<dt>').text(description);
+            var dd = $('<dd>').html(keyText);
+            dl.append(dt, dd);
+        }
+        return dl;
+    }
 
     /**
      * Binds a handler to a keystroke.
@@ -260,7 +283,9 @@ define(["jquery"], function($) {
         var self = this;
         var handler = function(e) {
             var mod = 0;
-            mod += e.ctrlKey ? CTRL : 0;
+
+            //metaKey is the apple command key
+            mod += e.ctrlKey || e.metaKey ? CTRL : 0;
             mod += e.altKey ? ALT : 0;
             mod += e.shiftKey ? SHIFT : 0;
             var keyCode = e.keyCode + (mod << 8);
@@ -314,7 +339,6 @@ define(["jquery"], function($) {
     };
 
 
-
     function Key(keyCode, keyName, keyText) {
         Object.defineProperty(this, "keyCode", {
             value: keyCode
@@ -357,9 +381,37 @@ define(["jquery"], function($) {
             value: key instanceof Key ? key : Keys[key]
         });
         Object.defineProperty(this, "modifiers", {
-            value: modifiers
+            value: modifiers || {}
         });
     }
+
+    /**
+     * Adds ctrl to the modifiers
+     * @returns {KeyStroke} self
+     */
+    KeyStroke.prototype.ctrl = function() {
+        this.modifiers.ctrl = true;
+        return this;
+    };
+
+
+    /**
+     * Adds shift to the modifiers
+     * @returns {KeyStroke} self
+     */
+    KeyStroke.prototype.shift = function() {
+        this.modifiers.shift = true;
+        return this;
+    };
+
+    /**
+     * Adds alt to the modifiers
+     * @returns {KeyStroke} self
+     */
+    KeyStroke.prototype.alt = function() {
+        this.modifiers.alt = true;
+        return this;
+    };
 
     /**
      * Converts KeyStroke to readable HTML, wrapped in a `<kbd>` tag, following bootstrap style advice.
