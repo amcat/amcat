@@ -162,7 +162,7 @@ define(["jquery"], function($) {
 
 
     /** 
-     * A KeyboardListener object
+     * A KeyboardListener class
      * @class
      *
      * @param {JQuery} jqObject the jQuery `this` element(s).

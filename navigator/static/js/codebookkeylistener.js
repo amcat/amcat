@@ -37,7 +37,9 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
 
 
     /**
-     *  The Codebook KeyboardListener, adds bindings to the 
+     *  The Codebook KeyboardListener
+     *  @class
+     *  @extends KeyboardListener
      */
     function CodebookKeyListener(jqObject, codebookEditor) {
         var self = this;
