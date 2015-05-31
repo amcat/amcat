@@ -216,6 +216,12 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
             }, "fast");
         }
     };
+
+    CodebookKeyListener.prototype._shouldCancel = function(event){
+        return event.target.tagName === "INPUT" || $(event.target).closest('.modal').length > 0;
+    }
+
+
     /**
      * The Navigation State, keeps track of the current node being navigated. 
      * @class

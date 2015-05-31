@@ -329,7 +329,7 @@ define(["jquery"], function($) {
     KeyboardListener.prototype._bindKeyEventHandler = function(keyup) {
         var self = this;
         var handler = function(e) {
-            if(e.target.tagName === "INPUT"){
+            if(self._shouldCancel(e)){
                 return;
             }
             var mod = 0;
@@ -359,7 +359,10 @@ define(["jquery"], function($) {
         }
     };
 
-
+    KeyboardListener.prototype._shouldCancel = function(event)
+    {
+        return event.target.tagName === "INPUT";
+    }
     /**
      * Gets the keycode belonging to the key.
      *
