@@ -63,13 +63,14 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
 
             new kl.Binding(kl.Keys.up     , this._onUp       , "Navigate Up"),
             new kl.Binding(kl.Keys.down   , this._onDown     , "Navigate Down"),
-            new kl.Binding(kl.Keys.tab    , this._onDown     , "Navigate Down"),
             new kl.Binding(kl.Keys.right  , this._onExpand   , "Expand"),
             new kl.Binding(kl.Keys.left   , this._onCollapse , "Collapse"),
             new kl.Binding(kl.Keys.k      , this._onUp       , "Navigate Up"),
             new kl.Binding(kl.Keys.j      , this._onDown     , "Navigate Down"),
             new kl.Binding(kl.Keys.l      , this._onExpand   , "Expand"),
-            new kl.Binding(kl.Keys.h      , this._onCollapse , "Collapse")
+            new kl.Binding(kl.Keys.h      , this._onCollapse , "Collapse"),
+            new kl.Binding(kl.Keys.tab    , this._onDown     , "Navigate Down"),
+            new kl.Binding(new kl.KeyStroke(kl.Keys.tab).shift(), this._onUp    , "Navigate Up"),
         ]);
     }
 
@@ -84,9 +85,10 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
             new kl.Binding(new kl.KeyStroke(kl.Keys.k).ctrl().shift(), this._onMoveUp  , "Move code up"),
             new kl.Binding(new kl.KeyStroke(kl.Keys.j).ctrl().shift(), this._onMoveDown, "Move code down"),    
 
-            new kl.Binding(kl.Keys.insert , this._onInsert   , "New Item" ),
-            new kl.Binding(kl.Keys.enter  , this._onRename   , "Rename" ),
-            new kl.Binding(kl.Keys.m      , this._onMove     , "Move Code" )
+            new kl.Binding(kl.Keys.insert , this._onInsert    , "New Item" ),
+            new kl.Binding(kl.Keys.enter  , this._onRename    , "Rename" ),
+            new kl.Binding(kl.Keys.m      , this._onMove      , "Move Code" ),
+            new kl.Binding(kl.Keys.t      , this._onDisplayLabels, "Move Code" )
         ]);
     };
      
@@ -182,6 +184,9 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
         self._codebookEditor.cancel_move();
     };
 
+    CodebookKeyListener.prototype._onDisplayLabels = function(e, self){
+        self._codebookEditor.show_labels_clicked.call(self._navigationState.active);
+    }
 
 
     CodebookKeyListener.prototype._scrollToActive = function() {

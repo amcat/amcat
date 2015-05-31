@@ -675,7 +675,7 @@ define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"
             self.show_labels_clicked = function () {
                 // Create and acivate modal window
                 var modal = self._create_modal_window("labels", "Labels of code " + this.code_id).modal();
-
+                
                 modal.on("hidden", function () {
                     $("#labels").remove()
                 });
