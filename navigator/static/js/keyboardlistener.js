@@ -329,7 +329,6 @@ define(["jquery"], function($) {
     KeyboardListener.prototype._bindKeyEventHandler = function(keyup) {
         var self = this;
         var handler = function(e) {
-            console.log(e);
             if(e.target.tagName === "INPUT"){
                 return;
             }
