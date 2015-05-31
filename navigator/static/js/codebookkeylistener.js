@@ -229,7 +229,7 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
      * @override
      */
     CodebookKeyListener.prototype._onBindingsChanged = function(){
-        this._cheatsheet.html(this.getBindingsHelpTextHtml());
+        this._cheatsheet.html($(this.getBindingsHelpTextHtml()).addClass('table'));
     }
 
     CodebookKeyListener.prototype._renderCheatSheet = function(){
@@ -238,8 +238,9 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
             .append(" Hotkeys");
 
         var wrapper = $('<div>').addClass('pull-right')
+            .width(0) //width 0 so it doesn't interfere with the layout of the content
             .append(button)
-            .append($('<div>').hide())
+            .append($('<div>').hide().addClass('pull-right').css('clear','right'))
             .insertAfter($('.btn-group',this._codebookEditor.root_el).first());
 
         button.click(function(){
