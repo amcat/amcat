@@ -38,7 +38,7 @@ define([
     var USER = $("#query-form").data("user");
     var PROJECT = query_screen.data("project");
     var SETS = $("#query-form").data("sets");
-    API = api(PROJECT, SETS);
+    API = api({"host": ""});
 
     var DEFAULT_SCRIPT = "summary";
     var SAVED_QUERY_API_URL = "/api/v4/projects/{project_id}/querys/{query_id}";
@@ -226,7 +226,7 @@ define([
 
         $.ajax({
             type: "POST", dataType: "json",
-            url: API.get_api_url(script),
+            url: API.getActionUrl(script, PROJECT, SETS),
             data: form_data,
             headers: {
                 "X-Available-Renderers": self.get_accepted_mimetypes().join(",")
@@ -248,7 +248,7 @@ define([
 
         window.history.replaceState(null, null, '#' + name);
 
-        var url = API.get_api_url(name);
+        var url = API.getActionUrl(name, PROJECT, SETS);
 
         $.ajax({
             "type": "OPTIONS", url: url, dateType: "json"
@@ -614,7 +614,7 @@ define([
 
                     $.ajax({
                         type: "POST", dataType: "json",
-                        url: API.get_api_url("statistics"),
+                        url: API.getActionUrl("statistics", PROJECT, SETS),
                         data: form_data,
                         traditional: true
                     }).done(function(data){
