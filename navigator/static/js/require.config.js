@@ -10,6 +10,7 @@ requirejs.config({
         "jquery.hotkeys": "jquery.hotkeys/jquery.hotkeys",
         "papaparse": "papaparse/papaparse",
         "highlight": "highlight/build/highlight.pack",
+        "highcharts.core": "highcharts/highcharts",
         "highcharts.data": "highcharts/modules/data",
         "highcharts.exporting": "highcharts/modules/exporting",
         "highcharts.heatmap": "highcharts/modules/heatmap",
@@ -35,14 +36,17 @@ requirejs.config({
         "jshashtable": "jshashtable/hashtable"
     },
     shim:{
+        "highcharts.core":{
+            deps: ['jquery']
+        },
         "highcharts.data":{
-            deps: ['highcharts/highcharts']
+            deps: ['highcharts.core']
         },
         "highcharts.exporting":{
-            deps: ['highcharts/highcharts']
+            deps: ['highcharts.core']
         },
         "highcharts.heatmap":{
-            deps: ['highcharts/highcharts']
+            deps: ['highcharts.core']
         },
         "bootstrap":{
             deps: ['jquery']
