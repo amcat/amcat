@@ -323,3 +323,11 @@ class SetRequestContextMiddleware(object):
     """
     def process_request(self, request):
         threading.current_thread().request = request
+
+class HTTPAccessControl(object):
+    def process_response(self, request, response):
+        if settings.DEBUG:
+            response["Access-Control-Allow-Origin"] = ",".join(settings.ACCESS_CONTROL_ORIGINS)
+            response["Access-Control-Allow-Methods"] = ",".join(settings.ACCESS_CONTROL_METHODS)
+            response["Access-Control-Allow-Headers"] = ",".join(settings.ACCESS_CONTROL_HEADERS)
+        return response

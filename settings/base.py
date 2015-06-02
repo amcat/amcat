@@ -56,6 +56,18 @@ DATABASE_OPTIONS = {
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,.amcat.nl,.vu.nl").split(",")
 
+ACCESS_CONTROL_ORIGINS = []
+ACCESS_CONTROL_HEADERS = []
+
+if DEBUG:
+    ACCESS_CONTROL_METHODS = ["GET", "POST"]
+    ACCESS_CONTROL_ORIGINS = ["*"]
+    ACCESS_CONTROL_HEADERS = [
+        "Accept", "Accept-Encoding", "Accept-Language", "Access-Control-Request-Headers",
+        "Access-Control-Request-Method", "Connection", "Host", "Origin", "User-Agent",
+        "X-CSRFTOKEN", "X-HTTP-METHOD-OVERRIDE"
+    ]
+
 DATABASES = dict(default=dict(
     ENGINE=os.environ.get("DJANGO_DB_ENGINE", 'django.db.backends.postgresql_psycopg2'),
     NAME=os.environ.get("DJANGO_DB_NAME", 'amcat'),
@@ -152,6 +164,7 @@ MIDDLEWARE_CLASSES = [
     'navigator.utils.auth.RequireLoginMiddleware',
     'navigator.utils.auth.SetRequestContextMiddleware',
     'navigator.utils.auth.NginxRequestMethodFixMiddleware',
+    'navigator.utils.auth.HTTPAccessControl',
     #'navigator.utils.misc.UUIDLogMiddleware',
     #'debug_toolbar.middleware.DebugToolbarMiddleware',
     'method_override.middleware.MethodOverrideMiddleware'
