@@ -17,15 +17,18 @@
 * License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
 ***************************************************************************/
 
-Array.prototype.remove=function(s){
-    var i = this.indexOf(s);
+Object.defineProperty(Array.prototype, "remove", {
+    value: function(s) {
+        var i = this.indexOf(s);
 
-    if(this.indexOf(s) != -1){
-        this.splice(i, 1);
-    }
-};
+        if (this.indexOf(s) != -1) {
+            this.splice(i, 1);
+        }
+    },
+    enumerable: false
+});
 
-define(["jquery", "amcat/djangofields", "bootstrap"], function($){
+define(["jquery", "amcat/djangofields", "bootstrap", "amcat/codebookkeylistener"], function($){
     $.fn.codebookeditor = function(api_url){
         return this.each(function(){
             /*
@@ -33,7 +36,6 @@ define(["jquery", "amcat/djangofields", "bootstrap"], function($){
              * url (must point to a codebookhierarchy).
              */
             var self = this;
-
             /* CONSTANTS */
             self.COLLAPSE_ICON = "/media/img/navigator/collapse-small-silver.png";
             self.EXPAND_ICON = "/media/img/navigator/expand-small-silver.png";
@@ -45,6 +47,7 @@ define(["jquery", "amcat/djangofields", "bootstrap"], function($){
             self.codebook = null;
             self.languages = null;
             self.moving = false; // Indicates wether the user is moving a code
+            self.movingCode = null; //The code that is being moved
             self.objects = null; // Flat list of all objects
             self.root = null; // Artificial (non existent in db) root code
             self.changesets = {
@@ -190,13 +193,14 @@ define(["jquery", "amcat/djangofields", "bootstrap"], function($){
                 self._ensure_order(self.root);
                 self.objects = self._get_descendents(self.root);
 
-
+                // Should be instantiated before render_tree
+                self._key_listener = $(document.body).codebookKeyListener(self)[0];
+                
                 // Add main action buttons
                 $(".loading-codebook", self).contents().remove();
                 $(self).append($("<ul>").append(self.render_tree(self.root)).addClass("root").css("margin-left", "-30px"));
 
                 self.searchbox.keyup(self.searchbox_keyup);
-
                 // Remove unneeded icons from root
                 $.each(["glyphicon-move", "glyphicon-eye-close", "glyphicon-tags", "glyphicon-arrow-up", "glyphicon-arrow-down"], function (i, cls) {
                     $($("." + cls, self.root_el)[0]).remove();
@@ -209,6 +213,7 @@ define(["jquery", "amcat/djangofields", "bootstrap"], function($){
                 // Get codebook name
                 $.getJSON(self.API_URL + 'codebook?format=json&paginate=false&id=' +
                     $(self.root_el).attr("name"), self._codebook_name_initialized);
+
             };
 
             self._get_descendents = function (object) {
@@ -464,6 +469,8 @@ define(["jquery", "amcat/djangofields", "bootstrap"], function($){
                 // Add action icon and label
                 code_el.append(
                     $("<span>").addClass("parts")
+                        .attr('tabindex', '0')
+                        .focus(self._key_listener.focusChanged.bind(object, self._key_listener))
                         .append(action_icon)
                         .append(label_span)
                         .append(options_el)
@@ -671,7 +678,7 @@ define(["jquery", "amcat/djangofields", "bootstrap"], function($){
             self.show_labels_clicked = function () {
                 // Create and acivate modal window
                 var modal = self._create_modal_window("labels", "Labels of code " + this.code_id).modal();
-
+                
                 modal.on("hidden", function () {
                     $("#labels").remove()
                 });
@@ -762,6 +769,22 @@ define(["jquery", "amcat/djangofields", "bootstrap"], function($){
 
                 return null;
             };
+
+            /**
+             * Quit the current move action.
+             */
+            self._exit_move = function()
+            {
+
+                $(".moving_destination").off("click").removeClass("moving_destination");
+                $(".moving").removeClass("moving");
+                $(".move-help", self.movingCode.dom_element).remove();
+                self.expand(self.movingCode.dom_element, "slow");
+
+                self.movingCode = null;
+                self.moving = false;
+                self._key_listener.updateMovingBindings();
+            }
 
             self.save_label_changes_clicked = function () {
                 /*
@@ -858,10 +881,13 @@ define(["jquery", "amcat/djangofields", "bootstrap"], function($){
                     )
                 );
 
+                self.moving = true;
+                self.movingCode = this;
+                self._key_listener.updateMovingBindings();
                 // Mark destinations as such
                 $(".parts", self.root_el)
                     .addClass("moving_destination")
-                    .click(self.move_destination_clicked.bind(this))
+                    .click(self.move_destination_clicked.bind(this));
             };
 
             self.move_help_clicked = function(){
@@ -905,35 +931,11 @@ define(["jquery", "amcat/djangofields", "bootstrap"], function($){
                 /*
                  * A move destination was clicked. Update relevant codes.
                  */
-                if (!self.moving) {
-                    return (self.moving = true);
-                }
 
                 var new_parent_el = $(event.currentTarget.parentNode);
                 var new_parent_obj = new_parent_el.get(0).object;
-                var old_parent_obj = this.parent;
+                return self.move_code_to(this, new_parent_obj);
 
-                if (new_parent_obj == this) {
-                    // Self clicked, do nothing.
-                    return (self.moving = false);
-                }
-
-                // Update state
-                this.parent.children.remove(this);
-                this.parent = new_parent_obj;
-                this.parent.children.push(this);
-
-                self._update_collapse_icons(old_parent_obj, new_parent_obj);
-
-                // Update GUI
-                $(".moving_destination").off("click").removeClass("moving_destination");
-                $(".moving").removeClass("moving");
-                $(".move-help", this.dom_element).remove();
-                $(this.dom_element).prependTo($(".children", new_parent_el).get(0));
-                self.expand(this.dom_element, "slow");
-
-                self.changesets.moves[this.code_id] = this;
-                self.moving = false;
             };
 
             self.create_child_clicked= function () {
@@ -1001,6 +1003,41 @@ define(["jquery", "amcat/djangofields", "bootstrap"], function($){
                 self.changesets.reorders[swap_with.code_id] = swap_with;
             };
 
+            self.move_code_to = function(code, newParent){
+                if (!self.moving) {
+                    return (self.moving = true);
+                }
+                var new_parent_el = $(newParent.dom_element);
+                var old_parent_obj = code.parent;
+
+                if (newParent == code) {
+                    // Moving to self, do nothing.
+                    return;
+                }
+
+                // Update state
+                code.parent.children.remove(code);
+                code.parent = newParent;
+                code.parent.children.unshift(code);//prepend code to children
+
+                self._update_collapse_icons(old_parent_obj, newParent);
+
+                
+                self.changesets.moves[code.code_id] = code;
+
+                // Update GUI
+                $(self.movingCode.dom_element).prependTo($(".children", new_parent_el).get(0));
+
+                self._exit_move()
+            };
+
+            self.cancel_move = function()
+            {
+                if(self.moving)
+                {
+                    self._exit_move();
+                }
+            }
             self.btn_reorder_by_alpha_clicked = function () {
                 self.reorder(function (a, b) {
                     if (a.label.toLowerCase() < b.label.toLowerCase()) return -1;
