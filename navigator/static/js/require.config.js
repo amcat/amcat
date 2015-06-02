@@ -30,7 +30,9 @@ requirejs.config({
         "jquery.highlight": AMCAT_STATIC_URL + "js/annotator/jquery.highlight",
         "jquery.scrollTo": "jquery.scrollTo/jquery.scrollTo",
         "jquery-ui": "jquery-ui/ui/jquery-ui",
-        "jquery.tablednd": "TableDnD/js/jquery.tablednd.0.7.min"
+        "jquery.tablednd": "TableDnD/js/jquery.tablednd.0.7.min",
+        "jshashset": "jshashtable/hashset",
+        "jshashtable": "jshashtable/hashtable"
     },
     shim:{
         "highcharts.data":{

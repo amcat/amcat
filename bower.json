@@ -18,7 +18,8 @@
     "bootstrap-multiselect": "0.9.13",
     "renderjson": "",
     "highlight": "",
-    "amcat-query-js": "git://github.com/amcat/amcat-query-js.git"
+    "amcat-query-js": "git://github.com/amcat/amcat-query-js.git",
+    "jshashtable": "git://github.com/timdown/jshashtable.git"
   },
   "resolutions": {
     "jquery": ">= 1.9.1",
