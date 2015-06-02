@@ -17,7 +17,11 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from rest_framework.metadata import SimpleMetadata
+
 import api
+import logging
+
+log = logging.getLogger(__name__)
 
 _field_name_map = {
     "PrimaryKeyRelatedField": "ModelChoiceField",
@@ -64,7 +68,12 @@ class AmCATMetadata(SimpleMetadata):
         if self._get_model(view) is None:
             return metadata
 
-        metadata['label'] = self.get_label(view)
+        try:
+            metadata['label'] = self.get_label(view)
+        except ValueError:
+            log.debug("No resource for model, returning minimal metadata.")
+            return metadata
+
         grfm = api.rest.resources.get_resource_for_model
 
         serializer = view.get_serializer()
