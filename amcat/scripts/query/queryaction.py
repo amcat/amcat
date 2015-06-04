@@ -60,7 +60,7 @@ class QueryActionHandler(TaskHandler):
         arguments['project'] = arguments['project'].id
         arguments['articlesets'] = [aset.id for aset in arguments['articlesets']]
 
-        if arguments['data'] is not None:
+        if arguments['data'] is not None and not isinstance(arguments["data"], dict):
             arguments['data'] = dict(arguments['data'].lists())
 
         return arguments
