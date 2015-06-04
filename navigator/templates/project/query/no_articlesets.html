@@ -11,13 +11,14 @@
     </div>
 
     <script type="text/javascript">
-        $("#use-in-query").click(function(event){
-            var wrapper = $(event.currentTarget).closest(".dataTables_wrapper");
-            var api = wrapper.find(".dataTables_scrollBody > .dataTable").DataTable();
-            var ids = $.map(api.rows('.active').data(), function(r){ return r.id; });
-            window.location = "{% url 'navigator:query' project.id %}?sets=" + ids.join(",");
+        require(["jquery", "amcat/amcat.datatables"], function($){
+            $("#use-in-query").click(function(event){
+                var wrapper = $(event.currentTarget).closest(".dataTables_wrapper");
+                var api = wrapper.find(".dataTables_scrollBody > .dataTable").DataTable();
+                var ids = $.map(api.rows('.active').data(), function(r){ return r.id; });
+                window.location = "{% url 'navigator:query' project.id %}?sets=" + ids.join(",");
+            });
         });
-
     </script>
 
     <div id="saved-queries" class="col-md-6">
