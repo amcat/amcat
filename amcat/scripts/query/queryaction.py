@@ -60,7 +60,7 @@ class QueryActionHandler(TaskHandler):
         arguments['project'] = arguments['project'].id
         arguments['articlesets'] = [aset.id for aset in arguments['articlesets']]
 
-        if arguments['data'] is not None and not isinstance(arguments["data"], dict):
+        if arguments['data'] is not None and isinstance(arguments["data"], QueryDict):
             arguments['data'] = dict(arguments['data'].lists())
 
         return arguments
@@ -189,6 +189,7 @@ class QueryAction(object):
         @rtype: QueryActionHandler
         """
         form = self.get_form()
+
         if not form.is_valid():
             raise ValidationError(form._errors)
 
