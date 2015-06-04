@@ -75,6 +75,9 @@ requirejs.config({
         "datatables.tabletools":{
             deps: ["datatables"]
         },
+        "jquery.depends":{
+            deps: ["jquery"]
+        },
         "datatables.bootstrap":{
             deps: ["datatables", "bootstrap", "jquery", "datatables.tabletools"]
         },
