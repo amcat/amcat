@@ -140,7 +140,7 @@ class TaskHandler(object):
             arguments=cls.serialise_arguments(arguments)
         )
 
-        amcat_task.apply_async(task_id=task.uuid)
+        amcat_task.apply_async(task_id=str(task.uuid))
         return cls(task)
 
     def run_task(self):
