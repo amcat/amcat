@@ -170,7 +170,7 @@ class CodingJobExportSelectView(ProjectFormView):
         return super(CodingJobExportSelectView, self).form_valid(form)
 
     def get_success_url(self):
-        url = reverse(CodingJobExportView.get_view_name(), args=[self.project.id])
+        url = reverse("navigator:" + CodingJobExportView.get_view_name(), args=[self.project.id])
         if len(self.jobs) < 100:
             codingjobs_url = "&".join("codingjobs={}".format(c.id) for c in self.jobs)
         else:
@@ -183,7 +183,7 @@ class CodingJobExportView(ProjectScriptView):
     script = GetCodingJobResults
     parent = CodingJobListView
     url_fragment = "export"
-    template_name = "project/coding_job_export.html"
+    template_name = "project/codingjob_export.html"
 
     def read_get(self):
         if self.request.GET.get("use_session"):

@@ -51,12 +51,14 @@
     <!-- Set inputfield 'submit' when clicking on one of the dropdown options,
          according to their 'name' attribute. -->
     <script type="text/javascript">
+    requirejs(["jquery"], function($) {
         $("#export-codingjobs a").click(function(event){
             var target = $(event.currentTarget);
             var form = target.parents("form");
             form.find("[name=export_level]").val(target.attr("name"));
             form.submit();
         });
+    });
     </script>
 
     <p>
@@ -89,8 +91,10 @@
 </div>
 
 <script type="text/javascript">
+requirejs(["jquery"], function($){
   exportids($("#export-codingjobs"));
   exportids($("#set-favourite"));
+});
 </script>
 
 {% endblock %}

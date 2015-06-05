@@ -96,7 +96,8 @@ class ScriptHandler(TaskHandler):
 
     def get_redirect(self):
         """Default: provide redirect to download location"""
-        return reverse("api:api-v4-taskresult") + "/" + self.task.uuid, "Download results"
+        return ("{}/{self.task.uuid}".format(reverse("api:api-v4-taskresult"), **locals()), 
+                "Download results")
 
     def get_response(self):
         """Default: instantiate the script and ask it to provide response"""

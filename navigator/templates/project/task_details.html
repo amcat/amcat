@@ -2,8 +2,9 @@
 {% load staticfiles %}
 
 {% block javascript %}
-    <script type="text/javascript" src="{% static 'js/task.js' %}"></script>
-    <script type="text/javascript">task("{{ task.uuid }}");</script>
+    <script type="text/javascript">
+      requirejs(["amcat/task"], function(task) {task("{{ task.uuid }}");});
+    </script>
 {% endblock %}
 
 
