@@ -59,10 +59,12 @@ class DeduplicateSet(Script):
                                             help_text="Ignore addressee when finding duplicates")
         skip_length = forms.BooleanField(initial=False, required=False,
                                          help_text="Ignore length when finding duplicates")
+        save_duplicates_to = forms.CharField(initial="", required=False)
+
         dry_run = forms.BooleanField(initial=False, required=False,
                                      help_text="Prints all duplicates but doesn't remove them")
 
-    def _run(self, articleset, dry_run, **_):
+    def _run(self, articleset, save_duplicates_to, dry_run, **_):
         hashes = collections.defaultdict(set)
         for i, (id, h) in enumerate(self.get_hashes()):
             if not i%100000:
@@ -84,12 +86,14 @@ class DeduplicateSet(Script):
         n = len(to_remove)
         if not to_remove:
             logging.info("No duplicates found!")
-        elif dry_run:
-            logging.info("{n} duplicate articles found, run without dry_run to remove".format(**locals()))
         else:
-            logging.info("Removing {n} articles from set".format(**locals()))
-            articleset.remove_articles(to_remove)
-
+            if dry_run:
+                logging.info("{n} duplicate articles found, run without dry_run to remove".format(**locals()))
+            else:
+                logging.info("Removing {n} articles from set".format(**locals()))
+                articleset.remove_articles(to_remove)
+            if save_duplicates_to:
+                dupes_article_set = ArticleSet.create_set(articleset.project, save_duplicates_to, to_remove)
         return n, dry_run
 
     def get_hashes(self):
