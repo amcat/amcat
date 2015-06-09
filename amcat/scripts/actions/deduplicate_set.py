@@ -60,7 +60,7 @@ class DeduplicateSet(Script):
         skip_length = forms.BooleanField(initial=False, required=False,
                                          help_text="Ignore length when finding duplicates")
         save_duplicates_to = forms.CharField(initial="", required=False, 
-                                             help_text="Save duplicates to new set with this name. If empty, nothing will be saved")
+                                             help_text="If not empty, save duplicates to new set with this name.")
 
         dry_run = forms.BooleanField(initial=False, required=False,
                                      help_text="Prints all duplicates but doesn't remove them")
