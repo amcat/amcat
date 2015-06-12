@@ -300,7 +300,14 @@ def parse_article(art):
             if RES.BODY_META.match(line):
                 return None, None
             if not line:
-                break
+                # they thought of something new again...
+                # headline\n\nbyline\n\nLENGTH:
+                # so empty line is not always the end
+                if (len(lines) > 4 and (not lines[2]) and lines[1]
+                    and RES.BODY_META.match(lines[3]) and (not RES.BODY_META.match(lines[1]))):
+                    target = byline
+                else:
+                    break
             if line.endswith(";"):
                 target.append(line[:-1])
                 target = byline
@@ -622,6 +629,9 @@ class TestLexisNexis(amcattest.AmCATTestCase):
 
         for a in texts:
             art = parse_article(a)
+            #import json; from django.core.serializers.json import DjangoJSONEncoder
+            #print json.dumps(art, indent=2, cls=DjangoJSONEncoder)
+
             if art is not None:
                 art = list(art)
                 art[3] = str(art[3])
