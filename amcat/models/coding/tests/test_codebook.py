@@ -19,7 +19,7 @@
 import datetime
 from amcat.models import Code, Codebook, CodebookCode, Language
 from amcat.tools import amcattest
-
+from django.core.exceptions import ObjectDoesNotExist
 
 class TestCodebook(amcattest.AmCATTestCase):
     def test_create(self):
@@ -261,9 +261,9 @@ class TestCodebook(amcattest.AmCATTestCase):
         from amcat.models.language import Language
 
         l1 = Language.objects.get(pk=1)
-        a = amcattest.create_test_code(label="a", language=l1)
+        a = amcattest.create_test_code(extra_label="a", extra_language=l1)
         l2 = Language.objects.get(pk=2)
-        b = amcattest.create_test_code(label="b", language=l2)
+        b = amcattest.create_test_code(extra_label="b", extra_language=l2)
         A = amcattest.create_test_codebook(name="A")
         A.add_code(a)
         A.add_code(b)
@@ -293,13 +293,12 @@ class TestCodebook(amcattest.AmCATTestCase):
             self.assertEqual(b.get_label(l2), "b")
 
         with self.checkMaxQueries(0, "Get non-existing labels"):
-            self.assertEqual(a.get_label(l2, l1), "a")
-            self.assertEqual(b.get_label(l1, l2), "b")
+            self.assertRaises(ObjectDoesNotExist, a.get_label, l2)
 
         with self.checkMaxQueries(0, "Get tree"):
             list(A.get_tree())
 
-        c = amcattest.create_test_code(label="c", language=l2)
+        c = amcattest.create_test_code(label="c")
         with self.checkMaxQueries(5, "Add new code"):
             A.add_code(c)
 
@@ -334,7 +333,6 @@ class TestCodebook(amcattest.AmCATTestCase):
 
     def test_get_aggregation_mapping(self):
         a, b, c, d, e, f,g = [amcattest.create_test_code(label=l) for l in "abcdefg"]
-        language = a.labels.all()[0].language
 
         # D: d
         #    +e
@@ -353,18 +351,13 @@ class TestCodebook(amcattest.AmCATTestCase):
         D.add_code(c, b)
 
         # Codebook not cached
-        self.assertRaises(ValueError, D.get_aggregation_mapping, language)
+        self.assertRaises(ValueError, D.get_aggregation_mapping)
         D.cache()
 
         # Codebook cached
-        self.assertEqual({u'c': u'b', u'e': u'd', u'f': u'd'}, D.get_aggregation_mapping(language))
+        self.assertEqual({u'c': u'b', u'e': u'd', u'f': u'd'}, D.get_aggregation_mapping())
 
     def test_get_language_ids(self):
-        try:
-            l1 = Language.objects.all()[0]
-        except KeyError:
-            l1 = Language.objects.create(label="blaat")
-
         al, bl, cl = [Language.objects.create(label=l) for l in "abc"]
         ac, bc, cc = [amcattest.create_test_code(label=l) for l in "abc"]
 
@@ -378,4 +371,4 @@ class TestCodebook(amcattest.AmCATTestCase):
         A.add_code(bc)
         A.add_code(cc)
 
-        self.assertEqual(A.get_language_ids(), {l1.id, al.id, bl.id, cl.id})
+        self.assertEqual(A.get_language_ids(), {al.id, bl.id, cl.id})

@@ -305,12 +305,12 @@ class Codebook(AmcatModel):
             for cid, pid in hierarchy.iteritems()
         )
 
-    def _get_aggregation_mapping(self, language):
-        for root in self.get_tree(get_labels=[language]):
+    def _get_aggregation_mapping(self):
+        for root in self.get_tree():
             for child in root.children:
                 yield (child.label, root.label)
 
-    def get_aggregation_mapping(self, language):
+    def get_aggregation_mapping(self):
         """Returns a mapping from label to label, to allow substantive analysis in codingjob
         export options. That is, with the codebook:
 
@@ -330,7 +330,7 @@ class Codebook(AmcatModel):
         poorly without the cache ready.
         """
         if not self.cached: raise ValueError("Codebook not cached. Use .cache().")
-        return dict(self._get_aggregation_mapping(language))
+        return dict(self._get_aggregation_mapping())
 
     def get_code_ids(self, include_hidden=False, include_parents=False):
         """Returns a set of code_ids that are in this hierarchy

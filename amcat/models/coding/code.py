@@ -50,7 +50,7 @@ class Code(AmcatModel):
     """
 
     id = models.AutoField(primary_key=True, db_column='code_id')
-    label = models.TextField()
+    label = models.TextField(blank=False, null=False)
     uuid = PostgresNativeUUIDField(db_index=True, unique=True)
 
     class Meta():
@@ -63,31 +63,7 @@ class Code(AmcatModel):
         self._labelcache = {}
         self._all_labels_cached = False
 
-
-    def get_lowest_label(self):
-        """Get the (cached, not-None) label with the lowest language id, or a repr-like string"""
-        repr_like_string = '<{0.__class__.__name__}: {0.id}>'.format(self)
-
-        if self._all_labels_cached and not self._labelcache:
-            # ALl lables are cached, but there seem to be no labels for this code
-            return repr_like_string
-
-        if self._labelcache:
-            for key in sorted(self._labelcache):
-                l = self.get_label(key)
-                if l is not None:
-                    return l
-
-            # All labels are cached, and all are None
-            if self._all_labels_cached:
-                return repr_like_string
-
-        try:
-            return self.labels.all().order_by('language__id')[0].label
-        except IndexError:
-            return repr_like_string
-
-    def _get_label(self, language):
+    def get_label(self, language):
         """Get the label (string) for the given language object, or raise label.DoesNotExist"""
         if type(language) != int: language = language.id
         try:
@@ -109,35 +85,6 @@ class Code(AmcatModel):
     def label_is_cached(self, language):
         if type(language) != int: language = language.id
         return language in self._labelcache
-
-    def get_label(self, *languages, **kargs):
-        """
-        @param lan: language to get label for
-        @type lan: Language object or int
-        @param fallback: If True, return another label if language not found
-        @return: string or None
-        """
-        if set(languages) == {None}:
-            languages = []
-        for lan in languages:
-            try:
-                return self._get_label(language=lan)
-            except Label.DoesNotExist:
-                pass
-
-        fallback = kargs.get("fallback", True)
-        if fallback:
-            if self._all_labels_cached:
-                if self._labelcache:
-                    for key in sorted(self._labelcache):
-                        l = self._labelcache[key]
-                        if l is not None: return l
-                    return None
-            else:
-                try:
-                    return self.labels.all().order_by('language__id')[0].label
-                except IndexError:
-                    pass
 
     def add_label(self, language, label, replace=True):
         """

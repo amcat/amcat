@@ -1,4 +1,4 @@
-###########################################################################
+##########################################################################
 # (C) Vrije Universiteit, Amsterdam (the Netherlands)                     #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -30,66 +30,27 @@ class TestCode(amcattest.AmCATTestCase):
         o = amcattest.create_test_code(label="bla")
         self.assertEqual(o.label, "bla")
         self.assertEqual(unicode(o), o.label)
-        # fallback with 'unknown' language
         l2 = Language.objects.create(label='zzz')
-        self.assertEqual(o.get_label(l2), "bla")
-        # second label
         o.add_label(l2, "blx")
         self.assertEqual(o.get_label(l2), "blx")
-        self.assertEqual(o.get_label(Language.objects.create()), "bla")
         self.assertEqual(o.label, "bla")
-
-        # does .label return something sensible on objects without labels?
-        o2 = Code.objects.create()
-        self.assertIsInstance(o2.label, unicode)
-        self.assertRegexpMatches(o2.label, r'^<Code: \d+>$')
-        self.assertIsNone(o2.get_label(l2))
 
         # does .label and .get_label return a unicode object under all circumstances
         self.assertIsInstance(o.label, unicode)
         self.assertIsInstance(o.get_label(l2), unicode)
-        self.assertIsInstance(o2.label, unicode)
-
-    def test_all_labels_cached(self):
-        l = Language.objects.create(label='zzz')
-        o = amcattest.create_test_code(label="bla", language=l)
-        o = Code.objects.get(id=o.id)
-        o._all_labels_cached = True
-
-        with self.checkMaxQueries(0, "Getting non-existing label with _all_cached=True"):
-            self.assertEqual(o.get_label(5), None)
-
-        with self.checkMaxQueries(0, "Getting label with _all_cached=True"):
-            self.assertEqual(o.label, "<Code: {id}>".format(id=o.id))
-
-        o._cache_label(l, "bla2")
-        self.assertEqual(o.get_label(5), "bla2")
-
-        o = Code.objects.get(id=o.id)
-        self.assertEqual(o.label, "bla")
-
-        # If all labels are cached, and _labelcache contains codes with None and
-        # a code with a string, get_label should return the string
-        o._labelcache = {1: None, 2: "grr"}
-        o._all_labels_cached = True
-
-        self.assertEqual(o.label, "grr")
-        self.assertEqual(o.get_label(3, fallback=True), "grr")
-        self.assertEqual(o.get_label(2, fallback=False), "grr")
-        self.assertEqual(o.get_label(1, fallback=True), "grr")
 
 
     def test_cache(self):
         """Are label lookups cached?"""
         l = Language.objects.create(label='zzz')
-        o = amcattest.create_test_code(label="bla", language=l)
+        o = amcattest.create_test_code(label="bla", extra_label="test", extra_language=l)
         with self.checkMaxQueries(0, "Get cached label"):
-            self.assertEqual(o.get_label(l), "bla")
+            self.assertEqual(o.get_label(l), "test")
         o = Code.objects.get(pk=o.id)
         with self.checkMaxQueries(1, "Get new label"):
-            self.assertEqual(o.get_label(l), "bla")
+            self.assertEqual(o.get_label(l), "test")
         with self.checkMaxQueries(0, "Get cached label"):
-            self.assertEqual(o.get_label(l), "bla")
+            self.assertEqual(o.get_label(l), "test")
         o = Code.objects.get(pk=o.id)
         o._cache_label(l, "onzin")
         with self.checkMaxQueries(0, "Get manually cached label"):
