@@ -81,4 +81,4 @@ class TestSerialiser(amcattest.AmCATTestCase):
         self.assertEqual({c}, set(s.possible_values))
 
         self.assertEqual("bla", s.value_label(c))
-        self.assertEqual("blx", s.value_label(c, l2))
+

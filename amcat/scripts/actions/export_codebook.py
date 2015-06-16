@@ -29,7 +29,7 @@ import collections
 from django import forms
 
 from amcat.scripts.script import Script
-from amcat.models import Codebook, Language
+from amcat.models import Codebook, Language, Label
 from amcat.tools.table import table3
 
 LABEL_PREFIX = "label - "
@@ -55,7 +55,10 @@ class CodeColumn(table3.ObjectColumn):
 
     def getCell(self, row):
         code = getattr(row, self.attr)
-        return code.get_label(self.language, fallback=False) if self.language else code.label
+        try:
+            return code.get_label(self.language) if self.language else code.label
+        except Label.DoesNotExist:
+            return None
 
             
 class ExportCodebook(Script):

@@ -24,9 +24,9 @@ class TestExportCodebookAsXML(amcattest.AmCATTestCase):
 
         # Test unicode
         cb = amcattest.create_test_codebook_with_codes()[0]
-        label = cb.codes[0].labels.all()[0]
-        label.label = u"\u2603"  # It's Mr. Snowman!
-        label.save()
+        c = cb.codes[0]
+        c.label = u"\u2603"  # It's Mr. Snowman!
+        c.save()
 
         # Shouldn't raise errors
         cb = codebook_to_xml(Codebook.objects.get(id=cb.id))

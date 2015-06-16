@@ -24,18 +24,18 @@ class TestRules(amcattest.AmCATTestCase):
     def test_lexicon(self):
         from amcat.models import Language
         cb = amcattest.create_test_codebook()
-        l1, l2 = [Language.get_or_create(label=x) for x in ["a", 'b']]
-
-        c1 = amcattest.create_test_code(label="a", language=l1)
-        c1.add_label(l2, "A")
+        l = Language.objects.create(label="lexlang")
+        
+        c1 = amcattest.create_test_code(label="a")
+        c1.add_label(l, "A")
         cb.add_code(c1)
 
-        c2 = amcattest.create_test_code(label="b", language=l1)
-        c2.add_label(l2, "B1, B2")
+        c2 = amcattest.create_test_code(label="b")
+        c2.add_label(l, "B1, B2")
         cb.add_code(c2)
 
         r = RuleSet.objects.create(label="test", lexicon_codebook=cb,
-                                   lexicon_language=l2)
+                                   lexicon_language=l)
 
         result = sorted(r.get_lexicon(), key=lambda l: l['lexclass'])
         self.assertEqual(result, [{"lexclass": "a", "lemma": ["A"]},

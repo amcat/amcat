@@ -25,6 +25,7 @@ articles database table.
 from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools.model import AmcatModel
+from amcat.models import Label
 from django.db import models
 import logging
 import re
@@ -35,6 +36,9 @@ class RuleSet(AmcatModel):
 
     """
     Class representing a set of syntax transformation rule
+
+    The lexical entries are pulled from the lexicon_codebook,
+    where the label with the specified language should be a space or comma delimited list of labels.
     """
 
     id = models.AutoField(primary_key=True, db_column="rule_id")
@@ -48,14 +52,13 @@ class RuleSet(AmcatModel):
         cb = self.lexicon_codebook
         cb.cache_labels()
         for code in cb.get_codes():
-            labels = {label.language:
-                      label.label for label in code.labels.all()}
-            lemmata = labels.get(self.lexicon_language, '').strip()
-            if lemmata:
-                lemmata = re.split("[ ,]+", lemmata)
-                for lang, label in labels.iteritems():
-                    if lang != self.lexicon_language:
-                        yield {"lexclass": label, "lemma": lemmata}
+            try:
+                lemmata = code.get_label(self.lexicon_language)
+                lemmata = re.split("[ ,]+", lemmata.strip())
+                if lemmata:
+                    yield {"lexclass": code.label, "lemma": lemmata}
+            except Label.DoesNotExist:
+                pass
 
     def get_rules(self):
         for rule in self.rules.order_by("order"):

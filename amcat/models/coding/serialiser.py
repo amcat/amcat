@@ -76,11 +76,8 @@ class BaseSerialiser(object):
         """
         return None
 
-    def value_label(self, value, language=None):
-        """Get a label for the given (deserialised) value
-
-        @param language: an optional preferred language, which may be ignored
-        """
+    def value_label(self, value):
+        """Get a label for the given (deserialised) value"""
         return unicode(value)
 
     def get_export_fields(self):
@@ -134,7 +131,7 @@ class QualitySerialiser(BaseSerialiser):
     def possible_values(self):
         return range(-10, 15, 5)  # 15 because end point is ommitted
 
-    def value_label(self, value, language=None):
+    def value_label(self, value):
         if value == 0: return "0"
         if value is None: return value
         return "%+1.1f" % (value / 10.)
@@ -196,9 +193,9 @@ class _CodebookSerialiser(BaseSerialiser):
     def possible_values(self):
         return self.field.codebook.codes
 
-    def value_label(self, value, language=None):
+    def value_label(self, value):
         #self.field.codebook.cache_labels(language)
-        return value.get_label(language)
+        return value.label
 
     def get_export_fields(self):
         yield "ids", forms.BooleanField(initial=True, label="ids", required=False)
