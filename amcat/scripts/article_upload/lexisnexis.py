@@ -385,7 +385,7 @@ def parse_article(art):
 
     def _get_source(lines, i):
         source = lines[0 if i>0 else 1]
-        if source.strip() == "PCM Uitgevers B.V." and i > 2 and lines[i-1].strip():
+        if source.strip() in ("PCM Uitgevers B.V.", "De Persgroep Nederland BV") and i > 2 and lines[i-1].strip():
             source = lines[i-1]
         return source
     
