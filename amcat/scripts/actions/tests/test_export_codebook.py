@@ -29,7 +29,7 @@ class TestExportCodebook(AmCATTestCase):
         self.default = Language.objects.get(id=1)
 
         self.codebook = amcattest.create_test_codebook_with_codes()[0]
-        self.codes_list = list(self.codebook.codes.all())
+        self.codes_list = sorted(self.codebook.codes.all(), key=lambda c:c.id)
         self.codes_list[0].add_label(self.de, "Ein")
         self.codes_list[1].add_label(self.nl, "Een")
 

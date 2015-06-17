@@ -108,4 +108,4 @@ class TestClusterMap(AmCATTestCase):
     def test_get_table(self):
         queries = {"a": [1, 2, 3], "b": [1, 4], "c": [1]}
         clusters = dict(get_clusters(queries))
-        print(get_clustermap_table(clusters))
+        # WvA: is this supposed to test something?
