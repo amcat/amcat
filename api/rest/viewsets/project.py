@@ -66,13 +66,13 @@ class ProjectPermission(permissions.BasePermission):
             return True
 
         user = request.user if request.user.is_authenticated() else None
-
         if user and user.is_superuser:
             return True
 
-        required_role_id = getattr(view, 'permission_map', {}).get(request.method)
+        required_role_id = getattr(view, 'permission_map', {}).get(request.method.upper())
         if required_role_id is None:
-            required_role_id = _DEFAULT_PERMISSION_MAP[request.method]
+            required_role_id = _DEFAULT_PERMISSION_MAP[request.method.upper()]
+
         if required_role_id in (True, False):
             return required_role_id
 
@@ -135,14 +135,11 @@ class ProjectViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
             return Project.objects.get(pk=self.kwargs['pk'])
         else:
             return None # no permissions needed. Not a very elegant signal?
-    
+
     def filter_queryset(self, queryset):
         qs = super(ProjectViewSet, self).filter_queryset(queryset)
         role = Role.objects.get(label="metareader", projectlevel=True)
         if self.request.user.is_anonymous():
             return qs.filter(guest_role__id__gte=role.id)
-
         else:
             return qs.filter(id__in=self.request.user.userprofile.get_projects(role))
-
-

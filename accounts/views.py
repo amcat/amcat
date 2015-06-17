@@ -14,8 +14,7 @@ from amcat.models.user import Affiliation
 from amcat.models.authorisation import Role
 from amcat.models import AmCAT
 
-import logging
-log = logging.getLogger("statistics" + __name__)
+from amcat.tools.usage import log_request_usage
 
 def _login(request, error, username, announcement):
     """
@@ -63,16 +62,18 @@ def login(request):
         # Credentials OK, log user in
         auth_login(request, user)
         signals.user_logged_in.send(sender=user.__class__, request=request, user=user)
-        log.info(json.dumps({"action": "login", "user": username}))
+
+        log_request_usage(request, "account" ,"login")
         return _redirect_login(request)
 
     # GET request, send empty form
     return _login(request, False, None, announcement)
 
 def logout(request):
+    log_request_usage(request, "account" ,"logout")
     auth_logout(request)
     signals.user_logged_out.send(sender=request.user.__class__, request=request, user=request.user)
-    log.info(json.dumps({"action": "logout", "user": request.user.username}))
+
     return redirect(login)
 
 def register(request):
@@ -97,8 +98,8 @@ def register(request):
         )
 
         form = AddUserForm(request)
-        log.info(json.dumps({"action": "register", "user": user.username}))
-
+        log_request_usage(request, "account" ,"register")
+        
     return render(request, "accounts/register.html", locals())
 
 def recover(request):

@@ -34,7 +34,6 @@ from amcat.models import Article, Project, ArticleSet
 from amcat.scripts.article_upload.fileupload import RawFileUploadForm
 from amcat.models.articleset import create_new_articleset
 
-
 class ParseError(Exception):
     pass
 
@@ -167,6 +166,9 @@ class UploadScript(script.Script):
             aset.provenance = ("%s\n%s" % (aset.provenance or "", new_provenance)).strip()
             aset.save()
 
+        if getattr(self, 'task', None):
+            self.task.log_usage("articles", "upload", n=len(arts))
+            
         return [aset.id for aset in self.articlesets]
 
     def postprocess(self, articles):

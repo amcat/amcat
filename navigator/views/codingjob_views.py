@@ -119,6 +119,11 @@ class CodingJobAddView(ProjectScriptView):
     script = AddCodingJob
     url_fragment = "add"
 
+    def get_context_data(self, **kwargs):
+        context = super(CodingJobAddView, self).get_context_data(**kwargs)
+        context["help_context"] = "Create_a_codingjob"
+        return context
+        
     def run_form(self, form):
         result = super(CodingJobAddView, self).run_form(form)
         if isinstance(result, CodingJob): result = [result]

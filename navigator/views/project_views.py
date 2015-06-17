@@ -28,8 +28,7 @@ from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin,
 from navigator.views.scriptview import ScriptView
 from amcat.scripts.actions.add_project import AddProject
 
-import logging
-log = logging.getLogger("statistics:" + __name__)
+from amcat.tools.usage import log_request_usage
 
 class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
     model = Project
@@ -139,4 +138,5 @@ class ProjectAddView(BreadCrumbMixin, ScriptView):
             "name": self.result.name, "description": self.result.description,
             "insert_user": self.result.insert_user.username
         }))
+        log_request_usage(self.request, "project", "create", self.result)
         return reverse('navigator:articleset-list', args=[self.result.id])

@@ -32,6 +32,7 @@ from amcat.models import Plugin, Article
 from amcat.models.project import LITTER_PROJECT_ID
 
 from amcat.scripts.actions.sample_articleset import SampleSet
+from amcat.scripts.actions.deduplicate_set import DeduplicateSet
 from amcat.scripts.actions.import_articleset import ImportSet
 from api.rest.viewsets import FavouriteArticleSetViewSet, ArticleSetViewSet, CodingjobArticleSetViewSet
 
@@ -43,6 +44,7 @@ from amcat.models import Project, ArticleSet
 from api.rest.resources import SearchResource
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
+from django.forms.widgets import HiddenInput
 
 from navigator.views.project_views import ProjectDetailsView
 UPLOAD_PLUGIN_TYPE = 1
@@ -256,21 +258,27 @@ class ArticleSetSampleView(ProjectScriptView):
 
 class ArticleSetDeduplicateView(ProjectScriptView):
     parent = ArticleSetDetailsView
-    script = Deduplicate
-    url_fragment = 'deduplicate'
+    script = DeduplicateSet
+    url_fragment = "deduplicate"
 
-    def xget_form(self, form_class):
-        #asets = self.project.articlesets_set
+
+    def get_form(self, form_class):
         form = super(ArticleSetDeduplicateView, self).get_form(form_class)
-        #form.fields["articleset"].queryset = form.fields["articleset_2"].queryset = asets
-
-        #if "articleset_1" in self.request.GET:
-        #    form.fields["articleset_1"].initial = self.request.GET["articleset_1"]
-
-        #if "articleset_2" in self.request.GET:
-        #    form.fields["articleset_2"].initial = self.request.GET["articleset_2"]
-
+        form.fields["articleset"].widget = HiddenInput()
+        form.fields["articleset"].initial = self.get_object()
         return form
+
+    def success_message(self, result=None):
+        (n, dry_run) = self.result
+        if not n:
+            return SafeText("No duplicates were found in the set")
+        if dry_run:
+            return SafeText("Found {n} duplicates, but did not delete them. Re-run without dry-run to remove"
+                            .format(**locals()))
+        else:
+            return SafeText("Removed {n} duplicates from the set!"
+                            .format(**locals()))
+    
 
 class ArticleSetEditView(ProjectEditView):
     parent = ArticleSetDetailsView
@@ -338,6 +346,7 @@ class ArticleSetUploadView(ProjectScriptView):
 
         return context
 
+        
 class ArticleSetRefreshView(ProjectActionRedirectView):
     parent = ArticleSetDetailsView
     url_fragment = "refresh"
@@ -346,6 +355,8 @@ class ArticleSetRefreshView(ProjectActionRedirectView):
         # refresh the queryset. Probably not the nicest way to do this (?)
         ArticleSet.objects.get(pk=articleset_id).refresh_index(full_refresh=True)
 
+
+        
 class ArticleSetDeleteView(ProjectActionRedirectView):
     parent = ArticleSetDetailsView
     url_fragment = "delete"

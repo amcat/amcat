@@ -36,6 +36,7 @@ from amcat.tools.toolkit import multidict, splitlist
 from elasticsearch import Elasticsearch, ImproperlyConfigured
 from elasticsearch.client import indices, cluster
 from elasticsearch.helpers import scan
+
 from django.conf import settings
 from amcat.tools.caching import cached
 from amcat.tools.progress import NullMonitor
@@ -344,6 +345,13 @@ class ES(object):
         kargs.update(options)
         return self.es.search(body=body, **kargs)
 
+    def scan(self, query, **kargs):
+        """
+        Perform a scan query on the es index
+        See: http://elasticsearch-py.readthedocs.org/en/latest/helpers.html#elasticsearch.helpers.scan
+        """
+        return scan(self.es, index=self.index, doc_type=self.doc_type, query=query, **kargs)
+        
     def query_ids(self, query=None, filters={}, **kwargs):
         """
         Query the index returning a sequence of article ids for the mathced articles

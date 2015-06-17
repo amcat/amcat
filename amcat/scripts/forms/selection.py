@@ -106,6 +106,7 @@ class SelectionForm(forms.Form):
 
         self.fields['articlesets'].queryset = articlesets.order_by('-pk')
         self.fields['codebook'].queryset = project.get_codebooks()
+
         self.fields['mediums'].queryset = self._get_mediums()
         self.fields['codebook_label_language'].queryset = self.fields['codebook_replacement_language'].queryset = (
             Language.objects.filter(labels__code__codebook_codes__codebook__in=project.get_codebooks()).distinct()
