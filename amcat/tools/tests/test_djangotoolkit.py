@@ -2,7 +2,7 @@ from django.http import QueryDict
 from amcat.models import Medium
 
 from amcat.tools import amcattest
-from amcat.tools.amcattest import create_test_medium, create_test_article
+from amcat.tools.amcattest import create_test_medium, create_test_article, require_postgres
 from amcat.tools.djangotoolkit import list_queries, to_querydict, get_or_create, \
     db_supports_distinct_on, get_model_field, bulk_insert_returning_ids
 
@@ -56,6 +56,7 @@ class TestDjangoToolkit(amcattest.AmCATTestCase):
         self.assertEqual(get_model_field(article, "medium"), article.medium)
         self.assertEqual(get_model_field(article, "text"), "abc")
 
+    @require_postgres
     def test_bulk_insert_returning_ids(self):
         m1 = Medium(name="test_bi_1")
         m2 = Medium(name="test_bi_2")
