@@ -294,7 +294,14 @@ def parse_article(art):
             if RES.BODY_META.match(line):
                 return None, None
             if not line:
-                break
+                # they thought of something new again...
+                # headline\n\nbyline\n\nLENGTH:
+                # so empty line is not always the end
+                if (len(lines) > 4 and (not lines[2]) and lines[1]
+                    and RES.BODY_META.match(lines[3]) and (not RES.BODY_META.match(lines[1]))):
+                    target = byline
+                else:
+                    break
             if line.endswith(";"):
                 target.append(line[:-1])
                 target = byline
@@ -372,7 +379,7 @@ def parse_article(art):
 
     def _get_source(lines, i):
         source = lines[0 if i>0 else 1]
-        if source.strip() == "PCM Uitgevers B.V." and i > 2 and lines[i-1].strip():
+        if source.strip() in ("PCM Uitgevers B.V.", "De Persgroep Nederland BV") and i > 2 and lines[i-1].strip():
             source = lines[i-1]
         return source
     
