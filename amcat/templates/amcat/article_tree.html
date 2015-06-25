@@ -1,7 +1,7 @@
 {% comment %}Used in models.article.ArticleTree.get_html(){% endcomment %}
 <li>
     {% if tree.article.id in articles %}
-        <a href="{% url 'article-details' articleset.project_id articleset.id tree.article.id %}">
+        <a href="{% url 'navigator:article-details' articleset.project_id articleset.id tree.article.id %}">
     {% endif %}
 
     {% if tree.article.id == active.id %}
