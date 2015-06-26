@@ -4,7 +4,7 @@
 
 {% block actions %}
 {% if user == object.coder or is_admin %}
-<a class="btn btn-primary" href="{% url 'navigator:annotator-codingjob' project.id object.id %}"><i class="glyphicon glyphicon-list-alt"></i>
+<a class="btn btn-primary" href="{% url 'annotator:annotator-codingjob' project.id object.id %}"><i class="glyphicon glyphicon-list-alt"></i>
 {% if user == object.coder %}
   Code
 {% else %} 
