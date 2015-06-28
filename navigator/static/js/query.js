@@ -22,7 +22,7 @@ var API = null;
 
 define([
     "jquery", "query/multiselect-defaults", "query/utils/serialize",
-    "query/renderers", "query/utils/poll", "query/api", "pnotify",
+    "query/renderers", "query/utils/poll", "query/api", "pnotify", "URIjs/URI",
     "pnotify.nonblock", "amcat/amcat.datatables",
     "query/utils/format", "jquery.hotkeys", "jquery.depends", "bootstrap",
     "bootstrap-multiselect", "bootstrap-tooltip"
