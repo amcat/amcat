@@ -23,7 +23,8 @@ from __future__ import unicode_literals, print_function, absolute_import
 from django.contrib.auth.models import User
 from django.db import models
 from amcat.forms.fields import JSONField
-from amcat.models import ArticleSet
+from amcat.models.articleset import ArticleSet
+from amcat.models.coding.codingjob import CodingJob
 from amcat.tools.model import AmcatModel
 
 __all__ = ["Query"]
@@ -47,6 +48,12 @@ class Query(AmcatModel):
 
     def get_articlesets(self):
         return ArticleSet.objects.filter(id__in=self.get_articleset_ids())
+
+    def get_codingjob_ids(self):
+        return map(int, self.parameters.get("codingjobs", []))
+
+    def get_codingjobs(self):
+        return CodingJob.objects.filter(id__in=self.get_codingjob_ids())
 
     class Meta:
         app_label = 'amcat'

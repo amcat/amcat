@@ -22,9 +22,7 @@ import json
 from django import conf
 from django.core.urlresolvers import reverse
 from django.db.models.query_utils import Q
-from django.http import HttpResponseBadRequest, Http404
-from django.shortcuts import redirect
-from django.views.generic.base import TemplateView
+from django.views.generic.base import TemplateView, RedirectView
 
 from amcat.models import Query
 from amcat.tools import amcates
@@ -37,50 +35,40 @@ from navigator.views.project_views import ProjectDetailsView
 
 SHOW_N_RECENT_QUERIES = 5
 
+class SavedQueryRedirectView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, RedirectView):
+    model = Query
+    parent = ProjectDetailsView
+    url_fragment = 'query/(?P<query>[0-9]+)'
+    view_name = 'saved_query'
+    permanent = False
+
+    def get_redirect_url(self, *args, **kwargs):
+        query_id = int(self.kwargs["query"])
+        query = Query.objects.get(id=query_id)
+        script_name = query.parameters["script"]
+        sets = ",".join(map(str, query.get_articleset_ids()))
+        codingjobs = ",".join(map(str, query.get_codingjob_ids()))
+        url = reverse("navigator:query", args=[self.project.id])
+
+        if codingjobs:
+            url += "?query={query_id}&jobs={codingjobs}#{script_name}".format(**locals())
+        else:
+            url += "?query={query_id}&sets={sets}#{script_name}".format(**locals())
+
+        return url
+
+
 class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, TemplateView):
     context_category = 'Query'
     parent = ProjectDetailsView
     url_fragment = 'query'
     view_name = 'query'
 
-    def get(self, request, *args, **kwargs):
-        """
-        Return BadRequest if query id not a valid integer
-        Return Http404 if query not found
-        Return redirect if no sets given
-        """
-        query_id = self.request.GET.get("query")
-
-        try:
-            query_id = int(query_id)
-        except ValueError:
-            return HttpResponseBadRequest("{query_id} is not a valid integer".format(**locals()))
-        except TypeError:
-            pass
-        else:
-            queries = Query.objects.filter(project=self.project)
-            owned_queries = queries.filter(user=self.request.user)
-            project_queries = queries.filter(~Q(user=self.request.user))
-
-            query = queries.filter(id=query_id)
-
-            if not query:
-                raise Http404("Query {query_id} not found".format(**locals()))
-
-            if "sets" not in self.request.GET:
-                script_name = query[0].parameters["script"]
-                sets = ",".join(map(str, query[0].get_articleset_ids()))
-                url = reverse("navigator:query", args=[self.project.id])
-                url += "?query={query_id}&sets={sets}#{script_name}".format(**locals())
-                return redirect(url)
-
-        return super(QueryView, self).get(request, *args, **kwargs)
-
     def get_saved_queries_table(self):
         table = Datatable(
             QueryViewSet,
             url_kwargs={"project": self.project.id},
-            rowlink="?query={id}"
+            rowlink="{id}"
         )
         table = table.hide("last_saved", "parameters", "private", "project")
         return table
@@ -96,16 +84,26 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         table = table.hide("favourite", "featured", "project", "provenance")
         return table
 
+    def _get_ids(self, key):
+        return set(map(int, filter(unicode.isdigit, self.request.GET.get(key, "").split(","))))
+
     def get_context_data(self, **kwargs):
-        articleset_ids = set(map(int, filter(unicode.isdigit, self.request.GET.get("sets", "").split(","))))
-        articlesets = self.project.all_articlesets().filter(id__in=articleset_ids)
-        articlesets = articlesets.only("id", "name")
         query_id = self.request.GET.get("query", "null")
         user_id = self.request.user.id
+
+        articleset_ids = self._get_ids("sets")
+        codingjob_ids = self._get_ids("jobs")
+
+        all_articlesets = self.project.all_articlesets().only("id", "name")
+
+        if codingjob_ids:
+            all_articlesets = all_articlesets.filter(codingjob_set__id__in=codingjob_ids)
+        else:
+            all_articlesets = all_articlesets.filter(codingjob_set__id__isnull=True)
+
+        articlesets = self.project.all_articlesets().filter(id__in=articleset_ids).only("id", "name")
         articleset_ids_json = json.dumps(list(articleset_ids))
         codebooks = self.project.get_codebooks().order_by("name").only("id", "name")
-
-        all_articlesets = self.project.all_articlesets().filter(codingjob_set__id__isnull=True).only("id", "name")
 
         saved_queries_table = self.get_saved_queries_table()
         articlesets_table = self.get_articlesets_table()
