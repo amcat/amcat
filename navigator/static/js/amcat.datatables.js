@@ -97,7 +97,7 @@ function _set_action_buttons(table){
 
 // Default options passed to datatables.
 _AMCAT_DEFAULT_OPTS = {
-    sScrollY: "300px",
+    //sScrollY: "300px",
     fnRowCallback : function(nRow){
         amcat.datatables.truncate_row(nRow);
     },
