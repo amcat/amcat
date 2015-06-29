@@ -595,51 +595,57 @@ define([
         }
     };
 
+    /**
+     * Called when the depends widget needs data
+     */
+    var dependsFetchDataAggregation = function(options, elements, url){
+        var form_data = serializeForm($("#query-form"), SETS);
+        var y_axis = form_data["y_axis"];
+        form_data.output_type = "application/json";
+
+        if (y_axis === "total"){
+            $("#script-form").find("[name=relative_to]").multiselect("disable").multiselect("setOptions", {
+                nonSelectedText: "None selected"
+            }).multiselect("rebuild");
+            return;
+        } else {
+            $("#script-form").find("[name=relative_to]").multiselect("enable");
+        }
+
+        $.ajax({
+            type: "POST", dataType: "json",
+            url: API.getActionUrl("statistics", PROJECT, SETS),
+            data: form_data,
+            traditional: true
+        }).done(function(data){
+            // Form accepted, we've been given a task uuid
+            Poll(data.uuid).result(function(data){
+                data = data[({
+                    medium: "mediums",
+                    term: "queries",
+                    "set": "articlesets"
+                })[y_axis]];
+
+                var ldata = [{id: "", label: "--------"}];
+                $.each(data, function(id, label){
+                    if (y_axis === "term"){
+                        ldata.push({id: id, label: id});
+                    } else {
+                        ldata.push({id: id, label: label});
+                    }
+                });
+
+                ldata = (ldata.length === 1) ? [] : ldata;
+                options.onSuccess(options, elements, {results: ldata});
+            });
+        }).fail(self.fail);
+
+    };
+
     var post_script_loaded = {
         "aggregation": function(){
             $("#script-form").find("[name=relative_to]").depends({
-                fetchData: function(options, elements, url){
-                    var form_data = serializeForm($("#query-form"), SETS);
-                    var y_axis = form_data["y_axis"];
-                    form_data.output_type = "application/json";
-
-                    if (y_axis === "total"){
-                        $("#script-form").find("[name=relative_to]").multiselect("disable").multiselect("setOptions", {
-                            nonSelectedText: "None selected"
-                        }).multiselect("rebuild");
-                        return;
-                    } else {
-                        $("#script-form").find("[name=relative_to]").multiselect("enable");
-                    }
-
-                    $.ajax({
-                        type: "POST", dataType: "json",
-                        url: API.getActionUrl("statistics", PROJECT, SETS),
-                        data: form_data,
-                        traditional: true
-                    }).done(function(data){
-                        // Form accepted, we've been given a task uuid
-                        Poll(data.uuid).result(function(data){
-                            data = data[({
-                                medium: "mediums",
-                                term: "queries",
-                                "set": "articlesets"
-                            })[y_axis]];
-
-                            var ldata = [{id: "", label: "--------"}];
-                            $.each(data, function(id, label){
-                                if (y_axis === "term"){
-                                    ldata.push({id: id, label: id});
-                                } else {
-                                    ldata.push({id: id, label: label});
-                                }
-                            });
-
-                            ldata = (ldata.length === 1) ? [] : ldata;
-                            options.onSuccess(options, elements, {results: ldata});
-                        });
-                    }).fail(self.fail);
-                }
+                fetchData: dependsFetchDataAggregation
             });
 
             $("#script-form").find("[name=relative_to]").parent().append(
