@@ -234,6 +234,8 @@ class ZipFileUploadForm(FileUploadForm):
                     f.close()
                     with open(fn) as fh:
                         yield File(fh, name=name)
+
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
