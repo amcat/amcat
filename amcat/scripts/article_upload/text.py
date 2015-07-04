@@ -94,7 +94,9 @@ def _convert_pdf(file):
     _file.write(file.bytes)
     pdf = PdfFileReader(_file)
     text = ""
-    for page in pdf.pages:
+    n = pdf.getNumPages()
+    for i in xrange(0,n):
+        page = pdf.getPage(i)
         text += page.extractText()
     return text
 
