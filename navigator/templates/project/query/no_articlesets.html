@@ -33,3 +33,26 @@
     </style>
 </div>
 
+<div id="codingjobjobs" class="row">
+    <div class="col-md-12">
+        <h2>Active codingjobs</h2>
+        {{ codingjobs_table|safe }}
+
+        <div id="{{ codingjobs_table.get_name }}-actions">
+            <a id="use-in-query-codingjobs" class="btn btn-success">
+                <i class="glyphicon glyphicon-search"></i> Use in query
+            </a>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        require(["jquery", "amcat/amcat.datatables"], function($){
+            $("#use-in-query-codingjobs").click(function(event){
+                var wrapper = $(event.currentTarget).closest(".dataTables_wrapper");
+                var api = wrapper.find(".dataTables_scrollBody > .dataTable").DataTable();
+                var ids = $.map(api.rows('.active').data(), function(r){ return r.id; });
+                window.location = "{% url 'navigator:query' project.id %}?jobs=" + ids.join(",");
+            });
+        });
+    </script>
+</div>

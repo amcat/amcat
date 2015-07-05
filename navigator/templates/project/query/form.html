@@ -73,7 +73,19 @@
         <div class="panel panel-default">
             <div class="panel-heading">Filters</div>
             <div class="panel-body">
-                <div class="row">
+                {% if all_codingjobs %}
+                    <div class="row">
+                        <div class="col-md-3"><label>Codingjobs</label></div>
+                        <div class="col-md-9">
+                            <select multiple="multiple" id="id_codingjobs" name="codingjobs">
+                                {% for cj in all_codingjobs %}
+                                    <option value="{{ cj.id }}">{{ cj.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                {% endif %}
+                <div style="{% if all_codingjobs %}display:none;{% endif %}" class="row">
                     <div class="col-md-3"><label>Sets</label></div>
                     <div class="col-md-9">
                         <select multiple="multiple" id="id_articlesets" name="articlesets">
@@ -99,7 +111,7 @@
 
                     <script>
                         require(["jquery", "query/multiselect-defaults", "bootstrap-multiselect"], function($, MULTISELECT_DEFAULTS){
-                            $("#id_mediums,#id_articlesets").multiselect(
+                            $("#id_mediums,#id_articlesets,#id_codingjobs").multiselect(
                                     $.extend({}, MULTISELECT_DEFAULTS, {
                                         nonSelectedText: 'All selected',
                                         buttonWidth: "100%"
@@ -110,6 +122,13 @@
                                     .multiselect("deselectAll")
                                     .multiselect("select", {{ articleset_ids_json }})
                                     .multiselect("disable");
+
+                            {% if all_codingjobs %}
+                                $("#id_codingjobs")
+                                        .multiselect("deselectAll")
+                                        .multiselect("select", {{ codingjob_ids_json }})
+                                        .multiselect("disable");
+                            {% endif %}
                         });
                     </script>
                 </div>
