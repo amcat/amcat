@@ -19,12 +19,13 @@
 import json
 from datetime import datetime
 from time import mktime
+
 from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.forms import ChoiceField, CharField, Select
+
 from amcat.models import Medium, ArticleSet
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools.aggregate import get_relative
-from amcat.tools.djangotoolkit import parse_date
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
 
 X_AXES = tuple((c, c.title()) for c in ("date", "medium", "term", "set"))
@@ -79,6 +80,10 @@ class AggregationActionForm(QueryActionForm):
             "data-depends-value": "{id}",
             "data-depends-label": "{label}",
         }
+
+        if self.codingjobs:
+            self.fields["x_axis"].choices = tuple((k, v) for k, v in X_AXES if k != "term")
+            self.fields["y_axis"].choices = tuple((k, v) for k, v in X_AXES if k != "term")
 
     def clean_relative_to(self):
         column = self.cleaned_data['relative_to']
