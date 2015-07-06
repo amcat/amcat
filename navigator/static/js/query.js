@@ -38,6 +38,7 @@ define([
     var USER = $("#query-form").data("user");
     var PROJECT = query_screen.data("project");
     var SETS = $("#query-form").data("sets");
+    var JOBS = $("#query-form").data("jobs");
     API = api({"host": ""});
 
     var DEFAULT_SCRIPT = "summary";
@@ -48,7 +49,7 @@ define([
         "include_all", "articlesets", "mediums", "article_ids",
         "start_date", "end_date", "datetype", "on_date",
         "codebook_replacement_language", "codebook_label_language",
-        "codebook", "query", "download"
+        "codebook", "query", "download", "codingjobs"
     ];
 
     var HOTKEYS = {
@@ -219,14 +220,14 @@ define([
             table.DataTable().destroy();
         }
 
-        form_data = serializeForm($("#query-form"), SETS);
+        form_data = serializeForm($("#query-form"), JOBS, SETS);
         $result.find(".panel-body").html("<i>No results yet</i>");
 
         var script = scripts_container.find(".active")[0].id.replace("script_","");
 
         $.ajax({
             type: "POST", dataType: "json",
-            url: API.getActionUrl(script, PROJECT, SETS),
+            url: API.getActionUrl(script, PROJECT, JOBS, SETS),
             data: form_data,
             headers: {
                 "X-Available-Renderers": self.get_accepted_mimetypes().join(",")
@@ -248,7 +249,7 @@ define([
 
         window.history.replaceState(null, null, '#' + name);
 
-        var url = API.getActionUrl(name, PROJECT, SETS);
+        var url = API.getActionUrl(name, PROJECT, JOBS, SETS);
 
         $.ajax({
             "type": "OPTIONS", url: url, dateType: "json"
@@ -398,7 +399,7 @@ define([
             url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: ''})
         }
 
-        var data = serializeForm($("#query-form"), SETS);
+        var data = serializeForm($("#query-form"), JOBS, SETS);
         data["script"] = window.location.hash.slice(1);
         delete data['csrfmiddlewaretoken'];
 
@@ -521,7 +522,7 @@ define([
             return parseInt($(option).val());
         });
 
-        var url = self.get_window_url(SETS, window.location.hash.slice(1));
+        var url = self.get_window_url(JOBS, SETS, window.location.hash.slice(1));
         history.replaceState({}, document.title, url);
 
         $("#id_articlesets")
@@ -536,9 +537,10 @@ define([
         })).click();
     };
 
-    self.get_window_url = function get_window_url(sets, hash){
+    self.get_window_url = function get_window_url(jobs, sets, hash){
         return "?sets={sets}#{hash}".format({
             sets: sets.join(","),
+            jobs: jobs.join(","),
             hash: hash
         });
     };
@@ -599,7 +601,7 @@ define([
      * Called when the depends widget needs data
      */
     var dependsFetchDataAggregation = function(options, elements, url){
-        var form_data = serializeForm($("#query-form"), SETS);
+        var form_data = serializeForm($("#query-form"), JOBS, SETS);
         var y_axis = form_data["y_axis"];
         form_data.output_type = "application/json";
 
@@ -614,7 +616,7 @@ define([
 
         $.ajax({
             type: "POST", dataType: "json",
-            url: API.getActionUrl("statistics", PROJECT, SETS),
+            url: API.getActionUrl("statistics", PROJECT, JOBS, SETS),
             data: form_data,
             traditional: true
         }).done(function(data){
@@ -790,7 +792,7 @@ define([
         $("#new-query").click(function(event){
             event.preventDefault();
 
-            var url = self.get_window_url(SETS, window.location.hash.slice(1));
+            var url = self.get_window_url(JOBS, SETS, window.location.hash.slice(1));
 
             if (window.location.search + window.location.hash === url){
                 window.location.reload();

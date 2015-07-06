@@ -22,7 +22,7 @@ from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.http import QueryDict, HttpResponse
 import sys
-from amcat.models import Project, ArticleSet, TaskHandler
+from amcat.models import Project, ArticleSet, TaskHandler, CodingJob
 from amcat.scripts.forms import SelectionForm
 from django import forms
 from amcat.tools.caching import cached
@@ -59,6 +59,7 @@ class QueryActionHandler(TaskHandler):
         arguments['user'] = arguments['user'].id
         arguments['project'] = arguments['project'].id
         arguments['articlesets'] = [aset.id for aset in arguments['articlesets']]
+        arguments['codingjobs'] = [cj.id for cj in arguments.get('codingjobs', [])]
 
         if arguments['data'] is not None and isinstance(arguments["data"], QueryDict):
             arguments['data'] = dict(arguments['data'].lists())
@@ -71,6 +72,7 @@ class QueryActionHandler(TaskHandler):
         arguments['user'] = User.objects.get(id=arguments['user'])
         arguments['project'] = Project.objects.get(id=arguments['project'])
         arguments['articlesets'] = ArticleSet.objects.filter(id__in=arguments['articlesets'])
+        arguments['codingjobs'] = CodingJob.objects.filter(id__in=arguments.get('codingjobs', []))
 
         if arguments['data'] is not None:
             arguments['data'] = to_querydict(arguments['data'])
@@ -137,7 +139,7 @@ class QueryAction(object):
     task_handler = QueryActionHandler
     output_types = None
 
-    def __init__(self, user, project, articlesets, data=None):
+    def __init__(self, user, project, articlesets, codingjobs=None, data=None):
         """
         @type project: amcat.models.Project
         @type articlesets: django.db.QuerySet
@@ -146,6 +148,7 @@ class QueryAction(object):
         self.user = user
         self.project = project
         self.articlesets = articlesets
+        self.codingjobs = codingjobs
         self.data = data
         self.monitor = ProgressMonitor()
 
@@ -154,7 +157,8 @@ class QueryAction(object):
     def get_form_kwargs(self, **kwargs):
         return dict({
             "data": self.data, "project": self.project,
-            "articlesets": self.articlesets, "user": self.user
+            "articlesets": self.articlesets, "user": self.user,
+            "codingjobs": self.codingjobs
         }, **kwargs)
 
     def get_form_class(self):
@@ -197,6 +201,7 @@ class QueryAction(object):
             target_class=self.__class__, user=self.user,
             project=self.project, arguments={
                 "user": self.user, "project": self.project,
-                "data": self.data, "articlesets": self.articlesets
+                "data": self.data, "articlesets": self.articlesets,
+                "codingjobs": self.codingjobs
             }
         )

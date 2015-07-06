@@ -25,7 +25,7 @@ import logging
 from django import forms
 from django.core.exceptions import ValidationError
 
-from amcat.models import Codebook, Language, Article, ArticleSet
+from amcat.models import Codebook, Language, Article, ArticleSet, CodingJob
 from amcat.models.medium import Medium, get_mediums
 from amcat.forms.forms import order_fields
 from amcat.tools.caching import cached
@@ -73,6 +73,7 @@ def _add_to_dict(dict, key, value):
 class SelectionForm(forms.Form):
     include_all = forms.BooleanField(label="Include articles not matched by any keyword", required=False, initial=False)
     articlesets = ModelMultipleChoiceFieldWithIdLabel(queryset=ArticleSet.objects.none(), required=False, initial=())
+    codingjobs = ModelMultipleChoiceFieldWithIdLabel(queryset=CodingJob.objects.none(), required=False, initial=())
     mediums = ModelMultipleChoiceFieldWithIdLabel(queryset=Medium.objects.all(), required=False, initial=())
     article_ids = forms.CharField(widget=forms.Textarea, required=False)
     start_date = forms.DateField(required=False)
@@ -88,8 +89,10 @@ class SelectionForm(forms.Form):
 
     query = forms.CharField(widget=forms.Textarea, required=False)
 
-    def __init__(self, project=None, articlesets=None, data=None, *args, **kwargs):
+    def __init__(self, project=None, articlesets=None, codingjobs=None, data=None, *args, **kwargs):
         """
+        @param codingojobs: when specified,
+
         @param project: project to generate this form for
         @type project: amcat.models.Project
 
@@ -103,14 +106,21 @@ class SelectionForm(forms.Form):
 
         self.project = project
         self.articlesets = articlesets
+        self.codingjobs = codingjobs
 
         self.fields['articlesets'].queryset = articlesets.order_by('-pk')
+        self.fields['codingjobs'].queryset = project.codingjob_set.all()
         self.fields['codebook'].queryset = project.get_codebooks()
 
         self.fields['mediums'].queryset = self._get_mediums()
         self.fields['codebook_label_language'].queryset = self.fields['codebook_replacement_language'].queryset = (
             Language.objects.filter(labels__code__codebook_codes__codebook__in=project.get_codebooks()).distinct()
         )
+
+        if codingjobs:
+            self.fields['articlesets'].queryset = self.fields['articlesets'].queryset.filter(
+                codingjob_set__id__in=codingjobs.values_list("id", flat=True)
+            )
 
         if data is not None:
             self.data = self.get_data()
@@ -205,6 +215,8 @@ class SelectionForm(forms.Form):
         return None
 
     def clean_articlesets(self):
+        print(self.cleaned_data)
+
         if not self.cleaned_data["articlesets"]:
             return self.project.all_articlesets()
         return self.cleaned_data["articlesets"]
