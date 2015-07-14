@@ -436,7 +436,7 @@ class ES(object):
         nbatches = len(batches)
         for i, batch in enumerate(batches):
             monitor.update(40/nbatches, "Added batch {iplus}/{nbatches}".format(iplus=i+1, **locals()))
-            self.bulk_update(article_ids, UPDATE_SCRIPT_ADD_TO_SET, params={'set' : setid})
+            self.bulk_update(batch, UPDATE_SCRIPT_ADD_TO_SET, params={'set' : setid})
 
     def bulk_insert(self, dicts):
         """
