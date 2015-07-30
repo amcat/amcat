@@ -347,20 +347,20 @@ def random_alphanum(size=10):
 ##                     Date(time) functions                              ##
 ###########################################################################
 
-MONTHNAMES = (('jan', 'janv', 'ener', 'gennaio'),
-              ('feb', 'fevr', 'feve', 'f\xe9vrier'),
-              ('mar', 'mrt', 'maa', 'mar', 'm\xe4rz', 'maerz'),
-              ('apr', 'avri', 'abri'),
-              ('may', 'mai', 'mei', 'mayo', 'maggio', 'm\xe4rz'),
-              ('jun', 'juin', 'giugno'),
-              ('jul', 'juil', 'luglio'),
-              ('aug', 'aout', 'agos', u'ao\xfbt'),
-              ('sep', 'setem', 'settembre'),
-              ('oct', 'okt', 'out', 'ottobre'),
-              ('nov'),
-              ('dec', 'dez', 'dici', 'dicembre', 'd\xe9cembre'))
-"""Tuple of 12 tuples containing month name (prefixes)"""
-
+MONTHNAMES = (('jan', 'janv', 'ener', 'gennaio', 'јануар', 'كانون الثاني', 'يناير', 'ינואר', 'בינואר'),
+              ('feb', 'fevr', 'feve', 'f\xe9vrier', 'февруар', 'shkurt', 'شباط', 'فبراير', 'בפבואר', 'פבואר'),
+              ('mar', 'mrt', 'maa', 'm\xe4rz', 'maerz', 'март', 'آذار', 'مارس', 'اذار', 'מרץ', 'במרץ'),
+              ('apr', 'avri', 'abri', 'април', 'prill', 'نيسان', 'أبريل', 'إبريل', 'ربيع الثاني', 'באפריל', 'אפריל'),
+              ('may', 'mai', 'mei', 'maggio', 'мај', 'maj', 'мože', 'أيار', 'مايو','ايار', 'מאי', 'במאי'),
+              ('jun', 'juin', 'giugno', 'јун','qershor', 'حزيران', 'يونيه', 'يونيو', 'יוני', 'ביוני'),
+              ('jul', 'juil', 'luglio', 'јул', 'korrik', 'تموز', 'يوليه', 'يوليو', 'יולי', 'ביולי'),
+              ('aug', 'aout', 'agos', u'ao\xfbt', 'август', 'avg', 'gusht', 'آب', 'أغسطس', 'אוגוסט', 'באוגוסט'),
+              ('sep', 'setem', 'settembre', 'септем', 'shtator', 'أيلول', 'سبتمبر', 'ايلول', 'ספטמבר', 'בספטמבר'),
+              ('oct', 'okt', 'out', 'ottobre', 'окто', 'tetor', 'تشرين الأول', 'أكتوبر', 'אוקטובר', 'באוקטובר'),
+              ('nov', 'ноем', 'noem', 'новем', 'nëntor', 'nentor', 'تشرين الثاني', 'نوفمبر', 'נובמבר', 'בנובמבר'),
+              ('dec', 'dez', 'dici', 'dicembre', 'd\xe9cembre', 'декем', 'dekem', 'децем', 'dhjetor', 'كانون الأول', 'ديسمبر', 'דצמבר', 'בדצמבר'))
+"""Tuple of 12 tuples containing month name (prefixes);
+   languages included: English German Dutch French Italian Serbian Macedonian Albanian Arabic Hebrew"""
 
 class _DateFormat(object):
     """Format definition for parsing dates"""
@@ -397,15 +397,15 @@ class _DateFormat(object):
 
 _DATEFORMATS = (
     _DateFormat("(\d{4})[-/\.](\d{1,2})[-/\.](\d{1,2})", 1, 2, 3),
-    _DateFormat("(\d{1,2})[-/\.](\d{1,2})[-/\.](\d{4})", 3, 2, 1, swapamerican=True),
-    _DateFormat("(\w+),?\s+(\d{1,2})\s*,?\s+(\d{4})", 3, 1, 2, True),
-    _DateFormat("(\w+)\s+(\d{1,2})\s*,?\s+(\d{4})", 3, 1, 2, True),
-    _DateFormat("(\d{1,2})(?:\w\w?|\.)?\s+(\w*)\s+(\d{4})", 3, 2, 1, True),
-    _DateFormat("\w*?,?\s*(\d{1,2})\s+(\w+)\s+(\d{4})", 3, 2, 1, True),
-    _DateFormat("(\d{1,2})\.?\s+(\w*)\s+(\d{4})", 3, 2, 1, True),
+    _DateFormat("(\d{1,2})[-/\.](\d{1,2})[-/\.](\d{2,4})", 3, 2, 1, swapamerican=True),
+    _DateFormat("(\w+),?\s+(\d{1,2})\s*,?\s+(\d{4})", 2, 3, 1, True),
+    _DateFormat("(\w+)\s+(\d{1,2})\s*,?\s+(\d{4})", 2, 3, 1, True),
+    _DateFormat("(\d{1,2})(?:\w\w?|\.)?\s+(\w*)\s+(\d{2,4})", 3, 2, 1, True),
+    _DateFormat("\w*?,?\s*(\d{1,2})\s+(\w+)\s+(\d{2,4})", 3, 2, 1, True),
+    _DateFormat("(\d{1,2})?\.?\s+(\w*)\s+(\d{2,4})", 3, 2, 1, True),
     _DateFormat("(\d{1,2})[- ](\w+)[- ](\d{2,4})", 3, 2, 1, True),
-    _DateFormat("(\w+) (\d{1,2}), (\d{4})", 3, 1, 2, True),
-    _DateFormat("(\d{1,2})(\w{3})(\d{4})", 3, 2, 1, True),
+    _DateFormat("(\w+) (\d{1,2}), (\d{4})", 2, 3, 1, True),
+    _DateFormat("(\d{1,2})(\w{3,4})(\d{2,4})", 3, 2, 1, True),
     _DateFormat("(\d{1,2})[-/](\d{1,2})[-/](\d{2})", 3, 2, 1, swapamerican=True),
 
 )
@@ -464,7 +464,7 @@ def read_date(string, lax=False, rejectPre1970=False, american=False):
             date = df.readDate(datestr, american=american)
             if date: break
 
-        datestr = datestr.lower()
+        datestr = datestr.lower().replace('  ',' ').replace(' : ',':').replace(' / ','/').replace('. ',' ').replace(' - ','-')
         if not date:
             # For 'October 20, 2010'
             for i, prefixes in enumerate(MONTHNAMES):
