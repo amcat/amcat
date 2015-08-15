@@ -34,7 +34,8 @@ X_AXES = tuple((c, c.title()) for c in ("date", "medium", "term", "set"))
 Y_AXES = tuple((c, c.title()) for c in ("medium", "term", "set", "total"))
 
 X_AXES_CODINGJOB = tuple((c, c.title()) for c in ("date", "medium"))
-Y_AXES_CODINGJOB = tuple((c, c.title()) for c in ("medium",))
+Y_AXES_CODINGJOB = tuple((c, c.title()) for c in ("medium", "total"))
+Y_AXES_CODINGJOB_2ND = (("", "-------"),) + Y_AXES_CODINGJOB
 
 INTERVALS = tuple((c, c.title()) for c in ("day", "week", "month", "quarter", "year"))
 
@@ -77,6 +78,10 @@ class AggregationActionForm(QueryActionForm):
     interval = ChoiceField(choices=INTERVALS, required=False, initial="day")
     relative_to = CharField(widget=Select, required=False)
 
+    # This field is ignored server-side, but processed by javascript. It causes the renderer
+    # to make another call
+    y_axis_2 = ChoiceField(label="2nd Y-axis (columns)", choices=Y_AXES, required=False)
+
     def __init__(self, *args, **kwargs):
         super(AggregationActionForm, self).__init__(*args, **kwargs)
 
@@ -92,13 +97,17 @@ class AggregationActionForm(QueryActionForm):
             schemafield_choices = tuple(get_schemafield_choices(self.codingjobs))
             self.fields["x_axis"].choices = X_AXES_CODINGJOB
             self.fields["y_axis"].choices = Y_AXES_CODINGJOB + schemafield_choices
+            self.fields["y_axis_2"].choices = Y_AXES_CODINGJOB_2ND + schemafield_choices
+        else:
+            del self.fields["y_axis_2"]
 
     def clean_relative_to(self):
         column = self.cleaned_data['relative_to']
-        y_axis = self.cleaned_data['y_axis']
 
         if not column:
             return None
+
+        y_axis = self.cleaned_data['y_axis']
 
         if y_axis == "medium":
             if int(column) not in (m.id for m in self.cleaned_data["mediums"]):
@@ -151,11 +160,9 @@ class AggregationAction(QueryAction):
         if y_axis.startswith("schemafield_avg_"):
             article_ids = selection.get_article_ids()
             orm_aggregate = ORMAggregate(codingjobs, article_ids)
-            aggregation = list(orm_aggregate.get_aggregate(x_axis, y_axis, interval))
-            print(aggregation)
+            aggregation = sorted(orm_aggregate.get_aggregate(x_axis, y_axis, interval))
         else:
             aggregation = selection.get_aggregate(x_axis, y_axis, interval)
-            print(aggregation)
 
         #
         self.monitor.update(20, "Calculating relative values..".format(**locals()))

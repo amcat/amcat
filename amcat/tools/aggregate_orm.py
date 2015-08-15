@@ -73,6 +73,9 @@ class ORMAggregate(object):
         if y_axis == "medium":
             for aggr_key, articles in aggregate.items():
                 aggregate[aggr_key] = len(self.aggregate_medium(articles))
+        elif y_axis == "total":
+            for aggr_key, articles in aggregate.items():
+                aggregate[aggr_key] = len(articles)
         else:
             assert y_axis.startswith("schemafield_avg_")
 

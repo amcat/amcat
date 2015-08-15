@@ -25,7 +25,7 @@ define([
     "query/renderers", "query/utils/poll", "query/api", "pnotify", "URIjs/URI",
     "pnotify.nonblock", "amcat/amcat.datatables",
     "query/utils/format", "jquery.hotkeys", "jquery.depends", "bootstrap",
-    "bootstrap-multiselect", "bootstrap-tooltip"
+    "bootstrap-multiselect", "bootstrap-tooltip", "jquery.scrollTo"
     ], function($, MULTISELECT_DEFAULTS, serializeForm, renderers, Poll, api, PNotify){
     // TODO: Make it prettier:
     $.fn.datepicker.defaults.format = "yyyy-mm-dd";
@@ -320,6 +320,12 @@ define([
 
         $("#loading-dialog").modal("hide");
         $(".query-submit .btn").removeClass("disabled");
+
+        if (document.location.search.indexOf("autorun") !== -1){
+            window.setTimeout(function(){
+                $("#run-query").click();
+            }, 500)
+        }
     };
 
     self.init_saved_query = function init_saved_query(query_id){
@@ -538,7 +544,7 @@ define([
     };
 
     self.get_window_url = function get_window_url(jobs, sets, hash){
-        return "?sets={sets}#{hash}".format({
+        return "?sets={sets}&jobs={jobs}#{hash}".format({
             sets: sets.join(","),
             jobs: jobs.join(","),
             hash: hash
@@ -697,6 +703,7 @@ define([
             }
 
             $("#result").attr("class", window.location.hash.slice(1));
+            $(window).scrollTo($("#result"), 500);
         }).always(function() {
             loading_dialog.modal("hide");
             progress_bar.css("width", 0);

@@ -66,7 +66,6 @@ class SummaryAction(QueryAction):
 
             self.monitor.update(79, "Rendering results..".format(**locals()))
 
-
         return TEMPLATE.render(Context(dict(locals(), **{
             "project": self.project, "user": self.user
         })))
