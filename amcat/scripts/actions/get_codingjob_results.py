@@ -181,11 +181,6 @@ class CodingJobResultsForm(CodingjobListForm):
                                           label=label, required=False)
             yield "{prefix}_{field_name}".format(**locals()), form_field
 
-            # Aggregate language field
-            label = "Aggregate {field_name}, language".format(field_name=field_name)
-            form_field = ModelChoiceField(queryset=Language.objects.all(), label=label, required=True, initial=Language.objects.all()[0].id)
-            yield "{prefix}_{field_name}_language".format(**locals()), form_field
-
             # Aggregate leave empty
             help_text = "If value is not found in codebook, leave field empty."
             label = "Aggregate {field_name}, include not found".format(field_name=field_name)
@@ -450,16 +445,16 @@ class GetCodingJobResults(Script):
 
         for field_name in AGGREGATABLE_FIELDS:
             codebook = self.options.get("aggregation_{field_name}".format(field_name=field_name))
-            language = self.options.get("aggregation_{field_name}_language".format(field_name=field_name))
             not_found = self.options.get("aggregation_{field_name}_default".format(field_name=field_name))
 
             if not codebook:
                 continue
 
-            codebook.cache_labels(language)
+            codebook.cache()
+     
             table.addColumn(MappingMetaColumn(
                 _MetaField("article", field_name, field_name + " aggregation"),
-                codebook.get_aggregation_mapping(language), not_found
+                codebook.get_aggregation_mapping(), not_found
             ))
 
         # Build columns based on form schemafields
