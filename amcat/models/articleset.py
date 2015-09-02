@@ -37,7 +37,7 @@ from amcat.models.amcat import AmCAT
 from amcat.tools.model import AmcatModel
 from amcat.tools import amcates
 from amcat.models.article import Article
-from amcat.tools.progress import NullMonitor, ProgressMonitor
+from amcat.tools.progress import ProgressMonitor
 from amcat.tools.amcates import ES
 
 log = logging.getLogger(__name__)
@@ -85,7 +85,7 @@ class ArticleSet(AmcatModel):
         from amcat.tools.amcates import ES
         return ES().count(filters={"sets": self.id})
 
-    def add_articles(self, articles, add_to_index=True, monitor=NullMonitor()):
+    def add_articles(self, articles, add_to_index=True, monitor=ProgressMonitor()):
         """
         Add the given articles to this article set. Implementation is exists of three parts:
 
