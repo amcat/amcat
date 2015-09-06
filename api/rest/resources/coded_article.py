@@ -17,45 +17,19 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+import logging
 
-from __future__ import unicode_literals, print_function, absolute_import
+from amcat.models import CodedArticle
+from api.rest.resources.amcatresource import AmCATResource
+from api.rest.viewsets import CodedArticleSerializer
 
-from django.contrib.auth.models import User
-from django.db import models
-from amcat.forms.fields import JSONField
-from amcat.models.articleset import ArticleSet
-from amcat.models.coding.codingjob import CodingJob
-from amcat.tools.model import AmcatModel
+log = logging.getLogger(__name__)
 
-__all__ = ["Query"]
+class CodedArticleResource(AmCATResource):
+    model = CodedArticle
+    serializer_class = CodedArticleSerializer
 
+    @classmethod
+    def get_model_name(cls):
+        return "CodedArticle".lower()
 
-class Query(AmcatModel):
-    __label__ = 'name'
-    id = models.AutoField(primary_key=True, db_column="query_id")
-
-    name = models.TextField()
-    parameters = JSONField()
-    private = models.BooleanField(default=True, db_index=True)
-
-    project = models.ForeignKey("amcat.Project")
-    user = models.ForeignKey(User)
-
-    last_saved = models.DateTimeField(auto_now=True, db_index=True)
-
-    def get_articleset_ids(self):
-        return map(int, self.parameters["articlesets"])
-
-    def get_articlesets(self):
-        return ArticleSet.objects.filter(id__in=self.get_articleset_ids())
-
-    def get_codingjob_ids(self):
-        return map(int, self.parameters.get("codingjobs", []))
-
-    def get_codingjobs(self):
-        return CodingJob.objects.filter(id__in=self.get_codingjob_ids())
-
-    class Meta:
-        app_label = 'amcat'
-        db_table = 'queries'
-        ordering = ("-last_saved",)

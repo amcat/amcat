@@ -26,7 +26,7 @@ from rest_framework.metadata import SimpleMetadata
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from amcat.models import Project
+from amcat.models import Project, CodingJob
 from amcat.tools.caching import cached
 
 
@@ -66,6 +66,10 @@ class QueryActionView(APIView):
     def articlesets(self):
         return self.get_articlesets()
 
+    @property
+    def codingjobs(self):
+        return self.get_codingjobs()
+
     @cached
     def get_project(self):
         try:
@@ -85,9 +89,18 @@ class QueryActionView(APIView):
         return articlesets.only("id", "name")
 
     @cached
+    def get_codingjobs(self):
+        # Codingjobs are given by GET parameter `jobs` and separated by commas. If *no* jobs are
+        # given, we also return no jobs, in contrast to get_articlesets which yields all articlesets
+        # belonging to the current project.
+        codingjob_ids = map(int, filter(unicode.isdigit, self.request.GET.get("jobs", "").split(",")))
+        codingjobs = self.project.codingjob_set.filter(id__in=codingjob_ids).only("id", "name")
+        return codingjobs if codingjob_ids else CodingJob.objects.none()
+
+    @cached
     def get_query_action(self):
         return self.query_action(
-            user=self.request.user, project=self.get_project(),
+            user=self.request.user, project=self.get_project(), codingjobs=self.get_codingjobs(),
             articlesets=self.get_articlesets(), data=self.request.POST or self.request.DATA or None
         )
 

@@ -22,10 +22,10 @@ var API = null;
 
 define([
     "jquery", "query/multiselect-defaults", "query/utils/serialize",
-    "query/renderers", "query/utils/poll", "query/api", "pnotify",
+    "query/renderers", "query/utils/poll", "query/api", "pnotify", "URIjs/URI",
     "pnotify.nonblock", "amcat/amcat.datatables",
     "query/utils/format", "jquery.hotkeys", "jquery.depends", "bootstrap",
-    "bootstrap-multiselect", "bootstrap-tooltip"
+    "bootstrap-multiselect", "bootstrap-tooltip", "jquery.scrollTo"
     ], function($, MULTISELECT_DEFAULTS, serializeForm, renderers, Poll, api, PNotify){
     // TODO: Make it prettier:
     $.fn.datepicker.defaults.format = "yyyy-mm-dd";
@@ -38,6 +38,7 @@ define([
     var USER = $("#query-form").data("user");
     var PROJECT = query_screen.data("project");
     var SETS = $("#query-form").data("sets");
+    var JOBS = $("#query-form").data("jobs");
     API = api({"host": ""});
 
     var DEFAULT_SCRIPT = "summary";
@@ -48,7 +49,7 @@ define([
         "include_all", "articlesets", "mediums", "article_ids",
         "start_date", "end_date", "datetype", "on_date",
         "codebook_replacement_language", "codebook_label_language",
-        "codebook", "query", "download"
+        "codebook", "query", "download", "codingjobs"
     ];
 
     var HOTKEYS = {
@@ -219,14 +220,14 @@ define([
             table.DataTable().destroy();
         }
 
-        form_data = serializeForm($("#query-form"), SETS);
+        form_data = serializeForm($("#query-form"), JOBS, SETS);
         $result.find(".panel-body").html("<i>No results yet</i>");
 
         var script = scripts_container.find(".active")[0].id.replace("script_","");
 
         $.ajax({
             type: "POST", dataType: "json",
-            url: API.getActionUrl(script, PROJECT, SETS),
+            url: API.getActionUrl(script, PROJECT, JOBS, SETS),
             data: form_data,
             headers: {
                 "X-Available-Renderers": self.get_accepted_mimetypes().join(",")
@@ -248,7 +249,7 @@ define([
 
         window.history.replaceState(null, null, '#' + name);
 
-        var url = API.getActionUrl(name, PROJECT, SETS);
+        var url = API.getActionUrl(name, PROJECT, JOBS, SETS);
 
         $.ajax({
             "type": "OPTIONS", url: url, dateType: "json"
@@ -319,6 +320,12 @@ define([
 
         $("#loading-dialog").modal("hide");
         $(".query-submit .btn").removeClass("disabled");
+
+        if (document.location.search.indexOf("autorun") !== -1){
+            window.setTimeout(function(){
+                $("#run-query").click();
+            }, 500)
+        }
     };
 
     self.init_saved_query = function init_saved_query(query_id){
@@ -398,7 +405,7 @@ define([
             url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: ''})
         }
 
-        var data = serializeForm($("#query-form"), SETS);
+        var data = serializeForm($("#query-form"), JOBS, SETS);
         data["script"] = window.location.hash.slice(1);
         delete data['csrfmiddlewaretoken'];
 
@@ -521,7 +528,7 @@ define([
             return parseInt($(option).val());
         });
 
-        var url = self.get_window_url(SETS, window.location.hash.slice(1));
+        var url = self.get_window_url(JOBS, SETS, window.location.hash.slice(1));
         history.replaceState({}, document.title, url);
 
         $("#id_articlesets")
@@ -536,9 +543,10 @@ define([
         })).click();
     };
 
-    self.get_window_url = function get_window_url(sets, hash){
-        return "?sets={sets}#{hash}".format({
+    self.get_window_url = function get_window_url(jobs, sets, hash){
+        return "?sets={sets}&jobs={jobs}#{hash}".format({
             sets: sets.join(","),
+            jobs: jobs.join(","),
             hash: hash
         });
     };
@@ -595,51 +603,57 @@ define([
         }
     };
 
+    /**
+     * Called when the depends widget needs data
+     */
+    var dependsFetchDataAggregation = function(options, elements, url){
+        var form_data = serializeForm($("#query-form"), JOBS, SETS);
+        var y_axis = form_data["y_axis"];
+        form_data.output_type = "application/json";
+
+        if (y_axis === "total"){
+            $("#script-form").find("[name=relative_to]").multiselect("disable").multiselect("setOptions", {
+                nonSelectedText: "None selected"
+            }).multiselect("rebuild");
+            return;
+        } else {
+            $("#script-form").find("[name=relative_to]").multiselect("enable");
+        }
+
+        $.ajax({
+            type: "POST", dataType: "json",
+            url: API.getActionUrl("statistics", PROJECT, JOBS, SETS),
+            data: form_data,
+            traditional: true
+        }).done(function(data){
+            // Form accepted, we've been given a task uuid
+            Poll(data.uuid).result(function(data){
+                data = data[({
+                    medium: "mediums",
+                    term: "queries",
+                    "set": "articlesets"
+                })[y_axis]];
+
+                var ldata = [{id: "", label: "--------"}];
+                $.each(data, function(id, label){
+                    if (y_axis === "term"){
+                        ldata.push({id: id, label: id});
+                    } else {
+                        ldata.push({id: id, label: label});
+                    }
+                });
+
+                ldata = (ldata.length === 1) ? [] : ldata;
+                options.onSuccess(options, elements, {results: ldata});
+            });
+        }).fail(self.fail);
+
+    };
+
     var post_script_loaded = {
         "aggregation": function(){
             $("#script-form").find("[name=relative_to]").depends({
-                fetchData: function(options, elements, url){
-                    var form_data = serializeForm($("#query-form"), SETS);
-                    var y_axis = form_data["y_axis"];
-                    form_data.output_type = "application/json";
-
-                    if (y_axis === "total"){
-                        $("#script-form").find("[name=relative_to]").multiselect("disable").multiselect("setOptions", {
-                            nonSelectedText: "None selected"
-                        }).multiselect("rebuild");
-                        return;
-                    } else {
-                        $("#script-form").find("[name=relative_to]").multiselect("enable");
-                    }
-
-                    $.ajax({
-                        type: "POST", dataType: "json",
-                        url: API.getActionUrl("statistics", PROJECT, SETS),
-                        data: form_data,
-                        traditional: true
-                    }).done(function(data){
-                        // Form accepted, we've been given a task uuid
-                        Poll(data.uuid).result(function(data){
-                            data = data[({
-                                medium: "mediums",
-                                term: "queries",
-                                "set": "articlesets"
-                            })[y_axis]];
-
-                            var ldata = [{id: "", label: "--------"}];
-                            $.each(data, function(id, label){
-                                if (y_axis === "term"){
-                                    ldata.push({id: id, label: id});
-                                } else {
-                                    ldata.push({id: id, label: label});
-                                }
-                            });
-
-                            ldata = (ldata.length === 1) ? [] : ldata;
-                            options.onSuccess(options, elements, {results: ldata});
-                        });
-                    }).fail(self.fail);
-                }
+                fetchData: dependsFetchDataAggregation
             });
 
             $("#script-form").find("[name=relative_to]").parent().append(
@@ -689,6 +703,7 @@ define([
             }
 
             $("#result").attr("class", window.location.hash.slice(1));
+            $(window).scrollTo($("#result"), 500);
         }).always(function() {
             loading_dialog.modal("hide");
             progress_bar.css("width", 0);
@@ -784,7 +799,7 @@ define([
         $("#new-query").click(function(event){
             event.preventDefault();
 
-            var url = self.get_window_url(SETS, window.location.hash.slice(1));
+            var url = self.get_window_url(JOBS, SETS, window.location.hash.slice(1));
 
             if (window.location.search + window.location.hash === url){
                 window.location.reload();

@@ -13,7 +13,9 @@
 
     <script>
         require(["jquery", "bootstrap-multiselect"], function($){
-            $("#id_datetype").multiselect({});
+            $(function(){
+                $("#id_datetype").multiselect();
+            });
         });
     </script>
 

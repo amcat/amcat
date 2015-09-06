@@ -19,19 +19,25 @@
 import json
 from datetime import datetime
 from time import mktime
+
 from django.core.exceptions import ValidationError, MultipleObjectsReturned
+from django.db.models import Q
 from django.forms import ChoiceField, CharField, Select
-from amcat.models import Medium, ArticleSet
+
+from amcat.models import Medium, ArticleSet, CodingSchema, CodingSchemaField
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools.aggregate import get_relative
-from amcat.tools.djangotoolkit import parse_date
+from amcat.tools.aggregate_orm import ORMAggregate
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
 
 X_AXES = tuple((c, c.title()) for c in ("date", "medium", "term", "set"))
 Y_AXES = tuple((c, c.title()) for c in ("medium", "term", "set", "total"))
 
+X_AXES_CODINGJOB = tuple((c, c.title()) for c in ("date", "medium"))
+Y_AXES_CODINGJOB = tuple((c, c.title()) for c in ("medium", "total"))
+Y_AXES_CODINGJOB_2ND = (("", "-------"),) + Y_AXES_CODINGJOB
+
 INTERVALS = tuple((c, c.title()) for c in ("day", "week", "month", "quarter", "year"))
-TRANSPOSE = {"text/json+aggregation+graph"}
 
 
 class AggregationEncoder(json.JSONEncoder):
@@ -42,25 +48,28 @@ class AggregationEncoder(json.JSONEncoder):
             return {"id": obj.id, "label": obj.name}
         if isinstance(obj, SearchQuery):
             return {"id": obj.label, "label": obj.query}
+        if isinstance(obj, CodingSchemaField):
+            return {"id": obj.id, "label": obj.label}
         return super(AggregationEncoder, self).default(obj)
 
 
 MEDIUM_ERR = "Could not find medium with id={column} or name={column}"
 
+def get_all_schemafields(codingjobs):
+    codingjob_ids = [c.id for c in codingjobs]
+    unitschema_filter = Q(codingjobs_unit__id__in=codingjob_ids)
+    articleschema_filter = Q(codingjobs_article__id__in=codingjob_ids)
+    codingschemas = CodingSchema.objects.filter(unitschema_filter | articleschema_filter)
+    schemafields = CodingSchemaField.objects.filter(codingschema__in=codingschemas)
+    return schemafields
 
-def _get_medium(column):
-    if column.isdigit():
-        try:
-            return Medium.objects.get(id=int(column))
-        except Medium.DoesNotExist:
-            pass
+def get_schemafield_choices(codingjobs):
+    schemafields = get_all_schemafields(codingjobs).order_by("label").only("id", "label")
+    article_fields = schemafields.filter(codingschema__isarticleschema=True)
+    sentence_fields = schemafields.filter(codingschema__isarticleschema=False)
 
-    try:
-        return Medium.objects.get(name=column)
-    except Medium.DoesNotExist:
-        raise ValidationError(MEDIUM_ERR.format(column=column))
-    except MultipleObjectsReturned:
-        raise ValidationError("Found multiple mediums for name={column}".format(**locals()))
+    yield ("Article field", [("schemafield_avg_%s" % s.id, "Average: " +s.label) for s in article_fields])
+    yield ("Sentence field", [("schemafield_avg_%s" % s.id, "Average: " + s.label) for s in sentence_fields])
 
 
 class AggregationActionForm(QueryActionForm):
@@ -68,6 +77,10 @@ class AggregationActionForm(QueryActionForm):
     y_axis = ChoiceField(label="Y-axis (columns)", choices=Y_AXES, initial="medium")
     interval = ChoiceField(choices=INTERVALS, required=False, initial="day")
     relative_to = CharField(widget=Select, required=False)
+
+    # This field is ignored server-side, but processed by javascript. It causes the renderer
+    # to make another call
+    y_axis_2 = ChoiceField(label="2nd Y-axis (columns)", choices=Y_AXES, required=False)
 
     def __init__(self, *args, **kwargs):
         super(AggregationActionForm, self).__init__(*args, **kwargs)
@@ -80,12 +93,21 @@ class AggregationActionForm(QueryActionForm):
             "data-depends-label": "{label}",
         }
 
+        if self.codingjobs:
+            schemafield_choices = tuple(get_schemafield_choices(self.codingjobs))
+            self.fields["x_axis"].choices = X_AXES_CODINGJOB
+            self.fields["y_axis"].choices = Y_AXES_CODINGJOB + schemafield_choices
+            self.fields["y_axis_2"].choices = Y_AXES_CODINGJOB_2ND + schemafield_choices
+        else:
+            del self.fields["y_axis_2"]
+
     def clean_relative_to(self):
         column = self.cleaned_data['relative_to']
-        y_axis = self.cleaned_data['y_axis']
 
         if not column:
             return None
+
+        y_axis = self.cleaned_data['y_axis']
 
         if y_axis == "medium":
             if int(column) not in (m.id for m in self.cleaned_data["mediums"]):
@@ -128,11 +150,19 @@ class AggregationAction(QueryAction):
         self.monitor.update(10, "Found {narticles} articles. Aggregating..".format(**locals()))
 
         # Get aggregation
-        aggregation = selection.get_aggregate(
-            form.cleaned_data['x_axis'],
-            form.cleaned_data['y_axis'],
-            form.cleaned_data['interval']
-        )
+        codingjobs = form.cleaned_data["codingjobs"]
+        x_axis = form.cleaned_data['x_axis']
+        y_axis = form.cleaned_data['y_axis']
+        interval = form.cleaned_data['interval']
+
+        # Ugly hack to see if we need postgres aggregation (because of codingjobs analyses),
+        # or whether we can just pass it to elastic
+        if y_axis.startswith("schemafield_avg_"):
+            article_ids = selection.get_article_ids()
+            orm_aggregate = ORMAggregate(codingjobs, article_ids)
+            aggregation = sorted(orm_aggregate.get_aggregate(x_axis, y_axis, interval))
+        else:
+            aggregation = selection.get_aggregate(x_axis, y_axis, interval)
 
         #
         self.monitor.update(20, "Calculating relative values..".format(**locals()))

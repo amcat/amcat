@@ -33,7 +33,8 @@ requirejs.config({
         "jquery-ui": "jquery-ui/ui/jquery-ui",
         "jquery.tablednd": "TableDnD/js/jquery.tablednd.0.7.min",
         "jshashset": "jshashtable/hashset",
-        "jshashtable": "jshashtable/hashtable"
+        "jshashtable": "jshashtable/hashtable",
+        "URIjs": "uri.js/src"
     },
     shim:{
         "highcharts.core":{

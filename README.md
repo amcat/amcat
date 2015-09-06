@@ -139,6 +139,7 @@ Then, in the top-directory of AmCAT itself run:
 
 ```sh
 bower install
+python static/components/highlight/tools/build.py
 ```
 
 ### Setting up the database

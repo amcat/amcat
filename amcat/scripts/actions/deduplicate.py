@@ -64,6 +64,8 @@ class Deduplicate(Script):
                                         help_text="Percentage of (fuzzy) text overlap to be considered duplicate, e.g. 80")
         headline_ratio = forms.IntegerField(required=False, initial=0, min_value=0, max_value=100,
                                             help_text="Percentage of (fuzzy) headline overlap to be considered duplicate, e.g. 99")
+        save_duplicates_to = forms.CharField(initial="", required=False, 
+                                             help_text="If not empty, save duplicates to new set with this name.")
 
         dry_run = forms.BooleanField(initial=False, required=False)
         skip_simple = forms.BooleanField(initial=False, required=False, help_text="Do not use an approximation of levenhstein ratio using article length (if using fuzzy text or headline")
@@ -173,8 +175,9 @@ class Deduplicate(Script):
                     aids = sorted(a.id for a in arts)
                     yield aids[0], aids[1:]
                 
-    def _run(self, articleset, dry_run, **kwargs):
+    def _run(self, articleset, save_duplicates_to, dry_run, **kwargs):
         all_dupes = {}
+        dupes_save_set = None
         log.debug("Deduplicating {articleset.id}".format(**locals()))
         for date in ES().list_dates(filters={"sets": articleset}):
             log.debug("Getting duplicates for {date}".format(**locals()))
@@ -184,6 +187,11 @@ class Deduplicate(Script):
                 todelete = list(itertools.chain(*dupes.values()))
                 if not dry_run:
                     articleset.remove_articles(todelete)
+                if save_duplicates_to:
+                    if dupes_save_set is None:
+                        dupes_save_set = ArticleSet.create_set(articleset.project, save_duplicates_to)
+                    dupes_save_set.add_articles(todelete)
+
         log.debug("Deleted dupes for {} articles".format(len(all_dupes)))
         return all_dupes
 

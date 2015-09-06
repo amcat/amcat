@@ -87,6 +87,9 @@ class CodedArticleViewSetMixin(AmCATViewSetMixin):
     model_key = "coded_article"
     model = CodedArticle
 
+    class Meta:
+        model = CodedArticle
+
 class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                           CodedArticleViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     serializer_class = CodedArticleSerializer
