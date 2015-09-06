@@ -41,26 +41,7 @@ def TemporaryFolder(*args, **kargs):
     finally:
         shutil.rmtree(tempdir)
         
-@contextmanager
-def ZipFileContents(zip_file, *args, **kargs):
-    with TemporaryFolder(*args, **kargs) as tempdir:
-        with zipfile.ZipFile(zip_file) as zf:
-            files = []
-            for name in zf.namelist():
-                if name.endswith("/"): continue # skip folders
-                # using zipfile.extract(name, tempdir) gives an error if name contains non-ascii characters
-                # this may be related to http://bugs.python.org/issue17656, but we are using 2.7.3
-                # strange enough, the issue does not occur in 'runserver' mode, but file handling might be different?
-                fn = os.path.basename(name.encode("ascii", "ignore"))
-                # use mkstemp instead of temporary folder because we don't want it to be deleted
-                # it will be deleted on __exit__ anyway since the whole tempdir will be deleted
-                _handle, fn = tempfile.mkstemp(suffix="_"+fn, dir=tempdir)
-                f = open(fn, 'w')
-                shutil.copyfileobj(zf.open(name), f)
-                f.close()
-                files.append(File(open(fn), name=name))
-            yield files
-        
+
 DecodedFile = collections.namedtuple("File", ["name", "file", "bytes", "encoding", "text"])
 ENCODINGS = ["Autodetect", "ISO-8859-15", "UTF-8", "Latin-1"]
 
@@ -221,11 +202,37 @@ class ZipFileUploadForm(FileUploadForm):
         f = self.files['file']
         extension = os.path.splitext(f.name)[1]
         if extension == ".zip":
-            with ZipFileContents(f) as files:
-                return [self.decode_file(f) for f in files]
+            return [self.decode_file(f) for f in self.iter_zip_file_contents(f)]
         else:
             return [self.decode_file(f)]
 
     def get_entries(self):
         return self.get_uploaded_texts()
+
+    def iter_zip_file_contents(self, zip_file, *args, **kargs):
+        """
+        Generator that unpacks and yields the zip entries as File objects. Skips folders.
+        @param zip_file: The zip file to iterate over.
+        @param args: Is passed to the `TemporaryFolder`
+        @param kargs: Is passed to the `TemporaryFolder`
+        """
+        with TemporaryFolder(*args, **kargs) as tempdir:
+            with zipfile.ZipFile(zip_file) as zf:
+                files = []
+                for name in zf.namelist():
+                    if name.endswith("/"): continue # skip folders
+                    # using zipfile.extract(name, tempdir) gives an error if name contains non-ascii characters
+                    # this may be related to http://bugs.python.org/issue17656, but we are using 2.7.3
+                    # strange enough, the issue does not occur in 'runserver' mode, but file handling might be different?
+                    fn = os.path.basename(name.encode("ascii", "ignore"))
+                    # use mkstemp instead of temporary folder because we don't want it to be deleted
+                    # it will be deleted on __exit__ anyway since the whole tempdir will be deleted
+                    _handle, fn = tempfile.mkstemp(suffix="_"+fn, dir=tempdir)
+                    f = open(fn, 'w')
+                    shutil.copyfileobj(zf.open(name), f)
+                    f.close()
+                    with open(fn) as fh:
+                        yield File(fh, name=name)
+
+
 

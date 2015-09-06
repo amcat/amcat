@@ -133,10 +133,5 @@ class ProjectAddView(BreadCrumbMixin, ScriptView):
             return super(ProjectAddView, self).get_form(form_class)
 
     def get_success_url(self):
-        log.info(json.dumps({
-            "action": "project_added", "project_id": self.result.id,
-            "name": self.result.name, "description": self.result.description,
-            "insert_user": self.result.insert_user.username
-        }))
         log_request_usage(self.request, "project", "create", self.result)
         return reverse('navigator:articleset-list', args=[self.result.id])
