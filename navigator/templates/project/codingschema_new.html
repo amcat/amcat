@@ -13,4 +13,11 @@
   <input type="submit" name="save" class="btn btn-primary"></input>
   <a href="{% url 'navigator:codingschema-list' project.id  %}" name="save" class="btn">Cancel</a>
 </div>
+
+
+<script>
+    require(["jquery", "query/multiselect-defaults", "bootstrap-multiselect"], function($, defaults){
+        $(".multiselect").multiselect(defaults);
+    })
+</script>
 {% endblock %}

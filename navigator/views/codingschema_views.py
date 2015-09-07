@@ -31,6 +31,7 @@ from django.http import HttpResponse
 from django import forms
 import itertools
 from amcat.forms import widgets
+from amcat.forms.widgets import convert_to_jquery_select
 
 from amcat.models import CodingSchema, authorisation, CodingSchemaField, CodingSchemaFieldType, CodingRule, Code, Project
 from amcat.models.coding.serialiser import CodebookSerialiser, BooleanSerialiser
@@ -160,6 +161,7 @@ class CodingSchemaCreateView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumb
         form.fields["project"].widget = HiddenInput()
         form.fields["project"].initial = self.project
         form.fields["highlighters"].required = False
+        convert_to_jquery_select(form)
         return form
 
     def get_success_url(self):
