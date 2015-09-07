@@ -15,6 +15,7 @@ before_install:
  - export DJANGO_DB_USER=postgres
  - export DJANGO_LOG_LEVEL=WARNING
  - export DJANGO_SETTINGS_MODULE=settings
+ - export TRAVIS=true
  - export AMCAT_ES_LEGACY_HASH=0
  - export PYTHONPATH=
  - "export DISPLAY=:99.0"
