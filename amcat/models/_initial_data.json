@@ -313,13 +313,6 @@
       "label" : "Irrelevant"
     }
   },
-  {  "pk" : 0,
-    "model": "amcat.function",
-    "fields" : {
-      "label" : "generic",
-      "description" : "general taxonomic more-specific-than relation"
-    }
-  },
   {"pk" : 1,
     "model": "amcat.plugintype",
     "fields" : {
