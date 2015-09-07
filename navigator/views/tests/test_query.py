@@ -16,6 +16,10 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import os
+import time
+
+from unittest import skipIf
 from django.core.urlresolvers import reverse
 
 from amcat.tools import amcattest
@@ -34,17 +38,20 @@ class TestQueryView(AmCATLiveServerTestCase):
         self.project.favourite_articlesets.add(self.aset2)
 
     @amcattest.use_elastic
+    @skipIf(os.environ.get("TRAVIS") == "true", "Not yet supported on Travis :(")
     def test_summary(self):
         self.set_up()
 
         
         self.login(username=self.user.username, password="test")
         self.browser.visit(self.get_url(reverse("navigator:query", args=[self.project.id])))
+
         try:
             self.browser.find_by_css("#active-articlesets tbody tr")[1].click()
         except:
-            import time; time.sleep(1)
-            self.browser.find_by_css("#active-articlesets tbody tr")[1].click() 
+            time.sleep(10)
+            self.browser.find_by_css("#active-articlesets tbody tr")[1].click()
+
         self.browser.find_by_css("#id_aggregations")
         self.browser.find_by_css("#run-query")[0].click()
         self.browser.find_by_css("#results.summary")
