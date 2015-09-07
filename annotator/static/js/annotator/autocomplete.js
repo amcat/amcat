@@ -135,30 +135,6 @@ define(["jquery", "jquery-ui"], function($){
     };
 
     /*
-     * Deprecated behaviour alert: this function tries to fetch a label matching
-     * the coders current language. If no label is found, a guess is made and the
-     * first available label is returned.
-     */
-    self.get_label = function(code){
-        var language_id = annotator.language_id;
-        var label = code.labels[language_id];
-        if (label !== undefined) return label;
-
-        // No label found with current coder language. Fetch first available label.
-        $.each(code.labels, function(lid, lbl){
-            label = lbl;
-            return false;
-        });
-
-        if (label === undefined){
-            // Damnit no labels at all.
-            return "";
-        }
-
-        return label;
-    };
-
-    /*
      * Generate a list of choices for autocomplete, based on a list of codes and the
      * language id for the label.
      */
@@ -166,15 +142,13 @@ define(["jquery", "jquery-ui"], function($){
         var get_code = function(){ return this };
 
         return $.map(codes, function (code) {
-            var lbl = self.get_label(code);
-
             return {
                 // We can't store code directly, as it triggers an infinite
                 // loop in some jQuery function (autocomplete).
                 get_code: get_code.bind(code),
                 intval: code.code,
-                label: lbl,
-                value: lbl,
+                label: code.label,
+                value: code.label,
                 descendant_choices: self.get_choices(code.descendants)
             }
         });

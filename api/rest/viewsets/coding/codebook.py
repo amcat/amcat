@@ -46,6 +46,7 @@ def serialize_codebook_code(codebook, ccode):
         "valid_to" : ccode.validto,
         "ordernr" : ccode.ordernr,
         "labels" : codebook._labels[ccode.code_id],
+        "label": ccode.code.label,
         "function" : {
             "id" : function.id,
             "label" : function.label,
