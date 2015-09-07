@@ -214,7 +214,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(set(), set(ES().query_ids(filters=dict(sets=s2.id))))
         self.assertEqual({a.id}, set(ES().query_ids(filters=dict(sets=s.id))))
 
-        s.remove_articles([a])
+        s.remove_articles([a], remove_from_index=False)
         self.assertEqual({a.id}, set(ES().query_ids(filters=dict(sets=s.id))))
         s.refresh_index()
         self.assertEqual(set(), set(ES().query_ids(filters=dict(sets=s.id))))
