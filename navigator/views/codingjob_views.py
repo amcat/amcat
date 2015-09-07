@@ -31,7 +31,7 @@ from navigator.utils.misc import session_pop
 from navigator.views.project_views import ProjectDetailsView
 from api.rest.resources import SearchResource
 from amcat.scripts.actions.add_codingjob import AddCodingJob
-from amcat.forms.widgets import convert_to_jquery_select
+from amcat.forms.widgets import convert_to_bootstrap_select
 from amcat.scripts.actions.get_codingjob_results import CodingjobListForm, GetCodingJobResults
 from amcat.models import User
 
@@ -139,7 +139,7 @@ class CodingJobAddView(ProjectScriptView):
         form = super(CodingJobAddView, self).get_form(form_class)
         form.fields['insertuser'].initial = self.request.user
         form.fields["insertuser"].widget = forms.HiddenInput()
-        convert_to_jquery_select(form)
+        convert_to_bootstrap_select(form)
         return form
 
 class CodingJobDeleteView(ProjectActionRedirectView):
