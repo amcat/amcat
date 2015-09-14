@@ -920,7 +920,7 @@ define([
 
     self._select = function _select(row){
         if (row.length === 0){
-            self.show_loading("Last article finished, coding done!");
+            self.show_message("Done", "Last article finished, coding done!");
             return;
         }
 
