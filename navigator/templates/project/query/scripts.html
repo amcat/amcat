@@ -1,7 +1,12 @@
 <div class="btn-group main-scripts">
     <!-- Mains scripts -->
     <span class="btn btn-sm btn-default script" id="script_summary" name="summary">Summary</span>
-    <span class="btn btn-sm btn-default script" id="script_aggregation" name="aggregation">Aggregation</span>
+    {% if all_codingjobs %}\
+    <span class="btn btn-sm btn-default script" id="script_codingaggregation" name="codingaggregation">Aggregation (Codings)</span>
+    {% else %}
+    <span class="btn btn-sm btn-default script" id="script_aggregation" name="aggregation">Aggregation (Elastic)</span>
+    {% endif %}
+
     <span class="btn btn-sm btn-default script" id="script_articlelist" name="articlelist">Articlelist</span>
 
     <!-- Network -->

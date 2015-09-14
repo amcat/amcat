@@ -9,3 +9,5 @@ from assignascodingjob import AssignAsCodingjobAction
 from articlelist import ArticleListAction
 from appendtoset import AppendToSetAction
 from querystatistics import StatisticsAction
+
+from codings_aggregation import CodingAggregationAction

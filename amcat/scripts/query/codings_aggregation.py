@@ -24,16 +24,19 @@ from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.db.models import Q
 from django.forms import ChoiceField, CharField, Select
 
-from amcat.models import Medium, ArticleSet
+from amcat.models import Medium, ArticleSet, CodingSchema, CodingSchemaField
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools.aggregate import get_relative
+from amcat.tools.aggregate_orm import ORMAggregate
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
 
-X_AXES = tuple((c, c.title()) for c in ("date", "medium", "term", "set"))
-Y_AXES = tuple((c, c.title()) for c in ("medium", "term", "set", "total"))
+X_AXES = tuple((c, c.title()) for c in ("date", "medium"))
+Y_AXES = tuple((c, c.title()) for c in ("medium", "total"))
+Y_AXES_2ND = (("", "-------"),) + Y_AXES
 
 INTERVALS = tuple((c, c.title()) for c in ("day", "week", "month", "quarter", "year"))
 
+from aggregation import AggregationEncoder
 
 class AggregationEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -50,14 +53,35 @@ class AggregationEncoder(json.JSONEncoder):
 
 MEDIUM_ERR = "Could not find medium with id={column} or name={column}"
 
-class AggregationActionForm(QueryActionForm):
+def get_all_schemafields(codingjobs):
+    codingjob_ids = [c.id for c in codingjobs]
+    unitschema_filter = Q(codingjobs_unit__id__in=codingjob_ids)
+    articleschema_filter = Q(codingjobs_article__id__in=codingjob_ids)
+    codingschemas = CodingSchema.objects.filter(unitschema_filter | articleschema_filter)
+    schemafields = CodingSchemaField.objects.filter(codingschema__in=codingschemas)
+    return schemafields
+
+def get_schemafield_choices(codingjobs):
+    schemafields = get_all_schemafields(codingjobs).order_by("label").only("id", "label")
+    article_fields = schemafields.filter(codingschema__isarticleschema=True)
+    sentence_fields = schemafields.filter(codingschema__isarticleschema=False)
+
+    yield ("Article field", [("schemafield_avg_%s" % s.id, "Average: " +s.label) for s in article_fields])
+    yield ("Sentence field", [("schemafield_avg_%s" % s.id, "Average: " + s.label) for s in sentence_fields])
+
+
+class CodingAggregationActionForm(QueryActionForm):
     x_axis = ChoiceField(label="X-axis (rows)", choices=X_AXES, initial="date")
     y_axis = ChoiceField(label="Y-axis (columns)", choices=Y_AXES, initial="medium")
     interval = ChoiceField(choices=INTERVALS, required=False, initial="day")
     relative_to = CharField(widget=Select, required=False)
 
+    # This field is ignored server-side, but processed by javascript. It causes the renderer
+    # to make another call
+    y_axis_2 = ChoiceField(label="2nd Y-axis (columns)", choices=Y_AXES, required=False)
+
     def __init__(self, *args, **kwargs):
-        super(AggregationActionForm, self).__init__(*args, **kwargs)
+        super(CodingAggregationActionForm, self).__init__(*args, **kwargs)
 
         self.fields["relative_to"].widget.attrs = {
             "class": "depends-will-be-added-by-query-js",
@@ -66,7 +90,12 @@ class AggregationActionForm(QueryActionForm):
             "data-depends-value": "{id}",
             "data-depends-label": "{label}",
         }
-        assert not self.codingjobs
+
+        assert self.codingjobs
+
+        schemafield_choices = tuple(get_schemafield_choices(self.codingjobs))
+        self.fields["y_axis"].choices = Y_AXES + schemafield_choices
+        self.fields["y_axis_2"].choices = Y_AXES_2ND + schemafield_choices
 
     def clean_relative_to(self):
         column = self.cleaned_data['relative_to']
@@ -96,7 +125,7 @@ class AggregationActionForm(QueryActionForm):
         raise ValidationError("Not a valid column name.")
 
 
-class AggregationAction(QueryAction):
+class CodingAggregationAction(QueryAction):
     """
     Aggregate articles based on their properties. Make sure x_axis != y_axis.
     """
@@ -108,7 +137,7 @@ class AggregationAction(QueryAction):
         ("text/json+aggregation+heatmap", "Heatmap"),
         ("text/csv", "CSV (Download)"),
     )
-    form_class = AggregationActionForm
+    form_class = CodingAggregationActionForm
 
     def run(self, form):
         self.monitor.update(1, "Executing query..")
@@ -117,10 +146,14 @@ class AggregationAction(QueryAction):
         self.monitor.update(10, "Found {narticles} articles. Aggregating..".format(**locals()))
 
         # Get aggregation
+        codingjobs = form.cleaned_data["codingjobs"]
         x_axis = form.cleaned_data['x_axis']
         y_axis = form.cleaned_data['y_axis']
         interval = form.cleaned_data['interval']
-        aggregation = selection.get_aggregate(x_axis, y_axis, interval)
+
+        article_ids = selection.get_article_ids()
+        orm_aggregate = ORMAggregate(codingjobs, article_ids)
+        aggregation = sorted(orm_aggregate.get_aggregate(x_axis, y_axis, interval))
 
         self.monitor.update(20, "Calculating relative values..".format(**locals()))
         column = form.cleaned_data['relative_to']
