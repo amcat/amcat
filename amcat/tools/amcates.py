@@ -142,12 +142,17 @@ def _get_hash(article):
 
 
 HIGHLIGHT_OPTIONS = {
+    'pre_tags': ['<mark>'],
+    'post_tags': ['</mark>'],
     'fields': {
         'text': {
             "fragment_size": 100,
-            "number_of_fragments": 3
+            "number_of_fragments": 3,
+            'no_match_size': 100
         },
-        'headline': {}
+        'headline': {
+            'no_match_size': 100 
+        }
     }
 }
 
@@ -382,12 +387,13 @@ class ES(object):
         if 'sort' in kwargs:
             body['track_scores'] = True
 
-        if highlight:
+        if highlight and query:
             if isinstance(highlight, dict):
                 body['highlight'] = highlight
             else:
                 body['highlight'] = HIGHLIGHT_OPTIONS
-        if lead: body['script_fields'] = LEAD_SCRIPT_FIELD
+        if lead or False and query == "" and highlight: 
+            body['script_fields'] = LEAD_SCRIPT_FIELD
 
         result = self.search(body, fields=fields, **kwargs)
         return SearchResult(result, fields, score, body, query=query)

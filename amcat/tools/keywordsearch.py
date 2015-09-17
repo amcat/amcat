@@ -175,14 +175,11 @@ class SelectionSearch:
         """
 
         """
-        article_ids = self.get_article_ids()
-        if size is not None:
-            article_ids = islice(article_ids, offset, size + offset)
-
-        # Return in order
-        article_ids = tuple(article_ids)
-        article_dict = Article.objects.in_bulk(article_ids)
-        return (article_dict[pk] for pk in article_ids)
+        fields = ['headline','text','date', 
+                  'length','medium','author','section']
+        articles = ES().query(self.get_query(), self.get_filters(), True, size=size, from_=offset, fields=fields)
+        
+        return articles
 
 
 class SearchQuery(object):
