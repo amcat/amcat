@@ -38,6 +38,10 @@
     <script src="{% static 'components/requirejs/require.js' %}"></script>
     <script src="{% static 'js/require.config.js' %}"></script>
 
+    <script>
+        require(["bootstrap"])
+    </script>
+
     {% block javascript %}{% endblock %}
 
   </head>

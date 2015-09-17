@@ -30,11 +30,11 @@ from django.views.generic.base import RedirectView
 from api.rest.resources import ProjectRoleResource
 from amcat.models import Project, ProjectRole, Role
 from django import forms
-from amcat.forms.widgets import JQueryMultipleSelect
+from amcat.forms.widgets import BootstrapMultipleSelect
 from navigator.forms import gen_user_choices
 
 class ProjectRoleForm(forms.ModelForm):
-    user = forms.MultipleChoiceField(widget=JQueryMultipleSelect)
+    user = forms.MultipleChoiceField(widget=BootstrapMultipleSelect)
 
     def __init__(self, project=None, user=None, data=None, **kwargs):
         super(ProjectRoleForm, self).__init__(data=data, **kwargs)

@@ -1,7 +1,12 @@
 {% extends "project/base.html" %}
+{% load staticfiles %}
 {% load markdown_deux_tags %}
 
 {% block help_context %}{{help_context}}{% endblock %}
+
+{% block css %}
+    <link href="{% static 'components/bootstrap-multiselect/dist/css/bootstrap-multiselect.css' %}" rel="stylesheet" type="text/css" media="screen" />
+{% endblock %}
 
 {% block content %}
 {% if script_doc %}
@@ -20,4 +25,12 @@
     <a href="{{cancel_url}}" class="btn">Cancel</a>
    </div>
 </form>
+
+<script>
+    require(["jquery", "query/multiselect-defaults", "bootstrap-multiselect"], function($, defaults){
+        $(".multiselect").multiselect(defaults);
+    })
+</script>
+
+
 {% endblock %}

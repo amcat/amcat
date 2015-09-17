@@ -102,12 +102,12 @@ def gen_coding_choices(user, model):
 
 class SplitArticleForm(forms.Form):
     add_to_new_set = forms.CharField(required=False)
-    add_to_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
+    add_to_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.BootstrapMultipleSelect, required=False)
 
-    remove_from_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
+    remove_from_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.BootstrapMultipleSelect, required=False)
     remove_from_all_sets = forms.BooleanField(initial=True, required=False, help_text="Remove all instances of the original article in this project")
 
-    add_splitted_to_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
+    add_splitted_to_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.BootstrapMultipleSelect, required=False)
     add_splitted_to_new_set = forms.CharField(required=False)
     add_splitted_to_all = forms.BooleanField(initial=False, required=False, help_text="Add new (splitted) articles to all sets containing the original article")
 
@@ -227,7 +227,7 @@ class ProjectForm(forms.ModelForm):
         return self.cleaned_data
 
 class AddProjectForm(ProjectForm):
-    owner = forms.ChoiceField(widget=widgets.JQuerySelect)
+    owner = forms.ChoiceField(widget=widgets.BootstrapSelect)
 
     def __init__(self, owner=None, *args, **kwargs):
         super(AddProjectForm, self).__init__(*args, **kwargs)
@@ -244,10 +244,10 @@ class MediumAliasForm(forms.ModelForm):
         exclude = ()
 
 class CodingJobForm(forms.ModelForm):
-    unitschema = forms.ModelChoiceField(CodingSchema.objects.none(), widget=widgets.JQuerySelect)
-    articleschema = forms.ModelChoiceField(CodingSchema.objects.none(), widget=widgets.JQuerySelect)
-    coder = forms.ModelChoiceField(User.objects.none(), widget=widgets.JQuerySelect)
-    articleset = forms.ModelChoiceField(ArticleSet.objects.none(), widget=widgets.JQuerySelect)
+    unitschema = forms.ModelChoiceField(CodingSchema.objects.none(), widget=widgets.BootstrapSelect)
+    articleschema = forms.ModelChoiceField(CodingSchema.objects.none(), widget=widgets.BootstrapSelect)
+    coder = forms.ModelChoiceField(User.objects.none(), widget=widgets.BootstrapSelect)
+    articleset = forms.ModelChoiceField(ArticleSet.objects.none(), widget=widgets.BootstrapSelect)
 
     def __init__(self, edit=True, project=None, **kwargs):
         """
@@ -285,7 +285,7 @@ class CodingJobForm(forms.ModelForm):
 
 
 class ImportCodingSchema(forms.Form):
-    schemas = forms.MultipleChoiceField(widget=widgets.JQueryMultipleSelect)
+    schemas = forms.MultipleChoiceField(widget=widgets.BootstrapMultipleSelect)
 
     def __init__(self, user, *args, **kwargs):
         super(ImportCodingSchema, self).__init__(*args, **kwargs)

@@ -98,7 +98,9 @@ table tr{
 }
 
 table td{
-    overflow:hidden;
+    /* Hidden overflows on tds result in hidden multiselect boxes.
+
+    overflow:hidden; */
     white-space: nowrap;
 }
 

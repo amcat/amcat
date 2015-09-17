@@ -550,19 +550,6 @@ class Codebook(AmcatModel):
         self.save()
 
 
-class Function(AmcatModel):
-    """Specification of code book parent-child relations"""
-    id = models.IntegerField(primary_key=True, db_column='function_id')
-    label = models.CharField(max_length=100, null=False, unique=True)
-    description = models.TextField(null=True)
-
-    __label__ = 'label'
-
-    class Meta():
-        db_table = 'codebooks_functions'
-        app_label = 'amcat'
-
-
 class CodebookCode(AmcatModel):
     """Many-to-many field (codebook : code) with additional properties"""
     id = models.AutoField(primary_key=True, db_column='codebook_object_id')
@@ -575,7 +562,6 @@ class CodebookCode(AmcatModel):
 
     validfrom = models.DateTimeField(null=True)
     validto = models.DateTimeField(null=True)
-    function = models.ForeignKey(Function, default=0)
 
     ordernr = models.IntegerField(default=0, null=False, db_index=True, help_text=(
         "Annotator should order according codes according to this number."
@@ -610,6 +596,6 @@ class CodebookCode(AmcatModel):
         db_table = 'codebooks_codes'
         app_label = 'amcat'
         ordering = ("ordernr",)
-        #unique_together = ("codebook", "code", "function_id", "validfrom")
+        #unique_together = ("codebook", "code", "validfrom")
         # TODO: does not really work since NULL!=NULL
 

@@ -143,7 +143,7 @@ class CodebookLinkView(ProjectFormView):
     url_fragment = 'link'
 
     class form_class(forms.Form):
-        codebooks = forms.MultipleChoiceField(widget=widgets.JQueryMultipleSelect)
+        codebooks = forms.MultipleChoiceField(widget=widgets.BootstrapMultipleSelect)
 
     def get_form(self, form_class):
         form = super(CodebookLinkView, self).get_form(form_class)

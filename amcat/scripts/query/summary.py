@@ -22,12 +22,14 @@ from django.forms import IntegerField, BooleanField
 from django.http import QueryDict
 from django.template import Context
 from django.template.loader import get_template
+from django.template.defaultfilters import escape as escape_filter
 
 from amcat.forms.forms import order_fields
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.toolkit import Timer
 
+import re
 
 TEMPLATE = get_template('query/summary/summary.html')
 
@@ -38,7 +40,19 @@ class SummaryActionForm(QueryActionForm):
     offset = IntegerField(initial=0)
     aggregations = BooleanField(initial=True, required=False)
 
-
+def escape_article_result(article):
+    if hasattr(article,'highlight'):
+        try:
+            article.highlight['headline'][0] = escape_filter(article.highlight['headline'][0])
+            article.highlight['headline'][0] = re.sub(r'&lt;(\/?)mark&gt;',r'<\1mark>',article.highlight['headline'][0])
+        except KeyError:
+            pass
+        try:
+            article.highlight['text'][0] = escape_filter(article.highlight['text'][0])
+            article.highlight['text'][0] = re.sub(r'&lt;(\/?)mark&gt;',r'<\1mark>',article.highlight['text'][0])
+        except KeyError:
+            pass
+    return article
 class SummaryAction(QueryAction):
     output_types = (("text/html+summary", "HTML"),)
     form_class = SummaryActionForm
@@ -57,13 +71,12 @@ class SummaryAction(QueryAction):
             self.monitor.update(39, "Fetching mediums..".format(**locals()))
             mediums = selection.get_mediums()
             self.monitor.update(59, "Fetching articles..".format(**locals()))
-            articles = selection.get_articles(size=size, offset=offset)
-
+            articles = [escape_article_result(art) for art in selection.get_articles(size=size, offset=offset)]
             if show_aggregation:
                 self.monitor.update(69, "Aggregating..".format(**locals()))
                 date_aggr = selection.get_aggregate(x_axis="date", y_axis="total", interval="day")
                 medium_aggr = selection.get_aggregate(x_axis="medium", y_axis="date", interval="day")
-
+            
             self.monitor.update(79, "Rendering results..".format(**locals()))
 
         return TEMPLATE.render(Context(dict(locals(), **{
