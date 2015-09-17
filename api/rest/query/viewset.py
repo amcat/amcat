@@ -122,7 +122,12 @@ class QueryActionView(APIView):
 
     def post(self, request, format=None):
         try:
-           task_handler = self.get_query_action().run_delayed()
+            qa = self.get_query_action()
+
+            #HACK! Sets query to session for article higlighting
+            request.session['query'] = qa.data['query']
+
+            task_handler = qa.run_delayed()
         except ValidationError as e:
             return Response(e.message_dict, status=400)
         else:
