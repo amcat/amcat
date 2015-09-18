@@ -24,7 +24,7 @@ from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.db.models import Q
 from django.forms import ChoiceField, CharField, Select
 
-from amcat.models import Medium, ArticleSet
+from amcat.models import Medium, ArticleSet, CodingSchemaField, Code
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools.aggregate import get_relative
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
@@ -43,7 +43,7 @@ class AggregationEncoder(json.JSONEncoder):
             return {"id": obj.id, "label": obj.name}
         if isinstance(obj, SearchQuery):
             return {"id": obj.label, "label": obj.query}
-        if isinstance(obj, CodingSchemaField):
+        if isinstance(obj, (CodingSchemaField, Code)):
             return {"id": obj.id, "label": obj.label}
         return super(AggregationEncoder, self).default(obj)
 

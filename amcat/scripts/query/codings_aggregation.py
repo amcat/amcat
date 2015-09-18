@@ -30,25 +30,14 @@ from amcat.tools.aggregate import get_relative
 from amcat.tools.aggregate_orm import ORMAggregate
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
 
+from aggregation import AggregationEncoder
+from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
+
 X_AXES = tuple((c, c.title()) for c in ("date", "medium"))
 Y_AXES = tuple((c, c.title()) for c in ("medium", "total"))
 Y_AXES_2ND = (("", "-------"),) + Y_AXES
 
 INTERVALS = tuple((c, c.title()) for c in ("day", "week", "month", "quarter", "year"))
-
-from aggregation import AggregationEncoder
-
-class AggregationEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, datetime):
-            return int(mktime(obj.timetuple())) * 1000
-        if isinstance(obj, Medium) or isinstance(obj, ArticleSet):
-            return {"id": obj.id, "label": obj.name}
-        if isinstance(obj, SearchQuery):
-            return {"id": obj.label, "label": obj.query}
-        if isinstance(obj, CodingSchemaField):
-            return {"id": obj.id, "label": obj.label}
-        return super(AggregationEncoder, self).default(obj)
 
 
 MEDIUM_ERR = "Could not find medium with id={column} or name={column}"
@@ -61,14 +50,31 @@ def get_all_schemafields(codingjobs):
     schemafields = CodingSchemaField.objects.filter(codingschema__in=codingschemas)
     return schemafields
 
-def get_schemafield_choices(codingjobs):
+def get_schemafield_choices(codingjobs, values=True):
     schemafields = get_all_schemafields(codingjobs).order_by("label").only("id", "label")
     article_fields = schemafields.filter(codingschema__isarticleschema=True)
     sentence_fields = schemafields.filter(codingschema__isarticleschema=False)
 
-    yield ("Article field", [("schemafield_avg_%s" % s.id, "Average: " +s.label) for s in article_fields])
-    yield ("Sentence field", [("schemafield_avg_%s" % s.id, "Average: " + s.label) for s in sentence_fields])
+    for src, fields in [("Article field", article_fields), ("Sentence field", sentence_fields)]:
+        if src == "Sentence field": continue #TODO: skip sentence fields for now
+        category_fields = list(get_category_fields(fields))
+        if category_fields: yield src, category_fields
 
+        if values:
+            value_fields = list(get_value_fields(fields))
+            if value_fields: yield src + " values", value_fields
+
+
+def get_category_fields(fields):
+    for field in fields:
+        if field.fieldtype_id in (FIELDTYPE_IDS.CODEBOOK,):
+            yield "schemafield_cat_%s" % field.id, field.label
+            
+def get_value_fields(fields):
+    for field in fields:
+        if field.fieldtype_id in (FIELDTYPE_IDS.INT, FIELDTYPE_IDS.QUALITY):
+            yield "schemafield_avg_%s" % field.id, "Average " +field.label
+    
 
 class CodingAggregationActionForm(QueryActionForm):
     x_axis = ChoiceField(label="X-axis (rows)", choices=X_AXES, initial="date")
@@ -93,9 +99,12 @@ class CodingAggregationActionForm(QueryActionForm):
 
         assert self.codingjobs
 
-        schemafield_choices = tuple(get_schemafield_choices(self.codingjobs))
-        self.fields["y_axis"].choices = Y_AXES + schemafield_choices
-        self.fields["y_axis_2"].choices = Y_AXES_2ND + schemafield_choices
+        
+        x_extra = tuple(get_schemafield_choices(self.codingjobs, values=False))
+        y_extra = tuple(get_schemafield_choices(self.codingjobs, values=True))
+        self.fields["x_axis"].choices = X_AXES + x_extra
+        self.fields["y_axis"].choices = Y_AXES + y_extra
+        self.fields["y_axis_2"].choices = Y_AXES_2ND + y_extra
 
     def clean_relative_to(self):
         column = self.cleaned_data['relative_to']

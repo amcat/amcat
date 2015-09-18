@@ -3,7 +3,8 @@ Contains logic to aggregate using Postgres / Django ORM, similar to amcates.py.
 """
 import collections
 from django.db.models import Avg
-from amcat.models import Article, CodedArticle, Coding, CodingSchemaField, CodingValue
+from amcat.models import Article, CodedArticle, Coding, CodingSchemaField, CodingValue, Code
+from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
 
 ARTICLE_AGGREGATES = ("date", "medium")
 ARTICLE_EXCLUDE = (
@@ -14,7 +15,7 @@ ARTICLE_EXCLUDE = (
 
 
 class ORMAggregate(object):
-    """ORMAggregate assumes """
+    """ORMAggregate assumes """ # and so do I! 
     def __init__(self, codingjobs, article_ids):
         self.article_ids = set(article_ids)
         self.articles = Article.objects.filter(id__in=self.article_ids)
@@ -45,6 +46,21 @@ class ORMAggregate(object):
     def aggregate_medium(self, articles):
         return self._aggregate_on_article_field(articles, "medium")
 
+    def aggregate_schemafield(self, field, articles):
+        aggregate = collections.defaultdict(set)
+
+        aids = {a.id: a for a in articles}
+
+        coding_values = (CodingValue.objects 
+                         .filter(field=field, coding__coded_article__article__id__in=aids) 
+                         .values_list("coding__coded_article__article_id", "intval"))
+
+        codes = Code.objects.in_bulk([code for (aid, code) in coding_values])
+        
+        for aid, code in coding_values:
+            aggregate[codes[code]].add(aids[aid])
+        return aggregate
+    
     def get_aggregate(self, x_axis, y_axis, interval=None):
         """
         @param x_axis: "date", "medium"
@@ -66,6 +82,10 @@ class ORMAggregate(object):
             aggregate = self.aggregate_day(interval)
         elif x_axis == "medium":
             aggregate = self.aggregate_medium(self.articles)
+        elif x_axis.startswith("schemafield_cat_"):
+            _, schemafield_id = x_axis.split("schemafield_cat_")
+            schemafield = CodingSchemaField.objects.get(id=int(schemafield_id))
+            aggregate = self.aggregate_schemafield(schemafield, self.articles)
         else:
             raise ValueError("Not a valid x_axis: {!r}".format(x_axis))
 
@@ -87,7 +107,9 @@ class ORMAggregate(object):
                 if average is None:
                     del aggregate[aggr_key]
                 else:
-                    aggregate[aggr_key] = {schemafield: self.average_schemafield(articles, schemafield)}
+                    if schemafield.fieldtype_id == FIELDTYPE_IDS.QUALITY:
+                        average /= 10.
+                    aggregate[aggr_key] = {schemafield: average}
 
         return aggregate
 
