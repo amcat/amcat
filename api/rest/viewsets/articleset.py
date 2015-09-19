@@ -48,7 +48,7 @@ class ArticleSetSerializer(AmCATModelSerializer):
 
     @cached
     def get_nn(self):
-        sets = [s.id for s in self.instance]
+        sets = [self.instance.id] if isinstance(self.instance, ArticleSet) else [s.id for s in self.instance] 
         return dict(amcates.ES().aggregate_query(filters={'sets': sets}, group_by='sets'))
 
     def n_articles(self, articleset):

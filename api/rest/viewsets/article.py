@@ -43,6 +43,11 @@ class ArticleViewSetMixin(AmCATViewSetMixin):
 
 
 class MediumField(ModelField):
+
+    def __init__(self, model_field, representation="name", *args, **kargs):
+        super(MediumField, self).__init__(model_field, *args, **kargs)
+        self.representation = representation
+    
     def to_internal_value(self, data):
         try:
             int(data)
@@ -52,12 +57,13 @@ class MediumField(ModelField):
             return super(MediumField, self).to_internal_value(data)
 
     def to_representation(self, obj):
-        return obj.medium_id
+        return obj.medium.name if self.representation == "name" else obj.medium_id
 
 
 class ArticleSerializer(AmCATModelSerializer):
     project = ModelChoiceField(queryset=Project.objects.all(), required=True)
     medium = MediumField(model_field=ModelChoiceField(queryset=Medium.objects.all()))
+    mediumid = MediumField(model_field=ModelChoiceField(queryset=Medium.objects.all()), representation="id")
     uuid = CharField(read_only=False, required=False)
 
     def validate(self, attrs):
