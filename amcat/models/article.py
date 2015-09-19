@@ -42,6 +42,7 @@ from amcat.models.authorisation import Role
 from amcat.models.medium import Medium
 from amcat.tools.toolkit import splitlist
 from amcat.tools.tree import Tree
+from amcat.tools.progress import ProgressMonitor
 
 
 log = logging.getLogger(__name__)
@@ -236,7 +237,8 @@ class Article(AmcatModel):
                 yield aid
 
     @classmethod
-    def create_articles(cls, articles, articleset=None, check_duplicate=True, create_id=False):
+    def create_articles(cls, articles, articleset=None, check_duplicate=True, create_id=False,
+                        monitor=ProgressMonitor()):
         """
         Add the given articles to the database, the index, and the given set
 
@@ -305,20 +307,20 @@ class Article(AmcatModel):
                 add_to_index.append(a.es_dict)
                 add_new_to_set.add(a.pk)
 
-        log.info("Considered {} articles: {} saved to db, {} new to add to index, {} existing/duplicates to add to set"
-                 .format(len(articles), len(add_new_to_set), len(add_to_index), len(add_to_set)))
+        monitor.update(60, "Considered {} articles: {} saved to db, {} new to add to index, {} existing/duplicates to add to set"
+                       .format(len(articles), len(add_new_to_set), len(add_to_index), len(add_to_set)))
 
         # add to index
         if add_to_index:
-            es.bulk_insert(add_to_index)
-            log.info("Added {} to index".format(len(add_to_index)))
+            es.bulk_insert(add_to_index, batch_size=1)
+            monitor.update(70, "Added {} to index".format(len(add_to_index)))
 
         if articleset:
             # add to articleset (db and index)
             articleset.add_articles(add_to_set | add_new_to_set, add_to_index=False)
-            log.info("Added {} to db".format(len(add_to_set | add_new_to_set)))
+            monitor.update(80, "Added {} to db".format(len(add_to_set | add_new_to_set)))
             es.add_to_set(articleset.id, add_to_set)
-            log.info("Added {} to elastic".format(len(add_to_set)))
+            monitor.update(90, "Added {} to elastic".format(len(add_to_set)))
 
         return result, errors
 

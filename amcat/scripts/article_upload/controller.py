@@ -29,6 +29,7 @@ stats_log = logging.getLogger("statistics:" + __name__)
 
 from collections import namedtuple
 from amcat.models import Article, Project
+from amcat.tools.progress import ProgressMonitor
 
 ScrapeError = namedtuple("ScrapeError", ["i", "unit", "error"])
 
@@ -38,7 +39,7 @@ class Controller(object):
         self.errors = []
         self.articles = []
 
-    def run(self, scraper):
+    def run(self, scraper, monitor=ProgressMonitor()):
         try:
             units = list(scraper._get_units())
         except Exception as e:
@@ -46,6 +47,7 @@ class Controller(object):
             log.exception("scraper._get_units failed")
             return self.articles
 
+        monitor.update(20, "Parsing files")
         for i, unit in enumerate(units):
             try:
                 articles = list(scraper._scrape_unit(unit))
@@ -58,6 +60,7 @@ class Controller(object):
         for article in self.articles:
             _set_default(article, 'project', scraper.project)
 
+        monitor.update(20, "Saving articles")
         try:
             articles, errors = Article.create_articles(self.articles, scraper.articleset)
             self.saved_article_ids = {a.id for a in self.articles}

@@ -148,17 +148,20 @@ class UploadScript(script.Script):
                 "using {self.__class__.__name__}".format(**locals()))
 
     def run(self, _dummy=None):
+        monitor = self.progress_monitor
+
         file = self.options['file']
         filename = file and file.name
-        log.info(u"Importing {self.__class__.__name__} from {filename} into {self.project}"
-                 .format(**locals()))
+        monitor.update(10, u"Importing {self.__class__.__name__} from {filename} into {self.project}"
+                       .format(**locals()))
         from amcat.scripts.article_upload.controller import Controller
         self.controller = Controller()
-        arts = self.controller.run(self)
+        arts = self.controller.run(self, monitor)
 
         if not arts:
             raise Exception("No articles were imported")
 
+        monitor.update(10, "Uploaded {n} articles, post-processing".format(n=len(arts)))
         self.postprocess(arts)
 
         for aset in self.articlesets:

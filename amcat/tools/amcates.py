@@ -39,7 +39,7 @@ from elasticsearch.helpers import scan
 
 from django.conf import settings
 from amcat.tools.caching import cached
-from amcat.tools.progress import NullMonitor
+from amcat.tools.progress import ProgressMonitor
 
 if settings.ES_USE_LEGACY_HASH_FUNCTION is None:
     error_msg = "Environment variable AMCAT_ES_LEGACY_HASH should be explicitely set."
@@ -425,7 +425,7 @@ class ES(object):
                                  for aa in ArticleSetArticle.objects.filter(article__in=batch))
             dicts = (get_article_dict(article, list(all_sets.get(article.id, [])))
                      for article in Article.objects.filter(pk__in=batch))
-            self.bulk_insert(dicts)
+            self.bulk_insert(dicts, batch_size=None)
 
     def remove_from_set(self, setid, article_ids, flush=True):
         """Remove the given articles from the given set. This is done in batches, so there
@@ -434,7 +434,7 @@ class ES(object):
         for batch in splitlist(article_ids, itemsperbatch=1000):
             self.bulk_update(batch, UPDATE_SCRIPT_REMOVE_FROM_SET, params={'set': setid})
 
-    def add_to_set(self, setid, article_ids, monitor=NullMonitor()):
+    def add_to_set(self, setid, article_ids, monitor=ProgressMonitor()):
         """Add the given articles to the given set. This is done in batches, so there
         is no limit on the length of article_ids (which can be a generator)."""
         if not article_ids: return
@@ -444,15 +444,22 @@ class ES(object):
             monitor.update(40/nbatches, "Added batch {iplus}/{nbatches}".format(iplus=i+1, **locals()))
             self.bulk_update(batch, UPDATE_SCRIPT_ADD_TO_SET, params={'set' : setid})
 
-    def bulk_insert(self, dicts):
+    def bulk_insert(self, dicts, batch_size=1000, monitor=ProgressMonitor()):
         """
-        Add the given article dict objects to the index using a bulk insert call
+        Bulk insert the given articles in batches of batch_size
         """
-        body = get_bulk_body({d["id"]: serialize(d) for d in dicts})
-        resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
-
-        if resp["errors"]:
-            raise ElasticSearchError(resp)
+        if batch_size:
+            batches = list(toolkit.splitlist(dicts, itemsperbatch=batch_size))
+        else:
+            batches = [dicts]
+        nbatches = len(batches)
+        for i, batch in enumerate(batches):
+            monitor.update(40/nbatches, "Added batch {iplus}/{nbatches}".format(iplus=i+1, **locals()))
+            body = get_bulk_body({d["id"]: serialize(d) for d in batch})
+            resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
+            if resp["errors"]:
+                raise ElasticSearchError(resp)
+            
 
     def update_values(self, article_id, values):
         """Update properties of existing article.
