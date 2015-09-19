@@ -157,9 +157,10 @@ class UploadScript(script.Script):
         
         files = list(self._get_files())
         nfiles = len(files)        
-        for i, file in enumerate(files):
-            monitor.update(20/nfiles, "Parsing file {i}/{nfiles}: {file.name}".format(**locals()))
-            articles += list(self.parse_file(file))
+        for i, f in enumerate(files):
+            filename = getattr(f, 'name', unicode(f))
+            monitor.update(20/nfiles, "Parsing file {i}/{nfiles}: {filename}".format(**locals()))
+            articles += list(self.parse_file(f))
             
         for article in articles:
             _set_project(article, self.project)

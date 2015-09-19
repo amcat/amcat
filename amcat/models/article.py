@@ -295,7 +295,7 @@ class Article(AmcatModel):
             a.duplicate = bool(dupe)
             if a.duplicate:
                 a.id = dupe.id
-                for aset in set(sets) - set(dupe.sets):
+                for aset in set(sets) - set(dupe.sets or []):
                     add_existing_to_set[aset].add(dupe.id)
                 result.append(dupe)
             else:
@@ -325,7 +325,7 @@ class Article(AmcatModel):
         monitor.update(10, "Added {} articles to index".format(len(add_to_index)))
 
         for setid, articles in add_existing_to_set.iteritems():
-            sets[setid].add_articles(articles, add_to_index=False)
+            sets[setid].add_articles(articles, add_to_index=True)
         monitor.update(10, "Added existing articles to articlesets")
             
         if add_new_to_set:

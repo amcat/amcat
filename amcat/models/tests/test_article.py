@@ -161,9 +161,9 @@ class TestArticle(amcattest.AmCATTestCase):
         # should be added to that set
         s1 = amcattest.create_test_set()
         a3 = amcattest.create_test_article(check_duplicate=True, articleset=s1, **art)
-
         self.assertEqual(a3.id, a1.id)
         self.assertEqual(q(mediumid=art['medium']), {a1.id})
+
         self.assertEqual(set(s1.get_article_ids()), {a1.id})
         self.assertEqual(q(sets=s1.id), {a1.id})
 
