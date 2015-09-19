@@ -85,6 +85,7 @@ class UploadScript(script.Script):
     def __init__(self, *args, **kargs):
         super(UploadScript, self).__init__(*args, **kargs)
         self.project = self.options['project']
+        self.errors = []
         for k, v in self.options.items():
             if type(v) == str:
                 self.options[k] = v.decode('utf-8')
@@ -95,9 +96,6 @@ class UploadScript(script.Script):
         log.debug(u"Articleset: {self.articlesets!r}, options: {o2}"
                   .format(**locals()))
 
-    @property
-    def articleset(self):
-        return self.articlesets[0]
 
     @property
     def articlesets(self):
@@ -113,13 +111,8 @@ class UploadScript(script.Script):
 
     def get_errors(self):
         """return a list of document index, message pairs that explains encountered errors"""
-        try:
-            errors = self.controller.errors
-        except AttributeError:
-            log.exception("Cannot get controller errors")
-            return
-
-        for error in errors:
+        
+        for error in self.errors:
             yield self.explain_error(error)
 
     def explain_error(self, error):
@@ -147,6 +140,11 @@ class UploadScript(script.Script):
         return ("[{timestamp}] Uploaded {n} articles from file {filename!r} "
                 "using {self.__class__.__name__}".format(**locals()))
 
+    def parse_file(self, file):
+        for unit in self._get_units(file):
+            for a in self._scrape_unit(unit):
+                yield a
+            
     def run(self, _dummy=None):
         monitor = self.progress_monitor
 
@@ -154,26 +152,39 @@ class UploadScript(script.Script):
         filename = file and file.name
         monitor.update(10, u"Importing {self.__class__.__name__} from {filename} into {self.project}"
                        .format(**locals()))
-        from amcat.scripts.article_upload.controller import Controller
-        self.controller = Controller()
-        arts = self.controller.run(self, monitor)
+        
+        articles = []
+        
+        files = list(self._get_files())
+        nfiles = len(files)        
+        for i, file in enumerate(files):
+            monitor.update(20/nfiles, "Parsing file {i}/{nfiles}: {file.name}".format(**locals()))
+            articles += list(self.parse_file(file))
+            
+        for article in articles:
+            _set_project(article, self.project)
 
-        if not arts:
+        monitor.update(10, "All files parsed, saving {n} articles".format(n=len(articles)))
+        articles, errors = Article.create_articles(articles, articlesets = self.articlesets,
+                                                   monitor=monitor.submonitor(40))
+        
+        if not articles:
             raise Exception("No articles were imported")
 
-        monitor.update(10, "Uploaded {n} articles, post-processing".format(n=len(arts)))
-        self.postprocess(arts)
+        monitor.update(10, "Uploaded {n} articles, post-processing".format(n=len(articles)))
+        self.postprocess(articles)
 
         for aset in self.articlesets:
-            new_provenance = self.get_provenance(file, arts)
+            new_provenance = self.get_provenance(file, articles)
             aset.provenance = ("%s\n%s" % (aset.provenance or "", new_provenance)).strip()
             aset.save()
 
         if getattr(self, 'task', None):
-            self.task.log_usage("articles", "upload", n=len(arts))
-            
-        return [aset.id for aset in self.articlesets]
-
+            self.task.log_usage("articles", "upload", n=len(articles))
+        
+        monitor.update(10, "Done! Uploaded articles".format(n=len(articles)))
+        return [a.id for a in self.articlesets]
+        
     def postprocess(self, articles):
         """
         Optional postprocessing of articles. Removing aricles from the list will exclude them from the
@@ -181,15 +192,11 @@ class UploadScript(script.Script):
         """
         pass
 
-    def _get_units(self):
-        """
-        Upload form assumes that the form (!) has a get_entries method, which you get
-        if you subclass you form from one of the fileupload forms. If not, please override
-        this method.
-        """
-        for entry in self.bound_form.get_entries():
-            for u in self.split_file(entry):
-                yield u
+    def _get_files(self):
+        return self.bound_form.get_entries()
+    
+    def _get_units(self, file):
+        return self.split_file(file)
 
     def _scrape_unit(self, document):
         result =  self.parse_document(document)
@@ -217,3 +224,10 @@ class UploadScript(script.Script):
         """
         return [file]
 
+
+def _set_project(art, project):
+    try:
+        if getattr(art, "project", None) is not None: return
+    except Project.DoesNotExist:
+        pass  # django throws DNE on x.y if y is not set and not nullable
+    art.project = project

@@ -27,6 +27,7 @@ from copy import copy
 from itertools import chain, count
 from operator import attrgetter
 import logging
+import collections
 
 from django.template.loader import get_template
 from django.template import Context
@@ -237,7 +238,7 @@ class Article(AmcatModel):
                 yield aid
 
     @classmethod
-    def create_articles(cls, articles, articleset=None, check_duplicate=True, create_id=False,
+    def create_articles(cls, articles, articleset=None, articlesets=None, check_duplicate=True, create_id=False,
                         monitor=ProgressMonitor()):
         """
         Add the given articles to the database, the index, and the given set
@@ -248,47 +249,55 @@ class Article(AmcatModel):
 
         @param articles: a collection of objects with the necessary properties (.headline etc)
         @param articleset: an articleset object
+        @param articlesets: a sequence of articleset object
         @param check_duplicate: if True, duplicates are not added to the database or index
         @param create_id: if True, also create articles that have an .id (for testing)
         (the 'existing' article *is* added to the set.
         """
         # TODO: test parent logic (esp. together with hash/dupes)
+        if articlesets is None:
+            articlesets = [articleset] if articleset else []
+        
         es = amcates.ES()
         for a in articles:
             if a.length is None:
                 a.length = word_len(a.text) + word_len(a.headline) + word_len(a.byline)
         # existing / duplicate article ids to add to set
-        add_to_set = set()
+        add_existing_to_set = collections.defaultdict(set) # aset : [aid]
         # add dict (+hash) as property on articles so we know who is who
-        sets = [articleset.id] if articleset else None
-        todo = []
+        sets = {aset.id: aset for aset in articlesets}
+        to_create = [] 
         for a in articles:
             if a.id and not create_id:
                 # article already exists, only add to set
-                add_to_set.add(a.id)
+                add_existing_to_set.add(a.id)
             else:
-                a.es_dict = amcates.get_article_dict(a, sets=sets)
-                todo.append(a)
+                a.es_dict = amcates.get_article_dict(a, sets=list(sets))
+                to_create.append(a)
 
         if check_duplicate:
-            hashes = [a.es_dict['hash'] for a in todo]
+            hashes = [a.es_dict['hash'] for a in to_create]
             results = es.query_all(filters={'hashes': hashes}, fields=["hash", "sets"], score=False)
             dupes = {r.hash: r for r in results}
         else:
             dupes = {}
 
+        monitor.update(10, "Creating {} articles, {} dupes, {} existing"
+                       .format(len(to_create), len(dupes), len(add_existing_to_set)))
+        
         # add all non-dupes to the db, needed actions
         add_new_to_set = set()  # new article ids to add to set
         add_to_index = []  # es_dicts to add to index
         result = []  # return result
         errors = []  # return errors
-        for a in todo:
+        for a in to_create:
             dupe = dupes.get(a.es_dict['hash'], None)
             a.duplicate = bool(dupe)
             if a.duplicate:
                 a.id = dupe.id
-                if articleset and not (dupe.sets and articleset.id in dupe.sets):
-                    add_to_set.add(dupe.id)
+                for aset in set(sets) - set(dupe.sets):
+                    add_existing_to_set[aset].add(dupe.id)
+                result.append(dupe)
             else:
                 if a.parent:
                     a.parent_id = a.parent.id
@@ -302,26 +311,29 @@ class Article(AmcatModel):
                     transaction.savepoint_rollback(sid)
                     errors.append(e)
                     continue
-                result.append(a)
                 a.es_dict['id'] = a.pk
                 add_to_index.append(a.es_dict)
                 add_new_to_set.add(a.pk)
+                result.append(a)
 
-        monitor.update(60, "Considered {} articles: {} saved to db, {} new to add to index, {} existing/duplicates to add to set"
-                       .format(len(articles), len(add_new_to_set), len(add_to_index), len(add_to_set)))
+        monitor.update(50, "Considered {} articles: {} saved to db, {} new to add to index, {} existing/duplicates to add to set"
+                       .format(len(articles), len(add_new_to_set), len(add_to_index), len(add_existing_to_set)))
 
         # add to index
         if add_to_index:
-            es.bulk_insert(add_to_index, batch_size=1)
-            monitor.update(70, "Added {} to index".format(len(add_to_index)))
+            es.bulk_insert(add_to_index, batch_size=100)
+        monitor.update(10, "Added {} articles to index".format(len(add_to_index)))
 
-        if articleset:
-            # add to articleset (db and index)
-            articleset.add_articles(add_to_set | add_new_to_set, add_to_index=False)
-            monitor.update(80, "Added {} to db".format(len(add_to_set | add_new_to_set)))
-            es.add_to_set(articleset.id, add_to_set)
-            monitor.update(90, "Added {} to elastic".format(len(add_to_set)))
-
+        for setid, articles in add_existing_to_set.iteritems():
+            sets[setid].add_articles(articles, add_to_index=False)
+        monitor.update(10, "Added existing articles to articlesets")
+            
+        if add_new_to_set:
+            for setid in sets:
+                sets[setid].add_articles(add_new_to_set, add_to_index=False)
+        monitor.update(10, "Added {} new articles to articlesets, done creating articles!"
+                       .format(len(add_new_to_set)))
+        
         return result, errors
 
     @classmethod
