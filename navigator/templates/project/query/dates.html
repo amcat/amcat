@@ -34,7 +34,7 @@
 <script>
     require(["jquery", "bootstrap-datepicker"], function($){
         var opts = {
-            //format: "dd-mm-yyyy",
+            format: "yyyy-mm-dd",
             calendarWeeks: true,
             todayHighlight: true,
             startDate: "{{ statistics.start_date|date:"Y-m-d" }}",
