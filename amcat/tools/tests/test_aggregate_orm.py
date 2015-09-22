@@ -63,8 +63,47 @@ class TestAggregateORM(amcattest.AmCATTestCase):
         
 
     def test_avg_per_code(self):
+        """Tests aggregate ORM with single aggregation and single value"""
         self.assertEqual(set(self._test_aggregate(self.codef, val=self.intf)),
                          {(self.code_A, 3.0), (self.code_B, 1.0)})
         
         self.assertEqual(set(self._test_aggregate("medium", val=self.intf)),
                          {(self.m1, 4.0), (self.m2, 1.5)})
+
+        # does not work yet, orm requires a codebook aggregation atm
+        self.assertEqual(set(self._test_aggregate(self.codef, val="count")),
+                         {(self.code_A, 2), (self.code_B, 1)})
+
+    def test_secondary_axis(self):
+        """Test whether we can do count plus average per something"""
+        # does not actually work yet, and not sure what signature/result structure should look like
+        # since now it is done by second aggregate call
+
+        
+        self.assertEqual(set(self._test_aggregate(self.codef, val="count", val2=self.intf)),
+                         {(self.code_A, (2, 3.0)), (self.code_B, (1, 1.0))})
+        
+        
+        
+    def test_medium_per_code(self):
+        """Test whether we can use code field as secondary aggregation"""
+        # does not actually work yet, and not sure what signature/result structure should look like
+        
+        self.assertEqual(set(self._test_aggregate("medium", self.codef, val="count")),
+                         {(self.m1, self.code_A, 1),
+                          (self.m2, self.code_A, 1),
+                          (self.m2, self.code_B, 1)})
+
+        
+        self.assertEqual(set(self._test_aggregate("medium", self.codef, val=self.intf)),
+                         {(self.m1, self.code_A, 4.0),
+                          (self.m2, self.code_A, 2.0),
+                          (self.m2, self.code_B, 1.0)})
+
+        
+    def test_illegal_aggregate(self):
+        """Having a second value and second aggregation should throw an exception"""
+        self.assertRaises(Exception,
+                          set(self._test_aggregate("medium", self.codef, val="count", val2=self.intf)))
+        
+        
