@@ -34,11 +34,11 @@
 <script>
     require(["jquery", "bootstrap-datepicker"], function($){
         var opts = {
-            format: "yyyy-mm-dd",
+            format: "dd-mm-yyyy",
             calendarWeeks: true,
             todayHighlight: true,
-            startDate: "{{ statistics.start_date|date:"Y-m-d" }}",
-            endDate: "{{ statistics.end_date|date:"Y-m-d" }}"
+            startDate: "{{ statistics.start_date|date:"d-m-Y" }}",
+            endDate: "{{ statistics.end_date|date:"d-m-Y" }}"
         };
 
         $('.input-daterange').datepicker(opts);
