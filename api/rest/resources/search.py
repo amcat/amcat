@@ -241,7 +241,7 @@ class SearchResource(AmCATResource):
         q = QueryDict("", mutable=True)
         q.update(self.request.QUERY_PARAMS)
         q.update(self.request.DATA)
-        return QueryDict(q.urlencode())
+        return QueryDict(q.urlencode().encode('utf-8'))
 
     @property
     @cached
