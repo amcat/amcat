@@ -124,15 +124,14 @@ def create_test_schema_with_fields(codebook=None, **kargs):
     from amcat.models import CodingSchemaFieldType, CodingSchemaField
 
     if codebook is None:
-        codebook = create_test_codebook()
+        codebook, _ = create_test_codebook_with_codes()
     schema = create_test_schema(**kargs)
 
     fields = []
-    for i, (label, type_id) in enumerate([
-            ("text", 1),
-            ("number", 2),
-            ("code", 5)]):
-        cb = codebook if label == "code" else None
+    for i, (label, type_id, cb) in enumerate([
+            ("text", 1, None),
+            ("number", 2, None),
+            ("code", 5, codebook)]):
         fieldtype = CodingSchemaFieldType.objects.get(pk=type_id)
         f = CodingSchemaField.objects.create(codingschema=schema, fieldnr=i, label=label,
                                              fieldtype=fieldtype, codebook=cb)
@@ -218,6 +217,7 @@ def create_test_job(narticles=1, **kargs):
     if "coder" not in kargs: kargs["coder"] = create_test_user()
     if "articleset" not in kargs: kargs["articleset"] = create_test_set(articles=narticles)
     if "id" not in kargs: kargs["id"] = _get_next_id()
+    if "name" not in kargs: kargs["name"] = "Test job {id}".format(**kargs)
     return CodingJob.objects.create(**kargs)
 
 def create_test_coding(**kargs):

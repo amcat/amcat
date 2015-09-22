@@ -50,7 +50,6 @@ class ORMAggregate(object):
         aggregate = collections.defaultdict(set)
 
         aids = {a.id: a for a in articles}
-
         coding_values = (CodingValue.objects 
                          .filter(field=field, coding__coded_article__article__id__in=aids) 
                          .values_list("coding__coded_article__article_id", "intval"))
@@ -58,7 +57,7 @@ class ORMAggregate(object):
         codes = Code.objects.in_bulk([code for (aid, code) in coding_values])
         
         for aid, code in coding_values:
-            aggregate[codes[code]].add(aids[aid])
+            aggregate[code and codes[code]].add(aids[aid])
         return aggregate
     
     def get_aggregate(self, x_axis, y_axis, interval=None):
