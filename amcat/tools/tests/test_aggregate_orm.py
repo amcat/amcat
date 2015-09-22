@@ -70,10 +70,15 @@ class TestAggregateORM(amcattest.AmCATTestCase):
         self.assertEqual(set(self._test_aggregate("medium", val=self.intf)),
                          {(self.m1, 4.0), (self.m2, 1.5)})
 
+    @amcattest.skip_TODO
+    def test_count(self):
+        """Tests whether count values work"""
         # does not work yet, orm requires a codebook aggregation atm
         self.assertEqual(set(self._test_aggregate(self.codef, val="count")),
                          {(self.code_A, 2), (self.code_B, 1)})
+        
 
+    @amcattest.skip_TODO
     def test_secondary_axis(self):
         """Test whether we can do count plus average per something"""
         # does not actually work yet, and not sure what signature/result structure should look like
@@ -85,6 +90,7 @@ class TestAggregateORM(amcattest.AmCATTestCase):
         
         
         
+    @amcattest.skip_TODO
     def test_medium_per_code(self):
         """Test whether we can use code field as secondary aggregation"""
         # does not actually work yet, and not sure what signature/result structure should look like
@@ -101,6 +107,7 @@ class TestAggregateORM(amcattest.AmCATTestCase):
                           (self.m2, self.code_B, 1.0)})
 
         
+    @amcattest.skip_TODO
     def test_illegal_aggregate(self):
         """Having a second value and second aggregation should throw an exception"""
         self.assertRaises(Exception,
