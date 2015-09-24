@@ -21,6 +21,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from amcat.models import Sentence, CodedArticle, Article, Medium
 from amcat.tools.caching import cached
+from amcat.tools import sbd
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
@@ -124,5 +125,7 @@ class CodedArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
 
     def filter_queryset(self, queryset):
         qs = super(CodedArticleSentenceViewSet, self).filter_queryset(queryset)
-        return qs.filter(article__id=self.coded_article.article_id)
+        article = Article.objects.get(id=self.coded_article.article_id)
+        sentences = qs.filter(id__in=sbd.get_or_create_sentences(article))
+        return sentences
 
