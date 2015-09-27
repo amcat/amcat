@@ -183,11 +183,11 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
 
         return HttpResponseBadRequest(str(dict(form.errors)))
 
-    def post(self, request, project_id, articleset_id):
+    def post(self, request, project, articleset):
         if not self.can_edit():
             raise PermissionDenied("You can't edit this articleset.")
 
-        articleset = ArticleSet.objects.get(id=articleset_id, project__id=project_id)
+        articleset = ArticleSet.objects.get(id=articleset, project__id=project)
         form = AddArticlesToArticleSetForm(project=self.project, articleset=articleset, data=request.POST)
 
         if form.is_valid():

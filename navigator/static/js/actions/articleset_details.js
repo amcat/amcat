@@ -1,5 +1,5 @@
 
-require(["jquery", "pnotify"],function($, PNotify){
+require(["jquery", "pnotify", "bootstrap-multiselect"],function($, PNotify){
     
 
     function addEventListeners(){
@@ -47,7 +47,7 @@ require(["jquery", "pnotify"],function($, PNotify){
             url: "/api/v4/projects/" + project_id + "/articlesets/?page_size=9999&order_by=name",
             dataType: "json"
         }).success(function(data){
-            var select = $("<select>");
+            var select = $("<select>").attr("multiple","multiple");
 
             $.each(data.results, function(i, aset){
                 var name = aset.name + " (" + aset.id + ") (" + aset.articles + " articles)";
@@ -57,14 +57,16 @@ require(["jquery", "pnotify"],function($, PNotify){
 
             // Add selector, multiselect and open filtering
             modal.find(".modal-body > p").html(select);
-            select.multiselect().multiselectfilter();
+            select.multiselect({
+                enableFiltering: true,
+            });
             modal.find(".modal-body > p .ui-multiselect").click();
             $(".ui-multiselect-filter input[type=search]").focus();
 
             // Enable 'ok' button
             modal.find(".btn-primary").removeClass("disabled").click(function(){
                 $(this).addClass("disabled");
-                var checked = $("select").multiselect("getChecked");
+                var checked = $("> option:selected", select);
                 var set_ids = checked.map(function(){ return this.value; }).get();
                 add_to_set_clicked(modal, get_selected(table), set_ids);
             });
@@ -76,6 +78,7 @@ require(["jquery", "pnotify"],function($, PNotify){
     function add_to_set_clicked(modal, article_ids, articleset_ids){
         $.ajax({
             "type": "POST",
+            "headers": {"X-CSRFTOKEN": csrf_middleware_token},
             "data": { "articles": article_ids, "articlesets": articleset_ids },
             "traditional": true
         }).done(function(){
