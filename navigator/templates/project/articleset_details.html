@@ -31,10 +31,10 @@
 
 {% block details %}
     <div style="display:none;" class="btn-group" id="{{ table.get_name }}-actions">
-        <btn onclick="remove_from_set(event);" class="btn btn-default disabled"><i class="glyphicon glyphicon-remove"></i> Remove</btn>
-        <btn onclick="add_to_set(event, {{ project.id }});" class="btn btn-default disabled" data-toggle="modal" data-target="#add_to_set_modal">
+        <button id="btn-remove-selected-from-set" class="btn btn-default disabled"><i class="glyphicon glyphicon-remove"></i> Remove</button>
+        <button id="btn-add-to-set" class="btn btn-default disabled" data-toggle="modal" data-project-id="{{ project.id }}" data-target="#add_to_set_modal">
             <i class="glyphicon glyphicon-plus"></i> Add to other
-        </btn>
+        </button>
     </div>
 
     <style type="text/css">

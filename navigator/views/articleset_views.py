@@ -168,12 +168,12 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
     rowlink = './{id}'
     model = ArticleSet
 
-    def delete(self, request, project_id, articleset_id):
+    def delete(self, request, project, articleset):
         """Accepts a list of article ids as post argument (articles)."""
         if not self.can_edit():
             raise PermissionDenied("You can't edit this articleset.")
 
-        articleset = ArticleSet.objects.get(id=articleset_id, project__id=project_id)
+        articleset = ArticleSet.objects.get(id=articleset, project__id=project)
         form = ArticleSetArticleDeleteForm(articleset=articleset, data=request.POST)
 
         if form.is_valid():
