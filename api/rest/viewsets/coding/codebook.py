@@ -35,7 +35,7 @@ __all__ = ("CodebookSerializer", "CodebookViewSetMixin", "CodingJobCodebookViewS
             "CodebookViewSet")
 
 def serialize_codebook_code(codebook, ccode):
-    function = ccode.function
+#    function = ccode.function
 
     return {
         "codebookcode" : ccode.id,
@@ -46,11 +46,11 @@ def serialize_codebook_code(codebook, ccode):
         "valid_to" : ccode.validto,
         "ordernr" : ccode.ordernr,
         "labels" : codebook._labels[ccode.code_id],
-        "function" : {
-            "id" : function.id,
-            "label" : function.label,
-            "description" : function.description
-        }
+#        "function" : {
+#            "id" : function.id,
+#            "label" : function.label,
+#            "description" : function.description
+#        }
     }
 
 class CodebookSerializer(AmCATModelSerializer):
@@ -61,7 +61,7 @@ class CodebookSerializer(AmCATModelSerializer):
         # Hack: we pass `codebook` to serialize_codebook_code, so it can use codebook's
         # internal label cache, which is way faster than iterating over all codebookcodes
         # and requesting their labels.
-        codebook.cache(select_related=("function",))
+#        codebook.cache(select_related=("function",))
         codebook.cache_labels()
         return (serialize_codebook_code(codebook, ccode) for ccode in codebook.codebookcodes)
 

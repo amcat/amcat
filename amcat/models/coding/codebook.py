@@ -533,7 +533,7 @@ class CodebookCode(AmcatModel):
 
     validfrom = models.DateTimeField(null=True)
     validto = models.DateTimeField(null=True)
-    function = models.ForeignKey(Function, default=0)
+    #function = models.ForeignKey(Function, default=0)
 
     ordernr = models.IntegerField(default=0, null=False, db_index=True, help_text=(
         "Annotator should order according codes according to this number."
