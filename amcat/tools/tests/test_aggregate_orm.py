@@ -16,9 +16,13 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import datetime
 
 from amcat.tools import amcattest, aggregate_orm
 from amcat.models import CodingSchemaField
+from amcat.tools.aggregate_orm import MediumCategory, Count, YearCategory, SchemafieldCategory, \
+    Average
+
 
 class TestAggregateORM(amcattest.AmCATTestCase):
     def setUp(self):
@@ -28,7 +32,19 @@ class TestAggregateORM(amcattest.AmCATTestCase):
         self.m2 = self.a2.medium
         self.a3.medium = self.m2
         self.a3.save()
-        
+
+        self.a1.date = datetime.datetime(2015, 01, 01)
+        self.a2.date = datetime.datetime(2015, 01, 01)
+        self.a3.date = datetime.datetime(2015, 02, 01)
+        self.a4.date = datetime.datetime(2016, 01, 01)
+        self.a1.save()
+        self.a2.save()
+        self.a3.save()
+        self.a4.save()
+
+        # Uncomment if ever using elastic :)
+        # self.s1.refresh_index(full_refresh=True)
+
         self.schema, self.codebook, self.strf, self.intf, self.codef = (
             amcattest.create_test_schema_with_fields(isarticleschema=True))
 
@@ -48,69 +64,78 @@ class TestAggregateORM(amcattest.AmCATTestCase):
         self.c3.update_values({self.codef: self.code_B.id, self.intf: 1})
 
 
-    def _test_aggregate(self, x, val):
-        "Conduct an aggregation and yield a 'settable' sequence" 
-        aggr = aggregate_orm.ORMAggregate([self.job], [a.id for a in self.s1.articles.all()])
-        if isinstance(x, CodingSchemaField):
-            x = "schemafield_cat_{x.id}".format(**locals())
-        if isinstance(val, CodingSchemaField):
-            val = "schemafield_avg_{val.id}".format(**locals())
-            
-        
-        for x, y in aggr.get_aggregate(x, val):
-            _, val = y[0]
-            yield x, val
-        
+    def _get_aggr(self, flat=False):
+        return aggregate_orm.ORMAggregate([self.job.id], [a.id for a in self.s1.articles.all()], flat=flat)
+
+    def test_incorrect_inputs(self):
+        # You need at least one value
+        self.assertRaises(ValueError, self._get_aggr().get_aggregate, categories=MediumCategory())
 
     def test_avg_per_code(self):
         """Tests aggregate ORM with single aggregation and single value"""
-        self.assertEqual(set(self._test_aggregate(self.codef, val=self.intf)),
-                         {(self.code_A, 3.0), (self.code_B, 1.0)})
-        
-        self.assertEqual(set(self._test_aggregate("medium", val=self.intf)),
-                         {(self.m1, 4.0), (self.m2, 1.5)})
+        aggr = self._get_aggr(flat=True)
 
-    @amcattest.skip_TODO
-    def test_count(self):
-        """Tests whether count values work"""
-        # does not work yet, orm requires a codebook aggregation atm
-        self.assertEqual(set(self._test_aggregate(self.codef, val="count")),
-                         {(self.code_A, 2), (self.code_B, 1)})
-        
+        result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [Average(self.intf)]))
+        self.assertEqual(result, {(self.code_A, 3.0), (self.code_B, 1.0)})
 
-    @amcattest.skip_TODO
+        result = set(aggr.get_aggregate([MediumCategory()], [Average(self.intf)]))
+        self.assertEqual(result, {(self.m1, 4.0), (self.m2, 1.5)})
+
     def test_secondary_axis(self):
         """Test whether we can do count plus average per something"""
-        # does not actually work yet, and not sure what signature/result structure should look like
-        # since now it is done by second aggregate call
+        aggr = self._get_aggr(flat=True)
 
-        
-        self.assertEqual(set(self._test_aggregate(self.codef, val="count", val2=self.intf)),
-                         {(self.code_A, (2, 3.0)), (self.code_B, (1, 1.0))})
-        
-        
-        
-    @amcattest.skip_TODO
+        result = (set(aggr.get_aggregate(
+            categories=[SchemafieldCategory(self.codef)],
+            values=[Count(), Average(self.intf)]
+        )))
+
+        self.assertEqual(result, {(self.code_A, (2, 3.0)), (self.code_B, (1, 1.0))})
+
+
     def test_medium_per_code(self):
         """Test whether we can use code field as secondary aggregation"""
-        # does not actually work yet, and not sure what signature/result structure should look like
+        aggr = self._get_aggr(flat=True)
+
+        # Two categories + count
+        result = set(aggr.get_aggregate(
+            categories=[MediumCategory(), SchemafieldCategory(self.codef)],
+            values=[Count()]
+        ))
         
-        self.assertEqual(set(self._test_aggregate("medium", self.codef, val="count")),
-                         {(self.m1, self.code_A, 1),
-                          (self.m2, self.code_A, 1),
-                          (self.m2, self.code_B, 1)})
+        self.assertEqual(result, {
+            ((self.m1, self.code_A), 1),
+            ((self.m2, self.code_A), 1),
+            ((self.m2, self.code_B), 1)
+        })
+
+        # Two categories + average
+        result = set(aggr.get_aggregate(
+            categories=[MediumCategory(), SchemafieldCategory(self.codef)],
+            values=[Average(self.intf)]
+        ))
+
+        self.assertEqual(result, {
+            ((self.m1, self.code_A), 4.0),
+            ((self.m2, self.code_A), 2.0),
+            ((self.m2, self.code_B), 1.0)
+        })
+
+        # Two categories + 2 values
+        result = set(aggr.get_aggregate(
+            categories=[MediumCategory(), SchemafieldCategory(self.codef)],
+            values=[Average(self.intf), Count()]
+        ))
+
+        self.assertEqual(result, {
+            ((self.m1, self.code_A), (4.0, 1)),
+            ((self.m2, self.code_A), (2.0, 1)),
+            ((self.m2, self.code_B), (1.0, 1))
+        })
 
         
-        self.assertEqual(set(self._test_aggregate("medium", self.codef, val=self.intf)),
-                         {(self.m1, self.code_A, 4.0),
-                          (self.m2, self.code_A, 2.0),
-                          (self.m2, self.code_B, 1.0)})
-
-        
-    @amcattest.skip_TODO
-    def test_illegal_aggregate(self):
-        """Having a second value and second aggregation should throw an exception"""
-        self.assertRaises(Exception,
-                          set(self._test_aggregate("medium", self.codef, val="count", val2=self.intf)))
-        
-        
+    def test_count(self):
+        """Tests whether count values work"""
+        aggr = self._get_aggr(flat=True)
+        result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [Count()]))
+        self.assertEqual(result, {(self.code_A, 2), (self.code_B, 1)})
