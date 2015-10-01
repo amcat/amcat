@@ -19,8 +19,7 @@
 import datetime
 
 from amcat.tools import amcattest, aggregate_orm
-from amcat.models import CodingSchemaField
-from amcat.tools.aggregate_orm import MediumCategory, Count, YearCategory, SchemafieldCategory, \
+from amcat.tools.aggregate_orm import MediumCategory, Count, SchemafieldCategory, \
     Average
 
 
