@@ -44,6 +44,7 @@ from amcat.models import Project, ArticleSet
 from api.rest.resources import SearchResource
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
+from django.views.generic.edit import CreateView
 from django.forms.widgets import HiddenInput
 
 from navigator.views.project_views import ProjectDetailsView
@@ -196,7 +197,7 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
             return HttpResponse("OK", status=200)
 
         return HttpResponseBadRequest(str(dict(form.errors)))
-
+    
     def get_datatable_kwargs(self):
         return {"checkboxes": True}
 
@@ -293,6 +294,19 @@ class ArticleSetDeduplicateView(ProjectScriptView):
 class ArticleSetEditView(ProjectEditView):
     parent = ArticleSetDetailsView
     fields = ['project', 'name', 'provenance']
+
+
+class ArticleSetCreateView(HierarchicalViewMixin, ProjectViewMixin,CreateView):
+    parent = ArticleSetListView
+    fields = ['project', 'name', 'provenance']
+    url_fragment = 'create' 
+    model = ArticleSet
+
+    def get_form(self, form_class):
+        if self.request.method == 'GET':
+            return form_class(initial={'project': self.project})
+        else:
+            return super(ArticleSetCreateView, self).get_form(form_class)
 
 class ArticleSetUploadListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     parent = ArticleSetListView

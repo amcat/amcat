@@ -8,7 +8,11 @@
 {% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
 
 {% block actions %}
-    <a class="btn btn-primary"  href="{% url 'navigator:articleset-upload-list' project.id %}" ><i class="glyphicon glyphicon-upload"></i> Upload articles</a>
+    <button class="btn btn-primary" data-toggle="dropdown"><i class="glyphicon glyphicon-plus"></i> Add article set...</button>
+    <ul class="dropdown-menu">
+        <li><a href="{% url 'navigator:articleset-upload-list' project.id %}" ><i class="glyphicon glyphicon-upload"></i> Upload articles</a></li>
+        <li><a href="#"><i class="glyphicon glyphicon-file"></i> New Empty Set</a></li>
+    </ul>
 {% endblock %}
 
 {% block content %}

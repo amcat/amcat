@@ -69,7 +69,7 @@ urlpatterns = patterns(
 )
 
 _views = [
-    ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
+    ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView, ArticleSetCreateView,
     ArticleSetArticleDetailsView, ProjectArticleDetailsView, ArticleRemoveFromSetView,
     ArticleSetUploadView, ArticleSetUploadListView, QueryView, SavedQueryRedirectView, ArticleSetSampleView,
     ArticleSetEditView, ArticleSetImportView, ArticleSetRefreshView,
