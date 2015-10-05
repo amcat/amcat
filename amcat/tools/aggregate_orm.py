@@ -51,6 +51,9 @@ class IntervalCategory(Category):
         aggregate = {date: [a.id for a in arts] for date, arts in aggregate.items()}
         return aggregate
 
+    def __repr__(self):
+        return "<Interval: %s>" % self.interval
+
 class YearCategory(IntervalCategory):
     def __init__(self):
         super(YearCategory, self).__init__("year")
@@ -96,6 +99,9 @@ class SchemafieldCategory(Category):
             aggregate[code_id and codes[code_id]].add(aid)
         return aggregate
 
+    def __repr__(self):
+        return "<SchemafieldCategory: %s>" % self.field
+
 class BaseAggregationValue:
     def aggregate(self, codingjobs, article_ids, codingschemafield=None):
         """
@@ -130,6 +136,9 @@ class Average(BaseAggregationValue):
         )
 
         return average
+
+    def __repr__(self):
+        return "<Average: %s>" % self.field
 
 class Count(BaseAggregationValue):
     def aggregate(self, codingjob_ids, article_ids, codingschemafield=None):
@@ -186,11 +195,11 @@ class ORMAggregate(object):
         aggregation = ((cats, vals) for cats, vals in aggregation if any(vals))
 
         # Flatten categories, i.e. [((Medium,), (1, 2))] to [((Medium, (1, 2))]
-        if len(categories) == 1:
+        if self.flat and len(categories) == 1:
             aggregation = ((cat[0], vals) for cat, vals in aggregation)
 
         # Flatten values, i.e. [(Medium, (1,))] to [(Medium, 1)]
-        if len(values) == 1:
+        if self.flat and len(values) == 1:
             aggregation = ((cats, val[0]) for cats, val in aggregation)
 
         return aggregation
