@@ -22,6 +22,7 @@ A PDF parser
 """
 
 from pdfminer.pdfdocument import PDFDocument
+from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfparser import PDFParser as module_parser
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.converter import PDFPageAggregator
@@ -35,12 +36,10 @@ class PDFParser(object):
     def load_document(self, _file, password=""):
         """turn the file into a PDFMiner document"""
         log.info("loading document...")
+        
         parser = module_parser(_file)
-        doc = PDFDocument()
-        parser.set_document(doc)
-        doc.set_parser(parser)
+        doc = PDFDocument(parser, password)
 
-        doc.initialize(password)
 
         if not doc.is_extractable:
             raise ValueError("PDF text extraction not allowed")
@@ -67,7 +66,7 @@ class PDFParser(object):
         return device.get_result()
 
     def process_document(self, doc, params=None):
-        for i, page in enumerate(doc.get_pages()):
+        for i, page in enumerate(PDFPage.create_pages(doc)):
             log.info("processing page {i}".format(**locals()))
             yield self.process_page(page, params)
 
@@ -89,7 +88,7 @@ class PDFParser(object):
         if not isinstance(params, LAParams):
             params = LAParams(**params)
         objects = [o for o in page._objs if hasattr(o, 'is_compatible')]
-        for line in page.get_textlines(params, objects):
+        for line in page.group_objects(params, objects):
             yield line
 
     def get_textboxes(self, page, params=None):
