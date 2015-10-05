@@ -55,6 +55,15 @@ class CodingJobSerializer(AmCATModelSerializer):
     articles = serializers.SerializerMethodField('get_n_articles')
     complete = serializers.SerializerMethodField('get_n_done_jobs')
     todo = serializers.SerializerMethodField('get_n_todo_jobs')
+    
+    def __init__(self, *args, **kwargs):
+        """Initializes the Serializer
+        @param use_caching: indicates whether the serializer should cache codingjobs' statistics
+                            Defaults to True.
+        """
+        super(CodingJobSerializer, self).__init__(*args, **kwargs)
+        
+        self.use_caching = kwargs.pop('use_caching', True) 
 
     def _get_codingjobs(self):
         view = self.context["view"]
@@ -81,14 +90,26 @@ class CodingJobSerializer(AmCATModelSerializer):
 
     def get_n_articles(self, obj):
         if not obj: return 0
+
+        if not self.use_caching:
+            return obj.articleset.articles.count()
+
         return self._get_n_articles().get(obj.id, 0)
 
     def get_n_done_jobs(self, obj):
         if not obj: return 0
+        
+        if not self.use_caching:
+            return CodedArticle.objects.filter(codingjob=obj, status__id__in=STATUS_DONE).count()
+        
         return self._get_n_done_jobs().get(obj.id, 0)
 
     def get_n_todo_jobs(self, obj):
         if not obj: return 0
+        
+        if not self.use_caching:
+            return CodedArticle.objects.filter(codingjob=obj, status__id__in=STATUS_TODO).count() 
+        
         return self._get_n_todo_jobs().get(obj.id, 0)
 
     class Meta:
@@ -108,10 +129,15 @@ class CodingJobViewSetMixin(AmCATViewSetMixin):
 class CodingJobViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     queryset = CodingJob.objects.all()
     serializer_class = CodingJobSerializer
+    
 
+    def retrieve(self, *args, **kwargs):
+        return super(CodingJobViewSet, self).retrieve(use_caching=False, *args, **kwargs)
+        
     def filter_queryset(self, jobs):
         jobs = super(CodingJobViewSet, self).filter_queryset(jobs)
         return jobs.filter(project=self.project)
+    
 
 class CodingJobArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, ArticleViewSetMixin,
                               DatatablesMixin, ReadOnlyModelViewSet):
