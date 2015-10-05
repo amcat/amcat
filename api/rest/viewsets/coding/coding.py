@@ -43,9 +43,11 @@ class CodingSerializer(AmCATModelSerializer):
         
     @cached
     def _get_coding_values(self):
-        coding_values = CodingValue.objects.filter(coding__in=self.context["view"].queryset)
+        view = self.context["view"]
+        coding_values = CodingValue.objects.filter(coding__in=view.filter_queryset(view.queryset))
         coding_values_dict = defaultdict(list)
 
+        
         for coding_value in coding_values:
             coding_values_dict[coding_value.coding_id].append({
                 "id" : coding_value.id,
