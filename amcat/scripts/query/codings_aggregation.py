@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import re
 import json
+
 from datetime import datetime
 from time import mktime
 
@@ -26,6 +28,7 @@ from django.forms import ChoiceField, CharField, Select
 
 from amcat.models import Medium, ArticleSet, CodingSchema, CodingSchemaField
 from amcat.scripts.query import QueryAction, QueryActionForm
+from amcat.tools import aggregate_orm
 from amcat.tools.aggregate import get_relative
 from amcat.tools.aggregate_orm import ORMAggregate
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
@@ -33,12 +36,29 @@ from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
 from aggregation import AggregationEncoder
 from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
 
-X_AXES = tuple((c, c.title()) for c in ("date", "medium"))
-Y_AXES = tuple((c, c.title()) for c in ("medium", "total"))
-Y_AXES_2ND = (("", "-------"),) + Y_AXES
+AGGREGATION_FIELDS = (
+    ("", "-------"),
+    ("medium", "Medium"),
+    ("Interval", (
+        ("year", "Year"),
+        ("quarter", "Quarter"),
+        ("month", "Month"),
+        ("week", "Week"),
+        ("day", "Day")
+    ))
+)
 
-INTERVALS = tuple((c, c.title()) for c in ("day", "week", "month", "quarter", "year"))
+AGGREGATION_ORM_MAPPING = {
+    "medium": aggregate_orm.MediumCategory,
+    "year": aggregate_orm.YearCategory,
+    "quarter": aggregate_orm.QuarterCategory,
+    "month": aggregate_orm.MonthCategory,
+    "week": aggregate_orm.WeekCategory,
+    "day": aggregate_orm.DayCategory
+}
 
+CODINGSCHEMAFIELD_RE = re.compile("^codingschemafield\((?P<id>[0-9]+)\)$")
+AVERAGE_CODINGSCHEMAFIELD_RE = re.compile("^avg\((?P<id>[0-9]+)\)$")
 
 MEDIUM_ERR = "Could not find medium with id={column} or name={column}"
 
@@ -56,82 +76,98 @@ def get_schemafield_choices(codingjobs, values=True):
     sentence_fields = schemafields.filter(codingschema__isarticleschema=False)
 
     for src, fields in [("Article field", article_fields), ("Sentence field", sentence_fields)]:
-        if src == "Sentence field": continue #TODO: skip sentence fields for now
+        if src == "Sentence field":
+            continue #TODO: skip sentence fields for now
+
         category_fields = list(get_category_fields(fields))
-        if category_fields: yield src, category_fields
-
-        if values:
-            value_fields = list(get_value_fields(fields))
-            if value_fields: yield src + " values", value_fields
-
+        if category_fields:
+            yield src, category_fields
 
 def get_category_fields(fields):
     for field in fields:
         if field.fieldtype_id in (FIELDTYPE_IDS.CODEBOOK,):
-            yield "schemafield_cat_%s" % field.id, field.label
+            yield "codingschemafield(%s)" % field.id, field.label
             
 def get_value_fields(fields):
     for field in fields:
         if field.fieldtype_id in (FIELDTYPE_IDS.INT, FIELDTYPE_IDS.QUALITY):
-            yield "schemafield_avg_%s" % field.id, "Average " +field.label
-    
+            yield "avg(%s)" % field.id, "Average %s" % field.label
+    yield "count", "Article count"
+
 
 class CodingAggregationActionForm(QueryActionForm):
-    x_axis = ChoiceField(label="X-axis (rows)", choices=X_AXES, initial="date")
-    y_axis = ChoiceField(label="Y-axis (columns)", choices=Y_AXES, initial="medium")
-    interval = ChoiceField(choices=INTERVALS, required=False, initial="day")
-    relative_to = CharField(widget=Select, required=False)
+    primary = ChoiceField(label="Primary aggregation", choices=AGGREGATION_FIELDS, required=False)
+    secondary = ChoiceField(label="Secondary aggregation", choices=AGGREGATION_FIELDS, required=False)
 
-    # This field is ignored server-side, but processed by javascript. It causes the renderer
-    # to make another call
-    y_axis_2 = ChoiceField(label="2nd Y-axis (columns)", choices=Y_AXES, required=False)
+    value1 = ChoiceField(label="First value", initial="count")
+    value2 = ChoiceField(label="Second value", required=False, initial="")
+
+    #relative_to = CharField(widget=Select, required=False)
 
     def __init__(self, *args, **kwargs):
         super(CodingAggregationActionForm, self).__init__(*args, **kwargs)
 
-        self.fields["relative_to"].widget.attrs = {
-            "class": "depends-will-be-added-by-query-js",
-            "data-depends-on": json.dumps(["y_axis", "query", "mediums"]),
-            "data-depends-url": "/api/v4/query/statistics/?project={project}&format=json",
-            "data-depends-value": "{id}",
-            "data-depends-label": "{label}",
-        }
-
         assert self.codingjobs
 
-        
-        x_extra = tuple(get_schemafield_choices(self.codingjobs, values=False))
-        y_extra = tuple(get_schemafield_choices(self.codingjobs, values=True))
-        self.fields["x_axis"].choices = X_AXES + x_extra
-        self.fields["y_axis"].choices = Y_AXES + y_extra
-        self.fields["y_axis_2"].choices = Y_AXES_2ND + y_extra
+        schemafields = get_all_schemafields(self.codingjobs)
 
-    def clean_relative_to(self):
-        column = self.cleaned_data['relative_to']
+        value_choices = tuple(get_value_fields(schemafields))
+        self.fields["value1"].choices = value_choices
+        self.fields["value2"].choices = (("", "------"),) + value_choices
 
-        if not column:
+
+        schema_choices = tuple(get_schemafield_choices(self.codingjobs))
+        self.fields["primary"].choices += schema_choices
+        self.fields["secondary"].choices += schema_choices
+
+    def _clean_aggregation(self, field_name):
+        field_value = self.cleaned_data[field_name]
+
+        if not field_value:
             return None
 
-        y_axis = self.cleaned_data['y_axis']
+        # Test for medium or interval
+        category = AGGREGATION_ORM_MAPPING.get(field_value)
+        if category:
+            return category()
 
-        if y_axis == "medium":
-            if int(column) not in (m.id for m in self.cleaned_data["mediums"]):
-                raise ValidationError(MEDIUM_ERR.format(column=column))
-            return Medium.objects.get(id=int(column))
+        # Test for schemafield
+        match = CODINGSCHEMAFIELD_RE.match(field_value)
+        if match:
+            codingschemafield_id = int(match.groupdict()["id"])
+            codingschemafield = CodingSchemaField.objects.get(id=codingschemafield_id)
+            return SchemafieldCategory(codingschemafield)
 
-        if y_axis == "term":
-            queries = SelectionSearch(self).get_queries()
-            queries = {q.label: q for q in queries}
-            if column not in queries:
-                raise ValidationError("Term '{column}' not found in search terms.".format(column=column))
-            return queries[column]
+        raise ValidationError("Not a valid aggregation: %s." % field_value)
 
-        if y_axis == "set":
-            if int(column) not in (aset.id for aset in self.articlesets):
-                raise ValidationError("Set '{column}' not available.".format(column=column))
-            return ArticleSet.objects.get(id=int(column))
+    def clean_primary(self):
+        return self._clean_aggregation("primary")
 
-        raise ValidationError("Not a valid column name.")
+    def clean_secondary(self):
+        return self._clean_aggregation("secondary")
+
+    def _clean_value(self, field_name):
+        field_value = self.cleaned_data[field_name]
+
+        if not field_value:
+            return None
+
+        if field_value == "count":
+            return aggregate_orm.Count()
+
+        match = AVERAGE_CODINGSCHEMAFIELD_RE.match(field_value)
+        if match:
+            codingschemafield_id = int(match.groupdict()["id"])
+            codingschemafield = CodingSchemaField.objects.get(id=codingschemafield_id)
+            return aggregate_orm.Average(codingschemafield)
+
+        raise ValidationError("Not a valid value: %s." % field_value)
+
+    def clean_value1(self):
+        return self._clean_value("value1")
+
+    def clean_value2(self):
+        return self._clean_value("value2")
 
 
 class CodingAggregationAction(QueryAction):
@@ -139,11 +175,11 @@ class CodingAggregationAction(QueryAction):
     Aggregate articles based on their properties. Make sure x_axis != y_axis.
     """
     output_types = (
-        ("text/json+aggregation+table", "Table"),
-        ("text/json+aggregation+barplot", "Bar plot"),
-        ("text/json+aggregation+scatter", "Scatter plot"),
-        ("text/json+aggregation+line", "Line plot"),
-        ("text/json+aggregation+heatmap", "Heatmap"),
+        ("text/json+aggregation+codingbs+table", "Table"),
+        ("text/json+aggregation+codings+barplot", "Bar plot"),
+        ("text/json+aggregation+codings+scatter", "Scatter plot"),
+        ("text/json+aggregation+codings+line", "Line plot"),
+        ("text/json+aggregation+codings+heatmap", "Heatmap"),
         ("text/csv", "CSV (Download)"),
     )
     form_class = CodingAggregationActionForm
@@ -156,19 +192,16 @@ class CodingAggregationAction(QueryAction):
 
         # Get aggregation
         codingjobs = form.cleaned_data["codingjobs"]
-        x_axis = form.cleaned_data['x_axis']
-        y_axis = form.cleaned_data['y_axis']
-        interval = form.cleaned_data['interval']
+        primary = form.cleaned_data['primary']
+        secondary = form.cleaned_data['secondary']
+        value1 = form.cleaned_data['value1']
+        value2 = form.cleaned_data['value2']
 
         article_ids = selection.get_article_ids()
         orm_aggregate = ORMAggregate(codingjobs, article_ids)
-        aggregation = sorted(orm_aggregate.get_aggregate(x_axis, y_axis, interval))
-
-        self.monitor.update(20, "Calculating relative values..".format(**locals()))
-        column = form.cleaned_data['relative_to']
-
-        if column is not None:
-            aggregation = list(get_relative(aggregation, column))
+        categories = list(filter(None, [primary, secondary]))
+        values = list(filter(None, [value1, value2]))
+        aggregation = sorted(orm_aggregate.get_aggregate(categories, values))
 
         self.monitor.update(60, "Serialising..".format(**locals()))
         return json.dumps(list(aggregation), cls=AggregationEncoder, check_circular=False)
