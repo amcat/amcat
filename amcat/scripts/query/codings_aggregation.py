@@ -37,7 +37,6 @@ from aggregation import AggregationEncoder
 from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
 
 AGGREGATION_FIELDS = (
-    ("", "-------"),
     ("medium", "Medium"),
     ("Interval", (
         ("year", "Year"),
@@ -96,8 +95,8 @@ def get_value_fields(fields):
 
 
 class CodingAggregationActionForm(QueryActionForm):
-    primary = ChoiceField(label="Primary aggregation", choices=AGGREGATION_FIELDS, required=False)
-    secondary = ChoiceField(label="Secondary aggregation", choices=AGGREGATION_FIELDS, required=False)
+    primary = ChoiceField(label="Primary aggregation", choices=AGGREGATION_FIELDS)
+    secondary = ChoiceField(label="Secondary aggregation", choices=(("", "------"),) + AGGREGATION_FIELDS, required=False)
 
     value1 = ChoiceField(label="First value", initial="count")
     value2 = ChoiceField(label="Second value", required=False, initial="")
@@ -114,7 +113,6 @@ class CodingAggregationActionForm(QueryActionForm):
         value_choices = tuple(get_value_fields(schemafields))
         self.fields["value1"].choices = value_choices
         self.fields["value2"].choices = (("", "------"),) + value_choices
-
 
         schema_choices = tuple(get_schemafield_choices(self.codingjobs))
         self.fields["primary"].choices += schema_choices
@@ -136,7 +134,7 @@ class CodingAggregationActionForm(QueryActionForm):
         if match:
             codingschemafield_id = int(match.groupdict()["id"])
             codingschemafield = CodingSchemaField.objects.get(id=codingschemafield_id)
-            return SchemafieldCategory(codingschemafield)
+            return aggregate_orm.SchemafieldCategory(codingschemafield)
 
         raise ValidationError("Not a valid aggregation: %s." % field_value)
 
@@ -210,7 +208,7 @@ class CodingAggregationAction(QueryAction):
         value2 = form.cleaned_data['value2']
 
         article_ids = selection.get_article_ids()
-        orm_aggregate = ORMAggregate(codingjobs, article_ids)
+        orm_aggregate = ORMAggregate(codingjobs, article_ids, flat=True, empty=True)
         categories = list(filter(None, [primary, secondary]))
         values = list(filter(None, [value1, value2]))
         aggregation = sorted(orm_aggregate.get_aggregate(categories, values))

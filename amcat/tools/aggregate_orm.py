@@ -146,10 +146,11 @@ class Count(BaseAggregationValue):
 
 
 class ORMAggregate(object):
-    def __init__(self, codingjob_ids, article_ids, flat=False):
+    def __init__(self, codingjob_ids, article_ids, flat=False, empty=False):
         self.article_ids = article_ids
         self.codingjob_ids = codingjob_ids
         self.flat = flat
+        self.empty = empty
 
     def _get_aggregate_categories(self, categories, values, article_ids, codingschemafield=None):
         category = categories.pop(0)
@@ -192,7 +193,8 @@ class ORMAggregate(object):
         aggregation = self._get_aggregate(categories, values, self.article_ids)
 
         # Filter empty values
-        aggregation = ((cats, vals) for cats, vals in aggregation if any(vals))
+        if not self.empty:
+            aggregation = ((cats, vals) for cats, vals in aggregation if any(vals))
 
         # Flatten categories, i.e. [((Medium,), (1, 2))] to [((Medium, (1, 2))]
         if self.flat and len(categories) == 1:
