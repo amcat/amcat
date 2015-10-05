@@ -169,14 +169,26 @@ class CodingAggregationActionForm(QueryActionForm):
     def clean_value2(self):
         return self._clean_value("value2")
 
+    def clean(self):
+        primary = self.cleaned_data["primary"]
+        secondary = self.cleaned_data["secondary"]
+        value2 = self.cleaned_data["value2"]
+
+        if primary and secondary and value2:
+            error_msg =  "When selecting two aggregations (primary and secondary), "
+            error_msg += "you can only select one value."
+            raise ValidationError(error_msg)
+
+        return self.cleaned_data
+
 
 class CodingAggregationAction(QueryAction):
     """
     Aggregate articles based on their properties. Make sure x_axis != y_axis.
     """
     output_types = (
-        ("text/json+aggregation+codingbs+table", "Table"),
         ("text/json+aggregation+codings+barplot", "Bar plot"),
+        ("text/json+aggregation+codingbs+table", "Table"),
         ("text/json+aggregation+codings+scatter", "Scatter plot"),
         ("text/json+aggregation+codings+line", "Line plot"),
         ("text/json+aggregation+codings+heatmap", "Heatmap"),
