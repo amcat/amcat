@@ -217,7 +217,7 @@ class CodingAggregationAction(QueryAction):
         value2 = form.cleaned_data['value2']
 
         article_ids = selection.get_article_ids()
-        orm_aggregate = ORMAggregate(codingjobs, article_ids, flat=True, empty=True)
+        orm_aggregate = ORMAggregate(codingjobs, article_ids, flat=False, empty=False)
         categories = list(filter(None, [primary, secondary]))
         values = list(filter(None, [value1, value2]))
         aggregation = orm_aggregate.get_aggregate(categories, values)
