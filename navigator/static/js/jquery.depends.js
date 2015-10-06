@@ -62,14 +62,14 @@ String.prototype.format = function(args){
 (function($){
     $.fn.depends = function(options){
         var defaults = {
-            getFormatter: function(options, elements){
+            getFormatter: function(options, elements, callback){
                 var formatter = {};
 
                 $.map(elements.dependsOnElements, function(el){
                     formatter[el.attr("name")] = el.val();
                 });
 
-                return formatter;
+                return callback(formatter);
             },
 
             /**
@@ -79,14 +79,15 @@ String.prototype.format = function(args){
              * @param event
              */
             onChange: function(options, elements, event){
-                elements.select.html("").multiselect("setOptions", {
-                    nonSelectedText: "Loading options.."
-                }).multiselect("rebuild");
+                options.getFormatter(options, elements, function(formatter){
+                    elements.select.html("").multiselect("setOptions", {
+                        nonSelectedText: "Loading options.."
+                    }).multiselect("rebuild");
 
-                var formatter = options.getFormatter(options, elements);
-                options.fetchData.bind(options.onSuccess)(
-                    options, elements, elements.url.format(formatter)
-                );
+                    options.fetchData.bind(options.onSuccess)(
+                        options, elements, elements.url.format(formatter)
+                    );
+                });
             },
 
             /**
@@ -151,7 +152,7 @@ String.prototype.format = function(args){
             }
         };
 
-        options = $.extend(defaults, options);
+        options = $.extend({}, defaults, options, {defaults: defaults});
 
         return this.each(function() {
             var elements = {

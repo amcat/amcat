@@ -110,6 +110,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
             articleset_ids = all_articlesets.values_list("id", flat=True)
             all_codingjobs = self.project.codingjob_set.all()
         else:
+            all_codingjobs = None
             all_articlesets = self.project.all_articlesets().only("id", "name")
             all_articlesets = all_articlesets.filter(codingjob_set__id__isnull=True)
 
@@ -124,6 +125,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         form = SelectionForm(
             project=self.project,
             articlesets=articlesets,
+            codingjobs=all_codingjobs,
             data=self.request.GET,
             initial={
                 "datetype": "all",

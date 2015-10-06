@@ -49,7 +49,8 @@ define([
         "include_all", "articlesets", "mediums", "article_ids",
         "start_date", "end_date", "datetype", "on_date",
         "codebook_replacement_language", "codebook_label_language",
-        "codebook", "query", "download", "codingjobs"
+        "codebook", "query", "download", "codingjobs",
+        "codingschemafield", "codingschemafield_value"
     ];
 
     var HOTKEYS = {

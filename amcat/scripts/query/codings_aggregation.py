@@ -26,12 +26,13 @@ from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.db.models import Q
 from django.forms import ChoiceField, CharField, Select
 
-from amcat.models import Medium, ArticleSet, CodingSchema, CodingSchemaField, Code
+from amcat.models import Medium, ArticleSet, CodingSchema, CodingSchemaField, Code, CodingValue
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools import aggregate_orm
 from amcat.tools.aggregate import get_relative
 from amcat.tools.aggregate_orm import ORMAggregate
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
+from amcat.scripts.forms.selection import ModelChoiceFieldWithIdLabel, get_all_schemafields
 
 from aggregation import AggregationEncoder
 from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
@@ -61,13 +62,6 @@ AVERAGE_CODINGSCHEMAFIELD_RE = re.compile("^avg\((?P<id>[0-9]+)\)$")
 
 MEDIUM_ERR = "Could not find medium with id={column} or name={column}"
 
-def get_all_schemafields(codingjobs):
-    codingjob_ids = [c.id for c in codingjobs]
-    unitschema_filter = Q(codingjobs_unit__id__in=codingjob_ids)
-    articleschema_filter = Q(codingjobs_article__id__in=codingjob_ids)
-    codingschemas = CodingSchema.objects.filter(unitschema_filter | articleschema_filter)
-    schemafields = CodingSchemaField.objects.filter(codingschema__in=codingschemas)
-    return schemafields
 
 def get_schemafield_choices(codingjobs, values=True):
     schemafields = get_all_schemafields(codingjobs).order_by("label").only("id", "label")
@@ -107,10 +101,9 @@ class CodingAggregationActionForm(QueryActionForm):
         super(CodingAggregationActionForm, self).__init__(*args, **kwargs)
 
         assert self.codingjobs
+        assert self.schemafields is not None
 
-        schemafields = get_all_schemafields(self.codingjobs)
-
-        value_choices = tuple(get_value_fields(schemafields))
+        value_choices = tuple(get_value_fields(self.schemafields))
         self.fields["value1"].choices = value_choices
         self.fields["value2"].choices = (("", "------"),) + value_choices
 
@@ -216,7 +209,23 @@ class CodingAggregationAction(QueryAction):
         value1 = form.cleaned_data['value1']
         value2 = form.cleaned_data['value2']
 
+        schemafield = form.cleaned_data["codingschemafield"]
+        schemafield_value = form.cleaned_data["codingschemafield_value"]
+
         article_ids = selection.get_article_ids()
+
+        if schemafield and schemafield_value:
+            # Reduce article set to article which have a coding coded as 'schemafield_value'
+            # on codingschemafield 'schemafield'
+            coding_values = (CodingValue.objects
+                .filter(field__id=schemafield.id)
+                .filter(intval=schemafield_value.id)
+                .filter(coding__coded_article__codingjob__id__in=codingjobs)
+            )
+
+            coded_article_ids = coding_values.values_list("coding__coded_article__article__id", flat=True)
+            article_ids = list(set(article_ids) & set(coded_article_ids))
+
         orm_aggregate = ORMAggregate(codingjobs, article_ids, flat=False, empty=False)
         categories = list(filter(None, [primary, secondary]))
         values = list(filter(None, [value1, value2]))

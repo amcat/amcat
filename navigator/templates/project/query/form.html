@@ -139,6 +139,52 @@
                         <textarea placeholder="IDs" name="article_ids"></textarea>
                     </div>
                 </div>
+                {% if form.codingjobs %}
+                <div class="row">
+                    <div class="col-md-3"><label>Coding</label></div>
+                    <div class="col-md-9">
+                        {{ form.codingschemafield}}
+                        {{ form.codingschemafield_value }}
+                    </div>
+                    <script>
+                        require(["jquery", "query/multiselect-defaults", "bootstrap-multiselect", "jquery.depends"], function($, MULTISELECT_DEFAULTS){
+                            $("#id_codingschemafield").multiselect(
+                                $.extend({}, MULTISELECT_DEFAULTS, {
+                                    nonSelectedText: 'All selected',
+                                    buttonWidth: "100%"
+                                })
+                            );
+
+                            $("#id_codingschemafield_value").multiselect(
+                                $.extend({}, MULTISELECT_DEFAULTS, {
+                                    disableIfEmpty: true,
+                                    nonSelectedText: 'Code',
+                                    buttonWidth: "100%"
+                                })
+                            ).depends({
+                                getFormatter: function(options, elements, callback){
+                                    options.defaults.getFormatter(options, elements, function(formatter){
+                                        if (!formatter["codingschemafield"]) return;
+
+                                        var url = "/api/v4/projects/{project}/codingschemafields/{codingschemafield}/";
+                                        $.getJSON(url.format(formatter), function(data){
+                                            formatter["codebook"] = data["codebook"];
+                                            callback(formatter);
+                                        });
+                                    });
+                                },
+                                fetchData: function(options, elements, url){
+                                    return options.defaults.fetchData.bind((function(options, elements, data){
+                                        data["results"] = data["codes"];
+                                        this(options, elements, data);
+                                    }).bind(this))(options, elements, url);
+                                }
+                            });
+                        });
+                    </script>
+
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

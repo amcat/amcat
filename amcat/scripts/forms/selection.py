@@ -20,12 +20,17 @@
 
 from itertools import ifilterfalse
 import datetime
+import json
 import logging
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 
-from amcat.models import Codebook, Language, Article, ArticleSet, CodingJob
+from amcat.models import Codebook, Language, Article, ArticleSet, CodingJob, CodingSchemaField, Code, \
+    CodingSchema, CodebookCode
+
+from amcat.models.coding.codingschemafield import FIELDTYPE_IDS
 from amcat.models.medium import Medium, get_mediums
 from amcat.forms.forms import order_fields
 from amcat.tools.caching import cached
@@ -69,6 +74,15 @@ def _add_to_dict(dict, key, value):
     dict[key] = value
 
 
+def get_all_schemafields(codingjobs):
+    codingjob_ids = [c.id for c in codingjobs]
+    unitschema_filter = Q(codingjobs_unit__id__in=codingjob_ids)
+    articleschema_filter = Q(codingjobs_article__id__in=codingjob_ids)
+    codingschemas = CodingSchema.objects.filter(unitschema_filter | articleschema_filter)
+    schemafields = CodingSchemaField.objects.filter(codingschema__in=codingschemas)
+    return schemafields
+
+
 @order_fields()
 class SelectionForm(forms.Form):
     include_all = forms.BooleanField(label="Include articles not matched by any keyword", required=False, initial=False)
@@ -89,6 +103,10 @@ class SelectionForm(forms.Form):
 
     query = forms.CharField(widget=forms.Textarea, required=False)
 
+    codingschemafield = ModelChoiceFieldWithIdLabel(queryset=CodingSchemaField.objects.none(), required=False)
+    codingschemafield_value = ModelChoiceFieldWithIdLabel(queryset=Code.objects.none(), required=False)
+
+
     def __init__(self, project=None, articlesets=None, codingjobs=None, data=None, *args, **kwargs):
         """
         @param codingojobs: when specified,
@@ -107,6 +125,7 @@ class SelectionForm(forms.Form):
         self.project = project
         self.articlesets = articlesets
         self.codingjobs = codingjobs
+        self.schemafields = None
 
         self.fields['articlesets'].queryset = articlesets.order_by('-pk')
         self.fields['codingjobs'].queryset = project.codingjob_set.all()
@@ -117,10 +136,27 @@ class SelectionForm(forms.Form):
             Language.objects.filter(labels__code__codebook_codes__codebook__in=project.get_codebooks()).distinct()
         )
 
-        if codingjobs:
+        if self.codingjobs:
             self.fields['articlesets'].queryset = self.fields['articlesets'].queryset.filter(
                 codingjob_set__id__in=codingjobs.values_list("id", flat=True)
             )
+
+            self.schemafields = get_all_schemafields(self.codingjobs)
+
+            schemafields_codebooks = self.schemafields.filter(fieldtype__id=FIELDTYPE_IDS.CODEBOOK)
+            codebookcodes = CodebookCode.objects.filter(codebook__id__in=schemafields_codebooks.values_list("codebook_id", flat=True))
+            codes = Code.objects.filter(id__in=codebookcodes.values_list("id", flat=True))
+
+            self.fields["codingschemafield"].queryset = schemafields_codebooks.order_by("id")
+            self.fields["codingschemafield_value"].queryset = codes.order_by("id")
+
+            self.fields["codingschemafield_value"].widget.attrs = {
+                "class": "depends",
+                "data-depends-on": json.dumps(["codingschemafield", "project"]),
+                "data-depends-url": "/api/v4/projects/{project}/codebooks/{codebook}/?format=json",
+                "data-depends-value": "{code}",
+                "data-depends-label": "{code} - {label}",
+            }
 
         if data is not None:
             self.data = self.get_data()
