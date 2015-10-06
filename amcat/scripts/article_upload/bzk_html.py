@@ -75,9 +75,9 @@ class BZK(UploadScript):
             raise ValueError("Neither 'werkmap' nor 'intranet/rss' in html.")
 
         for div in divs:
-            article = Article(metastring={'html': div})
+            article = Article(metastring=div.text)
             article.headline = div.cssselect("#articleTitle")[0].text_content()
-            article.text = div.cssselect("#articleIntro")[0]
+            article.text = div.cssselect("#articleIntro")[0].text or ""
             articlepage = div.cssselect("#articlePage")
 
             if articlepage:
