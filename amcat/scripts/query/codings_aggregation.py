@@ -26,7 +26,7 @@ from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.db.models import Q
 from django.forms import ChoiceField, CharField, Select
 
-from amcat.models import Medium, ArticleSet, CodingSchema, CodingSchemaField
+from amcat.models import Medium, ArticleSet, CodingSchema, CodingSchemaField, Code
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools import aggregate_orm
 from amcat.tools.aggregate import get_relative
@@ -179,6 +179,15 @@ class CodingAggregationActionForm(QueryActionForm):
 
         return self.cleaned_data
 
+def to_sortable_tuple(key):
+    if isinstance(key, tuple):
+        return tuple(map(to_sortable_tuple, key))
+    elif isinstance(key, Medium):
+        return key.name
+    elif isinstance(key, Code):
+        return key.label
+    return key
+
 
 class CodingAggregationAction(QueryAction):
     """
@@ -211,7 +220,8 @@ class CodingAggregationAction(QueryAction):
         orm_aggregate = ORMAggregate(codingjobs, article_ids, flat=True, empty=True)
         categories = list(filter(None, [primary, secondary]))
         values = list(filter(None, [value1, value2]))
-        aggregation = sorted(orm_aggregate.get_aggregate(categories, values))
+        aggregation = orm_aggregate.get_aggregate(categories, values)
+        aggregation = sorted(aggregation, key=to_sortable_tuple)
 
         self.monitor.update(60, "Serialising..".format(**locals()))
         return json.dumps(list(aggregation), cls=AggregationEncoder, check_circular=False)
