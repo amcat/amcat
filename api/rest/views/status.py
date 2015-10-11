@@ -1,31 +1,14 @@
 from rest_framework.views import APIView
-from rest_framework import generics
-from rest_framework import serializers
 from rest_framework.response import Response
+from rest_framework.status import HTTP_200_OK
 
 from amcat.amcatcelery import status
+from amcat.tools.amcates import ES
 
-class BaseStatusSerializer(serializers.Serializer):
-    amcat_version = serializers.CharField()
-    hostname = serializers.CharField()
-    folder = serializers.CharField()
-    default_celery_queue = serializers.CharField()
-    
-class CeleryStatusSerializer(BaseStatusSerializer):
-    task_id = serializers.CharField()
-    exchange = serializers.CharField()
-    routing_key = serializers.CharField()
-    
-    
-class StatusSerializer(BaseStatusSerializer):
-    celery_worker = CeleryStatusSerializer(many=False)
-    
-
-class StatusView(generics.GenericAPIView):
-    serializer_class = StatusSerializer
-    
+class StatusView(APIView):
     def get(self, request):
         data = status()
         data['celery_worker'] = status.delay().wait()
-        serializer = self.get_serializer(data)
-        return Response(serializer.data)
+        data['elastic'] = ES().status()
+        return Response(data, status=HTTP_200_OK)
+
