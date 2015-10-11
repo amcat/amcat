@@ -2,6 +2,7 @@
 import logging
 from django.conf import settings
 from navigator.utils import session_pop
+import amcat
 
 log = logging.getLogger(__name__)
 from amcat.models import AmCAT
@@ -47,4 +48,6 @@ def extra(request):
     # Set cache token to be used by requirejs
     cache_bust_token = settings.CACHE_BUST_TOKEN
 
+    amcat_version = amcat.__version__
+    
     return locals()
