@@ -332,8 +332,20 @@ class ES(object):
         if not indices.IndicesClient(self.es).exists(self.index):
             log.info("Index {self.index} does not exist, creating".format(**locals()))
             self.create_index()
-        x = cluster.ClusterClient(self.es).health(self.index, wait_for_status='yellow')
+        return self.es.cluster.health(self.index, wait_for_status='yellow')
 
+    def status(self):
+        nodes = self.es.nodes.info()['nodes'].values()
+        return {"ping": self.es.ping(),
+                "nodes": [n['name'] for n in nodes],
+                "index": self.index,
+                "index_health": self.es.cluster.health(self.index),
+                "transport_hosts": self.es.transport.hosts,
+            }
+
+
+
+    
     def get(self, id, **options):
         """
         Get a single article from the index
@@ -741,6 +753,8 @@ class ES(object):
         """Remove all articles without set from the index"""
         query =  {"query": {"constant_score": {"filter": {"missing": {"field": "sets"}}}}}
         self.es.delete_by_query(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=query)
+
+        
 
 def get_date(timestamp):
     d = datetime.datetime.fromtimestamp(timestamp / 1000)
