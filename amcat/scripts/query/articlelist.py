@@ -34,7 +34,7 @@ from api.rest.resources import SearchResource
 
 COLUMNS = ["id"] + sorted(set(HASH_FIELDS) | {"medium"})
 TABLE_TEMPLATE = get_template("query/articlelist.html")
-ARTICLE_ROWLINK = "navigator:article-details"
+ARTICLE_ROWLINK = "{}articles/{}"
 
 API_KEYWORD_MAP = {
     "query": "q",
@@ -82,9 +82,9 @@ class ArticleListAction(QueryAction):
         data = {API_KEYWORD_MAP.get(k, k): v for k,v in self.data.iterlists()}
         data["q"] = ["{}#{}".format(q.label, q.query) for q in selection.get_queries()]
         url = urllib.urlencode(data, doseq=True)
-        table = Datatable(SearchResource, url="/api/v4/search", rowlink_open_in="new")
+        rowlink = ARTICLE_ROWLINK.format(reverse("navigator:project-details", args=[self.project.id]), "{id}")
+        table = Datatable(SearchResource, url="/api/v4/search", rowlink=rowlink, rowlink_open_in="new")
         table = table.add_arguments(minimal="1")
-        table = table.rowlink_reverse(ARTICLE_ROWLINK, args=[self.project.id, "{id}"])
         table = table.add_arguments(project=str(self.project.id))
 
         for k, vs in data.items():
