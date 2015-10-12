@@ -110,21 +110,21 @@ class ArticleRemoveFromSetView(ProjectActionRedirectView):
             raise PermissionDenied("User {self.request.user} has insufficient rights on project {project}".format(**locals()))
 
 
-        articles = [int(kwargs["article_id"])]
+        articles = [int(kwargs["article"])]
         ArticleSet.objects.get(pk=remove_set).remove_articles(articles)
 
 
-    def get_redirect_url(self, project_id, article_id):
+    def get_redirect_url(self, project, article):
         remove_set = int(self.request.GET["remove_set"])
         return_set = self.request.GET.get("return_set")
         if return_set:
             return_set = int(return_set)
             if remove_set != return_set:
-                return reverse(ArticleSetArticleDetailsView.get_view_name(), args=(project_id, return_set, article_id))
-        return super(ArticleRemoveFromSetView, self).get_redirect_url(project_id=project_id, article_id=article_id)
+                return reverse(ArticleSetArticleDetailsView.get_view_name(), args=(project, return_set, article))
+        return super(ArticleRemoveFromSetView, self).get_redirect_url(project_id=project, article_id=article)
 
     def success_message(self, result=None):
-        article = self.kwargs["article_id"]
+        article = self.kwargs["article"]
         remove_set =  int(self.request.GET["remove_set"])
         return "Removed the current article ({article}) from set {remove_set}".format(**locals())
 
