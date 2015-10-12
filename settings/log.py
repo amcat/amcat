@@ -100,7 +100,7 @@ if 'DJANGO_LOG_FILE' in os.environ:
         'level': LOG_LEVEL,
         'class': 'logging.handlers.RotatingFileHandler',
         'filename': LOG_FILE,
-        'maxBytes': 50000,
+        'maxBytes': 2 * 1024 * 1024,
         'backupCount': 2,
         'formatter': 'color',
     }
