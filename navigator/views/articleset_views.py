@@ -225,7 +225,7 @@ class ArticleSetImportView(ProjectScriptView):
 
     def get_success_url(self):
         project = self.form.cleaned_data["target_project"]
-        return reverse("navigator" + ArticleSetListView.get_view_name(), kwargs={"project":project.id})
+        return reverse("navigator:" + ArticleSetListView.get_view_name(), kwargs={"project":project.id})
 
     def get_form(self, form_class):
         form = super(ArticleSetImportView, self).get_form(form_class)
@@ -246,11 +246,11 @@ class ArticleSetSampleView(ProjectScriptView):
     url_fragment = 'sample'
 
     def get_success_url(self):
-        return self.parent._get_breadcrumb_url({'project' : self.project.id, 'articleset_id' : self.result.id}, self)
+        return self.parent._get_breadcrumb_url({'project' : self.project.id, 'articleset' : self.result.id}, self)
 
 
     def success_message(self, result=None):
-        old = ArticleSet.objects.get(pk=self.kwargs['articleset_id'])
+        old = ArticleSet.objects.get(pk=self.kwargs['articleset'])
         return SafeText("Created sample set {newname} as shown below. "
                         "<a href='{oldurl}'>Return to original set {old.id} : {oldname}</a>"
                         .format(newname=escape(self.result.name), oldurl=reverse('navigator:articleset-details', kwargs=self.kwargs),
@@ -361,10 +361,9 @@ class ArticleSetDeleteView(ProjectActionRedirectView):
     parent = ArticleSetDetailsView
     url_fragment = "delete"
 
-    def action(self, project_id, articleset_id):
-        aset = ArticleSet.objects.get(pk=articleset_id)
-        project = Project.objects.get(pk=project_id)
-
+    def action(self, project, articleset):
+        aset = ArticleSet.objects.get(pk=articleset)
+        project = Project.objects.get(pk=project)
         aset.project = Project.objects.get(id=LITTER_PROJECT_ID)
         aset.indexed = False
         aset.provenance = json.dumps({
@@ -382,9 +381,9 @@ class ArticleSetUnlinkView(ProjectActionRedirectView):
     parent = ArticleSetDetailsView
     url_fragment = "unlink"
 
-    def action(self, project_id, articleset_id):
-        aset = ArticleSet.objects.get(pk=articleset_id)
-        project = Project.objects.get(pk=project_id)
+    def action(self, project, articleset):
+        aset = ArticleSet.objects.get(pk=articleset)
+        project = Project.objects.get(pk=project)
         project.articlesets.remove(aset)
         project.favourite_articlesets.remove(aset)
 
