@@ -145,11 +145,10 @@ class SelectionForm(forms.Form):
 
             schemafields_codebooks = self.schemafields.filter(fieldtype__id=FIELDTYPE_IDS.CODEBOOK)
             codebookcodes = CodebookCode.objects.filter(codebook__id__in=schemafields_codebooks.values_list("codebook_id", flat=True))
-            codes = Code.objects.filter(id__in=codebookcodes.values_list("id", flat=True))
+            codes = Code.objects.filter(id__in=codebookcodes.values_list("code_id", flat=True))
 
             self.fields["codingschemafield"].queryset = schemafields_codebooks.order_by("id")
             self.fields["codingschemafield_value"].queryset = codes.order_by("id")
-
             self.fields["codingschemafield_value"].widget.attrs = {
                 "class": "depends",
                 "data-depends-on": json.dumps(["codingschemafield", "project"]),
