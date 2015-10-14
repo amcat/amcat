@@ -139,7 +139,10 @@ Then, in the top-directory of AmCAT itself run:
 
 ```sh
 bower install
-python static/components/highlight/tools/build.py
+cd static/components/highlightjs
+sudo npm install
+node tools/build.js :common
+cd -
 ```
 
 ### Setting up the database
