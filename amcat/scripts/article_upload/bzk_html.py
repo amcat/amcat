@@ -75,16 +75,16 @@ class BZK(UploadScript):
             raise ValueError("Neither 'werkmap' nor 'intranet/rss' in html.")
 
         for div in divs:
-            article = Article(metastring=div.text)
+            article = Article(metastring=div.text_content())
             article.headline = div.cssselect("#articleTitle")[0].text_content()
-            article.text = div.cssselect("#articleIntro")[0].text or ""
+            article.text = div.cssselect("#articleIntro")[0].text_content() or None 
             articlepage = div.cssselect("#articlePage")
 
             if articlepage:
-                article.pagenr, article.section = self.get_pagenum(articlepage[0].text)
+                article.pagenr, article.section = self.get_pagenum(articlepage[0].text_content())
 
-            article.medium = self.get_medium(div.cssselect("#sourceTitle")[0].text)
-            date_str = div.cssselect("#articleDate")[0].text
+            article.medium = self.get_medium(div.cssselect("#sourceTitle")[0].text_content())
+            date_str = div.cssselect("#articleDate")[0].text_content()
 
             try:
                 article.date = readDate(date_str)
@@ -172,7 +172,7 @@ class BZK(UploadScript):
 
     def parse_item(self, item):
         #item: a list of html tags
-        article = Article(metastring={})
+        article = Article()
         article.text = self._parse_text(item)
         for tag in item:
             if tag.tag == "h2":
