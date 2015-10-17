@@ -32,6 +32,11 @@ class ANALYSES:
     alpino = [{"module" : "xtas.tasks.single.alpino"}]
     sources_nl = [{"module" : "xtas.tasks.single.alpino"},
                   {"module" : "xtas.tasks.single.sources_nl"}]
+    clauses_nl = [{"module" : "xtas.tasks.single.alpino"},
+                  {"module" : "xtas.tasks.single.sources_nl"},
+                  {"module" : "xtas.tasks.single.clauses_nl"}]
+
+
     frog = [{"module" : "xtas.tasks.single.frog"}]
 
     corenlp_lemmatize = [{"module" : "xtas.tasks.single.corenlp_lemmatize"}]

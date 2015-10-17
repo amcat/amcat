@@ -29,12 +29,20 @@ class XTasViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMix
 
         return Response(plugins)
 
-from rest_framework.serializers import Serializer
+from rest_framework.serializers import Serializer, ListSerializer
 from amcat.models import Article, ArticleSet
 from rest_framework.viewsets import ModelViewSet
 import itertools
 
 class ArticleXTasSerializer(Serializer):
+
+    class Meta:
+        class list_serializer_class(ListSerializer):
+            def to_representation(self, data):
+                # flatten list of lists
+                result = ListSerializer.to_representation(self, data)
+                result = itertools.chain(*result)
+                return result
 
     @property
     def module(self):
@@ -45,15 +53,8 @@ class ArticleXTasSerializer(Serializer):
         elif not module in dir(ANALYSES):
             raise Exception("Unknown module: {module}".format(**locals()))
         return module
-
-    def field_to_native(self, obj, field_name):
-        result =  super(ArticleXTasSerializer, self).field_to_native(obj, field_name)
-        if field_name == "results":
-            # flatting lists of tokens
-            result = itertools.chain(*result)
-        return result
-
-    def to_native(self, article):
+    
+    def to_representation(self, article):
         if article is None: return {}
         saf = get_result(article.pk, self.module)
         return list(self.get_xtas_results(article.pk, saf))
@@ -71,18 +72,10 @@ class ArticleLemmataSerializer(ArticleXTasSerializer):
         return True
 
     def get_xtas_results(self, aid, saf):
-        #rules = self.context['request'].GET.get('rules')
-        #if rules:
-        #    return self.get_transformed(aid, saf, rules)
-        if 'clauses' in saf:
-            return self.get_clauses(aid, saf)
-        elif 'sources' in saf:
-            return self.get_sources(aid, saf)
-        else:
-            return self.get_tokens(aid, saf)
+        from saf.saf import SAF
+        return SAF(saf).resolve(aid=aid)
 
     def get_transformed(self, aid, saf, rules):
-        print(saf)
         ruleset = RuleSet.objects.get(label=rules)
         from syntaxrules.soh import SOHServer
         from syntaxrules.syntaxtree import SyntaxTree
@@ -93,40 +86,11 @@ class ArticleLemmataSerializer(ArticleXTasSerializer):
             t.apply_ruleset(ruleset.get_ruleset())
             yield sid
 
-    def get_tokens(self, aid, saf):
-        for token in saf.get('tokens', []):
-            token["aid"] = aid
-            #if self.output_token(token):
-            yield token
-
-    def get_clauses(self, aid, saf):
-        if not 'tokens' in saf and 'clauses' in saf:
-            return
-        from saf.saf import SAF
-        saf = SAF(saf)
-        tokens = saf.resolve()
-        for token in tokens:
-            token["aid"] = aid
-            yield token
-
-
-    def get_sources(self, aid, saf):
-        if not 'tokens' in saf and 'sources' in saf:
-            return
-        tokendict = {t['id'] : t for t in saf['tokens']}
-        for sid, source in enumerate(saf['sources']):
-            for place, tokens in source.iteritems():
-                for tid in tokens:
-                    token = tokendict[tid]
-                    #if self.output_token(token):
-                    token["aid"] = aid
-                    token["source_id"] = sid
-                    token["source_place"] = place
-                    yield token
 
 class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
     model_key = "token"
     model = Article
+    queryset = Article.objects.all()
     serializer_class = ArticleLemmataSerializer
 
     def filter_queryset(self, queryset):
@@ -134,8 +98,6 @@ class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatables
         # only(.) would be better on serializer, but meh
         queryset = queryset.filter(articlesets_set=self.articleset).only("pk")
         return queryset
-
-
 
 from rest_framework.response import Response
 from rest_framework.exceptions import APIException
