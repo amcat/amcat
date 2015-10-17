@@ -19,11 +19,14 @@
 import json
 from datetime import datetime
 from time import mktime
+from csv import DictWriter
+from cStringIO import StringIO
 
 from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.db.models import Q
 from django.forms import ChoiceField, CharField, Select
 
+from api.rest.tablerenderer import CSVRenderer
 from amcat.models import Medium, ArticleSet, CodingSchema, CodingSchemaField
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools.aggregate import get_relative
@@ -172,8 +175,59 @@ class AggregationAction(QueryAction):
             aggregation = list(get_relative(aggregation, column))
 
         self.monitor.update(60, "Serialising..".format(**locals()))
+        if form.cleaned_data["output_type"] == "text/csv":
+            serializer = AggregationCSVSerializer()
+            return serializer.csv_serialize(aggregation, x_axis, y_axis)
         return json.dumps(list(aggregation), cls=AggregationEncoder, check_circular=False)
 
+
+class AggregationCSVSerializer:
+    def csv_serialize(self, aggregation, x_axis, y_axis):
+        srio = StringIO()
+
+        if y_axis == "total":
+            self._csv_serialize_totals(aggregation, srio, x_axis)
+        else:
+            self._csv_serialize_default(aggregation, srio, x_axis)
+
+        result = srio.getvalue()
+        srio.close()
+        return result
+
+
+    def _csv_serialize_default(self, aggregation, srio, x_axis):
+        fields = set()
+        for row in aggregation:
+            for col in row[1]:
+                field_name = self._csv_field_to_str(col[0])
+                if field_name not in fields:
+                    fields.add(field_name)
+        fields = [x_axis] + list(fields)
+        writer = DictWriter(srio, fieldnames=fields, restval=0)
+        writer.writeheader()
+        for row in aggregation:
+            row_dict = {x_axis: self._csv_field_to_str(row[0])}
+            for col in row[1]:
+                col_name = self._csv_field_to_str(col[0])
+                col_value = col[1]
+                row_dict[col_name] = col_value
+            writer.writerow(row_dict)
+
+    def _csv_serialize_totals(self, aggregation, srio, x_axis):
+        fields = [x_axis, "total"]
+        writer = DictWriter(srio, fieldnames=fields, restval=0)
+        writer.writeheader()
+        for row in aggregation:
+            row_dict = {"total": row[1], x_axis: self._csv_field_to_str(row[0])}
+            writer.writerow(row_dict)
+
+    def _csv_field_to_str(self, field):
+        if isinstance(field, Medium) or isinstance(field, ArticleSet):
+            return "{} - {}".format(field.id, field.name.encode("utf-8"))
+
+        if isinstance(field, SearchQuery):
+            return "{}#{}".format(field.label, field.query)
+        return field
 
 class AggregationColumnAction(QueryAction):
     pass
