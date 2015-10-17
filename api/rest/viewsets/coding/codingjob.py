@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+
 from django.db.models import Count, Q
 from rest_framework import serializers
 from amcat.models.coding.codingjob import CodingJob
@@ -67,6 +68,11 @@ class CodingJobSerializer(AmCATModelSerializer):
 
     def _get_codingjobs(self):
         view = self.context["view"]
+
+        #HACK prevents caching of all codingjobs when only one is needed
+        if hasattr(view, "kwargs") and 'pk' in view.kwargs:
+            return CodingJob.objects.filter(id=view.kwargs['pk'])
+
         return CodingJob.objects.filter(id__in=view.filter_queryset(view.get_queryset()))
 
     def _get_coded_articles(self):
