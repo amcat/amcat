@@ -1,6 +1,6 @@
 
 from rest_framework.response import Response
-from rest_framework.viewsets import ViewSet
+from rest_framework.viewsets import ViewSet, GenericViewSet
 from api.rest.viewsets.articleset import ArticleSetViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
 from api.rest.viewsets.article import ArticleViewSetMixin
@@ -98,6 +98,7 @@ class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatables
         # only(.) would be better on serializer, but meh
         queryset = queryset.filter(articlesets_set=self.articleset).only("pk")
         return queryset
+    
 
 from rest_framework.response import Response
 from rest_framework.exceptions import APIException
@@ -114,3 +115,42 @@ def get_adhoc_tokens(request):
     data = list(serializer.get_xtas_results(None, saf))
 
     return Response(data)
+
+from amcat.tools.amcates import ES
+from rest_framework.response import Response
+from rest_framework.status import HTTP_200_OK
+from rest_framework import serializers
+from rest_framework.mixins import ListModelMixin
+from collections import namedtuple
+
+ModuleCount = namedtuple("ModuleCount", ["module", "n"])
+
+class PreprocessViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ListModelMixin, GenericViewSet):
+    model_key = "preproces"
+    model = None
+    base_name = "preprocess"
+
+    class serializer_class(Serializer):
+        module = serializers.CharField()
+        n = serializers.IntegerField()
+    
+    def filter_queryset(self, queryset):
+        return queryset
+    
+    def get_queryset(self):
+        prefix = "article__"
+        class Result(list):
+            pass
+
+        result = [ModuleCount("Total #articles", self.articleset.get_count())]
+        for t, n in ES().get_child_type_counts(sets=self.articleset.id):
+            if t.startswith(prefix) and "xtas.tasks.single" not in t:
+                t = t[len(prefix):]
+                t = t.replace(u"__", u" \u21D2 ")
+                result.append(ModuleCount(module=t, n=n))
+
+        return result
+
+    def get_filter_fields(self):
+        return []
+    

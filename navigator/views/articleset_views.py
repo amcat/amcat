@@ -162,6 +162,7 @@ class AddArticlesToArticleSetForm(forms.Form):
         for aset in self.cleaned_data["articlesets"]:
             aset.add_articles(self.cleaned_data["articles"])
 
+    
 class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, DetailView):
     parent = ArticleSetListView
     resource = SearchResource
@@ -217,7 +218,16 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
         context['starred'] = starred
         return context
 
-
+from api.rest.viewsets.xtas import PreprocessViewSet
+class ArticleSetPreprocessView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, DetailView):
+    resource = PreprocessViewSet 
+    parent = ArticleSetDetailsView
+    url_fragment = 'preprocess'
+    model = ArticleSet
+    
+    def get_datatable_kwargs(self):
+        return {"url_kwargs": {"project": self.project.id, "articleset": self.object.id}}
+    
 class ArticleSetImportView(ProjectScriptView):
     script = ImportSet
     parent = ArticleSetDetailsView
