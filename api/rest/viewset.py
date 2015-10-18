@@ -53,7 +53,8 @@ class AmCATViewSetMixin(object):
         if self.serializer_class is None:
             self.serializer_class = self.get_serializer_class()
 
-        assert self.queryset.model == self.model, "{0}.model != {0}.queryset.model".format(self.__class__.__name__)
+        if self.model:
+            assert self.queryset.model == self.model, "self.model ({self.model}) != self.queryset.model ({self.queryset.model})".format(**locals())
 
     def __getattr__(self, item):
         checked = []

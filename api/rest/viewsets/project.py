@@ -122,7 +122,7 @@ class ProjectViewSetMixin(AmCATViewSetMixin):
     @classmethod
     def get_url(cls, base_name=None, view='list', **kwargs):
         if base_name is None:
-            base_name = cls.get_default_basename()
+            base_name = cls.get_basename()
         name = 'api:{base_name}-{view}'.format(**locals())
         return reverse(name, kwargs=kwargs)
 
