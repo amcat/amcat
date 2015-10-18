@@ -761,7 +761,16 @@ class ES(object):
         query =  {"query": {"constant_score": {"filter": {"missing": {"field": "sets"}}}}}
         self.es.delete_by_query(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=query)
 
-        
+     
+    def get_child_type_counts(self, **filters):        
+        """Get the number of child documents per type"""
+        filters = dict(build_body(filters=filters))
+        filter = {"has_parent": {"parent_type": self.doc_type, "filter": filters['filter']}}
+        aggs = {"module": {"terms": {"field": "_type"}}}
+        body = {"aggs": {"prep": {"filter": filter, "aggs": aggs}}}
+        r = self.es.search(index=self.index, search_type="count", body=body)
+        for b in r['aggregations']['prep']['module']['buckets']:
+            yield b['key'], b['doc_count']   
 
 def get_date(timestamp):
     d = datetime.datetime.fromtimestamp(timestamp / 1000)

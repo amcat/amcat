@@ -78,5 +78,4 @@ def get_adhoc_result(analysis, text, store_intermediate=True):
     es = amcates.ES()
     doc = adhoc_document('adhoc', es.doc_type, 'text', text=text)
 
-    print "Pipelining..."
     return pipeline(doc, analysis, store_intermediate=store_intermediate)
