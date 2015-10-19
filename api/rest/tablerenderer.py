@@ -94,9 +94,7 @@ class TableRenderer(BaseRenderer):
             fieldtype = {bool:str, type(None):str}.get(fieldtype, fieldtype)
             table.addColumn(label=col, col=partial(_get_val, key=key), fieldtype=fieldtype)
 
-            return table
-        #for item in data:
-        #    for k, v in item.iteritems():
+        return table
     
     def tablize(self, data):
         """
