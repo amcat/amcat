@@ -135,6 +135,9 @@ class BaseAggregationValue(SQLObject):
         super(BaseAggregationValue, self).__init__()
         self.prefix = uuid.uuid4().hex if prefix is None else prefix
 
+    def postprocess(self, value):
+        return value
+
 class Average(BaseAggregationValue):
     def __init__(self, field):
         """@type field: CodingSchemaField"""
@@ -151,7 +154,13 @@ class Average(BaseAggregationValue):
         yield where_sql.format(field_id=self.field.id, prefix=self.prefix)
 
     def get_select(self):
-        return 'AVG("T{prefix}_codings_values"."intval")'.format(prefix=self.prefix)
+        sql = 'AVG("T{prefix}_codings_values"."intval")'.format(prefix=self.prefix)
+        if self.field.fieldtype_id == FIELDTYPE_IDS.QUALITY:
+            sql += "/10.0"
+        return sql
+
+    def postprocess(self, value):
+        return float(value)
 
     def __repr__(self):
         return "<Average: %s>" % self.field
@@ -159,6 +168,9 @@ class Average(BaseAggregationValue):
 class Count(BaseAggregationValue):
     def get_select(self):
         return 'COUNT(DISTINCT("T_articles"."article_id"))'
+
+    def postprocess(self, value):
+        return int(value)
 
 class ORMAggregate(object):
     def __init__(self, codings, flat=False):
@@ -224,6 +236,11 @@ class ORMAggregate(object):
             objs = category.model.objects.in_bulk(pks)
             for row in aggregation:
                 row[i] = objs[row[i]]
+
+        # Convert to 'normal' Python types
+        for i, value in enumerate(values, start=len(categories)):
+            for row in aggregation:
+                row[i] = value.postprocess(row[i])
 
         # Flat representation to ([cats], [vals])
         num_categories = len(categories)

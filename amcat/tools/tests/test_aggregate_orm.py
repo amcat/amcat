@@ -46,7 +46,7 @@ class TestAggregateORM(amcattest.AmCATTestCase):
         # Uncomment if ever using elastic :)
         # self.s1.refresh_index(full_refresh=True)
 
-        self.schema, self.codebook, self.strf, self.intf, self.codef = (
+        self.schema, self.codebook, self.strf, self.intf, self.codef, self.boolf, self.qualf = (
             amcattest.create_test_schema_with_fields(isarticleschema=True))
 
         self.codes = self.codebook.get_codes()
@@ -56,13 +56,13 @@ class TestAggregateORM(amcattest.AmCATTestCase):
         self.job = amcattest.create_test_job(articleset=self.s1, articleschema=self.schema)
 
         self.c1 = amcattest.create_test_coding(codingjob=self.job, article=self.a1)
-        self.c1.update_values({self.codef: self.code_A.id, self.intf: 4})
+        self.c1.update_values({self.codef: self.code_A.id, self.intf: 4, self.qualf: 4})
 
         self.c2 = amcattest.create_test_coding(codingjob=self.job, article=self.a2)
-        self.c2.update_values({self.codef: self.code_A.id, self.intf: 2})
+        self.c2.update_values({self.codef: self.code_A.id, self.intf: 2, self.qualf: 1})
 
         self.c3 = amcattest.create_test_coding(codingjob=self.job, article=self.a3)
-        self.c3.update_values({self.codef: self.code_B.id, self.intf: 1})
+        self.c3.update_values({self.codef: self.code_B.id, self.intf: 1, self.qualf: 2})
 
     def _get_aggr(self, flat=False):
         article_ids = [a.id for a in self.s1.articles.all()]
@@ -82,6 +82,11 @@ class TestAggregateORM(amcattest.AmCATTestCase):
 
         result = set(aggr.get_aggregate([MediumCategory()], [Average(self.intf)]))
         self.assertEqual(result, {(self.m1, 4.0), (self.m2, 1.5)})
+
+    def test_quality_field(self):
+        aggr = self._get_aggr(flat=True)
+        result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [Average(self.qualf)]))
+        self.assertEqual(result, {(self.code_A, 0.25), (self.code_B, 0.2)})
 
     def test_secondary_axis(self):
         """Test whether we can do count plus average per something"""

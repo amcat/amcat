@@ -131,7 +131,9 @@ def create_test_schema_with_fields(codebook=None, **kargs):
     for i, (label, type_id, cb) in enumerate([
             ("text", 1, None),
             ("number", 2, None),
-            ("code", 5, codebook)]):
+            ("code", 5, codebook),
+            ("boolean", 7, None),
+            ("quality", 9, None)]):
         fieldtype = CodingSchemaFieldType.objects.get(pk=type_id)
         f = CodingSchemaField.objects.create(codingschema=schema, fieldnr=i, label=label,
                                              fieldtype=fieldtype, codebook=cb)

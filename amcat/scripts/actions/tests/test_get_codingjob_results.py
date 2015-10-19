@@ -48,7 +48,7 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         return [tuple(x) for x in json.loads(result)]
 
     def test_get_rows(self):
-        schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields()
+        schema, codebook, strf, intf, codef, _, _ = amcattest.create_test_schema_with_fields()
         job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=5)
         articles = list(job.articleset.articles.all())
         c = amcattest.create_test_coding(codingjob=job, article=articles[0])
@@ -82,9 +82,9 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
 
     def test_results(self):
         codebook, codes = amcattest.create_test_codebook_with_codes()
-        schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields(codebook=codebook,
+        schema, codebook, strf, intf, codef, _, _ = amcattest.create_test_schema_with_fields(codebook=codebook,
                                                                                        isarticleschema=True)
-        sschema, codebook, sstrf, sintf, scodef = amcattest.create_test_schema_with_fields(codebook=codebook)
+        sschema, codebook, sstrf, sintf, scodef, _, _ = amcattest.create_test_schema_with_fields(codebook=codebook)
         job = amcattest.create_test_job(unitschema=sschema, articleschema=schema, narticles=5)
         articles = list(job.articleset.articles.all())
 
@@ -160,8 +160,8 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         self.assertTrue(s.run())
 
     def test_nqueries_sentence_codings(self):
-        aschema, acodebook, astrf, aintf, acodef = amcattest.create_test_schema_with_fields(isarticleschema=True)
-        sschema, scodebook, sstrf, sintf, scodef = amcattest.create_test_schema_with_fields(isarticleschema=False)
+        aschema, acodebook, astrf, aintf, acodef, _, _ = amcattest.create_test_schema_with_fields(isarticleschema=True)
+        sschema, scodebook, sstrf, sintf, scodef, _, _ = amcattest.create_test_schema_with_fields(isarticleschema=False)
         cjob = amcattest.create_test_job(10, articleschema=aschema, unitschema=sschema)
 
         for article in cjob.articleset.articles.all():
@@ -178,8 +178,8 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
             list(csv.reader(StringIO(script.run())))
 
     def test_include_uncoded_articles(self):
-        aschema, acodebook, astrf, aintf, acodef = amcattest.create_test_schema_with_fields(isarticleschema=True)
-        sschema, scodebook, sstrf, sintf, scodef = amcattest.create_test_schema_with_fields(isarticleschema=False)
+        aschema, acodebook, astrf, aintf, acodef, _, _ = amcattest.create_test_schema_with_fields(isarticleschema=True)
+        sschema, scodebook, sstrf, sintf, scodef, _, _ = amcattest.create_test_schema_with_fields(isarticleschema=False)
         cjob = amcattest.create_test_job(2, articleschema=aschema, unitschema=sschema)
         a1, a2 = cjob.articleset.articles.all()
         coding = create_test_coding(codingjob=cjob, article=a1)
@@ -196,8 +196,8 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         self.assertEqual(2, len(result))
 
     def test_include_uncoded_sentences(self):
-        aschema, acodebook, astrf, aintf, acodef = amcattest.create_test_schema_with_fields(isarticleschema=True)
-        sschema, scodebook, sstrf, sintf, scodef = amcattest.create_test_schema_with_fields(isarticleschema=False)
+        aschema, acodebook, astrf, aintf, acodef, _, _ = amcattest.create_test_schema_with_fields(isarticleschema=True)
+        sschema, scodebook, sstrf, sintf, scodef, _, _ = amcattest.create_test_schema_with_fields(isarticleschema=False)
         a1 = amcattest.create_test_article(text="Zin 1. Zin 2.")
         a2 = amcattest.create_test_article(text="Zin 1. Zin 2.")
         aset = amcattest.create_test_set([a1, a2])
@@ -217,7 +217,7 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
 
     def test_nqueries(self):
         codebook, codes = amcattest.create_test_codebook_with_codes()
-        schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields(codebook=codebook)
+        schema, codebook, strf, intf, codef, _, _ = amcattest.create_test_schema_with_fields(codebook=codebook)
         job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=7)
         articles = list(job.articleset.articles.all())
 
