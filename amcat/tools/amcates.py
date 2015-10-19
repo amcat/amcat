@@ -369,17 +369,19 @@ class ES(object):
         """
         return scan(self.es, index=self.index, doc_type=self.doc_type, query=query, **kargs)
         
-    def query_ids(self, query=None, filters={}, **kwargs):
+    def query_ids(self, query=None, filters={}, body=None, **kwargs):
         """
         Query the index returning a sequence of article ids for the mathced articles
 
         @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
         @param filter: field filter DSL query dict
+        @param body: if given, use this instead of constructing from query/filters
         @param filters: if filter is None, build filter from filters as accepted by build_query, e.g. sets=12345
 
         Note that query and filters can be combined in a single call
         """
-        body = dict(build_body(query, filters, query_as_filter=True))
+        if body is None:
+            body = dict(build_body(query, filters, query_as_filter=True))
         for a in scan(self.es, query=body, index=self.index, doc_type=self.doc_type,
                       size=1000, fields=""):
             yield int(a['_id'])
@@ -771,6 +773,14 @@ class ES(object):
         r = self.es.search(index=self.index, search_type="count", body=body)
         for b in r['aggregations']['prep']['module']['buckets']:
             yield b['key'], b['doc_count']   
+
+    def get_articles_without_child(self, child_doctype, **filters):
+        """Return the ids of all articles without a child of the given doctype"""
+        nochild =  {"not" : {"has_child" : { "type": child_doctype,
+                                             "query" : {"match_all" : {}}}}}        
+        filter = dict(build_body(filters=filters))['filter']
+        body = {"filter": {"bool" : {"must" : [filter, nochild]}}}
+        return self.query_ids(body=body)
 
 def get_date(timestamp):
     d = datetime.datetime.fromtimestamp(timestamp / 1000)

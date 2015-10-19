@@ -89,3 +89,11 @@ def get_adhoc_result(analysis, text, store_intermediate=True):
     doc = adhoc_document('adhoc', es.doc_type, 'text', text=text)
 
     return pipeline(doc, analysis, store_intermediate=store_intermediate)
+
+def preprocess_background(articles, analysis, store_intermediate=True):
+    from xtas.tasks.pipeline import pipeline_multiple
+    docs = [_get_doc(a) for a in articles]
+    analysis = _get_analysis(analysis)
+
+    r = pipeline_multiple(docs, analysis, store_intermediate=store_intermediate, block=False, queue="background")
+    return r

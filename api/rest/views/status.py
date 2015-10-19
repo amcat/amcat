@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK
+from celery.exceptions import TimeoutError
 
 from amcat.amcatcelery import status
 from amcat.tools.amcates import ES
@@ -10,11 +11,26 @@ import time
 class StatusView(APIView):
     def get(self, request):
         data = {"amcat": status(),
-                'celery_worker': status.delay().wait(),
                 'elastic': ES().status(),
                 'git': git_status()}
+        try:
+            data['celery_worker'] = status.delay().wait(timeout=3)
+        except TimeoutError:
+            data['celery_worker'] = {"Error": "Timeout on getting worker status"}
+        data['celery_queues'] = queue_status()
+        
         return Response(data, status=HTTP_200_OK)
 
+
+def queue_status():
+    # TODO: should get config from somewhere?
+    from amqplib import client_0_8 as amqp
+    conn = amqp.Connection(host="localhost:5672 ", userid="guest", password="guest", virtual_host="/", insist=False)
+    result = {}
+    for queue in ["amcat", "xtas", "corenlp", "background"]:
+        _name, ntask, nconsumer = conn.channel().queue_declare(queue=queue, passive=True)
+        result[queue] = {"#tasks": ntask, "#consumer": nconsumer}
+    return result
 
 def git_status():
     def date2iso(date):
