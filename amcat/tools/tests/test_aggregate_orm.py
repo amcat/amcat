@@ -18,9 +18,11 @@
 ###########################################################################
 import datetime
 
+from django.db.models import F, Avg
+
 from amcat.tools import amcattest, aggregate_orm
-from amcat.tools.aggregate_orm import MediumCategory, Count, SchemafieldCategory, \
-    Average
+from amcat.tools.aggregate_orm import MediumCategory, Count
+from amcat.tools.aggregate_orm import SchemafieldCategory, Average
 
 
 class TestAggregateORM(amcattest.AmCATTestCase):
@@ -62,9 +64,10 @@ class TestAggregateORM(amcattest.AmCATTestCase):
         self.c3 = amcattest.create_test_coding(codingjob=self.job, article=self.a3)
         self.c3.update_values({self.codef: self.code_B.id, self.intf: 1})
 
-
     def _get_aggr(self, flat=False):
-        return aggregate_orm.ORMAggregate([self.job.id], [a.id for a in self.s1.articles.all()], flat=flat)
+        article_ids = [a.id for a in self.s1.articles.all()]
+        codingjob_ids = [self.job.id]
+        return aggregate_orm.ORMAggregate.from_articles(article_ids, codingjob_ids, flat=flat)
 
     def test_incorrect_inputs(self):
         # You need at least one value

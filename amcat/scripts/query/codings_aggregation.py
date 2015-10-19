@@ -48,14 +48,7 @@ AGGREGATION_FIELDS = (
     ))
 )
 
-AGGREGATION_ORM_MAPPING = {
-    "medium": aggregate_orm.MediumCategory,
-    "year": aggregate_orm.YearCategory,
-    "quarter": aggregate_orm.QuarterCategory,
-    "month": aggregate_orm.MonthCategory,
-    "week": aggregate_orm.WeekCategory,
-    "day": aggregate_orm.DayCategory
-}
+INTERAVLS = ("year", "quarter", "month", "week", "day")
 
 CODINGSCHEMAFIELD_RE = re.compile("^codingschemafield\((?P<id>[0-9]+)\)$")
 AVERAGE_CODINGSCHEMAFIELD_RE = re.compile("^avg\((?P<id>[0-9]+)\)$")
@@ -117,10 +110,11 @@ class CodingAggregationActionForm(QueryActionForm):
         if not field_value:
             return None
 
-        # Test for medium or interval
-        category = AGGREGATION_ORM_MAPPING.get(field_value)
-        if category:
-            return category()
+        if field_value in INTERAVLS:
+            return aggregate_orm.IntervalCategory(field_value)
+
+        if field_value == "medium":
+            return aggregate_orm.MediumCategory(field_value)
 
         # Test for schemafield
         match = CODINGSCHEMAFIELD_RE.match(field_value)
@@ -137,28 +131,28 @@ class CodingAggregationActionForm(QueryActionForm):
     def clean_secondary(self):
         return self._clean_aggregation("secondary")
 
-    def _clean_value(self, field_name):
+    def _clean_value(self, field_name, prefix=None):
         field_value = self.cleaned_data[field_name]
 
         if not field_value:
             return None
 
         if field_value == "count":
-            return aggregate_orm.Count()
+            return aggregate_orm.Count(prefix=prefix)
 
         match = AVERAGE_CODINGSCHEMAFIELD_RE.match(field_value)
         if match:
             codingschemafield_id = int(match.groupdict()["id"])
             codingschemafield = CodingSchemaField.objects.get(id=codingschemafield_id)
-            return aggregate_orm.Average(codingschemafield)
+            return aggregate_orm.Average(codingschemafield, prefix=prefix)
 
         raise ValidationError("Not a valid value: %s." % field_value)
 
     def clean_value1(self):
-        return self._clean_value("value1")
+        return self._clean_value("value1", prefix="2")
 
     def clean_value2(self):
-        return self._clean_value("value2")
+        return self._clean_value("value2", prefix="4")
 
     def clean(self):
         primary = self.cleaned_data["primary"]
@@ -214,19 +208,19 @@ class CodingAggregationAction(QueryAction):
 
         article_ids = selection.get_article_ids()
 
+        coding_values = CodingValue.objects.all()
+        coding_values = coding_values.filter(coding__coded_article__article__id__in=article_ids)
+        coding_values = coding_values.filter(coding__coded_article__codingjob__in=codingjobs)
+
         if schemafield and schemafield_value:
             # Reduce article set to article which have a coding coded as 'schemafield_value'
             # on codingschemafield 'schemafield'
-            coding_values = (CodingValue.objects
-                .filter(field__id=schemafield.id)
-                .filter(intval=schemafield_value.id)
-                .filter(coding__coded_article__codingjob__id__in=codingjobs)
-            )
+            coding_values = coding_values.filter(field__id=schemafield.id)
+            coding_values = coding_values.filter(intval=schemafield_value.id)
 
-            coded_article_ids = coding_values.values_list("coding__coded_article__article__id", flat=True)
-            article_ids = list(set(article_ids) & set(coded_article_ids))
+        codings = Coding.objects.filter(id__in=coding_values.values_list("coding_id", flat=True))
 
-        orm_aggregate = ORMAggregate(codingjobs, article_ids, flat=False, empty=False)
+        orm_aggregate = ORMAggregate(codings, flat=False)
         categories = list(filter(None, [primary, secondary]))
         values = list(filter(None, [value1, value2]))
         aggregation = orm_aggregate.get_aggregate(categories, values)
