@@ -72,7 +72,6 @@ ES_MAPPING = {
         "hash": {
             "type": "string",
             "index": "not_analyzed",
-            "postings_format": "bloom_default"
         },
     },
 }
