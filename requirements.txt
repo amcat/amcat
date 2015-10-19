@@ -40,3 +40,4 @@ django-markdown-deux==1.0.5
 splinter
 django-celery
 GitPython==1.0.1
+amqplib
