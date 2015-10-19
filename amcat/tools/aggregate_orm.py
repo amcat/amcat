@@ -97,7 +97,7 @@ class IntervalCategory(Category):
 
         if interval not in POSTGRES_DATE_TRUNC_VALUES:
             err_msg = "{} not a valid interval. Choose on of: {}"
-            raise ValueError("".format(interval, POSTGRES_DATE_TRUNC_VALUES))
+            raise ValueError(err_msg.format(interval, POSTGRES_DATE_TRUNC_VALUES))
 
         self.interval = interval
 
