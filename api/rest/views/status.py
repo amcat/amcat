@@ -23,13 +23,24 @@ class StatusView(APIView):
 
 
 def queue_status():
-    # TODO: should get config from somewhere?
     from amqplib import client_0_8 as amqp
-    conn = amqp.Connection(host="localhost:5672 ", userid="guest", password="guest", virtual_host="/", insist=False)
+    from amcat.amcatcelery import app
     result = {}
-    for queue in ["amcat", "xtas", "corenlp", "background"]:
-        _name, ntask, nconsumer = conn.channel().queue_declare(queue=queue, passive=True)
-        result[queue] = {"#tasks": ntask, "#consumer": nconsumer}
+
+    def _inspect_queue(queue, **conn_kwargs):
+        conn = amqp.Connection(insist=False, virtual_host="/", **conn_kwargs)
+        name, ntask, nconsumer = conn.channel().queue_declare(queue=queue, passive=True)
+        return {"queue": name, "#tasks": ntask, "#consumer": nconsumer}
+    
+    #amcat queue  - should read config instead of assuming localhost?
+    amcatq = app.conf['CELERY_DEFAULT_QUEUE']
+    result["amcat"] = _inspect_queue(amcatq, host="localhost:5672", userid="guest", password="guest")
+
+    #xtas queues
+    from xtas import celeryconfig as xc
+    for queue in ["xtas", "corenlp", "background"]:
+        result[queue] = _inspect_queue(queue, host="{}:5672".format(xc._BROKER_HOST),
+                                       userid=xc._BROKER_USERNAME, password=xc._BROKER_PASSWORD)
     return result
 
 def git_status():
