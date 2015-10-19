@@ -1,15 +1,48 @@
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
+"""
+API Viewsets for dealing with NLP (pre)processing via xtas
+"""
+
+from collections import namedtuple
+import itertools
+import json
 
 from rest_framework.response import Response
-from rest_framework.viewsets import ViewSet, GenericViewSet
+from rest_framework.exceptions import APIException
+from rest_framework.decorators import api_view
+from rest_framework.status import HTTP_200_OK
+from rest_framework import serializers
+from rest_framework.mixins import ListModelMixin
+from rest_framework.viewsets import ModelViewSet, ViewSet, GenericViewSet
+
+from amcat.tools.amcatxtas import get_adhoc_result
+from amcat.tools.amcates import ES
+from amcat.models import Article, ArticleSet
+
 from api.rest.viewsets.articleset import ArticleSetViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
 from api.rest.viewsets.article import ArticleViewSetMixin
 from api.rest.mixins import DatatablesMixin
 
-from amcat.models import RuleSet
-from amcat.tools.amcatxtas import ANALYSES, get_result
-import json
-
+from amcat.tools.amcatxtas import ANALYSES, get_result, get_results
 
 class XTasViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMixin, ViewSet):
     model_key = "xta"# HACK to get xtas in url. Sorry!
@@ -29,18 +62,16 @@ class XTasViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMix
 
         return Response(plugins)
 
-from rest_framework.serializers import Serializer, ListSerializer
-from amcat.models import Article, ArticleSet
-from rest_framework.viewsets import ModelViewSet
-import itertools
 
-class ArticleXTasSerializer(Serializer):
+class ArticleXTasSerializer(serializers.Serializer):
 
     class Meta:
-        class list_serializer_class(ListSerializer):
+        class list_serializer_class(serializers.ListSerializer):
             def to_representation(self, data):
+                # get results for all articles
+                self.child._cache = get_results(data, self.child.module)
+                result = serializers.ListSerializer.to_representation(self, data)
                 # flatten list of lists
-                result = ListSerializer.to_representation(self, data)
                 result = itertools.chain(*result)
                 return result
 
@@ -56,7 +87,7 @@ class ArticleXTasSerializer(Serializer):
     
     def to_representation(self, article):
         if article is None: return {}
-        saf = get_result(article.pk, self.module)
+        saf = self._cache[article.pk]['result']#get_result(article.pk, self.module)
         return list(self.get_xtas_results(article.pk, saf))
 
 class ArticleLemmataSerializer(ArticleXTasSerializer):
@@ -75,18 +106,6 @@ class ArticleLemmataSerializer(ArticleXTasSerializer):
         from saf.saf import SAF
         return SAF(saf).resolve(aid=aid)
 
-    def get_transformed(self, aid, saf, rules):
-        ruleset = RuleSet.objects.get(label=rules)
-        from syntaxrules.soh import SOHServer
-        from syntaxrules.syntaxtree import SyntaxTree
-        soh = SOHServer("http://localhost:3030/x")
-        t = SyntaxTree(soh)
-        for sid in {token['sentence'] for token in saf['tokens']}:
-            t.load_saf(saf, sid)
-            t.apply_ruleset(ruleset.get_ruleset())
-            yield sid
-
-
 class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
     model_key = "token"
     model = Article
@@ -100,10 +119,7 @@ class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatables
         return queryset
     
 
-from rest_framework.response import Response
-from rest_framework.exceptions import APIException
-from rest_framework.decorators import api_view
-from amcat.tools.amcatxtas import get_adhoc_result
+
 @api_view(http_method_names=("GET",))
 def get_adhoc_tokens(request):
     sentence = request.GET.get('sentence')
@@ -116,13 +132,6 @@ def get_adhoc_tokens(request):
 
     return Response(data)
 
-from amcat.tools.amcates import ES
-from rest_framework.response import Response
-from rest_framework.status import HTTP_200_OK
-from rest_framework import serializers
-from rest_framework.mixins import ListModelMixin
-from collections import namedtuple
-
 ModuleCount = namedtuple("ModuleCount", ["module", "n"])
 
 class PreprocessViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ListModelMixin, GenericViewSet):
@@ -130,7 +139,7 @@ class PreprocessViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesM
     model = None
     base_name = "preprocess"
 
-    class serializer_class(Serializer):
+    class serializer_class(serializers.Serializer):
         module = serializers.CharField()
         n = serializers.IntegerField()
     

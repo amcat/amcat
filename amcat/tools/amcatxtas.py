@@ -58,15 +58,25 @@ def _get_analysis(analysis):
     else:
         raise ValueError("Unknown analysis: {analysis}".format(**locals()))
 
-def get_result(article, analysis, store_intermediate=True, block=True):
-    from xtas.tasks.pipeline import pipeline
+def _get_doc(article):
     if not isinstance(article, int): article = article.id
+    es = amcates.ES()
+    return {'index': es.index, 'type': es.doc_type,
+           'id': article, 'field': 'text'}
+    
+def get_results(articles, analysis, store_intermediate=True):
+    from xtas.tasks.pipeline import pipeline_multiple
+    docs = [_get_doc(a) for a in articles]
     analysis = _get_analysis(analysis)
 
-    es = amcates.ES()
-    doc = {'index': es.index, 'type': es.doc_type,
-           'id': article, 'field': 'text'}
-    r = pipeline(doc, analysis,
+    r = pipeline_multiple(docs, analysis, store_intermediate=store_intermediate)
+    return r
+
+    
+def get_result(article, analysis, store_intermediate=True):
+    from xtas.tasks.pipeline import pipeline
+    analysis = _get_analysis(analysis)
+    r = pipeline(_get_doc(article), analysis,
                  store_intermediate=store_intermediate)
     return r
 
