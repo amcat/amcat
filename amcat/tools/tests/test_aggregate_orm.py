@@ -64,6 +64,11 @@ class TestAggregateORM(amcattest.AmCATTestCase):
         self.c3 = amcattest.create_test_coding(codingjob=self.job, article=self.a3)
         self.c3.update_values({self.codef: self.code_B.id, self.intf: 1, self.qualf: 2})
 
+        # Try to confuse aggregator by inserting multiple codingjobs
+        job = amcattest.create_test_job(articleset=self.s1, articleschema=self.schema)
+        c4 = amcattest.create_test_coding(codingjob=job, article=self.a3)
+        c4.update_values({self.codef: self.code_B.id, self.intf: 10, self.qualf: 8})
+
     def _get_aggr(self, flat=False):
         article_ids = [a.id for a in self.s1.articles.all()]
         codingjob_ids = [self.job.id]
