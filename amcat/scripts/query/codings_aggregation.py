@@ -114,7 +114,7 @@ class CodingAggregationActionForm(QueryActionForm):
             return aggregate_orm.IntervalCategory(field_value)
 
         if field_value == "medium":
-            return aggregate_orm.MediumCategory(field_value)
+            return aggregate_orm.MediumCategory()
 
         # Test for schemafield
         match = CODINGSCHEMAFIELD_RE.match(field_value)
