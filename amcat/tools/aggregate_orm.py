@@ -70,6 +70,9 @@ DEFAULT_JOINS = (
     JOINS.articles.format(prefix="")
 )
 
+DATE_TRUNC_SQL = 'date_trunc(\'{interval}\', "T_articles"."date")'
+
+
 class SQLObject(object):
     def get_select(self):
         raise NotImplementedError("Subclasses should implement get_select().")
@@ -90,8 +93,6 @@ class Category(SQLObject):
         return self.get_select()
 
 class IntervalCategory(Category):
-    DATE_TRUNC_SQL = 'date_trunc(\'{interval}\', "T_articles"."date")'
-
     def __init__(self, interval):
         super(IntervalCategory, self).__init__()
 
