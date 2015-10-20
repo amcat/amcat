@@ -139,7 +139,7 @@ Then, in the top-directory of AmCAT itself run:
 
 ```sh
 bower install
-cd static/components/highlightjs
+cd static/components/highlight
 sudo npm install
 node tools/build.js :common
 cd -
