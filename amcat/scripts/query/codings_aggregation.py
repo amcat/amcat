@@ -26,7 +26,8 @@ from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.db.models import Q
 from django.forms import ChoiceField, CharField, Select
 
-from amcat.models import Medium, ArticleSet, CodingSchema, CodingSchemaField, Code, CodingValue
+from amcat.models import Medium, ArticleSet
+from amcat.models import CodingSchema, CodingSchemaField, Code, CodingValue, Coding
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools import aggregate_orm
 from amcat.tools.aggregate import get_relative

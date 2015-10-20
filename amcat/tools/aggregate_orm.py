@@ -139,9 +139,9 @@ class BaseAggregationValue(SQLObject):
         return value
 
 class Average(BaseAggregationValue):
-    def __init__(self, field):
+    def __init__(self, field, *args, **kwargs):
         """@type field: CodingSchemaField"""
-        super(Average, self).__init__()
+        super(Average, self).__init__(*args, **kwargs)
         assert_msg = "Average only aggregates on codingschemafields for now"
         assert isinstance(field, CodingSchemaField), assert_msg
         self.field = field
