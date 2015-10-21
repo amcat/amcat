@@ -19,22 +19,16 @@
 import re
 import json
 
-from datetime import datetime
-from time import mktime
+from django.core.exceptions import ValidationError
+from django.forms import ChoiceField, BooleanField
 
-from django.core.exceptions import ValidationError, MultipleObjectsReturned
-from django.db.models import Q
-from django.forms import ChoiceField, CharField, Select
-
-from amcat.models import Medium, ArticleSet
-from amcat.models import CodingSchema, CodingSchemaField, Code, CodingValue, Coding
+from amcat.models import Medium
+from amcat.models import CodingSchemaField, Code, CodingValue, Coding
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools import aggregate_orm
-from amcat.tools.aggregate import get_relative
 from amcat.tools.aggregate_orm import ORMAggregate
-from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
-from amcat.scripts.forms.selection import ModelChoiceFieldWithIdLabel, get_all_schemafields
-
+from amcat.tools.keywordsearch import SelectionSearch
+from amcat.scripts.forms.selection import get_all_schemafields
 from aggregation import AggregationEncoder
 from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
 
@@ -83,7 +77,9 @@ def get_value_fields(fields):
 
 
 class CodingAggregationActionForm(QueryActionForm):
+    primary_use_codebook = BooleanField(initial=False, required=False)
     primary = ChoiceField(label="Primary aggregation", choices=AGGREGATION_FIELDS)
+    secondary_use_codebook = BooleanField(initial=False, required=False)
     secondary = ChoiceField(label="Secondary aggregation", choices=(("", "------"),) + AGGREGATION_FIELDS, required=False)
 
     value1 = ChoiceField(label="First value", initial="count")
@@ -122,7 +118,9 @@ class CodingAggregationActionForm(QueryActionForm):
         if match:
             codingschemafield_id = int(match.groupdict()["id"])
             codingschemafield = CodingSchemaField.objects.get(id=codingschemafield_id)
-            return aggregate_orm.SchemafieldCategory(codingschemafield)
+            use_codebook = self.cleaned_data["{}_use_codebook".format(field_name)]
+            codebook = codingschemafield.codebook if use_codebook else None
+            return aggregate_orm.SchemafieldCategory(codingschemafield, codebook=codebook)
 
         raise ValidationError("Not a valid aggregation: %s." % field_value)
 
