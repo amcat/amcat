@@ -369,19 +369,3 @@ def use_elastic(func):
         return func(*args, **kargs)
     return inner
 
-def close_db_connections(func, *args, **kwargs):
-    """
-    Decorator to explicitly close db connections during threaded execution
-
-    Note this is necessary to work around:
-    https://code.djangoproject.com/ticket/22420
-    """
-    def _close_db_connections(*args, **kwargs):
-        ret = None
-        try:
-            ret = func(*args, **kwargs)
-        finally:
-            for conn in connections.all():
-                conn.close()
-        return ret
-    return _close_db_connections

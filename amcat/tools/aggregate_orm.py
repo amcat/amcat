@@ -178,12 +178,13 @@ class Count(BaseAggregationValue):
         return int(value)
 
 class ORMAggregate(object):
-    def __init__(self, codings, flat=False):
+    def __init__(self, codings, flat=False, threaded=True):
         """
         @type codings: QuerySet
         """
         self.codings = codings
         self.flat = flat
+        self.threaded = threaded
 
     @classmethod
     def from_articles(self, article_ids, codingjob_ids, **kwargs):
@@ -226,6 +227,10 @@ class ORMAggregate(object):
             return list(map(list, c.fetchall()))
 
     def _execute_sqls(self, queries):
+        if not self.threaded:
+            return list(map(self._execute_sql, queries))
+
+        # Instantiate threadpool and use it to map over queries
         threadpool = ThreadPool(max(4, len(queries)))
         try:
             return list(threadpool.map(self._execute_sql, queries))
