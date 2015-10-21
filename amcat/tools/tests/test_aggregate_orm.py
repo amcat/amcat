@@ -19,18 +19,23 @@
 import datetime
 
 from django.db.models import F, Avg
+from django.test import TransactionTestCase
 
 from amcat.tools import amcattest, aggregate_orm
 from amcat.tools.aggregate_orm import MediumCategory, Count
 from amcat.tools.aggregate_orm import SchemafieldCategory, Average
 
 
-class TestAggregateORM(amcattest.AmCATTestCase):
+class TestAggregateORM(TransactionTestCase):
+    fixtures = ['_initial_data.json',]
+
     def setUp(self):
-        self.s1 = amcattest.create_test_set(4)
-        self.a1, self.a2, self.a3, self.a4 = self.s1.articles.all()
+        self.s1 = amcattest.create_test_set(5)
+        self.a1, self.a2, self.a3, self.a4, self.a5 = self.s1.articles.all()
         self.m1 = self.a1.medium
         self.m2 = self.a2.medium
+        self.m3 = self.a3.medium
+        self.m4 = self.a4.medium
         self.a3.medium = self.m2
         self.a3.save()
 
@@ -38,10 +43,12 @@ class TestAggregateORM(amcattest.AmCATTestCase):
         self.a2.date = datetime.datetime(2015, 01, 01)
         self.a3.date = datetime.datetime(2015, 02, 01)
         self.a4.date = datetime.datetime(2016, 01, 01)
+        self.a5.date = datetime.datetime(2016, 01, 01)
         self.a1.save()
         self.a2.save()
         self.a3.save()
         self.a4.save()
+        self.a5.save()
 
         # Uncomment if ever using elastic :)
         # self.s1.refresh_index(full_refresh=True)
@@ -52,6 +59,7 @@ class TestAggregateORM(amcattest.AmCATTestCase):
         self.codes = self.codebook.get_codes()
         self.code_A, = [c for c in self.codes if c.label == "A"]
         self.code_B, = [c for c in self.codes if c.label == "B"]
+        self.code_A1, = [c for c in self.codes if c.label == "A1"]
 
         self.job = amcattest.create_test_job(articleset=self.s1, articleschema=self.schema)
 
@@ -63,6 +71,9 @@ class TestAggregateORM(amcattest.AmCATTestCase):
 
         self.c3 = amcattest.create_test_coding(codingjob=self.job, article=self.a3)
         self.c3.update_values({self.codef: self.code_B.id, self.intf: 1, self.qualf: 2})
+
+        self.c4 = amcattest.create_test_coding(codingjob=self.job, article=self.a4)
+        self.c4.update_values({self.codef: self.code_A1.id, self.intf: 1})
 
         # Try to confuse aggregator by inserting multiple codingjobs
         job = amcattest.create_test_job(articleset=self.s1, articleschema=self.schema)
@@ -83,10 +94,10 @@ class TestAggregateORM(amcattest.AmCATTestCase):
         aggr = self._get_aggr(flat=True)
 
         result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [Average(self.intf)]))
-        self.assertEqual(result, {(self.code_A, 3.0), (self.code_B, 1.0)})
+        self.assertEqual(result, {(self.code_A, 3.0), (self.code_B, 1.0), (self.code_A1, 1.0)})
 
         result = set(aggr.get_aggregate([MediumCategory()], [Average(self.intf)]))
-        self.assertEqual(result, {(self.m1, 4.0), (self.m2, 1.5)})
+        self.assertEqual(result, {(self.m1, 4.0), (self.m2, 1.5), (self.m4, 1.0)})
 
     def test_quality_field(self):
         aggr = self._get_aggr(flat=True)
@@ -102,7 +113,7 @@ class TestAggregateORM(amcattest.AmCATTestCase):
             values=[Count(), Average(self.intf)]
         )))
 
-        self.assertEqual(result, {(self.code_A, (2, 3.0)), (self.code_B, (1, 1.0))})
+        self.assertEqual(result, {(self.code_A, (2, 3.0)), (self.code_B, (1, 1.0)), (self.code_A1, (1, 1.0))})
 
 
     def test_medium_per_code(self):
@@ -118,7 +129,8 @@ class TestAggregateORM(amcattest.AmCATTestCase):
         self.assertEqual(result, {
             ((self.m1, self.code_A), 1),
             ((self.m2, self.code_A), 1),
-            ((self.m2, self.code_B), 1)
+            ((self.m2, self.code_B), 1),
+            ((self.m4, self.code_A1), 1)
         })
 
         # Two categories + average
@@ -130,7 +142,8 @@ class TestAggregateORM(amcattest.AmCATTestCase):
         self.assertEqual(result, {
             ((self.m1, self.code_A), 4.0),
             ((self.m2, self.code_A), 2.0),
-            ((self.m2, self.code_B), 1.0)
+            ((self.m2, self.code_B), 1.0),
+            ((self.m4, self.code_A1), 1.0)
         })
 
         # Two categories + 2 values
@@ -142,12 +155,41 @@ class TestAggregateORM(amcattest.AmCATTestCase):
         self.assertEqual(result, {
             ((self.m1, self.code_A), (4.0, 1)),
             ((self.m2, self.code_A), (2.0, 1)),
-            ((self.m2, self.code_B), (1.0, 1))
+            ((self.m2, self.code_B), (1.0, 1)),
+            ((self.m4, self.code_A1), (1.0, 1))
         })
 
-        
+    def test_empty(self):
+        aggr = self._get_aggr(flat=True)
+
+        # We allow empty values (default)
+        result = set(aggr.get_aggregate(
+            categories=[SchemafieldCategory(self.codef)],
+            values=[Average(self.intf), Average(self.qualf)]
+        ))
+
+        self.assertEqual(result, {
+            (self.code_A, (3.0, 0.25)),
+            (self.code_B, (1.0, 0.2)),
+            (self.code_A1, (1.0, None)),
+        })
+
+        # Do not allow empty values
+        result = set(aggr.get_aggregate(
+            categories=[SchemafieldCategory(self.codef)],
+            values=[Average(self.intf), Average(self.qualf)],
+            allow_empty=False
+        ))
+
+        self.assertEqual(result, {
+            (self.code_A, (3.0, 0.25)),
+            (self.code_B, (1.0, 0.2))
+        })
+
+
+
     def test_count(self):
         """Tests whether count values work"""
         aggr = self._get_aggr(flat=True)
         result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [Count()]))
-        self.assertEqual(result, {(self.code_A, 2), (self.code_B, 1)})
+        self.assertEqual(result, {(self.code_A, 2), (self.code_B, 1), (self.code_A1, 1)})

@@ -1,16 +1,14 @@
 """
 Contains logic to aggregate using Postgres / Django ORM, similar to amcates.py.
 """
+from multiprocessing.pool import ThreadPool
 import uuid
-import collections
 import itertools
 
-from django.db.models import Avg as DAvg, Count as DCount
 from django.db import connection
 
 from amcat.models import Article, Medium
 from amcat.models import Code, Coding, CodingValue, CodedArticle, CodingSchemaField
-
 from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
 
 POSTGRES_DATE_TRUNC_VALUES = [
@@ -30,6 +28,7 @@ POSTGRES_DATE_TRUNC_VALUES = [
 ]
 
 INNER_JOIN = r'INNER JOIN "{table}" AS "T{{prefix}}_{table}" ON ("{prefix}{t1}"."{f1}" = "T{{prefix}}_{table}"."{f2}")'
+
 
 class JOINS:
     codings = INNER_JOIN.format(
@@ -71,6 +70,11 @@ DEFAULT_JOINS = (
 )
 
 DATE_TRUNC_SQL = 'date_trunc(\'{interval}\', "T_articles"."date")'
+
+def merge_aggregations(results):
+    results = [{tuple(row[:-1]): row[-1] for row in aggr} for aggr in results]
+    keys = set(itertools.chain.from_iterable(aggr.keys() for aggr in results))
+    return [list(key) + list(a.get(key) for a in results) for key in keys]
 
 
 class SQLObject(object):
@@ -191,7 +195,7 @@ class ORMAggregate(object):
         codings = codings.filter(coded_article__codingjob__id__in=codingjob_ids)
         return ORMAggregate(codings, **kwargs)
 
-    def _get_aggregate_sql(self, categories, values):
+    def _get_aggregate_sql(self, categories, value):
         sql = 'SELECT {selects} FROM "codings_values" {joins} WHERE {wheres}'
         if categories:
             sql += " GROUP BY {groups}"
@@ -202,7 +206,7 @@ class ORMAggregate(object):
 
         # Gather all separate sql statements
         selects, joins, groups = [], list(DEFAULT_JOINS), []
-        for sqlobj in itertools.chain(categories, values):
+        for sqlobj in itertools.chain(categories, [value]):
             selects.append(sqlobj.get_select())
             groups.append(sqlobj.get_group_by())
             joins.extend(sqlobj.get_joins())
@@ -216,14 +220,21 @@ class ORMAggregate(object):
             groups=",".join(filter(None, groups))
         )
 
-    def _get_aggregate(self, categories, values):
-        sql = self._get_aggregate_sql(categories, values)
-
-        # Execute sql
-        aggregation = []
+    def _execute_sql(self, query):
         with connection.cursor() as c:
-            c.execute(sql)
-            aggregation = list(map(list, c.fetchall()))
+            c.execute(query)
+            return list(map(list, c.fetchall()))
+
+    def _execute_sqls(self, queries):
+        threadpool = ThreadPool(max(4, len(queries)))
+        try:
+            return list(threadpool.map(self._execute_sql, queries))
+        finally:
+            threadpool.close()
+
+    def _get_aggregate(self, categories, values):
+        queries = [self._get_aggregate_sql(categories, value) for value in values]
+        aggregation = list(merge_aggregations(self._execute_sqls(queries)))
 
         # Replace ids with model objects
         for i, category in enumerate(categories):
@@ -237,14 +248,15 @@ class ORMAggregate(object):
         # Convert to 'normal' Python types
         for i, value in enumerate(values, start=len(categories)):
             for row in aggregation:
-                row[i] = value.postprocess(row[i])
+                if row[i] is not None:
+                    row[i] = value.postprocess(row[i])
 
         # Flat representation to ([cats], [vals])
         num_categories = len(categories)
         for row in aggregation:
             yield tuple(row[:num_categories]), tuple(row[num_categories:])
 
-    def get_aggregate(self, categories=(), values=()):
+    def get_aggregate(self, categories=(), values=(), allow_empty=True):
         """
         @type categories: iterable of Category
         @type values: iterable of Value
@@ -253,6 +265,10 @@ class ORMAggregate(object):
             raise ValueError("You must specify at least one value.")
 
         aggregation = self._get_aggregate(list(categories), list(values))
+
+        # Filter values like (1, None)
+        if not allow_empty:
+            aggregation = ((cats, vals) for cats, vals in aggregation if all(vals))
 
         # Flatten categories, i.e. [((Medium,), (1, 2))] to [((Medium, (1, 2))]
         if self.flat and len(categories) == 1:
