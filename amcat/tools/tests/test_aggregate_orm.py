@@ -88,6 +88,37 @@ class TestAggregateORM(AmCATTestCase):
         # You need at least one value
         self.assertRaises(ValueError, self._get_aggr().get_aggregate, categories=MediumCategory())
 
+    def test_codebook_avg(self):
+        aggr = self._get_aggr(flat=True)
+
+        # D: a
+        #    +b
+        #    +a1
+        D = amcattest.create_test_codebook(name="D")
+        D.add_code(self.code_A)
+        D.add_code(self.code_B, self.code_A)
+        D.add_code(self.code_A1, self.code_A)
+
+        cbsf = SchemafieldCategory(self.codef, codebook=D)
+        result = set(aggr.get_aggregate([cbsf], [Average(self.intf)]))
+        self.assertEqual(result, {(self.code_A, 2.0)})
+
+        # E: a
+        #    +b
+        #    a1
+        E = amcattest.create_test_codebook(name="E")
+        E.add_code(self.code_A)
+        E.add_code(self.code_B, self.code_A)
+        E.add_code(self.code_A1)
+
+        cbsf = SchemafieldCategory(self.codef, codebook=E)
+        result = set(aggr.get_aggregate([cbsf], [Average(self.intf)]))
+        self.assertEqual(result, {
+            (self.code_A1, 1.0),
+            (self.code_A, 7.0/3.0),
+        })
+
+
     def test_avg_per_code(self):
         """Tests aggregate ORM with single aggregation and single value"""
         aggr = self._get_aggr(flat=True)

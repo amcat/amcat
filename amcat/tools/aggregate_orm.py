@@ -1,9 +1,12 @@
 """
 Contains logic to aggregate using Postgres / Django ORM, similar to amcates.py.
 """
+from collections import defaultdict
 from multiprocessing.pool import ThreadPool
+from operator import itemgetter
 import uuid
 import itertools
+from decimal import Decimal
 
 from django.db import connection
 
@@ -78,8 +81,8 @@ def merge_aggregations(results):
 
 
 class SQLObject(object):
-    def get_select(self):
-        raise NotImplementedError("Subclasses should implement get_select().")
+    def get_selects(self):
+        raise NotImplementedError("Subclasses should implement get_selects().")
 
     def get_joins(self):
         return ()
@@ -92,9 +95,16 @@ class SQLObject(object):
 
 class Category(SQLObject):
     model = None
-    
+
+    def aggregate(self, categories, value, rows):
+        """
+        Categories may aggregate rows further as they see fit. This can for example
+        be used to implement codebook code aggregations.
+        """
+        return rows
+
     def get_group_by(self):
-        return self.get_select()
+        return next(iter(self.get_selects()))
 
 class IntervalCategory(Category):
     def __init__(self, interval):
@@ -106,8 +116,8 @@ class IntervalCategory(Category):
 
         self.interval = interval
 
-    def get_select(self):
-        return DATE_TRUNC_SQL.format(interval=self.interval)
+    def get_selects(self):
+        return [DATE_TRUNC_SQL.format(interval=self.interval)]
 
     def __repr__(self):
         return "<Interval: %s>" % self.interval
@@ -115,18 +125,56 @@ class IntervalCategory(Category):
 class MediumCategory(Category):
     model = Medium
 
-    def get_select(self):
-        return '"T_articles"."medium_id"'
+    def get_selects(self):
+        return ['"T_articles"."medium_id"']
 
 class SchemafieldCategory(Category):
     model = Code
 
-    def __init__(self, field, *args, **kwargs):
-        super(SchemafieldCategory, self).__init__(*args, **kwargs)
+    def __init__(self, field, codebook=None):
+        super(SchemafieldCategory, self).__init__()
         self.field = field
+        self.codebook = codebook
+        self.aggregation_map = {}
 
-    def get_select(self):
-        return '"codings_values"."intval"'
+        if self.codebook is not None:
+            self.codebook.cache()
+            for root_node in self.codebook.get_tree():
+                self.aggregation_map[root_node.code_id] = root_node.code_id
+                for descendant in root_node.get_descendants():
+                    self.aggregation_map[descendant.code_id] = root_node.code_id
+
+    def _aggregate(self, categories, value, rows):
+        num_categories = len(categories)
+        self_index = categories.index(self)
+
+        # First do a sanity check. If a coding specifies a code which is
+        # NOT present in the given codebook, raise an error.
+        coded_codes = set(map(itemgetter(self_index), rows))
+        codebook_codes = set(self.codebook.get_code_ids())
+        invalid_codes = coded_codes - codebook_codes
+
+        if invalid_codes:
+            error_message = "Codes with ids {} were used in {}, but are not present in {}."
+            raise ValueError(error_message.format(invalid_codes, self.field, self.codebook))
+
+        # Create a mapping from key -> rownrs which need to be aggregated
+        to_aggregate = defaultdict(list)
+        for n, row in enumerate(rows):
+            key = row[:self_index] + [self.aggregation_map[row[self_index]]] + row[self_index+1:num_categories]
+            to_aggregate[tuple(key)].append(n)
+
+        for key, rownrs in to_aggregate.items():
+            values = [row[num_categories:] for row in [rows[rownr] for rownr in rownrs]]
+            yield list(key) + value.aggregate(values)
+
+    def aggregate(self, categories, value, rows):
+        if self.codebook is None:
+            return super(SchemafieldCategory, self).aggregate(categories, value, rows)
+        return self._aggregate(categories, value, rows)
+
+    def get_selects(self):
+        return ['"codings_values"."intval"']
 
     def get_wheres(self):
         where_sql = '"codings_values"."field_id" = {field.id}'
@@ -140,7 +188,19 @@ class BaseAggregationValue(SQLObject):
         super(BaseAggregationValue, self).__init__()
         self.prefix = uuid.uuid4().hex if prefix is None else prefix
 
+    def aggregate(self, values):
+        """
+        Categories may request further aggregation in Python code, Each subclass
+        will need to implement a proper way to deal with this. For example, you can
+        simply add counts, but for averages you would need a weight too.
+        """
+        raise NotImplementedError("Subclasses should implement aggregate()")
+
     def postprocess(self, value):
+        """
+        Last step after all aggregation steps are done. Convert the (multiple)
+        selects into a single value.
+        """
         return value
 
 class Average(BaseAggregationValue):
@@ -158,24 +218,48 @@ class Average(BaseAggregationValue):
         where_sql = '"T{prefix}_codings_values"."field_id" = {field_id}'
         yield where_sql.format(field_id=self.field.id, prefix=self.prefix)
 
-    def get_select(self):
-        sql = 'AVG("T{prefix}_codings_values"."intval")'.format(prefix=self.prefix)
+    def get_selects(self):
+        sql = '{{method}}("T{prefix}_codings_values"."intval")'.format(prefix=self.prefix)
+
+        # Yield weight select
+        yield sql.format(method="COUNT")
+
+        # Yield AVERAGE select
+        avg_sql = sql.format(method="AVG")
         if self.field.fieldtype_id == FIELDTYPE_IDS.QUALITY:
-            sql += "/10.0"
-        return sql
+            avg_sql += "/10.0"
+        yield avg_sql
+
+    def aggregate(self, values):
+        # Quick check to prevent lots of calculations if not necessary
+        if len(values) == 1:
+            weight, value = values[0]
+            return [1, value]
+
+        average = Decimal(0)
+        for weight, value in values:
+            average += weight * value
+
+        total_weight = sum(map(itemgetter(0), values))
+        return [total_weight, average / total_weight]
 
     def postprocess(self, value):
+        weight, value = value
         return float(value)
 
     def __repr__(self):
         return "<Average: %s>" % self.field
 
 class Count(BaseAggregationValue):
-    def get_select(self):
-        return 'COUNT(DISTINCT("T_articles"."article_id"))'
+    def get_selects(self):
+        return ['COUNT(DISTINCT("T_articles"."article_id"))']
 
     def postprocess(self, value):
-        return int(value)
+        return int(value[0])
+
+    def aggregate(self, values):
+        return [sum(map(itemgetter(0), values))]
+
 
 class ORMAggregate(object):
     def __init__(self, codings, flat=False, threaded=True):
@@ -208,8 +292,8 @@ class ORMAggregate(object):
         # Gather all separate sql statements
         selects, joins, groups = [], list(DEFAULT_JOINS), []
         for sqlobj in itertools.chain(categories, [value]):
-            selects.append(sqlobj.get_select())
             groups.append(sqlobj.get_group_by())
+            selects.extend(sqlobj.get_selects())
             joins.extend(sqlobj.get_joins())
             wheres.extend(sqlobj.get_wheres())
 
@@ -239,7 +323,22 @@ class ORMAggregate(object):
 
     def _get_aggregate(self, categories, values):
         queries = [self._get_aggregate_sql(categories, value) for value in values]
-        aggregation = list(merge_aggregations(self._execute_sqls(queries)))
+
+        aggregations = list(self._execute_sqls(queries))
+
+        # Aggregate further in Python code
+        for n, (value, rows) in enumerate(zip(values, aggregations)):
+            for category in reversed(categories):
+                rows = list(category.aggregate(categories, value, rows))
+            aggregations[n] = rows
+
+        # Convert to single value / Python type
+        for n, (value, rows) in enumerate(zip(values, aggregations)):
+            for row in rows:
+                row[len(categories):] = [value.postprocess(row[len(categories):])]
+
+        # Merge aggregations
+        aggregation = list(merge_aggregations(aggregations))
 
         # Replace ids with model objects
         for i, category in enumerate(categories):
@@ -249,12 +348,6 @@ class ORMAggregate(object):
             objs = category.model.objects.in_bulk(pks)
             for row in aggregation:
                 row[i] = objs[row[i]]
-
-        # Convert to 'normal' Python types
-        for i, value in enumerate(values, start=len(categories)):
-            for row in aggregation:
-                if row[i] is not None:
-                    row[i] = value.postprocess(row[i])
 
         # Flat representation to ([cats], [vals])
         num_categories = len(categories)
