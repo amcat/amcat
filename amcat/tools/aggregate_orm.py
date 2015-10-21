@@ -205,12 +205,8 @@ class ORMAggregate(object):
         for sqlobj in itertools.chain(categories, values):
             selects.append(sqlobj.get_select())
             groups.append(sqlobj.get_group_by())
-
-            for join in sqlobj.get_joins():
-                joins.append(join)
-            
-            for where in sqlobj.get_wheres():
-                wheres.append(where)
+            joins.extend(sqlobj.get_joins())
+            wheres.extend(sqlobj.get_wheres())
 
         # Build sql statement
         return sql.format(
