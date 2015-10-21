@@ -20,6 +20,7 @@ import datetime
 
 from django.db.models import F, Avg
 from django.test import TransactionTestCase
+from amcat.models import Coding
 
 from amcat.tools import amcattest, aggregate_orm
 from amcat.tools.aggregate_orm import MediumCategory, Count
@@ -198,3 +199,9 @@ class TestAggregateORM(TransactionTestCase):
         aggr = self._get_aggr(flat=True)
         result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [Count()]))
         self.assertEqual(result, {(self.code_A, 2), (self.code_B, 1), (self.code_A1, 1)})
+
+    @close_db_connections
+    def test_no_codings(self):
+        aggr = aggregate_orm.ORMAggregate(Coding.objects.none())
+        self.assertEqual(set(aggr.get_aggregate(values=[Count()])), set())
+

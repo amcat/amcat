@@ -261,6 +261,9 @@ class ORMAggregate(object):
         @type categories: iterable of Category
         @type values: iterable of Value
         """
+        if not self.codings.count():
+            return iter([])
+
         if not values:
             raise ValueError("You must specify at least one value.")
 
