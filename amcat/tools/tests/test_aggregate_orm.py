@@ -24,6 +24,7 @@ from django.test import TransactionTestCase
 from amcat.tools import amcattest, aggregate_orm
 from amcat.tools.aggregate_orm import MediumCategory, Count
 from amcat.tools.aggregate_orm import SchemafieldCategory, Average
+from amcat.tools.amcattest import close_db_connections
 
 
 class TestAggregateORM(TransactionTestCase):
@@ -85,10 +86,12 @@ class TestAggregateORM(TransactionTestCase):
         codingjob_ids = [self.job.id]
         return aggregate_orm.ORMAggregate.from_articles(article_ids, codingjob_ids, flat=flat)
 
+    @close_db_connections
     def test_incorrect_inputs(self):
         # You need at least one value
         self.assertRaises(ValueError, self._get_aggr().get_aggregate, categories=MediumCategory())
 
+    @close_db_connections
     def test_avg_per_code(self):
         """Tests aggregate ORM with single aggregation and single value"""
         aggr = self._get_aggr(flat=True)
@@ -99,11 +102,13 @@ class TestAggregateORM(TransactionTestCase):
         result = set(aggr.get_aggregate([MediumCategory()], [Average(self.intf)]))
         self.assertEqual(result, {(self.m1, 4.0), (self.m2, 1.5), (self.m4, 1.0)})
 
+    @close_db_connections
     def test_quality_field(self):
         aggr = self._get_aggr(flat=True)
         result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [Average(self.qualf)]))
         self.assertEqual(result, {(self.code_A, 0.25), (self.code_B, 0.2)})
 
+    @close_db_connections
     def test_secondary_axis(self):
         """Test whether we can do count plus average per something"""
         aggr = self._get_aggr(flat=True)
@@ -115,7 +120,7 @@ class TestAggregateORM(TransactionTestCase):
 
         self.assertEqual(result, {(self.code_A, (2, 3.0)), (self.code_B, (1, 1.0)), (self.code_A1, (1, 1.0))})
 
-
+    @close_db_connections
     def test_medium_per_code(self):
         """Test whether we can use code field as secondary aggregation"""
         aggr = self._get_aggr(flat=True)
@@ -159,6 +164,7 @@ class TestAggregateORM(TransactionTestCase):
             ((self.m4, self.code_A1), (1.0, 1))
         })
 
+    @close_db_connections
     def test_empty(self):
         aggr = self._get_aggr(flat=True)
 
@@ -186,8 +192,7 @@ class TestAggregateORM(TransactionTestCase):
             (self.code_B, (1.0, 0.2))
         })
 
-
-
+    @close_db_connections
     def test_count(self):
         """Tests whether count values work"""
         aggr = self._get_aggr(flat=True)
