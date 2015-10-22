@@ -51,6 +51,11 @@ function export_clicked(){
         url += "&pk=" + pks.join("&pk=");
     }
 
+    var order = table.order()[0];
+    var order_str = $('th', this.table).eq(order[0]).text();
+    var order_dir = order[1] === "desc" ? '-' : '';
+    url += "&order_by=" + order_dir + order_str;
+
     window.location = url;
     this.modal.modal("hide");
 }
