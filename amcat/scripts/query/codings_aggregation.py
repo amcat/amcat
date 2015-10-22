@@ -189,9 +189,6 @@ def get_code_filter(codebook, code_id, include_descendants):
 
 
 class CodingAggregationAction(QueryAction):
-    """
-    Aggregate articles based on their properties. Make sure x_axis != y_axis.
-    """
     output_types = (
         ("text/json+aggregation+codings+barplot", "Bar plot"),
         ("text/json+aggregation+codingbs+table", "Table"),

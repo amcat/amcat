@@ -132,9 +132,6 @@ class QueryActionHandler(TaskHandler):
 
 
 class QueryAction(object):
-    """
-    A QueryAction
-    """
     form_class = QueryActionForm
     task_handler = QueryActionHandler
     output_types = None
