@@ -2,7 +2,7 @@ define(["jquery"], function($) {
     return function(uuid){
 	self = this;
 
-	var task_api = "/api/v4/task?uuid=" + uuid;
+	var task_api = "/api/v4/tasks/" + uuid + "/";
 	var taskresult_api = "/api/v4/taskresult/" + uuid;
 
 	// Initial timeout in milliseconds. Will increase half a second for
@@ -28,7 +28,7 @@ define(["jquery"], function($) {
 	function poll_success(data){
 	    timeout = (timeout >= 3000) ? timeout : timeout + 500;
 
-	    var task = data["results"][0];
+	    var task = data;//["results"][0];
 	    if (!task.ready && task.status === "INPROGRESS" && task.progress !== null){
 		// Not yet ready, progress indication supplied
 		window.setTimeout(poll, timeout);
@@ -63,7 +63,7 @@ define(["jquery"], function($) {
 	function task_failed(task){
 	    console.log("failed")
 	    $('#progressbar').removeClass("progress-bar-info").addClass("progress-bar-danger");
-
+	    $("#message").text(task.error.exc_type + ": " + task.error.exc_message);
 	}
 
 	function task_success(task){

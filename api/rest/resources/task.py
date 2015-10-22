@@ -31,15 +31,6 @@ class TaskResource(AmCATResource):
     serializer_class = TaskSerializer
     queryset = Task.objects.all()
 
-class TaskResultResource(AmCATResource):
-    model = Task
-
-    @classmethod
-    def get_model_name(cls):
-        return "taskresult"
-
-    serializer_class = TaskResultSerializer
-
 @api_view(http_method_names=("GET",))
 def single_task_result(request, task_id, uuid=False):
     task = Task.objects.get(**{ "uuid" if uuid else "id" : task_id})

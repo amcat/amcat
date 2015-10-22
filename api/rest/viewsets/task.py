@@ -21,9 +21,12 @@ from rest_framework import serializers
 from amcat.models.task import IN_PROGRESS, FAILED
 from amcat.models import Task
 from api.rest.serializer import AmCATModelSerializer
+from api.rest.viewset import AmCATViewSetMixin, UUIDLookupMixin
+from rest_framework.viewsets import ModelViewSet
+from api.rest.mixins import DatatablesMixin
 
 
-__all__ = ("TaskSerializer", "TaskResultSerializer")
+__all__ = ("TaskSerializer", "TaskResultSerializer", "TaskViewSet")
 
 class TaskSerializer(AmCATModelSerializer):
     """Represents a Task object defined in amcat.models.task.Task. Adds two
@@ -35,6 +38,10 @@ class TaskSerializer(AmCATModelSerializer):
     redirect_url = serializers.SerializerMethodField()
     redirect_message = serializers.SerializerMethodField()
     uuid = serializers.SerializerMethodField()
+    error = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Task
 
     def __init__(self, *args, **kwargs):
         super(TaskSerializer, self).__init__(*args, **kwargs)
@@ -84,9 +91,12 @@ class TaskSerializer(AmCATModelSerializer):
     def get_uuid(self, task):
         return str(task.uuid)
 
-    class Meta:
-        model = Task
-
+    def get_error(self, task):
+        _, result, status = self.get_status_ready(task)
+        if status == FAILED:
+            return result
+        
+        
 
 class TaskResultSerializer(AmCATModelSerializer):
     result = serializers.SerializerMethodField()
@@ -98,10 +108,17 @@ class TaskResultSerializer(AmCATModelSerializer):
     def get_result(self, task):
         if not self.get_ready(task):
             return None
-
         return task.get_result()
 
     class Meta:
         model = Task
         fields = ("uuid", "ready", "result")
+
+
+       
+class TaskViewSet(AmCATViewSetMixin, UUIDLookupMixin, DatatablesMixin, ModelViewSet):
+    model = Task
+    serializer_class = TaskSerializer
+    queryset = Task.objects.all()
+    model_key = "task"
 
