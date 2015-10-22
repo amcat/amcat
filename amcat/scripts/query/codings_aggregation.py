@@ -170,9 +170,9 @@ def to_sortable_tuple(key):
     if isinstance(key, tuple):
         return tuple(map(to_sortable_tuple, key))
     elif isinstance(key, Medium):
-        return key.name
+        return key.name.lower()
     elif isinstance(key, Code):
-        return key.label
+        return key.label.lower()
     return key
 
 
