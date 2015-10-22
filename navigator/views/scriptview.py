@@ -82,7 +82,7 @@ class ScriptHandler(TaskHandler):
     def get_script(self):
         script_cls = self.task.get_class()
         kwargs = self.get_form_kwargs()
-        form = script_cls.options_form(data=kwargs)
+        form = script_cls.options_form(**kwargs)
         return script_cls(form)
 
     def run_task(self):
