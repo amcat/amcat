@@ -50,7 +50,7 @@ define([
         "start_date", "end_date", "datetype", "on_date",
         "codebook_replacement_language", "codebook_label_language",
         "codebook", "query", "download", "codingjobs",
-        "codingschemafield", "codingschemafield_value"
+        "codingschemafield", "codingschemafield_value", "codingschemafield_include_descendants"
     ];
 
     var HOTKEYS = {

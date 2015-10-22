@@ -105,6 +105,7 @@ class SelectionForm(forms.Form):
 
     codingschemafield = ModelChoiceFieldWithIdLabel(queryset=CodingSchemaField.objects.none(), required=False)
     codingschemafield_value = ModelChoiceFieldWithIdLabel(queryset=Code.objects.none(), required=False)
+    codingschemafield_include_descendants = forms.BooleanField(required=False)
 
 
     def __init__(self, project=None, articlesets=None, codingjobs=None, data=None, *args, **kwargs):

@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from itertools import chain
 import re
 import json
 
@@ -175,6 +176,18 @@ def to_sortable_tuple(key):
     return key
 
 
+def get_code_filter(codebook, code_id, include_descendants):
+    yield code_id
+
+    if include_descendants:
+        codebook.cache()
+        flat_tree = chain.from_iterable(t.get_descendants() for t in codebook.get_tree())
+        flat_tree = chain(flat_tree, codebook.get_tree())
+        tree_item = [t for t in flat_tree if t.code_id == code_id][0]
+        for descendant in tree_item.get_descendants():
+            yield descendant.code_id
+
+
 class CodingAggregationAction(QueryAction):
     """
     Aggregate articles based on their properties. Make sure x_axis != y_axis.
@@ -204,6 +217,7 @@ class CodingAggregationAction(QueryAction):
 
         schemafield = form.cleaned_data["codingschemafield"]
         schemafield_value = form.cleaned_data["codingschemafield_value"]
+        schemafield_include_descendants = form.cleaned_data["codingschemafield_include_descendants"]
 
         article_ids = selection.get_article_ids()
 
@@ -212,10 +226,9 @@ class CodingAggregationAction(QueryAction):
         coding_values = coding_values.filter(coding__coded_article__codingjob__in=codingjobs)
 
         if schemafield and schemafield_value:
-            # Reduce article set to article which have a coding coded as 'schemafield_value'
-            # on codingschemafield 'schemafield'
+            code_ids = list(get_code_filter(schemafield.codebook, schemafield_value.id, schemafield_include_descendants))
             coding_values = coding_values.filter(field__id=schemafield.id)
-            coding_values = coding_values.filter(intval=schemafield_value.id)
+            coding_values = coding_values.filter(intval__in=code_ids)
 
         codings = Coding.objects.filter(id__in=coding_values.values_list("coding_id", flat=True))
 
