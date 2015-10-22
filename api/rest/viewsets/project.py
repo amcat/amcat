@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from django.core.urlresolvers import reverse
 from rest_framework import serializers, permissions, exceptions, status
 from rest_framework.viewsets import ModelViewSet, ViewSetMixin
 from amcat.models import Project, Role
@@ -118,13 +117,6 @@ class ProjectViewSetMixin(AmCATViewSetMixin):
     serializer_class = ProjectSerializer
     model_key = "project"
     queryset = Project.objects.all()
-
-    @classmethod
-    def get_url(cls, base_name=None, view='list', **kwargs):
-        if base_name is None:
-            base_name = cls.get_basename()
-        name = 'api:{base_name}-{view}'.format(**locals())
-        return reverse(name, kwargs=kwargs)
 
 class ProjectViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     model = Project

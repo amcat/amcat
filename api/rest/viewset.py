@@ -28,9 +28,13 @@ and multiple times for viewsets with the same model, but a different scope.
 __all__ = ("AmCATViewSetMixin", "get_url_pattern", "AmCATViewSetMixinTest")
 
 from collections import OrderedDict, namedtuple
+from django.core.urlresolvers import reverse
+
+from django.http import Http404
+from rest_framework.generics import get_object_or_404
+import re
 
 from . import tablerenderer
-
 
 ModelKey = namedtuple("ModelKey", ("key", "viewset"))
 
@@ -74,6 +78,14 @@ class AmCATViewSetMixin(object):
         """
         return "/".join(cls._get_url_pattern())
 
+    @classmethod
+    def get_url(cls, base_name=None, view='list', **kwargs):
+        if base_name is None:
+            base_name = cls.get_basename()
+        name = 'api:{base_name}-{view}'.format(**locals())
+        return reverse(name, kwargs=kwargs)
+
+        
     @classmethod
     def get_default_basename(cls):
         model_keys = list(mk.key for mk in cls._get_model_keys())
@@ -121,3 +133,24 @@ class AmCATViewSetMixin(object):
         for model_key in model_keys[:-1]:
             yield r"{model_key}s/(?P<{model_key}>\d+)".format(**locals())
         yield r"{model_key}s".format(model_key=model_keys[-1])
+
+_RE_UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+class UUIDLookupMixin(object):
+    """
+    Allow alternative lookup by uuid instead of pk
+    (This assumes that the uuid kwarg will be called pk)
+    """
+    uuid_lookup_field = 'uuid'
+    
+    def get_object(self):
+        try:
+            return super(UUIDLookupMixin, self).get_object()
+        except Http404:
+            # does the PK look like a uuid?
+            pk = self.kwargs['pk']
+            if re.match(_RE_UUID, pk.lower()):
+                queryset = self.filter_queryset(self.get_queryset())
+                obj = get_object_or_404(queryset, **{self.uuid_lookup_field: pk})
+                self.check_object_permissions(self.request, obj)
+                return obj
+            raise
