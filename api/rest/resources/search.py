@@ -39,7 +39,7 @@ FILTER_FIELDS = frozenset({"start_date", "end_date", "mediumid", "sets", "sectio
 FILTER_SINGLE_FIELDS = frozenset({"start_date", "end_date", "section"})
 FILTER_ID_FIELDS = frozenset({"ids", "pk"})
 
-RE_KWIC = re.compile("(?P<left>.*?)<em>(?P<keyword>.*?)</em>(?P<right>.*)", re.DOTALL)
+RE_KWIC = re.compile("(?P<left>.*?)<mark>(?P<keyword>.*?)</mark>(?P<right>.*)", re.DOTALL)
 
 
 class LazyES(object):
@@ -85,7 +85,6 @@ class LazyES(object):
             score=False,
             **query_kargs
         )
-
         if self.hits:
             def add_hits_column(r):
                 r.hits = {q.label : 0 for q in self.queries}
@@ -97,7 +96,6 @@ class LazyES(object):
             for q in self.queries:
                 for hit in self.es.query_all(q.query, filters=filters, fields=[]):
                     result_dict[hit.id].hits[q.label] = hit.score
-
         return result
 
 
@@ -118,7 +116,10 @@ class KWICField(CharField):
         self.kwic = kargs.pop('kwic')
         super(KWICField, self).__init__(*args, **kargs)
 
-    def field_to_native(self, obj, field_name):
+    def get_attribute(self, instance):
+        return instance
+
+    def to_representation(self, obj):
         # use highlighting if available, otherwise fall back to raw text
         if obj is None:
             return None
@@ -149,11 +150,14 @@ class KWICField(CharField):
                 val = re.sub('<[^<]+?>', '', val)
                 return val
 
-
 class ScoreField(IntegerField):
-    def field_to_native(self, obj, field_name):
-        source = self.source or field_name
-        return obj and obj.hits.get(source, 0)
+
+    def get_attribute(self, instance):
+        return instance.hits
+
+    def to_representation(self, obj):
+        source = self.source
+        return obj.get(source, 0)
 
 
 class SearchResourceSerialiser(Serializer):
@@ -194,6 +198,7 @@ class SearchResourceSerialiser(Serializer):
             self.fields['left'] = KWICField(kwic='left')
             self.fields['keyword'] = KWICField(kwic='keyword')
             self.fields['right'] = KWICField(kwic='right')
+
 
     class Meta:
         model = Article
