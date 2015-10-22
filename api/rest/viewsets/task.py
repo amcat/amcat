@@ -95,9 +95,15 @@ class TaskSerializer(AmCATModelSerializer):
         _, result, status = self.get_status_ready(task)
         if status == FAILED:
             return result
-        
-        
 
+
+          
+    def save(self, **kwargs):
+        from amcat.models.task import amcat_task
+        task = super(TaskSerializer, self).save(**kwargs)
+        amcat_task.apply_async(task_id=str(task.uuid))
+        return task
+        
 class TaskResultSerializer(AmCATModelSerializer):
     result = serializers.SerializerMethodField()
     ready = serializers.SerializerMethodField()
@@ -121,4 +127,5 @@ class TaskViewSet(AmCATViewSetMixin, UUIDLookupMixin, DatatablesMixin, ModelView
     serializer_class = TaskSerializer
     queryset = Task.objects.all()
     model_key = "task"
+
 
