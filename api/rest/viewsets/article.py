@@ -66,11 +66,6 @@ class ArticleSerializer(AmCATModelSerializer):
     mediumid = MediumField(model_field=ModelChoiceField(queryset=Medium.objects.all()), representation="id", required=False)
     uuid = CharField(read_only=False, required=False)
 
-    def validate(self, attrs):
-        validated_data = super(ArticleSerializer, self).validate(attrs)
-        validated_data["project"] = self.context["view"].project
-        return validated_data
-
     def create(self, validated_data):
         try:
             article = Article.objects.get(uuid=validated_data["uuid"])

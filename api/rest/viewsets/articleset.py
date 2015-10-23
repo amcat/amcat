@@ -21,7 +21,7 @@ from amcat.models import ArticleSet
 from amcat.tools import amcates
 from amcat.tools.caching import cached
 from api.rest.mixins import DatatablesMixin
-from api.rest.serializer import AmCATModelSerializer
+from api.rest.serializer import AmCATProjectModelSerializer
 from api.rest.viewsets.project import ProjectViewSetMixin
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from api.rest.viewset import AmCATViewSetMixin
@@ -30,16 +30,11 @@ __all__ = (
     "ArticleSetSerializer", "ArticleSetViewSet", "FavouriteArticleSetViewSet",
     "CodingjobArticleSetViewSet")
 
-class ArticleSetSerializer(AmCATModelSerializer):
+        
+class ArticleSetSerializer(AmCATProjectModelSerializer):
     favourite = serializers.SerializerMethodField("is_favourite")
     articles = serializers.SerializerMethodField("n_articles")
 
-    @property
-    def project(self):
-        try:
-            return self.context["view"].project
-        except AttributeError:
-            pass
 
     @cached
     def get_favourite_articlesets(self):
@@ -59,12 +54,7 @@ class ArticleSetSerializer(AmCATModelSerializer):
         if not articleset or not self.project: return None
         return articleset.id in self.get_favourite_articlesets()
 
-    def restore_fields(self, data, files):
-        data = data.copy() # make data mutable
-        if 'project' not in data:
-            data['project'] = self.context['view'].project.id
-        return super(ArticleSetSerializer, self).restore_fields(data, files)
-            
+
     class Meta:
         model = ArticleSet
 

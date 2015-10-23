@@ -21,7 +21,7 @@ from rest_framework.viewsets import ModelViewSet, ViewSetMixin
 from amcat.models import Project, Role
 from amcat.tools.caching import cached
 from api.rest.mixins import DatatablesMixin
-from api.rest.serializer import AmCATModelSerializer
+from api.rest.serializer import AmCATProjectModelSerializer
 from amcat.models.authorisation import (ROLE_PROJECT_READER, ROLE_PROJECT_WRITER,
                                         ROLE_PROJECT_ADMIN, ROLE_PROJECT_METAREADER)
 
@@ -81,7 +81,7 @@ class ProjectPermission(permissions.BasePermission):
         return actual_role_id >= required_role_id
 
 
-class ProjectSerializer(AmCATModelSerializer):
+class ProjectSerializer(AmCATProjectModelSerializer):
     """
     This serializer includes another boolean field `favourite` which is is True
     when the serialized project is in request.user.user_profile.favourite_projects.
@@ -103,11 +103,6 @@ class ProjectSerializer(AmCATModelSerializer):
         if project is None: return
         return project.id in self.favourite_projects
 
-    def restore_fields(self, data, files):
-        data = data.copy()
-        if 'project' not in data:
-            data['project'] = self.context['view'].project.id
-        return super(ProjectSerializer, self).restore_fields(data, files)
 
     class Meta:
         model = Project
