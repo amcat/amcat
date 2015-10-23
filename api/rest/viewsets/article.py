@@ -25,7 +25,7 @@ from amcat.models import Medium, Project
 from amcat.tools.amcates import ES
 from amcat.tools.caching import cached
 from api.rest.mixins import DatatablesMixin
-from api.rest.serializer import AmCATModelSerializer
+from api.rest.serializer import AmCATProjectModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.articleset import ArticleSetViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
@@ -60,7 +60,7 @@ class MediumField(ModelField):
         return obj.medium.name if self.representation == "name" else obj.medium_id
 
 
-class ArticleSerializer(AmCATModelSerializer):
+class ArticleSerializer(AmCATProjectModelSerializer):
     project = ModelChoiceField(queryset=Project.objects.all(), required=True)
     medium = MediumField(model_field=ModelChoiceField(queryset=Medium.objects.all()))
     mediumid = MediumField(model_field=ModelChoiceField(queryset=Medium.objects.all()), representation="id", required=False)
@@ -81,7 +81,7 @@ class ArticleSerializer(AmCATModelSerializer):
 
     class Meta:
         model = Article
-        read_only_fields = ('id', 'project', 'length', 'insertdate', 'insertscript')
+        read_only_fields = ('id', 'length', 'insertdate', 'insertscript')
 
 
 class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMixin, DatatablesMixin, ModelViewSet):

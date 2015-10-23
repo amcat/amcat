@@ -55,6 +55,7 @@ class AmCATProjectModelSerializer(AmCATModelSerializer):
 
     def to_internal_value(self, data):
         if 'project' not in data:
+            data = dict(data.iteritems())
             data['project'] = self.project_id
         value = super(AmCATProjectModelSerializer, self).to_internal_value(data)
         return value
