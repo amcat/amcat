@@ -27,14 +27,19 @@ from rest_framework.response import Response
 from rest_framework.fields import CharField
 
 from amcat.models import Article, Medium, ArticleTree, word_len
-from api.rest.serializer import AmCATModelSerializer
+from api.rest.serializer import AmCATProjectModelSerializer
 from api.rest.viewsets.article import MediumField
 
 
-class ArticleUploadSerializer(AmCATModelSerializer):
+class ArticleUploadSerializer(AmCATProjectModelSerializer):
     medium = MediumField(ModelChoiceField(queryset=Medium.objects.all()))
     uuid = CharField(required=False)
 
+    def to_internal_value(self, data):
+        if 'children' not in data:
+            data['children'] = []
+        return super(ArticleUploadSerializer, self).to_internal_value(data)
+        
     def to_representation(self, instance):
         article, children = instance
         article = super(ArticleUploadSerializer, self).to_representation(article)
@@ -48,7 +53,7 @@ class ArticleUploadSerializer(AmCATModelSerializer):
 
     def create(self, validated_data):
         children = validated_data.pop("children")
-        article = Article(**validated_data)
+        article = Article(**validated_data)        
 
         if article.length is None:
             article.length = word_len(article.text)
@@ -57,6 +62,7 @@ class ArticleUploadSerializer(AmCATModelSerializer):
 
     class Meta:
         model = Article
+        read_only_fields = ('id', 'length', 'insertdate', 'insertscript')
 
 
 class ArticleUploadView(CreateAPIView):

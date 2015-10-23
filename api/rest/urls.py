@@ -41,6 +41,8 @@ urlpatterns = format_suffix_patterns(patterns('',
     url(r'^get_token', 'api.rest.get_token.obtain_auth_token'),
     url(r'^tokens/', get_adhoc_tokens),
     url(r'^article-upload/$', ArticleUploadView.as_view(), name="article-upload"),
+    url(r'^projects/(?P<project>[0-9]+)/articlesets/articles-upload/$', ArticleUploadView.as_view(), name="article-upload"),
+    url(r'^projects/(?P<project>[0-9]+)/articlesets/(?P<articleset>[0-9]+)/articles-upload/$', ArticleUploadView.as_view(), name="article-upload"),
     url(r'^status/$', StatusView.as_view(), name="status"),
 
     *tuple(r.get_url_pattern() for r in resources.all_resources())
