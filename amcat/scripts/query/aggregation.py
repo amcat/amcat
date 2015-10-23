@@ -28,7 +28,7 @@ from django.forms import ChoiceField, CharField, Select
 
 from api.rest.tablerenderer import CSVRenderer
 from amcat.models import Medium, ArticleSet, CodingSchema, CodingSchemaField
-from amcat.scripts.query import QueryAction, QueryActionForm
+from amcat.scripts.query import QueryAction, QueryActionForm, QueryActionHandler
 from amcat.tools.aggregate import get_relative
 from amcat.tools.aggregate_orm import ORMAggregate
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
@@ -131,6 +131,14 @@ class AggregationActionForm(QueryActionForm):
 
         raise ValidationError("Not a valid column name.")
 
+class AggregationHandler(QueryActionHandler):
+
+    def get_response(self):
+        response = super(AggregationHandler, self).get_response()
+        form = self.get_query_action().get_form()
+        if form.cleaned_data["output_type"] == "text/csv":
+            response["Content-Disposition"] = 'attachment; filename="aggregation.csv"'
+        return response
 
 class AggregationAction(QueryAction):
     """
@@ -145,6 +153,7 @@ class AggregationAction(QueryAction):
         ("text/csv", "CSV (Download)"),
     )
     form_class = AggregationActionForm
+    task_handler = AggregationHandler
 
     def run(self, form):
         self.monitor.update(1, "Executing query..")
