@@ -6,14 +6,14 @@
             <option id="load-query-hack" value="load_query">Recent queries</option>
             <optgroup label="My queries">
                 {% for query in saved_user_queries %}
-                    <option title="Last saved: {{ query.last_saved }}" href="./?query={{ query.id }}">{{ query.name }}</option>
+                    <option title="Last saved: {{ query.last_saved }}" href="./{{ query.id }}">{{ query.name }}</option>
                 {% endfor %}
             </optgroup>
         {% endif %}
         {% if saved_project_queries %}
             <optgroup label="Project queries">
             {% for query in saved_project_queries %}
-                <option title="Last saved: {{ query.last_saved }}" href="./?query={{ query.id }}">{{ query.name }}</option>
+                <option title="Last saved: {{ query.last_saved }}" href="./{{ query.id }}">{{ query.name }}</option>
             {% endfor %}
         {% endif %}
         </optgroup>
