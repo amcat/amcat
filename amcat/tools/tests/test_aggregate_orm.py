@@ -17,14 +17,13 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import datetime
+
 from django.test import TransactionTestCase
 
 from amcat.models import Coding
 from amcat.tools import amcattest, aggregate_orm
-from amcat.tools.aggregate_orm import MediumCategory, CountArticlesValue, CountCodingValuesValue, \
-    CountCodingsValue, TermCategory, ArticleSetCategory
+from amcat.tools.aggregate_orm import MediumCategory, CountArticlesValue, TermCategory, ArticleSetCategory
 from amcat.tools.aggregate_orm import SchemafieldCategory, AverageValue
-from amcat.tools.amcattest import AmCATTestCase
 
 
 class TestAggregateORM(TransactionTestCase):
