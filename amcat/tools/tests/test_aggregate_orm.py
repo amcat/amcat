@@ -20,8 +20,9 @@ import datetime
 
 from amcat.models import Coding
 from amcat.tools import amcattest, aggregate_orm
-from amcat.tools.aggregate_orm import MediumCategory, Count
-from amcat.tools.aggregate_orm import SchemafieldCategory, Average
+from amcat.tools.aggregate_orm import MediumCategory, CountArticlesValue, CountCodingValuesValue, \
+    CountCodingsValue
+from amcat.tools.aggregate_orm import SchemafieldCategory, AverageValue
 from amcat.tools.amcattest import AmCATTestCase
 
 
@@ -100,7 +101,7 @@ class TestAggregateORM(AmCATTestCase):
         D.add_code(self.code_A1, self.code_A)
 
         cbsf = SchemafieldCategory(self.codef, codebook=D)
-        result = set(aggr.get_aggregate([cbsf], [Average(self.intf)]))
+        result = set(aggr.get_aggregate([cbsf], [AverageValue(self.intf)]))
         self.assertEqual(result, {(self.code_A, 2.0)})
 
         # E: a
@@ -112,26 +113,25 @@ class TestAggregateORM(AmCATTestCase):
         E.add_code(self.code_A1)
 
         cbsf = SchemafieldCategory(self.codef, codebook=E)
-        result = set(aggr.get_aggregate([cbsf], [Average(self.intf)]))
+        result = set(aggr.get_aggregate([cbsf], [AverageValue(self.intf)]))
         self.assertEqual(result, {
             (self.code_A1, 1.0),
             (self.code_A, 7.0/3.0),
         })
 
-
     def test_avg_per_code(self):
         """Tests aggregate ORM with single aggregation and single value"""
         aggr = self._get_aggr(flat=True)
 
-        result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [Average(self.intf)]))
+        result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [AverageValue(self.intf)]))
         self.assertEqual(result, {(self.code_A, 3.0), (self.code_B, 1.0), (self.code_A1, 1.0)})
 
-        result = set(aggr.get_aggregate([MediumCategory()], [Average(self.intf)]))
+        result = set(aggr.get_aggregate([MediumCategory()], [AverageValue(self.intf)]))
         self.assertEqual(result, {(self.m1, 4.0), (self.m2, 1.5), (self.m4, 1.0)})
 
     def test_quality_field(self):
         aggr = self._get_aggr(flat=True)
-        result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [Average(self.qualf)]))
+        result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [AverageValue(self.qualf)]))
         self.assertEqual(result, {(self.code_A, 0.25), (self.code_B, 0.2)})
 
     def test_secondary_axis(self):
@@ -140,7 +140,7 @@ class TestAggregateORM(AmCATTestCase):
 
         result = (set(aggr.get_aggregate(
             categories=[SchemafieldCategory(self.codef)],
-            values=[Count(), Average(self.intf)]
+            values=[CountArticlesValue(), AverageValue(self.intf)]
         )))
 
         self.assertEqual(result, {(self.code_A, (2, 3.0)), (self.code_B, (1, 1.0)), (self.code_A1, (1, 1.0))})
@@ -152,7 +152,7 @@ class TestAggregateORM(AmCATTestCase):
         # Two categories + count
         result = set(aggr.get_aggregate(
             categories=[MediumCategory(), SchemafieldCategory(self.codef)],
-            values=[Count()]
+            values=[CountArticlesValue()]
         ))
         
         self.assertEqual(result, {
@@ -165,7 +165,7 @@ class TestAggregateORM(AmCATTestCase):
         # Two categories + average
         result = set(aggr.get_aggregate(
             categories=[MediumCategory(), SchemafieldCategory(self.codef)],
-            values=[Average(self.intf)]
+            values=[AverageValue(self.intf)]
         ))
 
         self.assertEqual(result, {
@@ -178,7 +178,7 @@ class TestAggregateORM(AmCATTestCase):
         # Two categories + 2 values
         result = set(aggr.get_aggregate(
             categories=[MediumCategory(), SchemafieldCategory(self.codef)],
-            values=[Average(self.intf), Count()]
+            values=[AverageValue(self.intf), CountArticlesValue()]
         ))
 
         self.assertEqual(result, {
@@ -194,7 +194,7 @@ class TestAggregateORM(AmCATTestCase):
         # We allow empty values (default)
         result = set(aggr.get_aggregate(
             categories=[SchemafieldCategory(self.codef)],
-            values=[Average(self.intf), Average(self.qualf)]
+            values=[AverageValue(self.intf), AverageValue(self.qualf)]
         ))
 
         self.assertEqual(result, {
@@ -206,7 +206,7 @@ class TestAggregateORM(AmCATTestCase):
         # Do not allow empty values
         result = set(aggr.get_aggregate(
             categories=[SchemafieldCategory(self.codef)],
-            values=[Average(self.intf), Average(self.qualf)],
+            values=[AverageValue(self.intf), AverageValue(self.qualf)],
             allow_empty=False
         ))
 
@@ -218,10 +218,10 @@ class TestAggregateORM(AmCATTestCase):
     def test_count(self):
         """Tests whether count values work"""
         aggr = self._get_aggr(flat=True)
-        result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [Count()]))
+        result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [CountArticlesValue()]))
         self.assertEqual(result, {(self.code_A, 2), (self.code_B, 1), (self.code_A1, 1)})
 
     def test_no_codings(self):
         aggr = aggregate_orm.ORMAggregate(Coding.objects.none(), threaded=False)
-        self.assertEqual(set(aggr.get_aggregate(values=[Count()])), set())
+        self.assertEqual(set(aggr.get_aggregate(values=[CountArticlesValue()])), set())
 

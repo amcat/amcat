@@ -4,6 +4,7 @@ Contains logic to aggregate using Postgres / Django ORM, similar to amcates.py.
 from collections import defaultdict
 from multiprocessing.pool import ThreadPool
 from operator import itemgetter
+import logging
 import uuid
 import itertools
 from decimal import Decimal
@@ -13,6 +14,8 @@ from django.db import connection
 from amcat.models import Article, Medium
 from amcat.models import Code, Coding, CodingValue, CodedArticle, CodingSchemaField
 from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
+
+log = logging.getLogger(__name__)
 
 POSTGRES_DATE_TRUNC_VALUES = [
     "microseconds",
@@ -183,9 +186,9 @@ class SchemafieldCategory(Category):
     def __repr__(self):
         return "<SchemafieldCategory: %s>" % self.field
 
-class BaseAggregationValue(SQLObject):
+class Value(SQLObject):
     def __init__(self, prefix=None):
-        super(BaseAggregationValue, self).__init__()
+        super(Value, self).__init__()
         self.prefix = uuid.uuid4().hex if prefix is None else prefix
 
     def aggregate(self, values):
@@ -203,10 +206,10 @@ class BaseAggregationValue(SQLObject):
         """
         return value
 
-class Average(BaseAggregationValue):
+class AverageValue(Value):
     def __init__(self, field, *args, **kwargs):
         """@type field: CodingSchemaField"""
-        super(Average, self).__init__(*args, **kwargs)
+        super(AverageValue, self).__init__(*args, **kwargs)
         assert_msg = "Average only aggregates on codingschemafields for now"
         assert isinstance(field, CodingSchemaField), assert_msg
         self.field = field
@@ -248,17 +251,26 @@ class Average(BaseAggregationValue):
         return float(value)
 
     def __repr__(self):
-        return "<Average: %s>" % self.field
+        return "<AverageValue: %s>" % self.field
 
-class Count(BaseAggregationValue):
-    def get_selects(self):
-        return ['COUNT(DISTINCT("T_articles"."article_id"))']
-
+class CountValue(Value):
     def postprocess(self, value):
         return int(value[0])
 
     def aggregate(self, values):
         return [sum(map(itemgetter(0), values))]
+
+class CountArticlesValue(CountValue):
+    def get_selects(self):
+        return ['COUNT(DISTINCT("T_articles"."article_id"))']
+
+class CountCodingsValue(CountValue):
+    def get_selects(self):
+        return ['COUNT(DISTINCT("T_coded_articles"."id"))']
+
+class CountCodingValuesValue(CountValue):
+    def get_selects(self):
+        return ['COUNT("codings_values"."codingvalue_id")']
 
 
 class ORMAggregate(object):

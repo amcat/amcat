@@ -58,23 +58,27 @@ def get_schemafield_choices(codingjobs, values=True):
     sentence_fields = schemafields.filter(codingschema__isarticleschema=False)
 
     for src, fields in [("Article field", article_fields), ("Sentence field", sentence_fields)]:
-        if src == "Sentence field":
-            continue #TODO: skip sentence fields for now
-
         category_fields = list(get_category_fields(fields))
         if category_fields:
             yield src, category_fields
 
 def get_category_fields(fields):
     for field in fields:
-        if field.fieldtype_id in (FIELDTYPE_IDS.CODEBOOK,):
+        if field.fieldtype_id  == FIELDTYPE_IDS.CODEBOOK:
             yield "codingschemafield(%s)" % field.id, field.label
-            
-def get_value_fields(fields):
+
+def get_average_fields(fields):
     for field in fields:
         if field.fieldtype_id in (FIELDTYPE_IDS.INT, FIELDTYPE_IDS.QUALITY):
             yield "avg(%s)" % field.id, "Average %s" % field.label
-    yield "count", "Article count"
+
+def get_value_fields(fields):
+    yield "Average", list(get_average_fields(fields))
+    yield "Count", [
+        ("count(articles)", "Number of articles"),
+        ("count(codings)", "Number of codings"),
+        ("count(codingvalues)", "Number of coding values")
+    ]
 
 
 class CodingAggregationActionForm(QueryActionForm):
@@ -83,7 +87,7 @@ class CodingAggregationActionForm(QueryActionForm):
     secondary_use_codebook = BooleanField(initial=False, required=False)
     secondary = ChoiceField(label="Secondary aggregation", choices=(("", "------"),) + AGGREGATION_FIELDS, required=False)
 
-    value1 = ChoiceField(label="First value", initial="count")
+    value1 = ChoiceField(label="First value", initial="count(articles)")
     value2 = ChoiceField(label="Second value", required=False, initial="")
 
     #relative_to = CharField(widget=Select, required=False)
@@ -137,14 +141,20 @@ class CodingAggregationActionForm(QueryActionForm):
         if not field_value:
             return None
 
-        if field_value == "count":
-            return aggregate_orm.Count(prefix=prefix)
+        if field_value == "count(articles)":
+            return aggregate_orm.CountArticlesValue(prefix=prefix)
+
+        if field_value == "count(codings)":
+            return aggregate_orm.CountCodingsValue(prefix=prefix)
+
+        if field_value == "count(codingvalues)":
+            return aggregate_orm.CountCodingValuesValue(prefix=prefix)
 
         match = AVERAGE_CODINGSCHEMAFIELD_RE.match(field_value)
         if match:
             codingschemafield_id = int(match.groupdict()["id"])
             codingschemafield = CodingSchemaField.objects.get(id=codingschemafield_id)
-            return aggregate_orm.Average(codingschemafield, prefix=prefix)
+            return aggregate_orm.AverageValue(codingschemafield, prefix=prefix)
 
         raise ValidationError("Not a valid value: %s." % field_value)
 
@@ -222,7 +232,7 @@ class CodingAggregationAction(QueryAction):
         coding_values = coding_values.filter(coding__coded_article__article__id__in=article_ids)
         coding_values = coding_values.filter(coding__coded_article__codingjob__in=codingjobs)
 
-        if schemafield and schemafield_value:
+        if schemafield and  schemafield_value:
             code_ids = list(get_code_filter(schemafield.codebook, schemafield_value.id, schemafield_include_descendants))
             coding_values = coding_values.filter(field__id=schemafield.id)
             coding_values = coding_values.filter(intval__in=code_ids)
