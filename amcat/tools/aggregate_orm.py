@@ -85,13 +85,6 @@ class JOINS:
         prefix="T_"
     )
 
-DEFAULT_JOINS = (
-    JOINS.codings.format(prefix=""),
-    JOINS.coded_articles.format(prefix=""),
-    JOINS.articles.format(prefix=""),
-    JOINS.codingjobs.format(prefix="")
-)
-
 DATE_TRUNC_SQL = 'date_trunc(\'{interval}\', "T_articles"."date")'
 
 def merge_aggregations(results):
@@ -101,6 +94,8 @@ def merge_aggregations(results):
 
 
 class SQLObject(object):
+    joins_needed = []
+
     def __init__(self, prefix=None):
         self.prefix = uuid.uuid4().hex if prefix is None else prefix
 
@@ -154,6 +149,8 @@ class ModelCategory(Category):
 
 
 class IntervalCategory(Category):
+    joins_needed = ("codings", "coded_articles", "articles")
+
     def __init__(self, interval, **kwargs):
         super(IntervalCategory, self).__init__(**kwargs)
 
@@ -171,17 +168,21 @@ class IntervalCategory(Category):
 
 class MediumCategory(ModelCategory):
     model = Medium
+    joins_needed = ("codings", "coded_articles", "articles")
 
     def get_selects(self):
         yield 'T_articles.medium_id'
 
 class ArticleSetCategory(ModelCategory):
     model = ArticleSet
+    joins_needed = ("codings", "coded_articles", "codingjobs")
 
     def get_selects(self):
         yield "T_codingjobs.articleset_id"
 
 class TermCategory(Category):
+    joins_needed = ("codings", "coded_articles", "articles")
+
     def __init__(self, terms=None, **kwargs):
         # Force random prefix
         super(TermCategory, self).__init__(prefix=None)
@@ -304,6 +305,8 @@ class Value(SQLObject):
         return value
 
 class AverageValue(Value):
+    joins_needed = ("codings",)
+
     def __init__(self, field, *args, **kwargs):
         """@type field: CodingSchemaField"""
         super(AverageValue, self).__init__(*args, **kwargs)
@@ -358,10 +361,14 @@ class CountValue(Value):
         return [sum(map(itemgetter(0), values))]
 
 class CountArticlesValue(CountValue):
+    joins_needed = ("codings", "coded_articles", "articles")
+
     def get_selects(self):
         return ['COUNT(DISTINCT(T_articles.article_id))']
 
 class CountCodingsValue(CountValue):
+    joins_needed = ("codings",)
+
     def get_selects(self):
         return ['COUNT(DISTINCT(T_coded_articles.id))']
 
@@ -410,18 +417,25 @@ class ORMAggregate(object):
 
         # Add global codings filter
         codings_ids = tuple(self.codings.values_list("id", flat=True))
-        wheres = ['"codings_values"."coding_id" IN {}'.format(codings_ids)]
+        wheres = ['codings_values.coding_id IN {}'.format(codings_ids)]
 
         # Gather all separate sql statements
-        setups, teardowns = [], []
-        selects, joins, groups = [], list(DEFAULT_JOINS), []
+        joins_needed = set()
+        setups, selects, joins, groups, teardowns = [], [], [], [], []
         for sqlobj in itertools.chain(categories, [value]):
+            joins_needed.update(sqlobj.joins_needed)
             setups.extend(sqlobj.get_setup_statements())
             groups.append(sqlobj.get_group_by())
             selects.extend(sqlobj.get_selects())
             joins.extend(sqlobj.get_joins())
             wheres.extend(sqlobj.get_wheres())
             teardowns.extend(sqlobj.get_teardown_statements())
+
+        seen = set()
+        for join in reversed(("codings", "coded_articles", "articles", "codingjobs")):
+            if join in joins_needed and join not in seen:
+                joins.insert(0, getattr(JOINS, join).format(prefix=""))
+                seen.add(join)
 
         for setup_statement in setups:
             yield False, setup_statement
