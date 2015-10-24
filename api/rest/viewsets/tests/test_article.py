@@ -62,3 +62,49 @@ class TestArticleViewSet(APITestCase):
         self.assertEqual(res[0]["headline"], a['headline'])
         self.assertEqual(toolkit.readDate(res[0]["date"]), toolkit.readDate(a['date']))
         self.assertEqual(res[0]["uuid"], a['uuid'])
+
+    @amcattest.use_elastic
+    def test_dupes(self):
+        """Test whether deduplication on uuid and fields works"""
+        self.set_up()
+        article = amcattest.create_test_article()
+        amcates.ES().flush()
+        
+        a = {
+            'date': datetime.datetime.now().isoformat(),
+            'headline': 'Test child',
+            'medium': 'Fantasy',
+            'text': 'Hello Universe',
+            'pagenr': 1,
+            'url': 'http://example.org',
+            'uuid': article.uuid
+        }
+
+        p = amcattest.create_test_project(owner=self.user)
+        s = amcattest.create_test_set(project=p)
+        url = "/api/v4/projects/{p.id}/articlesets/{s.id}/articles/".format(**locals())
+        _status, response = self.post(url, a, self.user)
+        self.assertEqual(response['id'], article.id)
+        # is it added to elastic for this set?
+        amcates.ES().flush()
+        self.assertEqual(set(amcates.ES().query_ids(filters={'sets':s.id})), {article.id})
+        
+        
+        a = {
+            'date': '2001-01-01T00:00',
+            'headline': 'Test',
+            'medium': 'Fantasy',
+            'text': 'Hello Universe',
+            'pagenr': 1,
+            'url': 'http://example.org',
+        }
+
+        _status, response1 = self.post(url, a, self.user)
+        amcates.ES().flush()
+        
+        _status, response2 = self.post(url, a, self.user)
+        self.assertEqual(response1['id'], response2['id'])
+
+        amcates.ES().flush()
+        self.assertEqual(set(amcates.ES().query_ids(filters={'sets':s.id})), {article.id, response1['id']})
+

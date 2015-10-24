@@ -45,6 +45,7 @@ from amcat.tools.toolkit import splitlist
 from amcat.tools.tree import Tree
 from amcat.tools.progress import ProgressMonitor
 
+from amcat.tools.amcates import Result
 
 log = logging.getLogger(__name__)
 
@@ -279,8 +280,14 @@ class Article(AmcatModel):
             hashes = [a.es_dict['hash'] for a in to_create]
             results = es.query_all(filters={'hashes': hashes}, fields=["hash", "sets"], score=False)
             dupes = {r.hash: r for r in results}
+
         else:
             dupes = {}
+
+        uuids = [a.es_dict['uuid'] for a in to_create if a.es_dict['uuid']]
+        if uuids:
+            results = es.query_all(filters={'uuid': uuids}, fields=["uuid", "sets"], score=False)
+            dupes.update({r.uuid: r for r in results})
 
         monitor.update(10, "Creating {} articles, {} dupes, {} existing"
                        .format(len(to_create), len(dupes), len(add_existing_to_set)))
@@ -292,6 +299,8 @@ class Article(AmcatModel):
         errors = []  # return errors
         for a in to_create:
             dupe = dupes.get(a.es_dict['hash'], None)
+            if a.uuid and not dupe:
+                dupe = dupes.get(a.uuid, None)
             a.duplicate = bool(dupe)
             if a.duplicate:
                 a.id = dupe.id
@@ -312,6 +321,7 @@ class Article(AmcatModel):
                     errors.append(e)
                     continue
                 a.es_dict['id'] = a.pk
+                a.es_dict['uuid'] = a.uuid
                 add_to_index.append(a.es_dict)
                 add_new_to_set.add(a.pk)
                 result.append(a)
@@ -333,6 +343,11 @@ class Article(AmcatModel):
                 sets[setid].add_articles(add_new_to_set, add_to_index=False)
         monitor.update(10, "Added {} new articles to articlesets, done creating articles!"
                        .format(len(add_new_to_set)))
+
+        # if there are any 'dupe' placeholders, convert them to article objects
+        placeholders = [res.id for res in result if isinstance(res, Result)]
+        placeholders = list(Article.objects.filter(pk__in=placeholders).only("pk"))
+        result = [res for res in result if not isinstance(res, Result)] + placeholders
         
         return result, errors
 
@@ -360,22 +375,6 @@ class Article(AmcatModel):
             for tree, article in zip(level_trees, articles):
                 tree.obj = article
 
-    @classmethod
-    def ordered_save(cls, articles, *args, **kwargs):
-        """Figures out parent-child relationships, saves parent first
-        @param articles: a collection of unsaved articles
-        @param articleset: an articleset object
-        @param check_duplicate: if True, duplicates are not added to the database or index
-        """
-        index = {a.text: a for a in articles if a}
-        articles, errors = cls.create_articles(articles, *args, **kwargs)
-        for a in articles:
-            parent = index[a.text].parent
-            for b in articles:
-                if parent and b.text == parent.text:
-                    a.parent = b
-                    a.save()
-        return articles, errors
 
     def get_tree(self, include_parents=True, fields=("id",)):
         """

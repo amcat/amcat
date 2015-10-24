@@ -67,17 +67,14 @@ class ArticleSerializer(AmCATProjectModelSerializer):
     uuid = CharField(read_only=False, required=False)
 
     def create(self, validated_data):
-        try:
-            article = Article.objects.get(uuid=validated_data["uuid"])
-        except (Article.DoesNotExist, KeyError) as e:
-            article = super(ArticleSerializer, self).create(validated_data)
-
-        elastic = ES()
-        elastic.add_articles([article.id])
-        elastic.flush()
-
-        self.context["view"].articleset.add_articles([article])
-        return article
+        art = Article(**validated_data)
+        articleset = self.context["view"].kwargs.get('articleset')
+        if articleset: articleset = ArticleSet.objects.get(pk=articleset)
+        result, errors = Article.create_articles([art], articleset=articleset)
+        if errors: #TODO: WvA: not sure what kind of error handling is good inside serializer
+            logging.error("Error {errors}".format(**locals()))
+            raise Exception(errors)
+        return result[0]
 
     class Meta:
         model = Article

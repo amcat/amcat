@@ -811,6 +811,7 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
     f = {}
     for singular, plural in [("mediumid", "mediumids"),
                              ("id", "ids"),
+                             ("uuid", "uuids"),
                              ("set", "sets"),
                              ("section", "sections"),
                              ("page", "pages"),

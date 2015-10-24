@@ -128,7 +128,9 @@ class TestArticle(amcattest.AmCATTestCase):
         Article.create_articles([a], create_id=True)
         db_a = Article.objects.get(pk=a.id)
         amcates.ES().flush()
-        es_a = list(amcates.ES().query(filters={'ids': [a.id]}, fields=["date", "headline"]))[0]
+        es_a = list(amcates.ES().query(filters={'ids': [a.id]}, fields=["date", "headline", "uuid"]))[0]
+        self.assertEqual(a.uuid, unicode(db_a.uuid))
+        self.assertEqual(a.uuid, es_a.uuid)
         self.assertEqual(a.headline, db_a.headline)
         self.assertEqual(a.headline, es_a.headline)
         self.assertEqual('2010-12-31T00:00:00', db_a.date.isoformat())
