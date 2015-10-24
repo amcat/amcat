@@ -23,17 +23,18 @@ import json
 from django.core.exceptions import ValidationError
 from django.forms import ChoiceField, BooleanField
 
-from amcat.models import Medium
+from amcat.models import Medium, ArticleSet, CodingJob
 from amcat.models import CodingSchemaField, Code, CodingValue, Coding
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools import aggregate_orm
 from amcat.tools.aggregate_orm import ORMAggregate
-from amcat.tools.keywordsearch import SelectionSearch
+from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
 from amcat.scripts.forms.selection import get_all_schemafields
 from aggregation import AggregationEncoder
 from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
 
 AGGREGATION_FIELDS = (
+    ("articleset", "Articleset"),
     ("medium", "Medium"),
     ("term", "Term"),
     ("Interval", (
@@ -119,6 +120,9 @@ class CodingAggregationActionForm(QueryActionForm):
         if field_value == "medium":
             return aggregate_orm.MediumCategory(prefix=prefix)
 
+        if field_value == "articleset":
+            return aggregate_orm.ArticleSetCategory(prefix=prefix)
+
         if field_value == "term":
             return aggregate_orm.TermCategory()
 
@@ -183,9 +187,9 @@ class CodingAggregationActionForm(QueryActionForm):
 def to_sortable_tuple(key):
     if isinstance(key, tuple):
         return tuple(map(to_sortable_tuple, key))
-    elif isinstance(key, Medium):
+    elif isinstance(key, (Medium, ArticleSet, CodingJob)):
         return key.name.lower()
-    elif isinstance(key, Code):
+    elif isinstance(key, (Code, SearchQuery)):
         return key.label.lower()
     return key
 

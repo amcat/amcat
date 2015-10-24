@@ -11,7 +11,7 @@ from decimal import Decimal
 
 from django.db import connection
 
-from amcat.models import Article, Medium
+from amcat.models import Article, Medium, CodingJob, ArticleSet
 from amcat.models import Code, Coding, CodingValue, CodedArticle, CodingSchemaField
 from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
 
@@ -69,6 +69,14 @@ class JOINS:
         prefix="T_"
     )
 
+    codingjobs = INNER_JOIN.format(
+        table=CodingJob._meta.db_table,
+        t1=CodedArticle._meta.db_table,
+        f1="codingjob_id",
+        f2="codingjob_id",
+        prefix="T_"
+    )
+
     terms = INNER_JOIN.format(
         table="{{table}}",
         t1=Article._meta.db_table,
@@ -80,7 +88,8 @@ class JOINS:
 DEFAULT_JOINS = (
     JOINS.codings.format(prefix=""),
     JOINS.coded_articles.format(prefix=""),
-    JOINS.articles.format(prefix="")
+    JOINS.articles.format(prefix=""),
+    JOINS.codingjobs.format(prefix="")
 )
 
 DATE_TRUNC_SQL = 'date_trunc(\'{interval}\', "T_articles"."date")'
@@ -165,6 +174,12 @@ class MediumCategory(ModelCategory):
 
     def get_selects(self):
         yield 'T_articles.medium_id'
+
+class ArticleSetCategory(ModelCategory):
+    model = ArticleSet
+
+    def get_selects(self):
+        yield "T_codingjobs.articleset_id"
 
 class TermCategory(Category):
     def __init__(self, terms=None, **kwargs):

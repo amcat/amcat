@@ -22,7 +22,7 @@ from django.test import TransactionTestCase
 from amcat.models import Coding
 from amcat.tools import amcattest, aggregate_orm
 from amcat.tools.aggregate_orm import MediumCategory, CountArticlesValue, CountCodingValuesValue, \
-    CountCodingsValue, TermCategory
+    CountCodingsValue, TermCategory, ArticleSetCategory
 from amcat.tools.aggregate_orm import SchemafieldCategory, AverageValue
 from amcat.tools.amcattest import AmCATTestCase
 
@@ -86,6 +86,11 @@ class TestAggregateORM(TransactionTestCase):
         codingjob_ids = [self.job.id]
         kwargs['threaded'] = False
         return aggregate_orm.ORMAggregate.from_articles(article_ids, codingjob_ids, **kwargs)
+
+    def test_articleset_category(self):
+        aggr = self._get_aggr(flat=True)
+        result = set(aggr.get_aggregate([ArticleSetCategory()], [CountArticlesValue()]))
+        self.assertEqual(result, {(self.s1, 4)})
 
     def test_term_category(self):
         # Test three terms
