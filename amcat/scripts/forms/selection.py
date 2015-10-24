@@ -22,14 +22,13 @@ from itertools import ifilterfalse
 import datetime
 import json
 import logging
+import itertools
 
 from django import forms
 from django.core.exceptions import ValidationError
-from django.db.models import Q
 
 from amcat.models import Codebook, Language, Article, ArticleSet, CodingJob, CodingSchemaField, Code, \
-    CodingSchema, CodebookCode
-
+    CodebookCode
 from amcat.models.coding.codingschemafield import FIELDTYPE_IDS
 from amcat.models.medium import Medium, get_mediums
 from amcat.forms.forms import order_fields
@@ -37,7 +36,6 @@ from amcat.tools.caching import cached
 from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.toolkit import to_datetime
 from amcat.tools.djangotoolkit import db_supports_distinct_on
-
 
 log = logging.getLogger(__name__)
 
@@ -75,12 +73,10 @@ def _add_to_dict(dict, key, value):
 
 
 def get_all_schemafields(codingjobs):
-    codingjob_ids = [c.id for c in codingjobs]
-    unitschema_filter = Q(codingjobs_unit__id__in=codingjob_ids)
-    articleschema_filter = Q(codingjobs_article__id__in=codingjob_ids)
-    codingschemas = CodingSchema.objects.filter(unitschema_filter | articleschema_filter)
-    schemafields = CodingSchemaField.objects.filter(codingschema__in=codingschemas)
-    return schemafields
+    codingjobs = CodingJob.objects.filter(id__in=[c.id for c in codingjobs])
+    schemafield_ids = codingjobs.values_list("unitschema_id", "articleschema_id")
+    schemafield_ids = set(itertools.chain.from_iterable(schemafield_ids))
+    return CodingSchemaField.objects.filter(id__in=schemafield_ids)
 
 
 @order_fields()
@@ -139,7 +135,7 @@ class SelectionForm(forms.Form):
 
         if self.codingjobs:
             self.fields['articlesets'].queryset = self.fields['articlesets'].queryset.filter(
-                codingjob_set__id__in=codingjobs.values_list("id", flat=True)
+                id__in=codingjobs.values_list("articleset_id", flat=True)
             )
 
             self.schemafields = get_all_schemafields(self.codingjobs)
