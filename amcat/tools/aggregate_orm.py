@@ -108,9 +108,6 @@ class SQLObject(object):
     def get_selects(self):
         raise NotImplementedError("Subclasses should implement get_selects().")
 
-    def get_withs(self):
-        return ()
-
     def get_joins(self):
         return ()
 
@@ -402,10 +399,9 @@ class ORMAggregate(object):
 
         # Gather all separate sql statements
         setups, teardowns = [], []
-        withs, selects, joins, groups = [], [], list(DEFAULT_JOINS), []
+        selects, joins, groups = [], list(DEFAULT_JOINS), []
         for sqlobj in itertools.chain(categories, [value]):
             setups.extend(sqlobj.get_setup_statements())
-            withs.append(sqlobj.get_withs())
             groups.append(sqlobj.get_group_by())
             selects.extend(sqlobj.get_selects())
             joins.extend(sqlobj.get_joins())
@@ -417,7 +413,6 @@ class ORMAggregate(object):
 
         # Build sql statement
         yield True, sql.format(
-            withs=",".join(filter(None, withs)),
             selects=",".join(filter(None, selects)),
             joins=" ".join(filter(None, joins)),
             wheres="({})".format(") AND (".join(filter(None, wheres))),
