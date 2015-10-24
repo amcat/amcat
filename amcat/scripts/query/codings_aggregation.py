@@ -35,6 +35,7 @@ from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
 
 AGGREGATION_FIELDS = (
     ("medium", "Medium"),
+    ("term", "Term"),
     ("Interval", (
         ("year", "Year"),
         ("quarter", "Quarter"),
@@ -117,6 +118,9 @@ class CodingAggregationActionForm(QueryActionForm):
 
         if field_value == "medium":
             return aggregate_orm.MediumCategory(prefix=prefix)
+
+        if field_value == "term":
+            return aggregate_orm.TermCategory()
 
         # Test for schemafield
         match = CODINGSCHEMAFIELD_RE.match(field_value)
@@ -239,7 +243,8 @@ class CodingAggregationAction(QueryAction):
 
         codings = Coding.objects.filter(id__in=coding_values.values_list("coding_id", flat=True))
 
-        orm_aggregate = ORMAggregate(codings, flat=False)
+        terms = selection.get_article_ids_per_query()
+        orm_aggregate = ORMAggregate(codings, flat=False, terms=terms)
         categories = list(filter(None, [primary, secondary]))
         values = list(filter(None, [value1, value2]))
         aggregation = orm_aggregate.get_aggregate(categories, values)
