@@ -19,7 +19,7 @@ POSTGRES_DATE_TRUNC_VALUES = [
     "millennium"
 ]
 
-DATE_TRUNC_SQL = 'date_trunc(\'{interval}\', "T_articles"."date")'
+DATE_TRUNC_SQL = 'date_trunc(\'{interval}\', T_articles.date)'
 
 __all__ = (
     "IntervalCategory",

@@ -22,7 +22,8 @@ from django.test import TransactionTestCase
 
 from amcat.models import Coding
 from amcat.tools import amcattest, aggregate_orm
-from amcat.tools.aggregate_orm import MediumCategory, CountArticlesValue, TermCategory, ArticleSetCategory
+from amcat.tools.aggregate_orm import MediumCategory, CountArticlesValue, TermCategory, ArticleSetCategory, \
+    IntervalCategory
 from amcat.tools.aggregate_orm import SchemafieldCategory, AverageValue
 
 
@@ -85,6 +86,16 @@ class TestAggregateORM(TransactionTestCase):
         codingjob_ids = [self.job.id]
         kwargs['threaded'] = False
         return aggregate_orm.ORMAggregate.from_articles(article_ids, codingjob_ids, **kwargs)
+
+    def test_interval_category(self):
+        aggr = self._get_aggr(flat=True)
+        result = set(aggr.get_aggregate([IntervalCategory("day")], [CountArticlesValue()]))
+        self.assertEqual(result, {
+            (datetime.datetime(2015, 01, 01), 2),
+            (datetime.datetime(2015, 02, 01), 1),
+            (datetime.datetime(2016, 01, 01), 1),
+        })
+
 
     def test_articleset_category(self):
         aggr = self._get_aggr(flat=True)
