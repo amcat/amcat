@@ -106,17 +106,17 @@ class CodingAggregationActionForm(QueryActionForm):
         self.fields["primary"].choices += schema_choices
         self.fields["secondary"].choices += schema_choices
 
-    def _clean_aggregation(self, field_name):
+    def _clean_aggregation(self, field_name, prefix=None):
         field_value = self.cleaned_data[field_name]
 
         if not field_value:
             return None
 
         if field_value in INTERAVLS:
-            return aggregate_orm.IntervalCategory(field_value)
+            return aggregate_orm.IntervalCategory(field_value, prefix=prefix)
 
         if field_value == "medium":
-            return aggregate_orm.MediumCategory()
+            return aggregate_orm.MediumCategory(prefix=prefix)
 
         # Test for schemafield
         match = CODINGSCHEMAFIELD_RE.match(field_value)
@@ -125,15 +125,15 @@ class CodingAggregationActionForm(QueryActionForm):
             codingschemafield = CodingSchemaField.objects.get(id=codingschemafield_id)
             use_codebook = self.cleaned_data["{}_use_codebook".format(field_name)]
             codebook = codingschemafield.codebook if use_codebook else None
-            return aggregate_orm.SchemafieldCategory(codingschemafield, codebook=codebook)
+            return aggregate_orm.SchemafieldCategory(codingschemafield, codebook=codebook, prefix=prefix)
 
         raise ValidationError("Not a valid aggregation: %s." % field_value)
 
     def clean_primary(self):
-        return self._clean_aggregation("primary")
+        return self._clean_aggregation("primary", prefix="1")
 
     def clean_secondary(self):
-        return self._clean_aggregation("secondary")
+        return self._clean_aggregation("secondary", prefix="3")
 
     def _clean_value(self, field_name, prefix=None):
         field_value = self.cleaned_data[field_name]

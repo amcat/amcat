@@ -1,7 +1,7 @@
 """
 Contains logic to aggregate using Postgres / Django ORM, similar to amcates.py.
 """
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from multiprocessing.pool import ThreadPool
 from operator import itemgetter
 import logging
@@ -33,7 +33,7 @@ POSTGRES_DATE_TRUNC_VALUES = [
     "millennium"
 ]
 
-INNER_JOIN = r'INNER JOIN "{table}" AS "T{{prefix}}_{table}" ON ("{prefix}{t1}"."{f1}" = "T{{prefix}}_{table}"."{f2}")'
+INNER_JOIN = r'INNER JOIN {table} AS T{{prefix}}_{table} ON ({prefix}{t1}.{f1} = T{{prefix}}_{table}.{f2})'
 
 
 class JOINS:
@@ -69,6 +69,14 @@ class JOINS:
         prefix="T_"
     )
 
+    terms = INNER_JOIN.format(
+        table="{{table}}",
+        t1=Article._meta.db_table,
+        f1="article_id",
+        f2="article_id",
+        prefix="T_"
+    )
+
 DEFAULT_JOINS = (
     JOINS.codings.format(prefix=""),
     JOINS.coded_articles.format(prefix=""),
@@ -84,8 +92,24 @@ def merge_aggregations(results):
 
 
 class SQLObject(object):
+    def __init__(self, prefix=None):
+        self.prefix = uuid.uuid4().hex if prefix is None else prefix
+
+    def get_setup_statements(self):
+        """Yield sql statements which should be executed before the aggregation
+        begins. This could be used to create and populate temporary tables and
+        indices."""
+        return ()
+
+    def get_teardown_statements(self):
+        """Same as setup_statements, but executed after aggregation."""
+        return ()
+
     def get_selects(self):
         raise NotImplementedError("Subclasses should implement get_selects().")
+
+    def get_withs(self):
+        return ()
 
     def get_joins(self):
         return ()
@@ -97,8 +121,6 @@ class SQLObject(object):
         return None
 
 class Category(SQLObject):
-    model = None
-
     def aggregate(self, categories, value, rows):
         """
         Categories may aggregate rows further as they see fit. This can for example
@@ -106,12 +128,28 @@ class Category(SQLObject):
         """
         return rows
 
+    def get_objects(self, ids):
+        return None
+
+    def get_object(self, objects, id):
+        return id
+
     def get_group_by(self):
         return next(iter(self.get_selects()))
 
+class ModelCategory(Category):
+    model = None
+
+    def get_objects(self, ids):
+        return self.model.objects.in_bulk(ids)
+
+    def get_object(self, objects, id):
+        return objects[id]
+
+
 class IntervalCategory(Category):
-    def __init__(self, interval):
-        super(IntervalCategory, self).__init__()
+    def __init__(self, interval, **kwargs):
+        super(IntervalCategory, self).__init__(**kwargs)
 
         if interval not in POSTGRES_DATE_TRUNC_VALUES:
             err_msg = "{} not a valid interval. Choose on of: {}"
@@ -125,17 +163,65 @@ class IntervalCategory(Category):
     def __repr__(self):
         return "<Interval: %s>" % self.interval
 
-class MediumCategory(Category):
+class MediumCategory(ModelCategory):
     model = Medium
 
     def get_selects(self):
-        return ['"T_articles"."medium_id"']
+        yield 'T_articles.medium_id'
 
-class SchemafieldCategory(Category):
+class TermCategory(Category):
+    def __init__(self, terms=None, **kwargs):
+        # Force random prefix
+        super(TermCategory, self).__init__(prefix=None)
+        self.terms = terms
+
+    def _get_values(self):
+        for term, article_ids in enumerate(self.terms.values()):
+            for article_id in article_ids:
+                yield article_id, term
+
+    def get_setup_statements(self):
+        # Create table
+        sql = "CREATE TEMPORARY TABLE T_{prefix}_terms (article_id int, term int);"
+        yield sql.format(prefix=self.prefix)
+
+        values = tuple(self._get_values())
+        if values:
+            sql = "INSERT INTO T_{prefix}_terms (article_id, term) VALUES {values};"
+            yield sql.format(prefix=self.prefix, values=str(values)[1:-1])
+
+        # Create index
+        sql = "CREATE INDEX T_{prefix}_article_id_index ON T_{prefix}_terms (article_id);"
+        yield sql.format(prefix=self.prefix)
+
+        # Analyse table
+        yield "ANALYSE T_{prefix}_terms;".format(prefix=self.prefix)
+
+    def get_teardown_statements(self):
+        yield "DROP INDEX IF EXISTS T_{prefix}_article_id_index;".format(prefix=self.prefix)
+        yield "DROP TABLE IF EXISTS T_{prefix}_terms;".format(prefix=self.prefix)
+
+    def get_joins(self):
+        yield JOINS.terms.format(prefix="").format(table="T_{prefix}_terms".format(prefix=self.prefix))
+
+    def get_selects(self):
+        yield 'T_T_{prefix}_terms.term'.format(prefix=self.prefix)
+
+    def get_objects(self, ids):
+        assert isinstance(self.terms, OrderedDict)
+        return dict(enumerate(self.terms.keys()))
+
+    def get_object(self, objects, id):
+        return objects.get(id)
+
+    def copy(self, terms):
+        return self.__class__(terms)
+
+class SchemafieldCategory(ModelCategory):
     model = Code
 
-    def __init__(self, field, codebook=None):
-        super(SchemafieldCategory, self).__init__()
+    def __init__(self, field, codebook=None, **kwargs):
+        super(SchemafieldCategory, self).__init__(**kwargs)
         self.field = field
         self.codebook = codebook
         self.aggregation_map = {}
@@ -177,19 +263,18 @@ class SchemafieldCategory(Category):
         return self._aggregate(categories, value, rows)
 
     def get_selects(self):
-        return ['"codings_values"."intval"']
+        return ['codings_values.intval']
 
     def get_wheres(self):
-        where_sql = '"codings_values"."field_id" = {field.id}'
+        where_sql = 'codings_values.field_id = {field.id}'
         yield where_sql.format(field=self.field)
 
     def __repr__(self):
         return "<SchemafieldCategory: %s>" % self.field
 
 class Value(SQLObject):
-    def __init__(self, prefix=None):
-        super(Value, self).__init__()
-        self.prefix = uuid.uuid4().hex if prefix is None else prefix
+    def __init__(self, **kwargs):
+        super(Value, self).__init__(**kwargs)
 
     def aggregate(self, values):
         """
@@ -218,11 +303,11 @@ class AverageValue(Value):
         yield JOINS.codings_values.format(prefix=self.prefix)
 
     def get_wheres(self):
-        where_sql = '"T{prefix}_codings_values"."field_id" = {field_id}'
+        where_sql = 'T{prefix}_codings_values.field_id = {field_id}'
         yield where_sql.format(field_id=self.field.id, prefix=self.prefix)
 
     def get_selects(self):
-        sql = '{{method}}("T{prefix}_codings_values"."intval")'.format(prefix=self.prefix)
+        sql = '{{method}}(T{prefix}_codings_values.intval)'.format(prefix=self.prefix)
 
         # Yield weight select
         yield sql.format(method="COUNT")
@@ -262,25 +347,31 @@ class CountValue(Value):
 
 class CountArticlesValue(CountValue):
     def get_selects(self):
-        return ['COUNT(DISTINCT("T_articles"."article_id"))']
+        return ['COUNT(DISTINCT(T_articles.article_id))']
 
 class CountCodingsValue(CountValue):
     def get_selects(self):
-        return ['COUNT(DISTINCT("T_coded_articles"."id"))']
+        return ['COUNT(DISTINCT(T_coded_articles.id))']
 
 class CountCodingValuesValue(CountValue):
     def get_selects(self):
-        return ['COUNT("codings_values"."codingvalue_id")']
+        return ['COUNT(codings_values.codingvalue_id)']
 
 
 class ORMAggregate(object):
-    def __init__(self, codings, flat=False, threaded=True):
+    def __init__(self, codings, terms=None, flat=False, threaded=True):
         """
         @type codings: QuerySet
+        @param terms: mapping of label to list of article ids. This will be used
+                      by TermCategory. Ideally, we would instantiate TermCategory
+                      with this, but the article ids are often only known at the time
+                      of instantiating ORMAggregate.
         """
         self.codings = codings
         self.flat = flat
         self.threaded = threaded
+        self.terms = OrderedDict(terms if terms else {})
+
 
     @classmethod
     def from_articles(self, article_ids, codingjob_ids, **kwargs):
@@ -293,34 +384,57 @@ class ORMAggregate(object):
         return ORMAggregate(codings, **kwargs)
 
     def _get_aggregate_sql(self, categories, value):
+        # Build SQL template
         sql = 'SELECT {selects} FROM "codings_values" {joins} WHERE {wheres}'
         if categories:
-            sql += " GROUP BY {groups}"
-        sql += ';'
+            sql += " GROUP BY {groups};"
+        else:
+            sql += ";"
 
+        # Instantiate TermCategory with terms (HACK)
+        for i, category in enumerate(categories):
+            if isinstance(category, TermCategory):
+                categories[i] = category.copy(self.terms)
+
+        # Add global codings filter
         codings_ids = tuple(self.codings.values_list("id", flat=True))
         wheres = ['"codings_values"."coding_id" IN {}'.format(codings_ids)]
 
         # Gather all separate sql statements
-        selects, joins, groups = [], list(DEFAULT_JOINS), []
+        setups, teardowns = [], []
+        withs, selects, joins, groups = [], [], list(DEFAULT_JOINS), []
         for sqlobj in itertools.chain(categories, [value]):
+            setups.extend(sqlobj.get_setup_statements())
+            withs.append(sqlobj.get_withs())
             groups.append(sqlobj.get_group_by())
             selects.extend(sqlobj.get_selects())
             joins.extend(sqlobj.get_joins())
             wheres.extend(sqlobj.get_wheres())
+            teardowns.extend(sqlobj.get_teardown_statements())
+
+        for setup_statement in setups:
+            yield False, setup_statement
 
         # Build sql statement
-        return sql.format(
+        yield True, sql.format(
+            withs=",".join(filter(None, withs)),
             selects=",".join(filter(None, selects)),
             joins=" ".join(filter(None, joins)),
             wheres="({})".format(") AND (".join(filter(None, wheres))),
             groups=",".join(filter(None, groups))
         )
 
-    def _execute_sql(self, query):
+        for teardown_statement in teardowns:
+            yield False, teardown_statement
+
+    def _execute_sql(self, queries):
+        results = []
         with connection.cursor() as c:
-            c.execute(query)
-            return list(map(list, c.fetchall()))
+            for collect_results, query in queries:
+                c.execute(query)
+                if collect_results:
+                    results.extend(map(list, c.fetchall()))
+            return results
 
     def _execute_sqls(self, queries):
         if not self.threaded:
@@ -354,12 +468,10 @@ class ORMAggregate(object):
 
         # Replace ids with model objects
         for i, category in enumerate(categories):
-            if category.model is None:
-                continue
             pks = [row[i] for row in aggregation]
-            objs = category.model.objects.in_bulk(pks)
+            objs = category.get_objects(pks)
             for row in aggregation:
-                row[i] = objs[row[i]]
+                row[i] = category.get_object(objs, row[i])
 
         # Flat representation to ([cats], [vals])
         num_categories = len(categories)

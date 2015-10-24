@@ -17,16 +17,17 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import datetime
+from django.test import TransactionTestCase
 
 from amcat.models import Coding
 from amcat.tools import amcattest, aggregate_orm
 from amcat.tools.aggregate_orm import MediumCategory, CountArticlesValue, CountCodingValuesValue, \
-    CountCodingsValue
+    CountCodingsValue, TermCategory
 from amcat.tools.aggregate_orm import SchemafieldCategory, AverageValue
 from amcat.tools.amcattest import AmCATTestCase
 
 
-class TestAggregateORM(AmCATTestCase):
+class TestAggregateORM(TransactionTestCase):
     fixtures = ['_initial_data.json',]
 
     def setUp(self):
@@ -80,10 +81,32 @@ class TestAggregateORM(AmCATTestCase):
         c4 = amcattest.create_test_coding(codingjob=job, article=self.a3)
         c4.update_values({self.codef: self.code_B.id, self.intf: 10, self.qualf: 8})
 
-    def _get_aggr(self, flat=False):
+    def _get_aggr(self, **kwargs):
         article_ids = [a.id for a in self.s1.articles.all()]
         codingjob_ids = [self.job.id]
-        return aggregate_orm.ORMAggregate.from_articles(article_ids, codingjob_ids, flat=flat, threaded=False)
+        kwargs['threaded'] = False
+        return aggregate_orm.ORMAggregate.from_articles(article_ids, codingjob_ids, **kwargs)
+
+    def test_term_category(self):
+        # Test three terms
+        aggr = self._get_aggr(flat=True, terms={
+            "a": [self.a1.id, self.a2.id, self.a3.id],
+            "b": [self.a4.id, self.a5.id],
+            "c": [self.a1.id, self.a4.id]
+        })
+
+        result = set(aggr.get_aggregate([TermCategory()], [CountArticlesValue()]))
+        self.assertEqual(result, {
+            ('a', 3),
+            ('b', 1), # Article A5 has no coding, so won't be included!
+            ('c', 2),
+        })
+
+        # Test empty terms
+        aggr = self._get_aggr(flat=True, terms={})
+        result = set(aggr.get_aggregate([TermCategory()], [CountArticlesValue()]))
+        self.assertEqual(result, set())
+
 
     def test_incorrect_inputs(self):
         # You need at least one value
@@ -224,4 +247,3 @@ class TestAggregateORM(AmCATTestCase):
     def test_no_codings(self):
         aggr = aggregate_orm.ORMAggregate(Coding.objects.none(), threaded=False)
         self.assertEqual(set(aggr.get_aggregate(values=[CountArticlesValue()])), set())
-
