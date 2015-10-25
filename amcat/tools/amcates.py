@@ -116,10 +116,7 @@ def get_article_dict(article, sets=None):
     article_dict["uuid"] = str(article_dict["uuid"])
     article_dict["sets"] = sets
 
-    if settings.ES_USE_LEGACY_HASH_FUNCTION:
-        article_dict['hash'] = _get_legacy_hash(article_dict)
-    else:
-        article_dict['hash'] = _get_hash(article_dict)
+    article_dict['hash'] = _get_hash(article_dict)
     return article_dict
 
 
@@ -137,6 +134,8 @@ def _get_legacy_hash(article_dict):
 
 
 def _get_hash(article):
+    if settings.ES_USE_LEGACY_HASH_FUNCTION:
+        return _get_legacy_hash(article)
     article_dict = [(fn, article[fn]) for fn in HASH_FIELDS]
     return hash_class(json.dumps(article_dict)).hexdigest()
 
