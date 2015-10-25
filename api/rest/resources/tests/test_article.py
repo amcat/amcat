@@ -54,7 +54,7 @@ class TestArticle(ApiTestCase):
         a = result['results'][0]
         self.assertEqual(a['headline'], body['headline'])
         self.assertEqual(a['project'], s.project_id)
-        self.assertEqual(a['length'], 2)
+        self.assertEqual(a['length'], 3) # headline plus text
 
         # Is the result added to the elastic index as well?
         amcates.ES().flush()
