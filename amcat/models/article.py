@@ -239,7 +239,7 @@ class Article(AmcatModel):
                 yield aid
 
     @classmethod
-    def create_articles(cls, articles, articleset=None, articlesets=None, check_duplicate=True, create_id=False,
+    def create_articles(cls, articles, articleset=None, articlesets=None, create_id=False,
                         monitor=ProgressMonitor()):
         """
         Add the given articles to the database, the index, and the given set
@@ -251,7 +251,6 @@ class Article(AmcatModel):
         @param articles: a collection of objects with the necessary properties (.headline etc)
         @param articleset: an articleset object
         @param articlesets: a sequence of articleset object
-        @param check_duplicate: if True, duplicates are not added to the database or index
         @param create_id: if True, also create articles that have an .id (for testing)
         (the 'existing' article *is* added to the set.
         """

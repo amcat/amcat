@@ -157,7 +157,7 @@ def create_test_medium(**kargs):
     if "name" not in kargs: kargs["name"] = "Medium_%i" % kargs["id"]
     return Medium.objects.create(**kargs)
 
-def create_test_article(create=True, articleset=None, check_duplicate=False, **kargs):
+def create_test_article(create=True, articleset=None, **kargs):
     """Create a test article"""
     from amcat.models.article import Article
 
@@ -168,12 +168,12 @@ def create_test_article(create=True, articleset=None, check_duplicate=False, **k
     if "date" not in kargs: kargs["date"] = datetime.date(2000, 1, 1)
     if "medium" not in kargs: kargs["medium"] = create_test_medium()
     if "id" not in kargs: kargs["id"] = _get_next_id()
-    if 'headline' not in kargs: kargs['headline'] = 'test headline'
+    if 'headline' not in kargs: kargs['headline'] = 'test headline {}'.format(_get_next_id())
     if 'text' not in kargs: kargs["text"] = "\n\n".join(map(str, range(5)))
 
     a = Article(**kargs)
     if create:
-        Article.create_articles([a], articleset, check_duplicate=check_duplicate, create_id=True)
+        Article.create_articles([a], articleset, create_id=True)
     return a
 
 def create_test_sentence(**kargs):
@@ -197,7 +197,7 @@ def create_test_set(articles=0, **kargs):
     if type(articles) == int:
         if articles > 0:
             articles = [create_test_article(create=False) for _x in range(articles)]
-            Article.create_articles(articles, articleset=s, check_duplicate=False, create_id=True)
+            Article.create_articles(articles, articleset=s, create_id=True)
     elif articles:
         s.add_articles(articles)
     return s

@@ -154,7 +154,7 @@ class TestArticle(amcattest.AmCATTestCase):
         self.assertEqual(q(mediumid=art['medium']), {a1.id})
 
         # duplicate articles should not be added
-        a2 = amcattest.create_test_article(check_duplicate=True, **art)
+        a2 = amcattest.create_test_article(**art)
         self.assertEqual(a2.id, a1.id)
         self.assertTrue(a2.duplicate)
         self.assertEqual(q(mediumid=art['medium']), {a1.id})
@@ -162,19 +162,12 @@ class TestArticle(amcattest.AmCATTestCase):
         # however, if an articleset is given the 'existing' article
         # should be added to that set
         s1 = amcattest.create_test_set()
-        a3 = amcattest.create_test_article(check_duplicate=True, articleset=s1, **art)
+        a3 = amcattest.create_test_article(articleset=s1, **art)
         self.assertEqual(a3.id, a1.id)
         self.assertEqual(q(mediumid=art['medium']), {a1.id})
 
         self.assertEqual(set(s1.get_article_ids()), {a1.id})
         self.assertEqual(q(sets=s1.id), {a1.id})
-
-        # can we suppress duplicate checking?
-        a4 = amcattest.create_test_article(check_duplicate=False, **art)
-        self.assertTrue(Article.objects.filter(pk=a4.id).exists())
-        self.assertFalse(a4.duplicate)
-        self.assertIn(a4.id, q(mediumid=art['medium']))
-
 
     def test_unicode_word_len(self):
         """Does the word counter eat unicode??"""
