@@ -275,7 +275,7 @@ class Article(AmcatModel):
                 a.es_dict = amcates.get_article_dict(a, sets=list(sets))
                 to_create.append(a)
 
-        if check_duplicate:
+        if True:
             hashes = [a.es_dict['hash'] for a in to_create]
             results = es.query_all(filters={'hashes': hashes}, fields=["hash", "sets"], score=False)
             dupes = {r.hash: r for r in results}
