@@ -300,7 +300,7 @@ class AmCATTestCase(TestCase):
     @classmethod
     def tearDownClass(cls):
         if settings.ES_INDEX.endswith("__unittest"):
-            settings.ES_INDEX = settings.ES_INDEX[:len("__unittest")]
+            settings.ES_INDEX = settings.ES_INDEX[:-len("__unittest")]
         super(AmCATTestCase, cls).tearDownClass()
 
 class AmCATLiveServerTestCase(StaticLiveServerTestCase):
