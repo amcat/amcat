@@ -166,8 +166,8 @@ class UploadScript(script.Script):
             _set_project(article, self.project)
 
         monitor.update(10, "All files parsed, saving {n} articles".format(n=len(articles)))
-        articles, errors = Article.create_articles(articles, articlesets = self.articlesets,
-                                                   monitor=monitor.submonitor(40))
+        Article.create_articles(articles, articlesets = self.articlesets,
+                                monitor=monitor.submonitor(40))
         
         if not articles:
             raise Exception("No articles were imported")

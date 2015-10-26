@@ -5,11 +5,12 @@ from amcat.tools.amcates import ES
 
 class TestDedup(amcattest.AmCATTestCase):
     def do_test(self, articles, **options):
+        ids = {a.id: i+1 for (i,a) in enumerate(articles)}
         s = amcattest.create_test_set(articles=articles)
         ES().flush()
         Deduplicate(articleset=s.id, **options).run()
         ES().flush()
-        return set(s.articles.values_list("pk", flat=True))
+        return {ids[a.id] for a in s.articles.all()}
 
 
     def test_fields(self):
@@ -35,12 +36,13 @@ class TestDedup(amcattest.AmCATTestCase):
     def test_dedup(self):
         s = amcattest.create_test_set()
         m1, m2 = [amcattest.create_test_medium() for _x in range(2)]
+        adict = dict(text="text", headline="headline", articleset=s)
         arts = [
-            amcattest.create_test_article(articleset=s, medium=m1, pagenr=1, id=1),
-            amcattest.create_test_article(articleset=s, medium=m1, pagenr=2, id=2),
-            amcattest.create_test_article(articleset=s, medium=m2, pagenr=1, id=3),
-            amcattest.create_test_article(articleset=s, medium=m2, pagenr=2, id=4),
-            amcattest.create_test_article(articleset=s, medium=m2, pagenr=2, id=5)
+            amcattest.create_test_article(medium=m1, pagenr=1, **adict),
+            amcattest.create_test_article(medium=m1, pagenr=2, **adict),
+            amcattest.create_test_article(medium=m2, pagenr=1, **adict),
+            amcattest.create_test_article(medium=m2, pagenr=2, **adict),
+            amcattest.create_test_article(medium=m2, pagenr=2, **adict)
             ]
         self.assertEqual(self.do_test(arts), {1,2,3,4})
         self.assertEqual(self.do_test(arts, dry_run=True), {1,2,3,4,5})
@@ -51,10 +53,11 @@ class TestDedup(amcattest.AmCATTestCase):
     def test_date(self):
         s = amcattest.create_test_set()
         m = amcattest.create_test_medium()
+        adict = dict(text="text", headline="headline", articleset=s, medium=m)
         arts = [
-            amcattest.create_test_article(id=1, articleset=s, medium=m, date="2001-01-01"),
-            amcattest.create_test_article(id=2, articleset=s, medium=m, date="2001-01-01 02:00"),
-            amcattest.create_test_article(id=3, articleset=s, medium=m, date="2001-01-02"),
+            amcattest.create_test_article(date="2001-01-01", **adict),
+            amcattest.create_test_article(date="2001-01-01 02:00", **adict),
+            amcattest.create_test_article(date="2001-01-02", **adict),
             ]
         aids = [a.id for a in arts]
 
@@ -65,11 +68,12 @@ class TestDedup(amcattest.AmCATTestCase):
     def test_fuzzy(self):
         s = amcattest.create_test_set()
         m = amcattest.create_test_medium()
+        adict = dict(text="text", articleset=s, medium=m)
         arts = [
-            amcattest.create_test_article(id=1, articleset=s, medium=m, headline="Dit is een test"),
-            amcattest.create_test_article(id=2, articleset=s, medium=m, headline="Dit is ook een test"),
-            amcattest.create_test_article(id=3, articleset=s, medium=m, headline="Dit is ook een tesdt"),
-            amcattest.create_test_article(id=4, articleset=s, medium=m, headline="Is dit een test?"),
+            amcattest.create_test_article(headline="Dit is een test", **adict),
+            amcattest.create_test_article(headline="Dit is ook een test", **adict),
+            amcattest.create_test_article(headline="Dit is ook een tesdt", **adict),
+            amcattest.create_test_article(headline="Is dit een test?", **adict),
 
             ]
         self.assertEqual(self.do_test(arts, ignore_medium=True), {1,2,3,4})
