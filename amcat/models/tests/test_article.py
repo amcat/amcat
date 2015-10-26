@@ -19,8 +19,10 @@
 from amcat.models import Article, word_len, ArticleTree
 from amcat.tools import amcattest
 from amcat.tools import amcates
-from amcat.tools.amcattest import create_test_article
+from amcat.tools.amcattest import create_test_article, create_test_set
 
+import datetime
+import uuid
 
 def _setup_highlighting():
     from amcat.tools.amcates import ES
@@ -67,107 +69,113 @@ class TestArticleHighlighting(amcattest.AmCATTestCase):
         self.assertEqual("<p>bar</p>", article.headline)
 
 
+
+def _q(**filters):
+    amcates.ES().flush()
+    return set(amcates.ES().query_ids(filters=filters))
+    
 class TestArticle(amcattest.AmCATTestCase):
-    def test_save_trees(self):
-        articles = [create_test_article(create=False, length=0, headline=str(i)) for i in range(10)]
-
-        tree1 = (articles[0], [
-            (articles[1], [
-                (articles[2], []),
-                (articles[3], [])
-            ]),
-            (articles[4], [])
-        ])
-
-        tree2 = (articles[5], [
-            (articles[6], [
-                (articles[7], []),
-                (articles[8], [])
-            ]),
-            (articles[9], [])
-        ])
-
-        tree1 = ArticleTree.from_tuples(tree1)
-        tree2 = ArticleTree.from_tuples(tree2)
+    @amcattest.use_elastic
+    def test_save_parent(self):
+        """Can we save objects with new and existing parents?"""
+        m = amcattest.create_test_medium()
+        root = create_test_article()
+        s = create_test_set()
+        structure = {1:0, 2:1, 3:1, 4:0}
+        adict= dict(medium=m, date=datetime.date(2001,1,1), project=s.project)
+        def _articles(n, structure):
+            articles = [Article(headline=unicode(i), text=unicode(i), **adict) for i in range(n)]        
+            articles[0].parent = root
+            for child, parent in structure.iteritems():
+                articles[child].parent = articles[parent]
+            return articles
 
         # Trees are 3 levels deep, so it should take 3 queries to complete this request
-        self.assertNumQueries(3, Article.save_trees, [tree1, tree2])
+        articles = _articles(5, structure)
+        self.assertNumQueries(3, Article.create_articles, articles)
 
-        articles = [Article.objects.get(headline=str(i)) for i in range(10)]
-
-        # Is the hierachy / order preserved?
-        self.assertEqual(tree1.obj, articles[0])
-        self.assertEqual(tree1.children[0].obj, articles[1])
-        self.assertEqual(tree1.children[0].children[0].obj, articles[2])
-        self.assertEqual(tree1.children[0].children[1].obj, articles[3])
-        self.assertEqual(tree1.children[1].obj, articles[4])
-
-        self.assertEqual(tree2.obj, articles[5])
-        self.assertEqual(tree2.children[0].obj, articles[6])
-        self.assertEqual(tree2.children[0].children[0].obj, articles[7])
-        self.assertEqual(tree2.children[0].children[1].obj, articles[8])
-        self.assertEqual(tree2.children[1].obj, articles[9])
+        ids = _q(mediumid=m.id)
+        self.assertEqual(len(ids), 5)
+        a = {int(a.text):a for a in Article.objects.filter(pk__in=ids)}
 
         # Are the parent properties set correctly?
-        self.assertEqual(tree1.parent, None)
-        self.assertEqual(tree1.children[0].parent.obj, articles[0])
-        self.assertEqual(tree1.children[0].children[0].parent.obj, articles[1])
-        self.assertEqual(tree1.children[0].children[1].parent.obj, articles[1])
-        self.assertEqual(tree1.children[1].parent.obj, articles[0])
+        self.assertEqual(a[0].parent, root)        
+        for child, parent in structure.iteritems():
+            articles[child].parent = articles[parent]
+            self.assertEqual(a[child].parent, a[parent])
 
-        self.assertEqual(tree2.parent, None)
-        self.assertEqual(tree2.children[0].parent.obj, articles[5])
-        self.assertEqual(tree2.children[0].children[0].parent.obj, articles[6])
-        self.assertEqual(tree2.children[0].children[1].parent.obj, articles[6])
-        self.assertEqual(tree2.children[1].parent.obj, articles[5])
-
+        # can we save it again without errors? (And without queries, since it's all dupes
+        articles = _articles(5, structure)
+        self.assertNumQueries(0, Article.create_articles, articles)
+        self.assertEqual(len(_q(mediumid=m.id)), 5)
+        
+        # Can we insert new articles together with dupes?
+        structure.update({5:1, 6:1})
+        articles = _articles(7, structure)
+        articles[6].parent = a[1] # existing article
+        amcates.ES().flush()
+        # (inefficiency: it knows it can save 6 immediately, doesn't know it can also save 5 until dedup)
+        self.assertNumQueries(2, Article.create_articles, articles)
+        ids = _q(mediumid=m.id)
+        self.assertEqual(len(ids), 7)
+        a = {int(a.text):a for a in Article.objects.filter(pk__in=ids)}
+        self.assertEqual(a[0].parent, root)        
+        for child, parent in structure.iteritems():
+            articles[child].parent = articles[parent]
+            self.assertEqual(a[child].parent, a[parent])
+        #TODO: WvA: test errors on external unsaved parents and cycles
+        
+        
+        
     @amcattest.use_elastic
     def test_create(self):
         """Can we create/store/index an article object?"""
         a = amcattest.create_test_article(create=False, date='2010-12-31', headline=u'\ua000abcd\u07b4')
-        Article.create_articles([a], create_id=True)
+        Article.create_articles([a])
         db_a = Article.objects.get(pk=a.id)
         amcates.ES().flush()
         es_a = list(amcates.ES().query(filters={'ids': [a.id]}, fields=["date", "headline", "uuid"]))[0]
-        self.assertEqual(a.uuid, unicode(db_a.uuid))
-        self.assertEqual(a.uuid, es_a.uuid)
+        self.assertEqual(unicode(a.uuid), unicode(db_a.uuid))
+        self.assertEqual(unicode(a.uuid), unicode(es_a.uuid))
         self.assertEqual(a.headline, db_a.headline)
         self.assertEqual(a.headline, es_a.headline)
         self.assertEqual('2010-12-31T00:00:00', db_a.date.isoformat())
         self.assertEqual('2010-12-31T00:00:00', es_a.date.isoformat())
 
-
     @amcattest.use_elastic
     def test_deduplication(self):
         """Does deduplication work as it is supposed to?"""
-        art = dict(headline="test", byline="test", date='2001-01-01',
+        art = dict(headline="test", text="test", byline="test", date='2001-01-01',
                    medium=amcattest.create_test_medium(),
                    project=amcattest.create_test_project(),
                    )
-
         a1 = amcattest.create_test_article(**art)
-
-        def q(**filters):
-            amcates.ES().flush()
-            return set(amcates.ES().query_ids(filters=filters))
-
-        self.assertEqual(q(mediumid=art['medium']), {a1.id})
+        self.assertEqual(_q(mediumid=art['medium']), {a1.id})
 
         # duplicate articles should not be added
         a2 = amcattest.create_test_article(**art)
         self.assertEqual(a2.id, a1.id)
         self.assertTrue(a2.duplicate)
-        self.assertEqual(q(mediumid=art['medium']), {a1.id})
+        self.assertEqual(_q(mediumid=art['medium']), {a1.id})
 
         # however, if an articleset is given the 'existing' article
         # should be added to that set
         s1 = amcattest.create_test_set()
         a3 = amcattest.create_test_article(articleset=s1, **art)
         self.assertEqual(a3.id, a1.id)
-        self.assertEqual(q(mediumid=art['medium']), {a1.id})
-
+        self.assertEqual(_q(mediumid=art['medium']), {a1.id})
         self.assertEqual(set(s1.get_article_ids()), {a1.id})
-        self.assertEqual(q(sets=s1.id), {a1.id})
+        self.assertEqual(_q(sets=s1.id), {a1.id})
+
+        # a dupe cannot have a non-identical uuid
+        self.assertRaises(ValueError, amcattest.create_test_article, uuid=uuid.uuid4(), **art)
+        
+        # if an explicit uuid is set, it should be a perfect duplicate
+        art['uuid'] = a1.uuid
+        amcattest.create_test_article(**art) # okay
+        self.assertEqual(_q(mediumid=art['medium']), {a1.id}) # still a dupe
+        art['headline']="not the same"
+        self.assertRaises(ValueError, amcattest.create_test_article, **art) # not okay
 
     def test_unicode_word_len(self):
         """Does the word counter eat unicode??"""
@@ -191,7 +199,6 @@ class TestArticle(amcattest.AmCATTestCase):
         m = amcattest.create_test_medium(name="de testkrant")
         a = amcattest.create_test_article(medium=m)
         r = amcates.ES().query(filters={"id": a.id}, fields=["medium"])
-        print(r)
 
     @amcattest.use_elastic
     def test_get_tree(self):

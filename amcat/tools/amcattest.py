@@ -167,13 +167,12 @@ def create_test_article(create=True, articleset=None, **kargs):
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "date" not in kargs: kargs["date"] = datetime.date(2000, 1, 1)
     if "medium" not in kargs: kargs["medium"] = create_test_medium()
-    if "id" not in kargs: kargs["id"] = _get_next_id()
     if 'headline' not in kargs: kargs['headline'] = 'test headline {}'.format(_get_next_id())
-    if 'text' not in kargs: kargs["text"] = "\n\n".join(map(str, range(5)))
+    if 'text' not in kargs: kargs["text"] = 'test text {}'.format(_get_next_id())
 
     a = Article(**kargs)
     if create:
-        Article.create_articles([a], articleset, create_id=True)
+        Article.create_articles([a], articleset)
     return a
 
 def create_test_sentence(**kargs):
@@ -197,7 +196,7 @@ def create_test_set(articles=0, **kargs):
     if type(articles) == int:
         if articles > 0:
             articles = [create_test_article(create=False) for _x in range(articles)]
-            Article.create_articles(articles, articleset=s, create_id=True)
+            Article.create_articles(articles, articleset=s)
     elif articles:
         s.add_articles(articles)
     return s

@@ -28,6 +28,7 @@ from itertools import chain, count
 from operator import attrgetter
 import logging
 import collections
+import uuid
 
 from django.template.loader import get_template
 from django.template import Context
@@ -129,6 +130,10 @@ class Article(AmcatModel):
 
     parent = models.ForeignKey("self", null=True, db_column="parent_article_id",
                                db_index=True, blank=True, related_name="children")
+    # Allow .parent to be set to an article that still needs saving
+    # cf. https://www.caktusgroup.com/blog/2015/07/28/using-unsaved-related-models-sample-data-django-18/
+    parent.allow_unsaved_instance_assignment = True
+    
     project = models.ForeignKey("amcat.Project", db_index=True, related_name="articles")
     medium = models.ForeignKey(Medium, db_index=True)
 
@@ -239,142 +244,115 @@ class Article(AmcatModel):
                 yield aid
 
     @classmethod
-    def create_articles(cls, articles, articleset=None, articlesets=None, create_id=False,
+    def create_articles(cls, articles, articleset=None, articlesets=None,
                         monitor=ProgressMonitor()):
         """
         Add the given articles to the database, the index, and the given set
 
-        Article objects can contain a 'custom' nested_articles attribute. In that case,
-        this should be a list of article-like objects that will also be saved, and will
-        have the .parent set to the containing article
-
+        Duplicates are detected and have .duplicate, .id, and .uuid set (and are added to sets)
+        Articles can have a .parent object set to another (unsaved) object in the set
+        in which case the parent will be saved first
+        
         @param articles: a collection of objects with the necessary properties (.headline etc)
-        @param articleset: an articleset object
-        @param articlesets: a sequence of articleset object
-        @param create_id: if True, also create articles that have an .id (for testing)
-        (the 'existing' article *is* added to the set.
+        @param articleset(s): articleset object(s), specify either or none
         """
-        # TODO: test parent logic (esp. together with hash/dupes)
+        cls._create_articles_per_layer(articles)
         if articlesets is None:
             articlesets = [articleset] if articleset else []
-        
+
         es = amcates.ES()
+        dupes, new = [], []
         for a in articles:
+            if a.duplicate:
+                dupes.append(a)
+            else:
+                a.es_dict.update(dict(sets=[aset.id for aset in articlesets],
+                                      uuid=unicode(a.uuid), id=a.id))
+                new.append(a)
+
+        if new:
+            es.bulk_insert([a.es_dict for a in new], batch_size=100)
+            for aset in articlesets:
+                aset.add_articles(new, add_to_index=False)
+        if dupes:
+            for aset in articlesets:
+                aset.add_articles(dupes, add_to_index=True)
+            
+    @classmethod
+    def _create_articles_per_layer(cls, articles):
+        """Call _do_create_articles for each layer of the .parent tree"""
+        while articles:
+            to_save, todo = [], []
+            for a in articles:
+                # set parent_id from dupe if needed
+                if a.parent and not a.parent_id:
+                    if a.parent.id:
+                        a.parent_id = a.parent.id
+                    elif hasattr(a.parent, "duplicate"):
+                        a.parent_id = a.parent.duplicate.id
+                if (a.parent is None) or a.parent_id or a.parent.id:
+                    to_save.append(a)
+                else:
+                    todo.append(a)
+            if not to_save:
+                raise ValueError("Parent cycle")
+            cls._do_create_articles(to_save)
+            articles = todo
+    
+    @classmethod
+    def _do_create_articles(cls, articles):
+        """Check duplicates and save the articles to db.
+        Does *not* save to elastic or add to articlesets
+        Assumes that if .parent is given, it has an id
+        (because parent is part of hash)
+        modifies all articles in place with .hash and either .duplicate or .id and .uuid
+        """
+        es = amcates.ES()
+        dupe_values = {'uuid': {}, 'hash': {}}
+        # Iterate over articles, remove duplicates within addendum and build dupe values dictionary 
+        for a in articles:
+            if a.id:
+                raise ValueError("Specifying explicit article ID in save not allowed")
             if a.length is None:
                 a.length = word_len(a.text) + word_len(a.headline) + word_len(a.byline)
-        # existing / duplicate article ids to add to set
-        add_existing_to_set = collections.defaultdict(set) # aset : [aid]
-        # add dict (+hash) as property on articles so we know who is who
-        sets = {aset.id: aset for aset in articlesets}
-        to_create = [] 
+            a.es_dict = amcates.get_article_dict(a)
+            a.hash = a.es_dict['hash']
+            a.duplicate = None # innocent until proven guilty
+            for attr in dupe_values:
+                val = getattr(a, attr)
+                if val:
+                    val = unicode(val)
+                    if val in dupe_values[attr]:
+                        a.duplicate = dupe_values[attr][val] # within-set duplicate
+                    else:
+                        dupe_values[attr][val] = a
+        # for each duplicate indicator, query es and get existing articles
+        for attr in dupe_values:
+            values = dupe_values[attr]
+            if values:
+                results = es.query_all(filters={attr: values.keys()}, fields=["hash", "uuid"], score=False)
+                for r in results:
+                    a =values[getattr(r, attr)]
+                    if a.hash != r.hash: 
+                        raise ValueError("Cannot modify existing articles: {a.hash} != {r.hash}".format(**locals()))
+                    if a.uuid and unicode(a.uuid) != unicode(r.uuid): # not part of hash
+                        raise ValueError("Cannot modify existing articles: {a.uuid} != {r.uuid}".format(**locals()))
+                    a.duplicate = r
+                    a.id = r.id
+                
+        # now we can save the articles and set id
+        to_insert = {}
         for a in articles:
-            if a.id and not create_id:
-                # article already exists, only add to set
-                add_existing_to_set.add(a.id)
-            else:
-                a.es_dict = amcates.get_article_dict(a, sets=list(sets))
-                to_create.append(a)
+            if not a.duplicate:
+                if not a.uuid: a.uuid = uuid.uuid4()
+                assert a.uuid not in to_insert
+                to_insert[unicode(a.uuid)] = a
+        if to_insert:
+            for b in bulk_insert_returning_ids(to_insert.values(), fields=["uuid"]):
+                to_insert[unicode(b.uuid)].id = b.pk
+        return to_insert.values()
 
-        if True:
-            hashes = [a.es_dict['hash'] for a in to_create]
-            results = es.query_all(filters={'hashes': hashes}, fields=["hash", "sets"], score=False)
-            dupes = {r.hash: r for r in results}
-
-        else:
-            dupes = {}
-
-        uuids = [a.es_dict['uuid'] for a in to_create if a.es_dict['uuid']]
-        if uuids:
-            results = es.query_all(filters={'uuid': uuids}, fields=["uuid", "sets"], score=False)
-            dupes.update({r.uuid: r for r in results})
-
-        monitor.update(10, "Creating {} articles, {} dupes, {} existing"
-                       .format(len(to_create), len(dupes), len(add_existing_to_set)))
         
-        # add all non-dupes to the db, needed actions
-        add_new_to_set = set()  # new article ids to add to set
-        add_to_index = []  # es_dicts to add to index
-        result = []  # return result
-        errors = []  # return errors
-        for a in to_create:
-            dupe = dupes.get(a.es_dict['hash'], None)
-            if a.uuid and not dupe:
-                dupe = dupes.get(a.uuid, None)
-            a.duplicate = bool(dupe)
-            if a.duplicate:
-                a.id = dupe.id
-                for aset in set(sets) - set(dupe.sets or []):
-                    add_existing_to_set[aset].add(dupe.id)
-                result.append(dupe)
-            else:
-                if a.parent:
-                    a.parent_id = a.parent.id
-
-                sid = transaction.savepoint()
-                try:
-                    a.save()
-                    transaction.savepoint_commit(sid)
-                except (IntegrityError, ValidationError, DatabaseError) as e:
-                    log.warning(str(e))
-                    transaction.savepoint_rollback(sid)
-                    errors.append(e)
-                    continue
-                a.es_dict['id'] = a.pk
-                a.es_dict['uuid'] = a.uuid
-                add_to_index.append(a.es_dict)
-                add_new_to_set.add(a.pk)
-                result.append(a)
-
-        monitor.update(50, "Considered {} articles: {} saved to db, {} new to add to index, {} existing/duplicates to add to set"
-                       .format(len(articles), len(add_new_to_set), len(add_to_index), len(add_existing_to_set)))
-
-        # add to index
-        if add_to_index:
-            es.bulk_insert(add_to_index, batch_size=100)
-        monitor.update(10, "Added {} articles to index".format(len(add_to_index)))
-
-        for setid, articles in add_existing_to_set.iteritems():
-            sets[setid].add_articles(articles, add_to_index=True)
-        monitor.update(10, "Added existing articles to articlesets")
-            
-        if add_new_to_set:
-            for setid in sets:
-                sets[setid].add_articles(add_new_to_set, add_to_index=False)
-        monitor.update(10, "Added {} new articles to articlesets, done creating articles!"
-                       .format(len(add_new_to_set)))
-
-        # if there are any 'dupe' placeholders, convert them to article objects
-        placeholders = [res.id for res in result if isinstance(res, Result)]
-        placeholders = list(Article.objects.filter(pk__in=placeholders).only("pk"))
-        result = [res for res in result if not isinstance(res, Result)] + placeholders
-        
-        return result, errors
-
-    @classmethod
-    def save_trees(cls, trees):
-        """
-        Saves a list of article trees efficiently to database.
-
-        @type trees: [ArticleTree]
-        """
-        #trees = map(copy, trees)
-
-        for level in count():
-            level_trees = list(chain.from_iterable(tree.get_level(level) for tree in trees))
-
-            if not level_trees:
-                break
-
-            for tree in level_trees:
-                if tree.parent is None:
-                    continue
-                tree.obj.parent = tree.parent.obj
-
-            articles = bulk_insert_returning_ids(t.obj for t in level_trees)
-            for tree, article in zip(level_trees, articles):
-                tree.obj = article
-
-
     def get_tree(self, include_parents=True, fields=("id",)):
         """
         Returns a deterministic (sorted by id) tree of articles, based on their parent

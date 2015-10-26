@@ -70,11 +70,8 @@ class ArticleSerializer(AmCATProjectModelSerializer):
         art = Article(**validated_data)
         articleset = self.context["view"].kwargs.get('articleset')
         if articleset: articleset = ArticleSet.objects.get(pk=articleset)
-        result, errors = Article.create_articles([art], articleset=articleset)
-        if errors: #TODO: WvA: not sure what kind of error handling is good inside serializer
-            logging.error("Error {errors}".format(**locals()))
-            raise Exception(errors)
-        return result[0]
+        Article.create_articles([art], articleset=articleset)
+        return art
 
     class Meta:
         model = Article

@@ -65,46 +65,29 @@ class TestArticleViewSet(APITestCase):
 
     @amcattest.use_elastic
     def test_dupes(self):
-        """Test whether deduplication on uuid and fields works"""
+        """Test whether deduplication works"""
         self.set_up()
-        article = amcattest.create_test_article()
-        amcates.ES().flush()
         
         a = {
-            'date': datetime.datetime.now().isoformat(),
+            'date': datetime.datetime(2000,1,1),
             'headline': 'Test child',
-            'medium': 'Fantasy',
             'text': 'Hello Universe',
             'pagenr': 1,
             'url': 'http://example.org',
-            'uuid': article.uuid
         }
-
+        
+        article = amcattest.create_test_article(**a)
+        amcates.ES().flush()
+        a['medium'] = article.medium.name
+        
         p = amcattest.create_test_project(owner=self.user)
         s = amcattest.create_test_set(project=p)
         url = "/api/v4/projects/{p.id}/articlesets/{s.id}/articles/".format(**locals())
         _status, response = self.post(url, a, self.user)
         self.assertEqual(response['id'], article.id)
+        # is it not added (ie we only have one article with this medium)
+        self.assertEqual(set(amcates.ES().query_ids(filters={'mediumid':article.medium.id})), {article.id})
         # is it added to elastic for this set?
         amcates.ES().flush()
         self.assertEqual(set(amcates.ES().query_ids(filters={'sets':s.id})), {article.id})
-        
-        
-        a = {
-            'date': '2001-01-01T00:00',
-            'headline': 'Test',
-            'medium': 'Fantasy',
-            'text': 'Hello Universe',
-            'pagenr': 1,
-            'url': 'http://example.org',
-        }
-
-        _status, response1 = self.post(url, a, self.user)
-        amcates.ES().flush()
-        
-        _status, response2 = self.post(url, a, self.user)
-        self.assertEqual(response1['id'], response2['id'])
-
-        amcates.ES().flush()
-        self.assertEqual(set(amcates.ES().query_ids(filters={'sets':s.id})), {article.id, response1['id']})
-
+        #TODO: WvA test error handling

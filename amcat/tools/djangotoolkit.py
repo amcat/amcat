@@ -82,7 +82,7 @@ def db_supports_distinct_on(db='default'):
     return connections[db].features.can_distinct_on_fields
 
 
-def bulk_insert_returning_ids(new_objects):
+def bulk_insert_returning_ids(new_objects, fields=None):
     """bulk_insert() does not set ids as per Django ticket #19527. However, postgres does
     support this, so we implement this manually in this function."""
     new_objects = list(new_objects)
@@ -95,8 +95,9 @@ def bulk_insert_returning_ids(new_objects):
         query = sql.InsertQuery(model)
         query.insert_values(model._meta.fields[1:], new_objects)
         raw_sql, params = query.sql_with_params()[0]
-        returning = "RETURNING {pk.db_column} AS {pk.name}".format(pk=model._meta.pk)
-        new_objects = list(model.objects.raw("%s %s" % (raw_sql, returning), params))
+        pk = "{pk.db_column} AS {pk.name}".format(pk=model._meta.pk)
+        fields = ", ".join([pk] + (fields if fields else []))
+        new_objects = list(model.objects.raw("{raw_sql} RETURNING {fields}".format(**locals()), params))
     else:
         # Do naive O(n) approach
         for new_obj in new_objects:
