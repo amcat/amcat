@@ -19,32 +19,40 @@
 import itertools
 
 from django.forms import ModelChoiceField
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.generics import CreateAPIView
 from rest_framework.parsers import JSONParser
 from rest_framework.renderers import JSONRenderer, BrowsableAPIRenderer
 from rest_framework.response import Response
 from rest_framework.fields import CharField
 
-from amcat.models import Article, Medium, ArticleTree, word_len
+from amcat.models import Article, Medium, ArticleSet
 from api.rest.serializer import AmCATProjectModelSerializer
 from api.rest.viewsets.article import MediumField
 
+class FlatteningListSerializer(serializers.ListSerializer):
+    def to_representation(self, data):
+        result = serializers.ListSerializer.to_representation(self, data)
+        return list(itertools.chain(*result))
+    
 
 class ArticleUploadSerializer(AmCATProjectModelSerializer):
     medium = MediumField(ModelChoiceField(queryset=Medium.objects.all()))
     uuid = CharField(required=False)
+    
+    class Meta:
+        model = Article
+        read_only_fields = ('id', 'length', 'insertdate', 'insertscript')
+        list_serializer_class = FlatteningListSerializer
 
+            
     def to_internal_value(self, data):
         if 'children' not in data:
             data['children'] = []
         return super(ArticleUploadSerializer, self).to_internal_value(data)
         
     def to_representation(self, instance):
-        article, children = instance
-        article = super(ArticleUploadSerializer, self).to_representation(article)
-        article["children"] = map(self.to_representation, children)
-        return article
+        return [{"id": a.id} for a in instance]
 
     def get_fields(self):
         fields = super(ArticleUploadSerializer, self).get_fields()
@@ -52,17 +60,23 @@ class ArticleUploadSerializer(AmCATProjectModelSerializer):
         return fields
 
     def create(self, validated_data):
-        children = validated_data.pop("children")
-        article = Article(**validated_data)        
+        def _process(data, parent=None):
+            children = data.pop("children")
+            if parent is not None:
+                assert 'parent' not in data
+                data['parent'] = parent
+            article = Article(**data)
+            yield article
+            for child in children:
+                for a in _process(child, parent=article):
+                    yield a
 
-        if article.length is None:
-            article.length = word_len(article.text)
+        articles = list(_process(validated_data))
 
-        return (article, map(self.create, children))
-
-    class Meta:
-        model = Article
-        read_only_fields = ('id', 'length', 'insertdate', 'insertscript')
+        articleset = self.context["view"].kwargs.get('articleset')
+        if articleset: articleset = ArticleSet.objects.get(pk=articleset)
+        Article.create_articles(articles, articleset=articleset)
+        return articles
 
 
 class ArticleUploadView(CreateAPIView):
@@ -79,17 +93,3 @@ class ArticleUploadView(CreateAPIView):
 
     def get_serializer(self, **kwargs):
         return super(ArticleUploadView, self).get_serializer(many=True, **kwargs)
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        article_trees = self.perform_create(serializer)
-        article_ids = itertools.chain.from_iterable(at.get_ids() for at in article_trees)
-        headers = self.get_success_headers(serializer.data)
-        return Response(list(article_ids), status=status.HTTP_201_CREATED, headers=headers)
-
-    def perform_create(self, serializer):
-        result = serializer.save()
-        trees = map(ArticleTree.from_tuples, result)
-        Article.save_trees(trees)
-        return trees
