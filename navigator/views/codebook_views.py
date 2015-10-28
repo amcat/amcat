@@ -47,9 +47,9 @@ class CodebookListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin,
 
     def get_context_data(self, **kwargs):
         ctx = super(CodebookListView, self).get_context_data(**kwargs)
-        all_codebooks = Datatable(CodebookViewSet, rowlink='./{id}', url_kwargs={"project" : self.project.id})
-        owned_codebooks = all_codebooks.filter(project=self.project)
-        #linked_codebooks = all_codebooks.filter(projects_set=self.project)
+        all_codebooks = Datatable(CodebookViewSet, rowlink='./{id}', url_kwargs={"project" : self.project.id}).hide("codes")
+        owned_codebooks = all_codebooks.filter(project=self.project).hide("project")
+        linked_codebooks = all_codebooks.filter(projects_set=self.project)
 
         ctx.update(locals())
         return ctx

@@ -97,7 +97,7 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
     model = Project
 
     def get_success_url(self):
-        return reverse(self.get_view_name(), args=(self.project.id,))
+        return reverse("navigator:{}".format(self.get_view_name()), args=(self.project.id,))
 
 
     @classmethod
