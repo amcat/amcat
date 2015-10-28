@@ -94,7 +94,7 @@ class ExportCodebook(Script):
         rows = list(_get_tree(codebook))
 
         result = table3.ObjectTable(rows=rows)
-        result.addColumn(lambda row : row.code.uuid, label="uuid")
+        result.addColumn(lambda row : str(row.code.uuid), label="uuid")
         result.addColumn(lambda row : row.code.id, label="code_id")
         depth = max(row.indent for row in rows) + 1
         for i in range(depth):
@@ -105,7 +105,7 @@ class ExportCodebook(Script):
 
     def parent_table(self, codebook, labelcols):
         result = table3.ObjectTable(rows=codebook.codebookcodes)
-        result.addColumn(lambda row: row.code.uuid, label="uuid")
+        result.addColumn(lambda row: str(row.code.uuid), label="uuid")
         result.addColumn(lambda row: row.code.id, label="code_id")
         result.addColumn(lambda row: getattr(row.parent, "id", None), label="parent_id")
         result.addColumn(lambda row: row.code.label, label="label")
