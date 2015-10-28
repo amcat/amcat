@@ -23,7 +23,7 @@
  * url.
  */
 
-amcat = (amcat === undefined) ? {} : amcat;
+window.amcat = (window.amcat === undefined) ? {} : window.amcat;
 amcat.datatables = {};
 
 _TARGET_ERR = "You can't use number to target columns in columndefs, as " +
@@ -250,7 +250,8 @@ amcat.datatables.create_rest_table = function (cont, rest_url, optional_args) {
  * This function truncates all cells in the given row.
  */
 amcat.datatables.truncate_row = function(row, limit){
-    var txt, limit = limit || 30;
+    var txt;
+    limit = limit || 30;
 
     $.each($("td", row), function(i, cell){
         txt = $(cell).text();
@@ -260,14 +261,14 @@ amcat.datatables.truncate_row = function(row, limit){
 	header = $(th).attr('aria-label');
 
 	if (header == 'left') {
-	    if (txt.length > 30) {
+	    if (txt.length > limit) {
 		$(cell).attr("title", txt);
-		$(cell).text("..."+txt.substring(txt.length - 30));
+		$(cell).text("..."+txt.substring(txt.length - limit));
 	    }
 	    $(cell).css('text-align', 'right');
-	} else if (txt.length > 30) {
+	} else if (txt.length > limit) {
             $(cell).attr("title", txt);
-            $(cell).text(txt.substring(0,30)+"...");
+            $(cell).text(txt.substring(0,limit)+"...");
         }
     });
 

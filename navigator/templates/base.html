@@ -39,7 +39,9 @@
     <script src="{% static 'js/require.config.js' %}"></script>
 
     <script>
-        require(["bootstrap"])
+        require(["amcat/amcat", "bootstrap"], function(amcat){
+            amcat.main();
+        })
     </script>
 
     {% block javascript %}{% endblock %}
