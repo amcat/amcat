@@ -28,7 +28,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from amcat.models import Codebook, Language, Article, ArticleSet, CodingJob, CodingSchemaField, Code, \
-    CodebookCode
+    CodebookCode, CodingSchema
 from amcat.models.coding.codingschemafield import FIELDTYPE_IDS
 from amcat.models.medium import Medium, get_mediums
 from amcat.forms.forms import order_fields
@@ -74,9 +74,10 @@ def _add_to_dict(dict, key, value):
 
 def get_all_schemafields(codingjobs):
     codingjobs = CodingJob.objects.filter(id__in=[c.id for c in codingjobs])
-    schemafield_ids = codingjobs.values_list("unitschema_id", "articleschema_id")
-    schemafield_ids = set(itertools.chain.from_iterable(schemafield_ids))
-    return CodingSchemaField.objects.filter(id__in=schemafield_ids)
+    codingschema_ids = codingjobs.values_list("unitschema_id", "articleschema_id")
+    codingschema_ids = set(itertools.chain.from_iterable(codingschema_ids))
+    codingschemas = CodingSchema.objects.filter(id__in=codingschema_ids)
+    return CodingSchemaField.objects.filter(codingschema__in=codingschemas)
 
 
 @order_fields()
