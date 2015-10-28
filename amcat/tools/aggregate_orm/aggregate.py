@@ -79,7 +79,7 @@ class ORMAggregate(object):
                 categories[i] = category.copy(self.terms)
 
         # Add global codings filter
-        codings_ids = tuple(self.codings.values_list("id", flat=True))
+        codings_ids = tuple(self.codings.values_list("id", flat=True)) + (-1,)
         wheres = ['codings_values.coding_id IN {}'.format(codings_ids)]
 
         # Gather all separate sql statements

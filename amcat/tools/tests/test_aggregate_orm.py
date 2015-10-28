@@ -87,6 +87,12 @@ class TestAggregateORM(TransactionTestCase):
         kwargs['threaded'] = False
         return aggregate_orm.ORMAggregate.from_articles(article_ids, codingjob_ids, **kwargs)
 
+    def test_one_coding(self):
+        aggr = aggregate_orm.ORMAggregate(Coding.objects.filter(id__in=(self.c1.id,)), flat=True)
+
+        result = set(aggr.get_aggregate([ArticleSetCategory()], [CountArticlesValue()]))
+        self.assertEqual(result, {(self.s1, 1)})
+
     def test_interval_category(self):
         aggr = self._get_aggr(flat=True)
         result = set(aggr.get_aggregate([IntervalCategory("day")], [CountArticlesValue()]))

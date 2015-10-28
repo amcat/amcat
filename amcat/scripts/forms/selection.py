@@ -100,9 +100,18 @@ class SelectionForm(forms.Form):
 
     query = forms.CharField(widget=forms.Textarea, required=False)
 
-    codingschemafield = ModelChoiceFieldWithIdLabel(queryset=CodingSchemaField.objects.none(), required=False)
-    codingschemafield_value = ModelChoiceFieldWithIdLabel(queryset=Code.objects.none(), required=False)
-    codingschemafield_include_descendants = forms.BooleanField(required=False)
+    codingschemafield_1 = ModelChoiceFieldWithIdLabel(queryset=CodingSchemaField.objects.none(), required=False)
+    codingschemafield_value_1 = ModelChoiceFieldWithIdLabel(queryset=Code.objects.none(), required=False)
+    codingschemafield_include_descendants_1 = forms.BooleanField(required=False)
+
+    # Because hack > not at all?
+    codingschemafield_2 = ModelChoiceFieldWithIdLabel(queryset=CodingSchemaField.objects.none(), required=False)
+    codingschemafield_value_2 = ModelChoiceFieldWithIdLabel(queryset=Code.objects.none(), required=False)
+    codingschemafield_include_descendants_2 = forms.BooleanField(required=False)
+
+    codingschemafield_3 = ModelChoiceFieldWithIdLabel(queryset=CodingSchemaField.objects.none(), required=False)
+    codingschemafield_value_3 = ModelChoiceFieldWithIdLabel(queryset=Code.objects.none(), required=False)
+    codingschemafield_include_descendants_3 = forms.BooleanField(required=False)
 
 
     def __init__(self, project=None, articlesets=None, codingjobs=None, data=None, *args, **kwargs):
@@ -141,19 +150,22 @@ class SelectionForm(forms.Form):
 
             self.schemafields = get_all_schemafields(self.codingjobs)
 
-            schemafields_codebooks = self.schemafields.filter(fieldtype__id=FIELDTYPE_IDS.CODEBOOK)
-            codebookcodes = CodebookCode.objects.filter(codebook__id__in=schemafields_codebooks.values_list("codebook_id", flat=True))
-            codes = Code.objects.filter(id__in=codebookcodes.values_list("code_id", flat=True))
+            schemafields_codebooks = self.schemafields.filter(fieldtype__id=FIELDTYPE_IDS.CODEBOOK).order_by("id")
+            schemafield_codebook_ids = schemafields_codebooks.values_list("codebook_id", flat=True)
+            codebookcodes = CodebookCode.objects.filter(codebook__id__in=schemafield_codebook_ids)
+            codes = Code.objects.filter(id__in=codebookcodes.values_list("code_id", flat=True)).order_by("id")
 
-            self.fields["codingschemafield"].queryset = schemafields_codebooks.order_by("id")
-            self.fields["codingschemafield_value"].queryset = codes.order_by("id")
-            self.fields["codingschemafield_value"].widget.attrs = {
-                "class": "depends",
-                "data-depends-on": json.dumps(["codingschemafield", "project"]),
-                "data-depends-url": "/api/v4/projects/{project}/codebooks/{codebook}/?format=json",
-                "data-depends-value": "{code}",
-                "data-depends-label": "{code} - {label}",
-            }
+            for field_name in ("1", "2", "3"):
+                print(schemafields_codebooks)
+                self.fields["codingschemafield_{}".format(field_name)].queryset = schemafields_codebooks
+                self.fields["codingschemafield_value_{}".format(field_name)].queryset = codes
+                self.fields["codingschemafield_value_{}".format(field_name)].widget.attrs = {
+                    "class": "depends",
+                    "data-depends-on": json.dumps(["codingschemafield_{}".format(field_name), "project"]),
+                    "data-depends-url": "/api/v4/projects/{project}/codebooks/{codebook}/?format=json",
+                    "data-depends-value": "{code}",
+                    "data-depends-label": "{code} - {label}",
+                }
 
         if data is not None:
             self.data = self.get_data()
