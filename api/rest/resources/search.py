@@ -123,10 +123,11 @@ class KWICField(CharField):
         # use highlighting if available, otherwise fall back to raw text
         if obj is None:
             return None
-
         hl = obj.highlight.get('headline')
+        hl = filter(lambda h: re.search(r"<mark>.*</mark>", h), hl)
         if not hl:
             hl = obj.highlight.get('text')
+
 
         if hl:
             # try to get match of first word
