@@ -52,9 +52,20 @@ class AssociationForm(QueryActionForm):
 
         return self.cleaned_data
 
+class AssociationHandler(QueryActionHandler):
+
+    def get_response(self):
+        response = super(AssociationHandler, self).get_response()
+        content_type = get_content_type(self.get_query_action().get_form())[0]
+
+        if content_type == "text/csv":
+            response["Content-Disposition"] = 'attachment; filename="association.csv"'
+
+        return response
 
 class AssociationAction(QueryAction):
     form_class = AssociationForm
+    task_handler = AssociationHandler
 
     output_types = (
         ("application/json+table;fromto", "Table (from-to)"),
