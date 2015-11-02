@@ -7,6 +7,7 @@ from amcat.amcatcelery import status
 from amcat.tools.amcates import ES
 from git import Repo
 import time
+import logging
 
 class StatusView(APIView):
     def get(self, request):
@@ -39,8 +40,11 @@ def queue_status():
     #xtas queues
     from xtas import celeryconfig as xc
     for queue in ["xtas", "corenlp", "background"]:
-        result[queue] = _inspect_queue(queue, host="{}:5672".format(xc._BROKER_HOST),
-                                       userid=xc._BROKER_USERNAME, password=xc._BROKER_PASSWORD)
+        try:
+            result[queue] = _inspect_queue(queue, host="{}:5672".format(xc._BROKER_HOST),
+                                           userid=xc._BROKER_USERNAME, password=xc._BROKER_PASSWORD)
+        except:
+            logging.exception("Error on probing queue {queue}".format(**locals()))
     return result
 
 def git_status():
