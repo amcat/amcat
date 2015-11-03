@@ -408,6 +408,7 @@ class ES(object):
         if lead or False and query == "" and highlight: 
             body['script_fields'] = LEAD_SCRIPT_FIELD
 
+            
         result = self.search(body, fields=fields, **kwargs)
         return SearchResult(result, fields, score, body, query=query)
 
@@ -792,9 +793,9 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
     For convenience, the singular versions (mediumid, id) etc are allowed as aliases
     """
 
-    def _list(x):
+    def _list(x, number=True):
         if isinstance(x, (str, unicode, int)):
-            return [int(x)]
+            return [int(x) if number else x]
         elif hasattr(x, 'pk'):
             return [x.pk]
         return x
@@ -830,6 +831,8 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
     if 'id' in f: yield dict(ids={'values': _list(f['id'])})
     if 'section' in f: yield dict(terms={'section' : _list(f['section'])})
     if 'page' in f: yield dict(terms={'page' : _list(f['page'])})
+    if 'uuid' in f: yield dict(terms={'uuid' : _list(f['uuid'], number=False)})
+    if 'hash' in f: yield dict(terms={'hash' : _list(f['hash'], number=False)})
 
     date_range = {}
     if start_date: date_range['gte'] = parse_date(start_date)
@@ -838,11 +841,6 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
     if on_date: date_range={"gte": parse_date(on_date),
                             "lt": parse_date(on_date)+"||+1d"}
     if date_range: yield dict(range={'date' : date_range})
-
-    if 'hash' in f:
-        hashes = f['hash']
-        if isinstance(hashes, str): hashes = [hashes]
-        yield dict(terms={'hash': hashes})
 
 
 def combine_filters(filters):

@@ -145,15 +145,23 @@ class TestArticle(amcattest.AmCATTestCase):
     @amcattest.use_elastic
     def test_deduplication(self):
         """Does deduplication work as it is supposed to?"""
+
+        # create dummy articles to have something in the db 
+        [amcattest.create_test_article() for i in range(10)]
+        amcates.ES().flush()
+        
         art = dict(headline="test", text="test", byline="test", date='2001-01-01',
                    medium=amcattest.create_test_medium(),
                    project=amcattest.create_test_project(),
                    )
         a1 = amcattest.create_test_article(**art)
+        amcates.ES().flush()
         self.assertEqual(_q(mediumid=art['medium']), {a1.id})
+
 
         # duplicate articles should not be added
         a2 = amcattest.create_test_article(**art)
+        amcates.ES().flush()
         self.assertEqual(a2.id, a1.id)
         self.assertTrue(a2.duplicate)
         self.assertEqual(_q(mediumid=art['medium']), {a1.id})
@@ -162,6 +170,7 @@ class TestArticle(amcattest.AmCATTestCase):
         # should be added to that set
         s1 = amcattest.create_test_set()
         a3 = amcattest.create_test_article(articleset=s1, **art)
+        amcates.ES().flush()
         self.assertEqual(a3.id, a1.id)
         self.assertEqual(_q(mediumid=art['medium']), {a1.id})
         self.assertEqual(set(s1.get_article_ids()), {a1.id})
@@ -173,8 +182,10 @@ class TestArticle(amcattest.AmCATTestCase):
         # if an explicit uuid is set, it should be a perfect duplicate
         art['uuid'] = a1.uuid
         amcattest.create_test_article(**art) # okay
+        amcates.ES().flush()
         self.assertEqual(_q(mediumid=art['medium']), {a1.id}) # still a dupe
         art['headline']="not the same"
+
         self.assertRaises(ValueError, amcattest.create_test_article, **art) # not okay
 
     def test_unicode_word_len(self):
