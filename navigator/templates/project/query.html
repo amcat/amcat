@@ -33,6 +33,7 @@
   {% else %}
       <form data-jobs="{{ codingjob_ids_json }}" data-sets="{{ articleset_ids_json }}" data-user="{{ user_id }}" data-query="{{ query_id }}" id="query-form">
           {% csrf_token %}
+          <input name="project" type="hidden" value="{{ project.id }}" />
           {% include "project/query/form.html" %}
       </form>
 
@@ -50,6 +51,7 @@
       {% include "project/query/loading_dialog.html" %}
       {% include "project/query/articlelist_dialog.html" %}
       {% include "project/query/save_dialog.html" %}
+      {% include "project/query/confirm_dialog.html" %}
       {% include "project/query/change_articlesets_dialog.html" %}
   {% endif %}
 {% endblock %}

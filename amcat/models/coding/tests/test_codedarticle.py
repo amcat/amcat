@@ -49,8 +49,8 @@ class TestCodedArticle(amcattest.AmCATTestCase):
         }
 
     def test_replace_codings(self):
-        schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields(isarticleschema=True)
-        schema2, codebook2, strf2, intf2, codef2 = amcattest.create_test_schema_with_fields(isarticleschema=True)
+        schema, codebook, strf, intf, codef, _, _ = amcattest.create_test_schema_with_fields(isarticleschema=True)
+        schema2, codebook2, strf2, intf2, codef2, _, _ = amcattest.create_test_schema_with_fields(isarticleschema=True)
         codingjob = amcattest.create_test_job(articleschema=schema, narticles=10)
 
         coded_article = CodedArticle.objects.get(article=codingjob.articleset.articles.all()[0], codingjob=codingjob)

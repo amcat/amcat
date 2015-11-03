@@ -351,9 +351,9 @@ class ArticleSetRefreshView(ProjectActionRedirectView):
     parent = ArticleSetDetailsView
     url_fragment = "refresh"
 
-    def action(self, project_id, articleset_id):
+    def action(self, articleset, **kwargs):
         # refresh the queryset. Probably not the nicest way to do this (?)
-        ArticleSet.objects.get(pk=articleset_id).refresh_index(full_refresh=True)
+        ArticleSet.objects.get(pk=articleset).refresh_index(full_refresh=True)
 
 
         

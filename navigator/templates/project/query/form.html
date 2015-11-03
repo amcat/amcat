@@ -139,6 +139,63 @@
                         <textarea placeholder="IDs" name="article_ids"></textarea>
                     </div>
                 </div>
+                {% if form.codingjobs %}
+                <div class="row">
+                    <div class="col-md-3"><label>Coding</label></div>
+                    <div class="col-md-9">
+                        {{ form.codingschemafield_1 }}
+                        {{ form.codingschemafield_value_1 }}
+                        {{ form.codingschemafield_include_descendants_1 }} <label for="id_codingschemafield_include_descendants">Include descendants</label>
+                        <br/>
+                        <br/>
+                        {{ form.codingschemafield_2 }}
+                        {{ form.codingschemafield_value_2 }}
+                        {{ form.codingschemafield_include_descendants_2 }} <label for="id_codingschemafield_include_descendants">Include descendants</label>
+                        <br/>
+                        <br/>
+                        {{ form.codingschemafield_3 }}
+                        {{ form.codingschemafield_value_3 }}
+                        {{ form.codingschemafield_include_descendants_3 }} <label for="id_codingschemafield_include_descendants">Include descendants</label>
+                    </div>
+                    <script>
+                        require(["jquery", "query/multiselect-defaults", "bootstrap-multiselect", "jquery.depends"], function($, MULTISELECT_DEFAULTS){
+                            $("#id_codingschemafield_1,#id_codingschemafield_2,#id_codingschemafield_3").multiselect(
+                                $.extend({}, MULTISELECT_DEFAULTS, {
+                                    nonSelectedText: 'All selected',
+                                    buttonWidth: "100%"
+                                })
+                            );
+
+                            $("#id_codingschemafield_value_1,#id_codingschemafield_value_2,#id_codingschemafield_value_3").multiselect(
+                                $.extend({}, MULTISELECT_DEFAULTS, {
+                                    disableIfEmpty: true,
+                                    nonSelectedText: 'Code',
+                                    buttonWidth: "100%"
+                                })
+                            ).depends({
+                                getFormatter: function(options, elements, callback){
+                                    options.defaults.getFormatter(options, elements, function(formatter){
+                                        if (!formatter["codingschemafield"]) return;
+
+                                        var url = "/api/v4/projects/{project}/codingschemafields/{codingschemafield}/";
+                                        $.getJSON(url.format(formatter), function(data){
+                                            formatter["codebook"] = data["codebook"];
+                                            callback(formatter);
+                                        });
+                                    });
+                                },
+                                fetchData: function(options, elements, url){
+                                    return options.defaults.fetchData.bind((function(options, elements, data){
+                                        data["results"] = data["codes"];
+                                        this(options, elements, data);
+                                    }).bind(this))(options, elements, url);
+                                }
+                            });
+                        });
+                    </script>
+
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

@@ -49,7 +49,10 @@ define([
         "include_all", "articlesets", "mediums", "article_ids",
         "start_date", "end_date", "datetype", "on_date",
         "codebook_replacement_language", "codebook_label_language",
-        "codebook", "query", "download", "codingjobs"
+        "codebook", "query", "download", "codingjobs",
+        "codingschemafield_1", "codingschemafield_value_1", "codingschemafield_include_descendants_1",
+        "codingschemafield_2", "codingschemafield_value_2", "codingschemafield_include_descendants_2",
+        "codingschemafield_3", "codingschemafield_value_3", "codingschemafield_include_descendants_3"
     ];
 
     var HOTKEYS = {
@@ -364,6 +367,7 @@ define([
     self.save_query = function save_query(event){
         event.preventDefault();
         var dialog = $("#save-query-dialog");
+        var confirm_dialog = $('#confirm-overwrite-dialog');
         var name_btn = $("[name=name]", dialog);
         var private_btn = $("[name=private]", dialog);
         var save_btn = $(".save", dialog);
@@ -371,23 +375,34 @@ define([
         save_btn.removeClass("disabled");
         name_btn.removeClass('error');
 
-        var dialog_visible = $("#save-query-dialog").is(":visible");
+        var dialog_visible = dialog.is(":visible") || confirm_dialog.is(":visible");
 
         if (this.method !== undefined){
             saved_query.method = this.method;
         }
 
+        var method = saved_query.method.toUpperCase();
+        
         if (!dialog_visible){
             name_btn.val(saved_query.name);
             private_btn.prop("checked", saved_query.private);
         }
+        var form = name_btn.closest('form');
+
+        
 
         if (!dialog_visible && this.confirm === true) {
-            dialog.modal();
-            return $(dialog.find("input").get(0)).focus();
+            var modal
+            if(method === "PATCH"){
+                confirm_dialog.modal()
+                return $('.save', confirm_dialog)[0].focus();
+            }
+            else{
+                dialog.modal()
+                return $(modal.find("input").get(0)).focus();
+            }    
         }
 
-        var method = saved_query.method.toUpperCase();
 
         // Save query in modal clicked
         var _private = private_btn.is(":checked");
@@ -423,6 +438,7 @@ define([
             }
         }).done(function(data){
             dialog.modal("hide");
+            confirm_dialog.modal("hide");
             progress_bar.css("width", "0%");
             $("#query-name").text(data.name);
 
@@ -504,12 +520,11 @@ define([
 
     self.save_query_clicked = function save_query_clicked(event){
         var args = {};
-
         if (saved_query.id === null || saved_query.user !== USER) {
             args.confirm = true;
             args.method = "post";
         } else {
-            args.confirm = false;
+            args.confirm = true;
             args.method = "patch";
         }
 
@@ -784,7 +799,7 @@ define([
         $("#scripts").find(".script").click(self.script_changed);
 
         $("#delete-query").click(self.delete_query);
-        $("#save-query-dialog").find(".save").click(self.save_query.bind({confirm: false}));
+        $("#confirm-overwrite-dialog, #save-query-dialog").find(".save").click(self.save_query.bind({confirm: false}));
         $("h4.name").click(self.save_query.bind({confirm: true, method: "patch"}));
         $("#save-query").click(self.save_query_clicked);
         $("#change-articlesets").click(self.change_articlesets_clicked);

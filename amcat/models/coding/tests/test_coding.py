@@ -25,7 +25,7 @@ class TestCoding(amcattest.AmCATTestCase):
         """Set up a simple codingschema with fields to use for testing"""
         super(TestCoding, self).setUp()
 
-        self.schema, self.codebook, self.strfield, self.intfield, self.codefield = (
+        self.schema, self.codebook, self.strfield, self.intfield, self.codefield, _, _ = (
             amcattest.create_test_schema_with_fields())
 
         self.c = amcattest.create_test_code(label="CODED")
@@ -49,7 +49,7 @@ class TestCoding(amcattest.AmCATTestCase):
 
     def test_update_values(self):
         codebook, codes = amcattest.create_test_codebook_with_codes()
-        schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields(codebook=codebook)
+        schema, codebook, strf, intf, codef, _, _ = amcattest.create_test_schema_with_fields(codebook=codebook)
         job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=7)
         articles = list(job.articleset.articles.all())
 

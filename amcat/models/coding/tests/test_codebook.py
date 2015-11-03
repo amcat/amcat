@@ -331,6 +331,36 @@ class TestCodebook(amcattest.AmCATTestCase):
         roots = [ti.code_id for ti in cb.get_tree()]
         self.assertEquals(roots, [code_a.id, code_c.id, code_b.id])
 
+    def test_get_descendants(self):
+        a, b, c, d, e, f,g = [amcattest.create_test_code(label=l) for l in "abcdefg"]
+
+        # D: d
+        #    +e
+        #    +f
+        #    ++g
+        #    a
+        #    b
+        #    +c
+        D = amcattest.create_test_codebook(name="D")
+        D.add_code(d)
+        D.add_code(e, d)
+        D.add_code(f, d)
+        D.add_code(g, f)
+        D.add_code(a)
+        D.add_code(b)
+        D.add_code(c, b)
+
+        tree = D.get_tree()
+
+        a = next(t for t in tree if t.label == "a")
+        b = next(t for t in tree if t.label == "b")
+        d = next(t for t in tree if t.label == "d")
+
+        self.assertEqual({t.code_id for t in a.get_descendants()}, set())
+        self.assertEqual({t.code_id for t in b.get_descendants()}, {c.id})
+        self.assertEqual({t.code_id for t in d.get_descendants()}, {e.id, f.id, g.id})
+
+
     def test_get_aggregation_mapping(self):
         a, b, c, d, e, f,g = [amcattest.create_test_code(label=l) for l in "abcdefg"]
 

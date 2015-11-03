@@ -17,6 +17,8 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from __future__ import unicode_literals
+
+import logging
 import json
 
 from django import conf
@@ -32,6 +34,7 @@ from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin,
 from amcat.scripts.forms import SelectionForm
 from navigator.views.project_views import ProjectDetailsView
 
+log = logging.getLogger(__name__)
 
 SHOW_N_RECENT_QUERIES = 5
 
@@ -108,8 +111,9 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
             all_articlesets = self.project.all_articlesets().only("id", "name")
             all_articlesets = all_articlesets.filter(codingjob_set__id__in=codingjob_ids)
             articleset_ids = all_articlesets.values_list("id", flat=True)
-            all_codingjobs = self.project.codingjob_set.all()
+            all_codingjobs = self.project.codingjob_set.all().filter(id__in=codingjob_ids)
         else:
+            all_codingjobs = None
             all_articlesets = self.project.all_articlesets().only("id", "name")
             all_articlesets = all_articlesets.filter(codingjob_set__id__isnull=True)
 
@@ -124,6 +128,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         form = SelectionForm(
             project=self.project,
             articlesets=articlesets,
+            codingjobs=all_codingjobs,
             data=self.request.GET,
             initial={
                 "datetype": "all",

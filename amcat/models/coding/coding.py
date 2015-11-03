@@ -122,7 +122,7 @@ class Coding(AmcatModel):
         CodingValue.objects.bulk_create(self._get_coding_value(f, v) for f, v in values_dict.items())
 
     def save(self, *args, **kwargs):
-        # This is deprecated behaviour intended to
+        # This is deprecated behaviour intended to # WvA???
         if self._coded_article_changed:
             self.coded_article.save(*args, **kwargs)
             self._coded_article_changed = False

@@ -26,6 +26,7 @@ or to derive automatically generated search terms from.
 from __future__ import unicode_literals, print_function, absolute_import
 
 import logging
+import itertools
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +46,10 @@ import collections
 from itertools import product, chain
 
 # Used in Codebook.get_tree()
-TreeItem = collections.namedtuple("TreeItem", ["code_id", "codebookcode_id", "children", "hidden", "label", "ordernr"])
+class TreeItem(collections.namedtuple("TreeItem", ["code_id", "codebookcode_id", "children", "hidden", "label", "ordernr"])):
+    def get_descendants(self):
+        childrens_children = (c.get_descendants() for c in self.children)
+        return self.children + tuple(itertools.chain.from_iterable(childrens_children))
 
 
 def sort_codebookcodes(ccodes):
