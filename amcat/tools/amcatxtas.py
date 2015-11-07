@@ -21,12 +21,10 @@
 Interface with the xtas NLP processing system
 """
 from amcat.tools import amcates
+from celery.exceptions import NotRegistered
+import logging
 
 class ANALYSES:
-    postag = [{"module" : "xtas.tasks.single.tokenize"},
-              {"module": "xtas.tasks.single.pos_tag",
-               "arguments" : {"model" : "nltk"}}]
-
     corenlp = [{"module" : "xtas.tasks.single.corenlp"}]
     parzu = [{"module" : "xtas.tasks.single.parzu"}]
     alpino = [{"module" : "xtas.tasks.single.alpino"}]
@@ -72,7 +70,12 @@ def get_results(articles, analysis, store_intermediate=True):
     r = pipeline_multiple(docs, analysis, store_intermediate=store_intermediate)
     return r
 
-    
+def _get_doc_type(analysis):
+    analysis = _get_analysis(analysis)
+    pipeline = [task['module'].split(".")[-1] for task in analysis]
+    return "__".join(["article"] + pipeline)
+
+
 def get_result(article, analysis, store_intermediate=True):
     from xtas.tasks.pipeline import pipeline
     analysis = _get_analysis(analysis)
@@ -90,6 +93,14 @@ def get_adhoc_result(analysis, text, store_intermediate=True):
 
     return pipeline(doc, analysis, store_intermediate=store_intermediate)
 
+def preprocess_set_background(articleset, analysis, limit=None, **kargs):
+    analysis = _get_analysis(analysis)
+    doc_type = _get_doc_type(analysis)
+    aids = list(amcates.ES().get_articles_without_child(doc_type, sets=articleset, limit=limit))
+    logging.warning("Adding {} articles from set {} to background queue".format(len(aids), articleset))
+    preprocess_background(aids, analysis)
+
+    
 def preprocess_background(articles, analysis, store_intermediate=True):
     from xtas.tasks.pipeline import pipeline_multiple
     docs = [_get_doc(a) for a in articles]
@@ -97,3 +108,38 @@ def preprocess_background(articles, analysis, store_intermediate=True):
 
     r = pipeline_multiple(docs, analysis, store_intermediate=store_intermediate, block=False, queue="background")
     return r
+
+
+
+
+def _create_mapping(child_type, properties):
+    body = {child_type: {"_parent": {"type": "article"},
+                         "properties" : {prop :{"type" : "object", "enabled" : False}
+                                         for prop in properties}}}
+    amcates.ES().put_mapping(doc_type=child_type, body=body)
+    
+def check_mappings():
+    """Make sure the needed parent mappings are active"""
+    for name, analysis in ANALYSES.__dict__.iteritems():
+        if name.startswith("__"): continue
+        for i in range(len(analysis)):
+            child_type = _get_doc_type(analysis[:i+1])
+            if not amcates.ES().exists_type(child_type):
+                mod = analysis[i]['module']
+                from amcat.tools.classtools import import_attribute
+                try:
+                    t = import_attribute(mod)
+                except ImportError:
+                    logging.exception("Cannot create mapping {child_type}: Cannot find task {mod}"
+                                 .format(**locals()))
+                    continue
+                try:
+                    properties = t.output
+                except AttributeError:
+                    logging.exception("Cannot create mapping {child_type}: Task {mod} has no output attribute"
+                                 .format(**locals()))
+                    continue
+                logging.info("Creating parent mapping article -> {child_type} (properties: {properties})"
+                             .format(**locals()))
+                _create_mapping(child_type, properties)
+                

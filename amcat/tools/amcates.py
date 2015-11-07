@@ -34,7 +34,6 @@ from json import dumps as serialize
 from amcat.tools import queryparser, toolkit
 from amcat.tools.toolkit import multidict, splitlist
 from elasticsearch import Elasticsearch, ImproperlyConfigured
-from elasticsearch.client import indices, cluster
 from elasticsearch.helpers import scan
 
 from django.conf import settings
@@ -268,7 +267,7 @@ class ES(object):
         self.doc_type = settings.ES_ARTICLE_DOCTYPE if doc_type is None else doc_type
 
     def flush(self):
-        indices.IndicesClient(self.es).flush()
+        self.es.indices.flush()
 
     def highlight_article(self, aid, query):
         query = queryparser.parse_to_terms(query).get_dsl()
@@ -297,11 +296,11 @@ class ES(object):
             log.exception("Could not get highlights from {r!r}".format(**locals()))
 
     def clear_cache(self):
-        indices.IndicesClient(self.es).clear_cache()
+        self.es.indices.clear_cache()
 
     def delete_index(self):
         try:
-            indices.IndicesClient(self.es).delete(self.index)
+            self.es.indices.delete(self.index)
         except Exception, e:
             if 'IndexMissingException' in unicode(e): return
             raise
@@ -318,7 +317,7 @@ class ES(object):
             }
         }
 
-        indices.IndicesClient(self.es).create(self.index, body)
+        self.es.indices.create(self.index, body)
 
     def check_index(self):
         """
@@ -328,11 +327,17 @@ class ES(object):
         """
         if not self.es.ping():
             raise Exception("Elastic server cannot be reached")
-        if not indices.IndicesClient(self.es).exists(self.index):
+        if not self.es.indices.exists(self.index):
             log.info("Index {self.index} does not exist, creating".format(**locals()))
             self.create_index()
         return self.es.cluster.health(self.index, wait_for_status='yellow')
 
+    def exists_type(self, doc_type, **kargs):
+        return self.es.indices.exists_type(index=self.index, doc_type=doc_type, **kargs)
+
+    def put_mapping(self, doc_type, body, **kargs):
+        return self.es.indices.put_mapping(index=self.index, doc_type=doc_type, body=body, **kargs)
+        
     def status(self):
         nodes = self.es.nodes.info()['nodes'].values()
         return {"ping": self.es.ping(),
@@ -368,7 +373,7 @@ class ES(object):
         """
         return scan(self.es, index=self.index, doc_type=self.doc_type, query=query, **kargs)
         
-    def query_ids(self, query=None, filters={}, body=None, **kwargs):
+    def query_ids(self, query=None, filters={}, body=None, limit=None, **kwargs):
         """
         Query the index returning a sequence of article ids for the mathced articles
 
@@ -381,9 +386,12 @@ class ES(object):
         """
         if body is None:
             body = dict(build_body(query, filters, query_as_filter=True))
-        for a in scan(self.es, query=body, index=self.index, doc_type=self.doc_type,
-                      size=1000, fields=""):
+        for i, a in enumerate(scan(self.es, query=body, index=self.index, doc_type=self.doc_type,
+                                   size=(limit or 1000), fields="")):
+            if limit and i >= limit:
+                return
             yield int(a['_id'])
+
 
     def query(self, query=None, filters={}, highlight=False, lead=False, fields=[], score=True, **kwargs):
         """
@@ -774,13 +782,13 @@ class ES(object):
         for b in r['aggregations']['prep']['module']['buckets']:
             yield b['key'], b['doc_count']   
 
-    def get_articles_without_child(self, child_doctype, **filters):
+    def get_articles_without_child(self, child_doctype, limit=None, **filters):
         """Return the ids of all articles without a child of the given doctype"""
         nochild =  {"not" : {"has_child" : { "type": child_doctype,
                                              "query" : {"match_all" : {}}}}}        
         filter = dict(build_body(filters=filters))['filter']
         body = {"filter": {"bool" : {"must" : [filter, nochild]}}}
-        return self.query_ids(body=body)
+        return self.query_ids(body=body, limit=limit)
 
 def get_date(timestamp):
     d = datetime.datetime.fromtimestamp(timestamp / 1000)

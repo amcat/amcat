@@ -30,7 +30,7 @@ from rest_framework.exceptions import APIException
 from rest_framework.decorators import api_view
 from rest_framework.status import HTTP_200_OK
 from rest_framework import serializers
-from rest_framework.mixins import ListModelMixin
+from rest_framework.mixins import ListModelMixin, CreateModelMixin
 from rest_framework.viewsets import ModelViewSet, ViewSet, GenericViewSet
 
 from amcat.tools.amcatxtas import get_adhoc_result
@@ -42,7 +42,7 @@ from api.rest.viewsets.project import ProjectViewSetMixin
 from api.rest.viewsets.article import ArticleViewSetMixin
 from api.rest.mixins import DatatablesMixin
 
-from amcat.tools.amcatxtas import ANALYSES, get_result, get_results
+from amcat.tools.amcatxtas import ANALYSES, get_result, get_results, preprocess_set_background
 
 class XTasViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMixin, ViewSet):
     model_key = "xta"# HACK to get xtas in url. Sorry!
@@ -134,7 +134,8 @@ def get_adhoc_tokens(request):
 
 ModuleCount = namedtuple("ModuleCount", ["module", "n"])
 
-class PreprocessViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ListModelMixin, GenericViewSet):
+class PreprocessViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin,
+                        ListModelMixin, CreateModelMixin, GenericViewSet):
     model_key = "preproces"
     model = None
     base_name = "preprocess"
@@ -162,4 +163,10 @@ class PreprocessViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesM
 
     def get_filter_fields(self):
         return []
+
     
+        
+    def perform_create(self, serializer):
+        module, n = [serializer.data.get(f) for f in ['module', 'n']]
+        preprocess_set_background(self.articleset, module, limit=n)
+        
