@@ -134,3 +134,16 @@ class TestAggregateES(amcattest.AmCATTestCase):
             (term2, datetime.datetime(2010, 1, 1, 0, 0), 2),
             (term3, datetime.datetime(2010, 1, 2, 0, 0), 1)
         })
+
+    @amcattest.use_elastic
+    def test_no_objects(self):
+        self.set_up()
+
+        term1 = SearchQuery("aap")
+        term2 = SearchQuery("noot")
+
+        result = self.aggregate(categories=[TermCategory([term1, term2])], objects=False)
+        self.assertEqual(result, {
+            ("aap", 2),
+            ("noot", 2)
+        })

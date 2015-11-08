@@ -112,13 +112,16 @@ class TermCategory(Category):
     def __init__(self, terms):
         self.terms = OrderedDict({t.label: t for t in terms})
 
+    def get_objects(self, ids):
+        return self.terms
+
+    def get_object(self, objects, id):
+        return objects[id]
+
     @property
     def bodies(self):
         from amcat.tools.amcates import build_body
         return (dict(build_body(t.query)) for t in self.terms.values())
-
-    def postprocess(self, value):
-        return self.terms[value]
 
     def get_aggregation(self):
         for label, body in zip(self.terms.keys(), self.bodies):
