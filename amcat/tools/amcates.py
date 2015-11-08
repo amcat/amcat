@@ -22,6 +22,10 @@ from collections import namedtuple
 import json
 import logging
 from types import NoneType
+
+from amcat.tools.aggregate_es.aggregate import aggregate
+from amcat.tools.aggregate_es.categories import IntervalCategory
+from amcat.tools.aggregate_orm import MediumCategory
 from amcat.tools.djangotoolkit import get_model_field
 
 log = logging.getLogger(__name__)
@@ -684,13 +688,12 @@ class ES(object):
         """
         List a sequence of medium_ids that exist in the selection
         """
-        for medium_id, count in self.aggregate_query(query, filters, group_by="mediumid"):
+        for medium_id, count in aggregate(query, filters, [MediumCategory()], objects=False, es=self):
             yield medium_id
 
     def list_dates(self, query=None, filters=None, interval="day"):
-        agg = {"date_histogram": {"field": "date", "interval": interval}}
-        for bucket in self.search_aggregate(agg, query=query, filters=filters)['buckets']:
-            yield get_date(bucket['key'])
+        for date, count in aggregate(query, filters, [IntervalCategory(interval)], es=self):
+            yield date
 
     def in_index(self, ids):
         """
