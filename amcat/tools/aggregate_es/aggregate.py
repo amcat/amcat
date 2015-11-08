@@ -51,14 +51,14 @@ def build_query(query, filters, categories):
         yield "query", {"constant_score": dict(body)}
 
 
-def aggregate(query=None, filters=None, categories=(), objects=True):
+def aggregate(query=None, filters=None, categories=(), objects=True, es=None):
     from amcat.tools.amcates import ES
 
     if not categories:
         raise ValueError("You need to specify at least one category.")
 
     body = dict(build_query(query, filters, categories))
-    raw_result = ES().search(body, search_type="count")
+    raw_result = (es or ES()).search(body, search_type="count")
     aggregation = list(flatten(raw_result["aggregations"], list(categories)))
 
     # Convert to suitable Python value
