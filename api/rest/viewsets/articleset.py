@@ -17,14 +17,16 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from rest_framework import serializers
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+
 from amcat.models import ArticleSet
-from amcat.tools import amcates
+from amcat.tools.aggregate_es.aggregate import aggregate
+from amcat.tools.aggregate_es.categories import ArticlesetCategory
 from amcat.tools.caching import cached
 from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
-from api.rest.viewsets.project import ProjectViewSetMixin
-from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from api.rest.viewset import AmCATViewSetMixin
+from api.rest.viewsets.project import ProjectViewSetMixin
 
 __all__ = (
     "ArticleSetSerializer", "ArticleSetViewSet", "FavouriteArticleSetViewSet",
@@ -48,8 +50,9 @@ class ArticleSetSerializer(AmCATModelSerializer):
 
     @cached
     def get_nn(self):
-        sets = [s.id for s in self.instance]
-        return dict(amcates.ES().aggregate_query(filters={'sets': sets}, group_by='sets'))
+        set_ids = [s.id for s in self.instance]
+        category = ArticlesetCategory(ArticleSet.objects.filter(id__in=set_ids))
+        return dict(aggregate(filters={'sets': set_ids}, categories=[category], objects=False))
 
     def n_articles(self, articleset):
         if not articleset: return None
