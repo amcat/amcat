@@ -139,7 +139,9 @@
                         <textarea placeholder="IDs" name="article_ids"></textarea>
                     </div>
                 </div>
-                {% if form.codingjobs %}
+                {{ form.codingjobs.queryset }}
+
+                {% if form.fields.codingjobs.queryset %}
                 <div class="row">
                     <div class="col-md-3"><label>Coding</label></div>
                     <div class="col-md-9">

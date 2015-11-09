@@ -23,6 +23,8 @@ from collections import OrderedDict
 
 from amcat.models import ArticleSet, Medium
 
+__all__ = ("IntervalCategory", "ArticlesetCategory", "MediumCategory", "TermCategory")
+
 log = logging.getLogger(__name__)
 
 ELASTIC_TIME_UNITS = [
@@ -61,10 +63,7 @@ class Category(object):
         }
 
     def parse_aggregation_result(self, result):
-        expected_fields = 2 if "doc_count" in result else 1
-        assert len(result) == expected_fields
-
-        for bucket in result.values()[0]["buckets"]:
+        for bucket in result[self.field]["buckets"]:
             yield bucket["key"], bucket
 
 
@@ -100,12 +99,7 @@ class ArticlesetCategory(ModelCategory):
 
 class MediumCategory(ModelCategory):
     model = Medium
-    field = "medium"
-
-    def parse_aggregation_result(self, result):
-        result = super(MediumCategory, self).parse_aggregation_result(result)
-        next(result)
-        return result
+    field = "mediumid"
 
 
 class TermCategory(Category):
@@ -132,6 +126,8 @@ class TermCategory(Category):
 
 
 class IntervalCategory(Category):
+    field = "date"
+
     def __init__(self, interval):
         if interval not in ELASTIC_TIME_UNITS:
             err_msg = "{} not a valid interval. Choose on of: {}"

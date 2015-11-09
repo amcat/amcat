@@ -16,37 +16,24 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from itertools import chain
-import re
 import json
+import re
+from itertools import chain
 
 from django.core.exceptions import ValidationError
 from django.forms import ChoiceField, BooleanField
 
-from amcat.models import Medium, ArticleSet, CodingJob
+from aggregation import AggregationEncoder
 from amcat.models import CodingSchemaField, Code, CodingValue, Coding
+from amcat.models import Medium, ArticleSet, CodingJob
+from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
+from amcat.scripts.forms.selection import get_all_schemafields
 from amcat.scripts.query import QueryAction, QueryActionForm
+from amcat.scripts.query.aggregation import AGGREGATION_FIELDS
 from amcat.tools import aggregate_orm
 from amcat.tools.aggregate_orm import ORMAggregate
+from amcat.tools.aggregate_orm.categories import POSTGRES_DATE_TRUNC_VALUES
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
-from amcat.scripts.forms.selection import get_all_schemafields
-from aggregation import AggregationEncoder
-from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
-
-AGGREGATION_FIELDS = (
-    ("articleset", "Articleset"),
-    ("medium", "Medium"),
-    ("term", "Term"),
-    ("Interval", (
-        ("year", "Year"),
-        ("quarter", "Quarter"),
-        ("month", "Month"),
-        ("week", "Week"),
-        ("day", "Day")
-    ))
-)
-
-INTERAVLS = ("year", "quarter", "month", "week", "day")
 
 CODINGSCHEMAFIELD_RE = re.compile("^codingschemafield\((?P<id>[0-9]+)\)$")
 AVERAGE_CODINGSCHEMAFIELD_RE = re.compile("^avg\((?P<id>[0-9]+)\)$")
@@ -114,7 +101,7 @@ class CodingAggregationActionForm(QueryActionForm):
         if not field_value:
             return None
 
-        if field_value in INTERAVLS:
+        if field_value in POSTGRES_DATE_TRUNC_VALUES:
             return aggregate_orm.IntervalCategory(field_value, prefix=prefix)
 
         if field_value == "medium":

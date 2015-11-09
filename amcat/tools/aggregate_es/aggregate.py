@@ -51,7 +51,7 @@ def build_query(query, filters, categories):
         yield "query", {"constant_score": dict(body)}
 
 
-def aggregate(query=None, filters=None, categories=(), objects=True, es=None):
+def aggregate(query=None, filters=None, categories=(), objects=True, es=None, flat=True):
     from amcat.tools.amcates import ES
 
     if not categories:
@@ -74,4 +74,9 @@ def aggregate(query=None, filters=None, categories=(), objects=True, es=None):
             for row in aggregation:
                 row[i] = category.get_object(objs, row[i])
 
-    return map(tuple, aggregation)
+    aggregation = map(tuple, aggregation)
+
+    if not flat:
+        aggregation = ((row[:-1], row[-1:]) for row in aggregation)
+
+    return aggregation

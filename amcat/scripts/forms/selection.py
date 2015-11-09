@@ -131,13 +131,12 @@ class SelectionForm(forms.Form):
 
         self.project = project
         self.articlesets = articlesets
-        self.codingjobs = codingjobs
+        self.codingjobs = codingjobs or CodingJob.objects.none()
         self.schemafields = None
 
         self.fields['articlesets'].queryset = articlesets.order_by('-pk')
-        self.fields['codingjobs'].queryset = project.codingjob_set.all()
         self.fields['codebook'].queryset = project.get_codebooks()
-
+        self.fields['codingjobs'].queryset = project.codingjob_set.filter(id__in=self.codingjobs)
         self.fields['mediums'].queryset = self._get_mediums()
         self.fields['codebook_label_language'].queryset = self.fields['codebook_replacement_language'].queryset = (
             Language.objects.filter(labels__code__codebook_codes__codebook__in=project.get_codebooks()).distinct()
@@ -156,7 +155,6 @@ class SelectionForm(forms.Form):
             codes = Code.objects.filter(id__in=codebookcodes.values_list("code_id", flat=True)).order_by("id")
 
             for field_name in ("1", "2", "3"):
-                print(schemafields_codebooks)
                 self.fields["codingschemafield_{}".format(field_name)].queryset = schemafields_codebooks
                 self.fields["codingschemafield_value_{}".format(field_name)].queryset = codes
                 self.fields["codingschemafield_value_{}".format(field_name)].widget.attrs = {

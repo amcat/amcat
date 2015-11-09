@@ -57,8 +57,8 @@ def get_mediums(articlesets):
     if not articlesets:
         return Medium.objects.none()
 
-    articlesets = ES().list_media(filters={"sets": tuple(articlesets)})
-    return Medium.objects.filter(id__in=articlesets)
+    medium_ids = ES().list_media(filters={"sets": tuple(articlesets)})
+    return Medium.objects.filter(id__in=medium_ids)
 
 
 class MediumSourcetype(AmcatModel):

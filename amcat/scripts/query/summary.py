@@ -26,6 +26,7 @@ from django.template.defaultfilters import escape as escape_filter
 
 from amcat.forms.forms import order_fields
 from amcat.scripts.query import QueryAction, QueryActionForm
+from amcat.tools.aggregate_es import IntervalCategory, MediumCategory
 from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.toolkit import Timer
 
@@ -53,6 +54,7 @@ def escape_article_result(article):
         except KeyError:
             pass
     return article
+
 class SummaryAction(QueryAction):
     output_types = (("text/html+summary", "HTML"),)
     form_class = SummaryActionForm
@@ -72,11 +74,11 @@ class SummaryAction(QueryAction):
             mediums = selection.get_mediums()
             self.monitor.update(59, "Fetching articles..".format(**locals()))
             articles = [escape_article_result(art) for art in selection.get_articles(size=size, offset=offset)]
+
             if show_aggregation:
                 self.monitor.update(69, "Aggregating..".format(**locals()))
-                date_aggr = selection.get_aggregate(x_axis="date", y_axis="total", interval="day")
-                medium_aggr = selection.get_aggregate(x_axis="medium", y_axis="date", interval="day")
-            
+                date_aggr = selection.get_nested_aggregate([IntervalCategory("day")])
+                medium_aggr = selection.get_nested_aggregate([MediumCategory(), IntervalCategory("day")])
             self.monitor.update(79, "Rendering results..".format(**locals()))
 
         return TEMPLATE.render(Context(dict(locals(), **{

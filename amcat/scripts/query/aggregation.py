@@ -16,23 +16,34 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from __future__ import unicode_literals
+
 import json
 from datetime import datetime
 from time import mktime
 
-from django.core.exceptions import ValidationError, MultipleObjectsReturned
-from django.db.models import Q
-from django.forms import ChoiceField, CharField, Select
+from django.core.exceptions import ValidationError
+from django.forms import ChoiceField
 
 from amcat.models import Medium, ArticleSet, CodingSchemaField, Code, CodingJob
 from amcat.scripts.query import QueryAction, QueryActionForm
-from amcat.tools.aggregate import get_relative
+from amcat.tools import aggregate_es
+from amcat.tools.aggregate_es.categories import ELASTIC_TIME_UNITS
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
 
-X_AXES = tuple((c, c.title()) for c in ("date", "medium", "term", "set"))
-Y_AXES = tuple((c, c.title()) for c in ("medium", "term", "set", "total"))
 
-INTERVALS = tuple((c, c.title()) for c in ("day", "week", "month", "quarter", "year"))
+AGGREGATION_FIELDS = (
+    ("articleset", "Articleset"),
+    ("medium", "Medium"),
+    ("term", "Term"),
+    ("Interval", (
+        ("year", "Year"),
+        ("quarter", "Quarter"),
+        ("month", "Month"),
+        ("week", "Week"),
+        ("day", "Day")
+    ))
+)
 
 
 class AggregationEncoder(json.JSONEncoder):
@@ -51,49 +62,41 @@ class AggregationEncoder(json.JSONEncoder):
 MEDIUM_ERR = "Could not find medium with id={column} or name={column}"
 
 class AggregationActionForm(QueryActionForm):
-    x_axis = ChoiceField(label="X-axis (rows)", choices=X_AXES, initial="date")
-    y_axis = ChoiceField(label="Y-axis (columns)", choices=Y_AXES, initial="medium")
-    interval = ChoiceField(choices=INTERVALS, required=False, initial="day")
-    relative_to = CharField(widget=Select, required=False)
+    primary = ChoiceField(label="Primary aggregation", choices=AGGREGATION_FIELDS)
+    secondary = ChoiceField(label="Secondary aggregation", choices=(("", "------"),) + AGGREGATION_FIELDS, required=False)
+
+    #relative_to = CharField(widget=Select, required=False)
 
     def __init__(self, *args, **kwargs):
         super(AggregationActionForm, self).__init__(*args, **kwargs)
-
-        self.fields["relative_to"].widget.attrs = {
-            "class": "depends-will-be-added-by-query-js",
-            "data-depends-on": json.dumps(["y_axis", "query", "mediums"]),
-            "data-depends-url": "/api/v4/query/statistics/?project={project}&format=json",
-            "data-depends-value": "{id}",
-            "data-depends-label": "{label}",
-        }
         assert not self.codingjobs
 
-    def clean_relative_to(self):
-        column = self.cleaned_data['relative_to']
+    def _clean_aggregation(self, field_name):
+        field_value = self.cleaned_data[field_name]
 
-        if not column:
+        if not field_value:
             return None
 
-        y_axis = self.cleaned_data['y_axis']
+        if field_value in ELASTIC_TIME_UNITS:
+            return aggregate_es.IntervalCategory(field_value)
 
-        if y_axis == "medium":
-            if int(column) not in (m.id for m in self.cleaned_data["mediums"]):
-                raise ValidationError(MEDIUM_ERR.format(column=column))
-            return Medium.objects.get(id=int(column))
+        if field_value == "medium":
+            return aggregate_es.MediumCategory()
 
-        if y_axis == "term":
-            queries = SelectionSearch(self).get_queries()
-            queries = {q.label: q for q in queries}
-            if column not in queries:
-                raise ValidationError("Term '{column}' not found in search terms.".format(column=column))
-            return queries[column]
+        if field_value == "articleset":
+            return aggregate_es.ArticlesetCategory(self.articlesets)
 
-        if y_axis == "set":
-            if int(column) not in (aset.id for aset in self.articlesets):
-                raise ValidationError("Set '{column}' not available.".format(column=column))
-            return ArticleSet.objects.get(id=int(column))
+        if field_value == "term":
+            terms = SelectionSearch(self).get_queries()
+            return aggregate_es.TermCategory(terms)
 
-        raise ValidationError("Not a valid column name.")
+        raise ValidationError("Not a valid value: %s" % field_value)
+
+    def clean_primary(self):
+        return self._clean_aggregation("primary")
+
+    def clean_secondary(self):
+        return self._clean_aggregation("secondary")
 
 
 class AggregationAction(QueryAction):
@@ -101,8 +104,8 @@ class AggregationAction(QueryAction):
     Aggregate articles based on their properties. Make sure x_axis != y_axis.
     """
     output_types = (
-        ("text/json+aggregation+table", "Table"),
         ("text/json+aggregation+barplot", "Bar plot"),
+        ("text/json+aggregation+table", "Table"),
         ("text/json+aggregation+scatter", "Scatter plot"),
         ("text/json+aggregation+line", "Line plot"),
         ("text/json+aggregation+heatmap", "Heatmap"),
@@ -117,20 +120,10 @@ class AggregationAction(QueryAction):
         self.monitor.update(10, "Found {narticles} articles. Aggregating..".format(**locals()))
 
         # Get aggregation
-        x_axis = form.cleaned_data['x_axis']
-        y_axis = form.cleaned_data['y_axis']
-        interval = form.cleaned_data['interval']
-        aggregation = selection.get_aggregate(x_axis, y_axis, interval)
-
-        self.monitor.update(20, "Calculating relative values..".format(**locals()))
-        column = form.cleaned_data['relative_to']
-
-        if column is not None:
-            aggregation = list(get_relative(aggregation, column))
+        primary = form.cleaned_data["primary"]
+        secondary= form.cleaned_data["secondary"]
+        categories = list(filter(None, [primary, secondary]))
+        aggregation = selection.get_aggregate(categories, flat=False)
 
         self.monitor.update(60, "Serialising..".format(**locals()))
         return json.dumps(list(aggregation), cls=AggregationEncoder, check_circular=False)
-
-
-class AggregationColumnAction(QueryAction):
-    pass

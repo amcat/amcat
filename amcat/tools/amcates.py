@@ -18,32 +18,29 @@
 ###########################################################################
 
 from __future__ import unicode_literals, print_function, absolute_import
-from collections import namedtuple
+
+import datetime
 import json
 import logging
-from types import NoneType
-
-from amcat.tools.aggregate_es.aggregate import aggregate
-from amcat.tools.aggregate_es.categories import IntervalCategory
-from amcat.tools.aggregate_orm import MediumCategory
-from amcat.tools.djangotoolkit import get_model_field
-
-log = logging.getLogger(__name__)
 import re
-import datetime
 
+from collections import namedtuple
 from hashlib import sha224 as hash_class
 from json import dumps as serialize
-
-from amcat.tools import queryparser, toolkit
-from amcat.tools.toolkit import multidict, splitlist
-from elasticsearch import Elasticsearch, ImproperlyConfigured
-from elasticsearch.client import indices, cluster
-from elasticsearch.helpers import scan
+from types import NoneType
 
 from django.conf import settings
+from elasticsearch import Elasticsearch, ImproperlyConfigured
+from elasticsearch.client import indices
+from elasticsearch.helpers import scan
+
+from amcat.tools import queryparser, toolkit
 from amcat.tools.caching import cached
+from amcat.tools.djangotoolkit import get_model_field
 from amcat.tools.progress import NullMonitor
+from amcat.tools.toolkit import multidict, splitlist
+
+log = logging.getLogger(__name__)
 
 if settings.ES_USE_LEGACY_HASH_FUNCTION is None:
     error_msg = "Environment variable AMCAT_ES_LEGACY_HASH should be explicitely set."
@@ -688,10 +685,12 @@ class ES(object):
         """
         List a sequence of medium_ids that exist in the selection
         """
+        from amcat.tools.aggregate_es import aggregate, MediumCategory
         for medium_id, count in aggregate(query, filters, [MediumCategory()], objects=False, es=self):
             yield medium_id
 
     def list_dates(self, query=None, filters=None, interval="day"):
+        from amcat.tools.aggregate_es import aggregate, IntervalCategory
         for date, count in aggregate(query, filters, [IntervalCategory(interval)], es=self):
             yield date
 

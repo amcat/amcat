@@ -23,21 +23,19 @@ move it to 'queryparser'?
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
-from itertools import chain, islice
+
 import logging
-from operator import attrgetter
 import re
+from itertools import chain
 
-from django.core.exceptions import ValidationError
 from dateutil.relativedelta import relativedelta
+from django.core.exceptions import ValidationError
 
-from amcat.tools.aggregate import get_mediums
-from amcat.tools.aggregate import get_articlesets
+from amcat.models import Label, Medium, ArticleSet, CodingJob, Code
+from amcat.tools.aggregate_es import aggregate, TermCategory
 from amcat.tools.amcates import ES
 from amcat.tools.caching import cached
-from amcat.models import Label, Article, Medium
 from amcat.tools.toolkit import stripAccents
-
 
 REFERENCE_RE = re.compile(r"<(?P<reference>.*?)(?P<recursive>\+?)>")
 
@@ -49,10 +47,43 @@ FIELD_MAP = {
     "set": "sets"
 }
 
+def to_sortable_tuple(key):
+    if isinstance(key, tuple):
+        return tuple(map(to_sortable_tuple, key))
+    elif isinstance(key, (Medium, ArticleSet, CodingJob)):
+        return key.name.lower()
+    elif isinstance(key, (Code, SearchQuery)):
+        return key.label.lower()
+    return key
+
 
 class SelectionData:
     def __init__(self, data):
         self.__dict__.update(data)
+
+
+def group_by_first_value(aggr):
+    current_group = None
+    nested_aggr = []
+
+    for row in aggr:
+        if not nested_aggr:
+            current_group = row[0]
+
+        if row[0] == current_group:
+            nested_aggr.append(row[1:])
+        else:
+            yield current_group, nested_aggr
+            nested_aggr = []
+
+    if nested_aggr:
+        yield current_group, nested_aggr
+
+def to_nested(aggr):
+    for row in aggr:
+        if len(row) == 2:
+            return aggr
+    return ((group, to_nested(a)) for group, a in group_by_first_value(aggr))
 
 
 class SelectionSearch:
@@ -136,27 +167,17 @@ class SelectionSearch:
     def get_mediums(self):
         return Medium.objects.filter(id__in=self.get_medium_ids())
 
-    def get_aggregate(self, x_axis, y_axis, interval="month"):
-        x_axis = FIELD_MAP.get(x_axis, x_axis)
-        y_axis = FIELD_MAP.get(y_axis, y_axis)
+    def get_aggregate(self, categories, flat=True):
+        # If we're aggregating on terms, we don't want a global filter
+        query = None
+        if not any(isinstance(c, TermCategory) for c in categories):
+            query = self.get_query()
 
-        if y_axis == "total":
-            group_by = [x_axis]
-        else:
-            group_by = [x_axis, y_axis]
+        aggr = aggregate(query, self.get_filters(), categories, flat=flat)
+        return sorted(aggr, key=to_sortable_tuple)
 
-        query = None if "term" in (x_axis, y_axis) else self.get_query()
-
-        aggr = ES().aggregate_query(
-            query=query, terms=self.get_queries(),
-            filters=self.get_filters(), group_by=group_by,
-            date_interval=interval, sets=map(attrgetter("id"), self.data.articlesets)
-        )
-
-        aggr = get_mediums(aggr, list(group_by))
-        aggr = get_articlesets(aggr, list(group_by))
-
-        return aggr
+    def get_nested_aggregate(self, categories):
+        return to_nested(self.get_aggregate(categories))
 
     def get_medium_ids(self):
         return self.es.list_media(self.get_query(), self.get_filters())
@@ -175,11 +196,8 @@ class SelectionSearch:
         """
 
         """
-        fields = ['headline','text','date', 
-                  'length','medium','author','section']
-        articles = ES().query(self.get_query(), self.get_filters(), True, size=size, from_=offset, fields=fields)
-        
-        return articles
+        fields = ['headline','text','date', 'length','medium','author','section']
+        return ES().query(self.get_query(), self.get_filters(), True, size=size, from_=offset, fields=fields)
 
 
 class SearchQuery(object):
