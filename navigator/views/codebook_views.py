@@ -162,9 +162,9 @@ class CodebookUnlinkView(ProjectActionRedirectView):
     parent = CodebookDetailsView
     url_fragment = "unlink"
 
-    def action(self, project_id, codebook_id):
-        cb = Codebook.objects.get(pk=codebook_id)
-        project = Project.objects.get(pk=project_id)
+    def action(self, project, codebook):
+        cb = Codebook.objects.get(pk=codebook)
+        project = Project.objects.get(pk=project)
         project.codebooks.remove(cb)
 
     def get_redirect_url(self, **kwargs):
@@ -178,8 +178,8 @@ class CodebookDeleteView(ProjectActionRedirectView):
     def get_redirect_url(self, **kwargs):
         return CodebookListView._get_breadcrumb_url(kwargs, self)
 
-    def action(self, project_id, codebook_id):
-        cb = Codebook.objects.get(pk=codebook_id)
+    def action(self, project, codebook):
+        cb = Codebook.objects.get(pk=codebook)
         cb.recycle()
 
 class CodebookFormActionView(ProjectFormView):
