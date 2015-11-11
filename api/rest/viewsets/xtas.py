@@ -24,6 +24,8 @@ API Viewsets for dealing with NLP (pre)processing via xtas
 from collections import namedtuple
 import itertools
 import json
+import tempfile
+import logging
 
 from rest_framework.response import Response
 from rest_framework.exceptions import APIException
@@ -63,7 +65,7 @@ class XTasViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMix
         return Response(plugins)
 
 
-class ArticleXTasSerializer(serializers.Serializer):
+class ArticleLemmataSerializer(serializers.Serializer):
 
     class Meta:
         class list_serializer_class(serializers.ListSerializer):
@@ -86,25 +88,19 @@ class ArticleXTasSerializer(serializers.Serializer):
         return module
     
     def to_representation(self, article):
-        if article is None: return {}
-        saf = self._cache[article.pk]['result']#get_result(article.pk, self.module)
-        return list(self.get_xtas_results(article.pk, saf))
-
-class ArticleLemmataSerializer(ArticleXTasSerializer):
-
-    @property
-    def filter_pos(self):
-        return self.context['request'].GET.get('pos1')
-
-    def output_token(self, token):
-        for key, vals in self.context['request'].GET.iterlists():
-            if key in token and token[key] not in vals:
-                return False
-        return True
-
-    def get_xtas_results(self, aid, saf):
         from saf.saf import SAF
-        return SAF(saf).resolve(aid=aid)
+        if article is None: return {}
+        saf = self._cache[article.pk]['result']
+        try:
+            return list(SAF(saf).resolve(aid=article.pk))
+        except:
+            with tempfile.NamedTemporaryFile(prefix="saf_{article.pk}_".format(**locals()),
+                                             suffix=".json", delete=False) as f:
+                json.dump(saf, f)
+                logging.exception("Error on resolving saf for article {article.pk}, written to {f.name}"
+                                  .format(**locals()))
+                raise
+
 
 class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
     model_key = "token"
