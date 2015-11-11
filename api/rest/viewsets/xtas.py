@@ -44,7 +44,7 @@ from api.rest.viewsets.project import ProjectViewSetMixin
 from api.rest.viewsets.article import ArticleViewSetMixin
 from api.rest.mixins import DatatablesMixin
 
-from amcat.tools.amcatxtas import ANALYSES, get_result, get_results, preprocess_set_background
+from amcat.tools.amcatxtas import ANALYSES, get_result, get_results, preprocess_set_background, get_preprocessed_results
 
 class XTasViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMixin, ViewSet):
     model_key = "xta"# HACK to get xtas in url. Sorry!
@@ -70,13 +70,18 @@ class ArticleLemmataSerializer(serializers.Serializer):
     class Meta:
         class list_serializer_class(serializers.ListSerializer):
             def to_representation(self, data):
-                # get results for all articles
-                self.child._cache = get_results(data, self.child.module)
+                only_cached = self.context['request'].GET.get('only_cached', 'N')
+                only_cached = only_cached[0].lower() in ['1', 'y']
+                if only_cached:
+                    self.child._cache = dict(get_preprocessed_results(data, self.child.module))
+                else:
+                    self.child._cache = dict(get_results(data, self.child.module))
                 result = serializers.ListSerializer.to_representation(self, data)
                 # flatten list of lists
                 result = itertools.chain(*result)
                 return result
 
+        
     @property
     def module(self):
         module = self.context['request'].GET.get('module')
@@ -90,7 +95,8 @@ class ArticleLemmataSerializer(serializers.Serializer):
     def to_representation(self, article):
         from saf.saf import SAF
         if article is None: return {}
-        saf = self._cache[article.pk]['result']
+        saf = self._cache.get(article.pk)
+        if saf is None: return {}
         try:
             return list(SAF(saf).resolve(aid=article.pk))
         except:

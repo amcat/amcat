@@ -61,6 +61,19 @@ def _get_doc(article):
     es = amcates.ES()
     return {'index': es.index, 'type': es.doc_type,
            'id': article, 'field': 'text'}
+
+def get_preprocessed_results(articles, analysis):
+    """
+    Get only the results that have already been preprocessed
+    Returns a sequence of id, result pairs for the articles that were found
+    """
+    ids = [(art if isinstance(art, int) else art.id) for art in articles]
+    analysis = _get_analysis(analysis)
+    doc_type = _get_doc_type(analysis)
+    for d in amcates.ES().mget(ids, doc_type=doc_type, parents=ids):
+        if d['found']:
+            yield int(d['_id']), d['_source']
+    
     
 def get_results(articles, analysis, store_intermediate=True):
     from xtas.tasks.pipeline import pipeline_multiple
@@ -68,7 +81,11 @@ def get_results(articles, analysis, store_intermediate=True):
     analysis = _get_analysis(analysis)
 
     r = pipeline_multiple(docs, analysis, store_intermediate=store_intermediate)
-    return r
+    for id, result in r.iteritems():
+        if result['state'] != 'SUCCESS':
+            raise Exception("Exception on processing article {id}: {msg}"
+                            .format(msg=result['result'], **locals()))
+        yield id, result['result']
 
 def _get_doc_type(analysis):
     analysis = _get_analysis(analysis)

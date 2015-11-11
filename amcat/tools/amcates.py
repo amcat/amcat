@@ -358,6 +358,17 @@ class ES(object):
         kargs.update(options)
         return self.es.get_source(id=id, **kargs)
 
+    def mget(self, ids, doc_type=None, parents=None):
+        """
+        Get multiple articles from the index.
+        If paret is given, it should be a sequence of the same length as ids
+        """
+        if parents is None: parents = [None] * len(ids)
+        if doc_type is None: doc_type = self.doc_type
+        getdocs = [{"_index" : self.index, "_id" : id, "_parent" : parent, "_type" : doc_type}
+                   for (id, parent) in zip(ids, parents)]
+        return self.es.mget({"docs": getdocs})['docs']
+        
     def search(self, body, **options):
         """
         Perform a 'raw' search on the underlying ES index
