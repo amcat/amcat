@@ -125,7 +125,7 @@ class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatables
     
     def get_renderer_context(self):
         context = super(XTasLemmataViewSet, self).get_renderer_context()
-        context['fast_csv'] = False
+        context['fast_csv'] = True 
         return context
 
 
