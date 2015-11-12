@@ -72,10 +72,12 @@ class ArticleLemmataSerializer(serializers.Serializer):
             def to_representation(self, data):
                 only_cached = self.context['request'].GET.get('only_cached', 'N')
                 only_cached = only_cached[0].lower() in ['1', 'y']
+                import time; t = time.time() 
                 if only_cached:
                     self.child._cache = dict(get_preprocessed_results(data, self.child.module))
                 else:
                     self.child._cache = dict(get_results(data, self.child.module))
+                logging.debug("Cached xtas results in {t}s".format(t=time.time()-t))
                 result = serializers.ListSerializer.to_representation(self, data)
                 # flatten list of lists
                 result = itertools.chain(*result)
@@ -98,7 +100,8 @@ class ArticleLemmataSerializer(serializers.Serializer):
         saf = self._cache.get(article.pk)
         if saf is None: return {}
         try:
-            return list(SAF(saf).resolve(aid=article.pk))
+            result = list(SAF(saf).resolve(aid=article.pk))
+            return result
         except:
             with tempfile.NamedTemporaryFile(prefix="saf_{article.pk}_".format(**locals()),
                                              suffix=".json", delete=False) as f:
@@ -120,6 +123,10 @@ class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatables
         queryset = queryset.filter(articlesets_set=self.articleset).only("pk")
         return queryset
     
+    def get_renderer_context(self):
+        context = super(XTasLemmataViewSet, self).get_renderer_context()
+        context['fast_csv'] = False
+        return context
 
 
 @api_view(http_method_names=("GET",))

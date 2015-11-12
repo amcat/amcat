@@ -67,15 +67,10 @@ LOGGING = {
                             'propagate': True,
                             'level': 'WARN',
         },
-        'django': {
-            'handlers': ['console'],
-            'propagate': True,
-            'level': 'WARN',
-        },
-        'amcat': {
+        '': {
             'handlers': ['console'],
             'level': LOG_LEVEL,
-        }, 
+        },
     }
 }
 

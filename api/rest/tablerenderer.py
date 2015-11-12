@@ -26,7 +26,10 @@ from functools import partial
 
 from rest_framework.renderers import *
 from amcat.tools.table import table3
+import logging
 
+from cStringIO import StringIO
+import csv
 
 class TableRenderer(BaseRenderer):
     """
@@ -191,6 +194,7 @@ class TableRenderer(BaseRenderer):
         return flat_dict
 
 
+        
 class CSVRenderer(TableRenderer):
     """
     Renderer which serializes to CSV
@@ -205,6 +209,32 @@ class CSVRenderer(TableRenderer):
     def render_exception(self, data, context):
         return data['detail']
 
+    
+    def render(self, data, media_type=None, renderer_context=None):
+        import time; t = time.time()
+        if renderer_context and renderer_context.get('fast_csv'):
+            result = self.render_fast(data)
+        else:
+            result = super(CSVRenderer, self).render(data, media_type=media_type, renderer_context=renderer_context)
+        logging.debug("Created csv in {t}s".format(t=time.time()-t))
+        return result
+
+    def render_fast(self, data):
+        header = []       
+        out = StringIO()
+        w = csv.writer(out)
+        for d in data['results']:
+            keys = set(d.keys())
+            extra = keys - set(header)
+            if extra:
+                header += list(extra)
+            row = [(unicode(d[h]).encode("utf-8") if h in d else "") for h in header]
+            w.writerow(row)
+        out_h = StringIO()
+        csv.writer(out_h).writerow(header)
+        return out_h.getvalue() + out.getvalue()
+        
+        
 class CSVRendererWithUnderscores (CSVRenderer):
     level_sep = '_'
 
@@ -245,8 +275,6 @@ class XHTMLRenderer(TableRenderer):
         result = table.export(format='html')
         return result
 
-
-
 EXPORTERS = [CSVRenderer, XLSXRenderer, SPSSRenderer, XHTMLRenderer]
 
 def set_response_content(response):
@@ -260,3 +288,4 @@ def set_response_content(response):
             response['Content-Disposition'] = 'attachment; filename="data.{exporter.extension}"'.format(**locals())
             break
     return response
+
