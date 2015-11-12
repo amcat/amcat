@@ -99,7 +99,6 @@ if 'DJANGO_LOG_FILE' in os.environ:
         'backupCount': 2,
         'formatter': 'color',
     }
-    LOGGING['loggers']['amcat']['handlers'] += ['logfile']
-    LOGGING['loggers']['django']['handlers'] += ['logfile']
+    LOGGING['loggers']['']['handlers'] += ['logfile']
 
 
