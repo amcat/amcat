@@ -16,22 +16,23 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from itertools import chain
-import re
 import json
+import re
+from itertools import chain
 
 from django.core.exceptions import ValidationError
 from django.forms import ChoiceField, BooleanField
 
-from amcat.models import Medium, ArticleSet, CodingJob
+from aggregation import AggregationEncoder
+from amcat.models import CodedArticle
 from amcat.models import CodingSchemaField, Code, CodingValue, Coding
+from amcat.models import Medium, ArticleSet, CodingJob
+from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
+from amcat.scripts.forms.selection import get_all_schemafields
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools import aggregate_orm
 from amcat.tools.aggregate_orm import ORMAggregate
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
-from amcat.scripts.forms.selection import get_all_schemafields
-from aggregation import AggregationEncoder
-from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
 
 AGGREGATION_FIELDS = (
     ("articleset", "Articleset"),
@@ -217,6 +218,7 @@ class CodingAggregationAction(QueryAction):
     )
     form_class = CodingAggregationActionForm
 
+
     def run(self, form):
         self.monitor.update(1, "Executing query..")
         selection = SelectionSearch(form)
@@ -233,15 +235,13 @@ class CodingAggregationAction(QueryAction):
         article_ids = selection.get_article_ids()
 
         # This should probably happen in SelectionForm?
-        codings = Coding.objects.all()
-        codings = codings.filter(coded_article__article__id__in=article_ids)
-        codings = codings.filter(coded_article__codingjob__in=codingjobs)
+        coded_articles = CodedArticle.objects.all()
+        coded_articles = coded_articles.filter(article__id__in=article_ids)
+        coded_articles = coded_articles.filter(codingjob__id__in=codingjobs)
 
-        # To prevent huge 'recursive' queries, we will build our own list of valid
-        # coding values ids in Python :)
-        coding_ids = set(CodingValue.objects.filter(coding__in=codings).values_list("coding_id", flat=True))
+        coded_article_ids = set(coded_articles.values_list("id", flat=True))
         for field_name in ("1", "2", "3"):
-            if not coding_ids:
+            if not coded_article_ids:
                 break
 
             schemafield = form.cleaned_data["codingschemafield_{}".format(field_name)]
@@ -249,13 +249,13 @@ class CodingAggregationAction(QueryAction):
             schemafield_include_descendants = form.cleaned_data["codingschemafield_include_descendants_{}".format(field_name)]
 
             if schemafield and  schemafield_value:
-                code_ids = list(get_code_filter(schemafield.codebook, schemafield_value.id, schemafield_include_descendants))
-                coding_values = CodingValue.objects.filter(coding__id__in=coding_ids)
+                code_ids = get_code_filter(schemafield.codebook, schemafield_value.id, schemafield_include_descendants)
+                coding_values = CodingValue.objects.filter(coding__coded_article__id__in=coded_article_ids)
                 coding_values = coding_values.filter(field__id=schemafield.id)
                 coding_values = coding_values.filter(intval__in=code_ids)
-                coding_ids.intersection_update(set(coding_values.values_list("coding_id", flat=True)))
+                coded_article_ids &= set(coding_values.values_list("coding__coded_article__id", flat=True))
 
-        codings = Coding.objects.filter(id__in=coding_ids)
+        codings = Coding.objects.filter(coded_article__id__in=coded_article_ids)
 
         terms = selection.get_article_ids_per_query()
         orm_aggregate = ORMAggregate(codings, flat=False, terms=terms)
