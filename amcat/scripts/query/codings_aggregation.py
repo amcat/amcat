@@ -198,7 +198,7 @@ def get_code_filter(codebook, code_id, include_descendants):
 class CodingAggregationAction(QueryAction):
     output_types = (
         ("text/json+aggregation+codings+barplot", "Bar plot"),
-        ("text/json+aggregation+codingbs+table", "Table"),
+        ("text/json+aggregation+codings+table", "Table"),
         ("text/json+aggregation+codings+scatter", "Scatter plot"),
         ("text/json+aggregation+codings+line", "Line plot"),
         ("text/json+aggregation+codings+heatmap", "Heatmap"),
