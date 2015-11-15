@@ -77,7 +77,7 @@ class BZK(UploadScript):
         for div in divs:
             article = Article(metastring=div.text_content())
             article.headline = div.cssselect("#articleTitle")[0].text_content()
-            article.text = div.cssselect("#articleIntro")[0].text_content() or None 
+            article.text = div.cssselect("#articleIntro")[0].text_content()
             articlepage = div.cssselect("#articlePage")
 
             if articlepage:
@@ -111,7 +111,8 @@ class BZK(UploadScript):
                 pass
             else:
                 # extra div wrapper as of 2014-04-08
-                #tags = _html.cssselect("body > div > *")
+                # apparently Word adds this div as well (?)
+                tags = _html.cssselect("body > div > *")
                 pass
         else:
             tags = _html.cssselect("body > *")
