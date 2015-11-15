@@ -341,16 +341,11 @@ class Article(AmcatModel):
                     a.id = r.id
                 
         # now we can save the articles and set id
-        to_insert = {}
-        for a in articles:
-            if not a.duplicate:
-                if not a.uuid: a.uuid = uuid.uuid4()
-                assert a.uuid not in to_insert
-                to_insert[unicode(a.uuid)] = a
-        if to_insert:
-            for b in bulk_insert_returning_ids(to_insert.values(), fields=["uuid"]):
-                to_insert[unicode(b.uuid)].id = b.pk
-        return to_insert.values()
+        to_insert = [a for a in articles if not a.duplicate]
+        result = bulk_insert_returning_ids(to_insert)
+        for a, inserted in zip(to_insert, result):
+            a.id = inserted.id
+        return to_insert
 
         
     def get_tree(self, include_parents=True, fields=("id",)):

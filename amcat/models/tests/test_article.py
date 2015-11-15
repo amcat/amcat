@@ -23,6 +23,7 @@ from amcat.tools.amcattest import create_test_article, create_test_set
 
 import datetime
 import uuid
+import random
 
 def _setup_highlighting():
     from amcat.tools.amcates import ES
@@ -197,6 +198,21 @@ class TestArticle(amcattest.AmCATTestCase):
         self.assertEqual(word_len(b), 5)
 
     @amcattest.use_elastic
+    def test_create_order(self):
+        """Is insert order preserved in id order?"""
+        articles = [amcattest.create_test_article(create=False) for _i in range(25)]
+        random.shuffle(articles)
+        Article.create_articles(articles)
+        ids = [a.id for a in articles]
+        # is order preserved?
+        self.assertEqual(ids, sorted(ids))
+        # do the right articles have the right headline?
+        for saved in articles:
+            indb = Article.objects.get(pk=saved.id)
+            self.assertEqual(indb.headline, saved.headline)
+        
+        
+    @amcattest.use_elastic
     def test_unicode(self):
         """Test unicode headlines"""
         for offset in range(1, 10000, 1000):
@@ -205,6 +221,7 @@ class TestArticle(amcattest.AmCATTestCase):
             self.assertIsInstance(a.headline, unicode)
             self.assertEqual(a.headline, s)
 
+        
     @amcattest.use_elastic
     def test_medium_name(self):
         m = amcattest.create_test_medium(name="de testkrant")
