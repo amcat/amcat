@@ -57,8 +57,15 @@ DAY_DELTA = datetime.timedelta(hours=23, minutes=59, seconds=59, milliseconds=99
 
 
 class ModelMultipleChoiceFieldWithIdLabel(forms.ModelMultipleChoiceField):
+    def clean(self, value):
+        # HACK / WORKAROUND: For reasons unbeknown to me, value sometimes is
+        # a list of None's. This seems silly, so we filter them.
+        if value is not None:
+            value = [v for v in value if v is not None]
+        return super(ModelMultipleChoiceFieldWithIdLabel, self).clean(value)
+
     def label_from_instance(self, obj):
-        return "%s - %s" % (obj.id, obj.name)
+        return "%s - %s" % (obj.id, getattr(obj, obj.__label__))
 
 
 class ModelChoiceFieldWithIdLabel(forms.ModelChoiceField):
@@ -101,16 +108,16 @@ class SelectionForm(forms.Form):
     query = forms.CharField(widget=forms.Textarea, required=False)
 
     codingschemafield_1 = ModelChoiceFieldWithIdLabel(queryset=CodingSchemaField.objects.none(), required=False)
-    codingschemafield_value_1 = ModelChoiceFieldWithIdLabel(queryset=Code.objects.none(), required=False)
+    codingschemafield_value_1 = ModelMultipleChoiceFieldWithIdLabel(queryset=Code.objects.none(), required=False)
     codingschemafield_include_descendants_1 = forms.BooleanField(required=False)
 
     # Because hack > not at all?
     codingschemafield_2 = ModelChoiceFieldWithIdLabel(queryset=CodingSchemaField.objects.none(), required=False)
-    codingschemafield_value_2 = ModelChoiceFieldWithIdLabel(queryset=Code.objects.none(), required=False)
+    codingschemafield_value_2 = ModelMultipleChoiceFieldWithIdLabel(queryset=Code.objects.none(), required=False)
     codingschemafield_include_descendants_2 = forms.BooleanField(required=False)
 
     codingschemafield_3 = ModelChoiceFieldWithIdLabel(queryset=CodingSchemaField.objects.none(), required=False)
-    codingschemafield_value_3 = ModelChoiceFieldWithIdLabel(queryset=Code.objects.none(), required=False)
+    codingschemafield_value_3 = ModelMultipleChoiceFieldWithIdLabel(queryset=Code.objects.none(), required=False)
     codingschemafield_include_descendants_3 = forms.BooleanField(required=False)
 
 

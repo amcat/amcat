@@ -183,16 +183,21 @@ def to_sortable_tuple(key):
     return key
 
 
-def get_code_filter(codebook, code_id, include_descendants):
-    yield code_id
+def get_code_filter(codebook, codes, include_descendants):
+    code_ids = set(code.id for code in codes)
+
+    for code_id in code_ids:
+        yield code_id
 
     if include_descendants:
         codebook.cache()
         flat_tree = chain.from_iterable(t.get_descendants() for t in codebook.get_tree())
         flat_tree = chain(flat_tree, codebook.get_tree())
-        tree_item = [t for t in flat_tree if t.code_id == code_id][0]
-        for descendant in tree_item.get_descendants():
-            yield descendant.code_id
+        tree_items = [t for t in flat_tree if t.code_id in code_ids]
+
+        for tree_item in tree_items:
+            for descendant in tree_item.get_descendants():
+                yield descendant.code_id
 
 
 class CodingAggregationAction(QueryAction):
@@ -233,11 +238,11 @@ class CodingAggregationAction(QueryAction):
                 break
 
             schemafield = form.cleaned_data["codingschemafield_{}".format(field_name)]
-            schemafield_value = form.cleaned_data["codingschemafield_value_{}".format(field_name)]
+            schemafield_values = form.cleaned_data["codingschemafield_value_{}".format(field_name)]
             schemafield_include_descendants = form.cleaned_data["codingschemafield_include_descendants_{}".format(field_name)]
 
-            if schemafield and  schemafield_value:
-                code_ids = get_code_filter(schemafield.codebook, schemafield_value.id, schemafield_include_descendants)
+            if schemafield and  schemafield_values:
+                code_ids = get_code_filter(schemafield.codebook, schemafield_values, schemafield_include_descendants)
                 coding_values = CodingValue.objects.filter(coding__coded_article__id__in=coded_article_ids)
                 coding_values = coding_values.filter(field__id=schemafield.id)
                 coding_values = coding_values.filter(intval__in=code_ids)
