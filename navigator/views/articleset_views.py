@@ -296,7 +296,7 @@ class ArticleSetEditView(ProjectEditView):
     fields = ['project', 'name', 'provenance']
 
 
-class ArticleSetCreateView(HierarchicalViewMixin, ProjectViewMixin,CreateView):
+class ArticleSetCreateView(HierarchicalViewMixin, ProjectViewMixin, CreateView):
     parent = ArticleSetListView
     fields = ['project', 'name', 'provenance']
     url_fragment = 'create' 
