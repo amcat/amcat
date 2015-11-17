@@ -18,6 +18,7 @@
 ###########################################################################
 
 import re
+from datetime import datetime
 
 from django.views.generic.base import RedirectView
 from django.views.generic.edit import FormView, UpdateView
@@ -25,7 +26,7 @@ from django.views.generic.detail import DetailView
 from django.core.urlresolvers import reverse
 from django.core.exceptions import PermissionDenied
 
-from amcat.models import authorisation, Project
+from amcat.models import authorisation, Project, RecentProject
 from navigator.views.scriptview import ScriptView
 
 from amcat.tools.usage import log_request_usage
@@ -91,6 +92,9 @@ class ProjectViewMixin(object):
         self.project = self.get_project()
         # HACK: remove query from session to prevent 'permanent' highlighting
         self.last_query = self.request.session.pop("query", None)
+
+        RecentProject.objects.update_or_create({"date_visited": datetime.utcnow()},
+            user=self.request.user.userprofile, project=self.project)
 
         self.check_permission()
         return super(ProjectViewMixin, self).dispatch(
