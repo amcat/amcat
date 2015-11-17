@@ -41,6 +41,19 @@ from amcat.tools.model import AmcatModel
 
 LITTER_USER_ID = 1
 
+class RecentProject(AmcatModel):
+
+    user = models.ForeignKey("UserProfile")
+    project = models.ForeignKey("amcat.project")
+    date_visited = models.DateTimeField()
+
+
+    class Meta():
+        db_table = 'user_recent_projects'
+        unique_together = ("user", "project")
+        app_label = "amcat"
+        ordering = ["-date_visited"]
+
 
 class Affiliation(AmcatModel):
     """
@@ -74,6 +87,9 @@ class UserProfile(AmcatModel):
     language = models.ForeignKey(Language, default=1)
     role = models.ForeignKey(Role, default=0)
 
+    recent_projects = models.ManyToManyField("amcat.project", through="RecentProject",
+                                             through_fields=("user", "project"), related_name="recent_projects")
+
     favourite_projects = models.ManyToManyField("amcat.project", related_name="favourite_users")
 
     theme = models.CharField(max_length=255, choices=[(t, t) for t in THEMES], default="AmCAT")
@@ -101,6 +117,7 @@ class UserProfile(AmcatModel):
             Q(projectrole__user=self.user) |
             Q(guest_role__id__lte=role.id)
         )
+
 
     def has_role(self, role, onproject=None):
         """
