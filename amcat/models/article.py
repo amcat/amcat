@@ -343,6 +343,8 @@ class Article(AmcatModel):
         # now we can save the articles and set id
         to_insert = [a for a in articles if not a.duplicate]
         result = bulk_insert_returning_ids(to_insert)
+        if len(to_insert) == 0:
+            return []
         for a, inserted in zip(to_insert, result):
             a.id = inserted.id
         return to_insert
