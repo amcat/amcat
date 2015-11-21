@@ -105,17 +105,11 @@ class BZK(UploadScript):
         item = []
         
         if len(_html.cssselect("body > hr")) == 0:
-            if len(_html.cssselect("body > div > hr")) == 0:
-                # extra extra div  and span wrapper as of 2014-11-20
-                # apparently Word adds this as well (?)
-                tags = _html.cssselect("body > div > div > span > *")
-                pass
-            else:
-                # extra div wrapper as of 2014-04-08
-                # presumably unnecessary
-                # tags = _html.cssselect("body > div > *")
+            # select MS Word div wrapper
+            tags = _html.cssselect("body > div.WordSection1 > *")
+            if len(tags) == 0:
+                    raise ParseError("Document format is not supported")
 
-                raise ParseError("This document format is not supported")
         else:
             tags = _html.cssselect("body > *")
 
