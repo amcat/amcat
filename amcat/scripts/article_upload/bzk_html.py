@@ -28,7 +28,7 @@ import logging
 from lxml import html
 from html2text import html2text
 
-from amcat.scripts.article_upload.upload import UploadScript
+from amcat.scripts.article_upload.upload import UploadScript, ParseError
 from amcat.tools.toolkit import readDate
 from amcat.models.medium import Medium
 from amcat.models.article import Article
@@ -107,13 +107,15 @@ class BZK(UploadScript):
         if len(_html.cssselect("body > hr")) == 0:
             if len(_html.cssselect("body > div > hr")) == 0:
                 # extra extra div  and span wrapper as of 2014-11-20
-                #tags = _html.cssselect("body > div > div > span > *")
+                # apparently Word adds this as well (?)
+                tags = _html.cssselect("body > div > div > span > *")
                 pass
             else:
                 # extra div wrapper as of 2014-04-08
-                # apparently Word adds this div as well (?)
-                tags = _html.cssselect("body > div > *")
-                pass
+                # presumably unnecessary
+                # tags = _html.cssselect("body > div > *")
+
+                raise ParseError("This document format is not supported")
         else:
             tags = _html.cssselect("body > *")
 
