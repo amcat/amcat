@@ -47,6 +47,13 @@ class RecentProject(AmcatModel):
     project = models.ForeignKey("amcat.project")
     date_visited = models.DateTimeField()
 
+    def get_recent_projects(self, userprofile):
+        """
+        :param userprofile: the userprofile
+        :return: The queryset of recent projects, ordered by date (descending)
+        :rtype: django.db.models.query.QuerySet
+        """
+        return RecentProject.objects.filter(user=userprofile)
 
     class Meta():
         db_table = 'user_recent_projects'
