@@ -36,7 +36,7 @@ class TestSerializer(ApiTestCase):
         res = self.get(ProjectResource, datatables_options='{"sEcho":5}')
         self.assertEqual(res['echo'], 5)
 
-    def test_get(self):
+    def teslast_visited_att_get(self):
         p1 = amcattest.create_test_project(name="testnaam", description="testdescription", insert_date='2012-01-01')
 
         actual = self.get(ProjectResource, id=p1.id)
@@ -55,6 +55,7 @@ class TestSerializer(ApiTestCase):
                           u'owner': p1.owner.id,
                           u'active': True,
                            u'id': p1.id,
+                          u'last_visited_at': None,
                           u'favourite' : False,
         }
 

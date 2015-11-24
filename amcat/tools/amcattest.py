@@ -33,6 +33,7 @@ import os
 from contextlib import contextmanager
 from functools import wraps
 import datetime
+from uuid import uuid4
 from urlparse import urljoin
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test.runner import DiscoverRunner
@@ -167,7 +168,7 @@ def create_test_article(create=True, articleset=None, **kargs):
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "date" not in kargs: kargs["date"] = datetime.date(2000, 1, 1)
     if "medium" not in kargs: kargs["medium"] = create_test_medium()
-    if 'headline' not in kargs: kargs['headline'] = 'test headline {}'.format(_get_next_id())
+    if 'headline' not in kargs: kargs['headline'] = 'test headline {} : {}'.format(_get_next_id(), uuid4())
     if 'text' not in kargs: kargs["text"] = 'test text {}'.format(_get_next_id())
 
     a = Article(**kargs)
@@ -195,8 +196,8 @@ def create_test_set(articles=0, **kargs):
     s = ArticleSet.objects.create(**kargs)
     if type(articles) == int:
         if articles > 0:
-            articles = [create_test_article(create=False) for _x in range(articles)]
-            Article.create_articles(articles, articleset=s)
+            arts = [create_test_article(create=False) for _x in range(articles)]
+            Article.create_articles(arts, articleset=s)
     elif articles:
         s.add_articles(articles)
     return s
