@@ -87,6 +87,7 @@ class ProjectSerializer(AmCATProjectModelSerializer):
     when the serialized project is in request.user.user_profile.favourite_projects.
     """
     favourite = serializers.SerializerMethodField("is_favourite")
+    last_visited_at = serializers.SerializerMethodField("project_visited_at", allow_null=True)
 
     @property
     @cached
@@ -103,6 +104,17 @@ class ProjectSerializer(AmCATProjectModelSerializer):
         if project is None: return
         return project.id in self.favourite_projects
 
+    @property
+    @cached
+    def project_visited_dates(self):
+        user = self.context['request'].user
+        if user.is_anonymous():
+            return dict()
+
+        return dict((rp.project, rp.date_visited) for rp in user.userprofile.get_recent_projects())
+
+    def project_visited_at(self, project):
+        return self.project_visited_dates.get(project)
 
     class Meta:
         model = Project
