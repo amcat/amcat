@@ -93,12 +93,13 @@ class ProjectViewMixin(object):
         # HACK: remove query from session to prevent 'permanent' highlighting
         self.last_query = self.request.session.pop("query", None)
 
-        RecentProject.objects.update_or_create({"date_visited": datetime.utcnow()},
-            user=self.request.user.userprofile, project=self.project)
+        if not self.request.user.is_anonymous():
+            RecentProject.update_visited(self.request.user.userprofile, self.project)
 
         self.check_permission()
         return super(ProjectViewMixin, self).dispatch(
             request, *args, **kwargs)
+
 
     def has_permission(self, perm):
         return self.request.user.userprofile.has_role(perm, self.project)

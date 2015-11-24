@@ -26,7 +26,7 @@ from api.rest.viewsets.project import ProjectSerializer
 class ProjectResource(AmCATResource):
     model = Project
     extra_filters = ['projectrole__user__id']
-    ordering_fields = ("id", "name", "description", "insert_date", "active")
+    ordering_fields = ("id", "name", "description", "insert_date", "active", "last_visited_at")
     serializer_class = ProjectSerializer
     queryset = Project.objects.all()
 

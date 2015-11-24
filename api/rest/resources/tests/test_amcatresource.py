@@ -89,6 +89,7 @@ class TestAmCATResource(ApiTestCase):
                   u'id': u'IntegerField',
                   u'insert_date': u'DateTimeField',
                   u'insert_user': u'ModelChoiceField',
+                  u'last_visited_at': u'SerializerMethodField',
                   u'favourite': u'SerializerMethodField',
                   }
         parses = [u'application/json', u'application/x-www-form-urlencoded', u'multipart/form-data',

@@ -20,6 +20,7 @@
 """ORM Module representing users"""
 
 from __future__ import print_function, absolute_import
+from datetime import datetime
 import logging
 import string
 import random
@@ -44,16 +45,31 @@ LITTER_USER_ID = 1
 class RecentProject(AmcatModel):
 
     user = models.ForeignKey("UserProfile")
-    project = models.ForeignKey("amcat.project")
+
+    #related_name should be the same as the ProjectSerializer's column name to assert sortability
+    project = models.ForeignKey("amcat.project", related_name="last_visited_at")
     date_visited = models.DateTimeField()
 
-    def get_recent_projects(self, userprofile):
+    @classmethod
+    def get_recent_projects(cls, userprofile):
         """
-        :param userprofile: the userprofile
-        :return: The queryset of recent projects, ordered by date (descending)
-        :rtype: django.db.models.query.QuerySet
+        Returns recently created projects
+        @param userprofile: the userprofile
+        @return: The queryset of recent projects, ordered by date (descending)
+        @rtype: django.db.models.query.QuerySet
         """
         return RecentProject.objects.filter(user=userprofile)
+
+    @classmethod
+    def update_visited(cls, userprofile, project, date_visited=datetime.utcnow()):
+        """
+        Creates or updates the date
+        @returns: a tuple containing the RecentProject and a bool indicating whether it was created (`True`) or
+            updated (`False`)
+        @rtype: tuple[RecentProject, bool]
+        """
+        return RecentProject.objects.update_or_create({"date_visited": date_visited },
+                                               user=userprofile, project=project)
 
     class Meta():
         db_table = 'user_recent_projects'
@@ -125,6 +141,8 @@ class UserProfile(AmcatModel):
             Q(guest_role__id__lte=role.id)
         )
 
+    def get_recent_projects(self):
+        return RecentProject.get_recent_projects(self)
 
     def has_role(self, role, onproject=None):
         """
