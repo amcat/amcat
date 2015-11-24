@@ -61,13 +61,15 @@ class RecentProject(AmcatModel):
         return RecentProject.objects.filter(user=userprofile)
 
     @classmethod
-    def update_visited(cls, userprofile, project, date_visited=datetime.utcnow()):
+    def update_visited(cls, userprofile, project, date_visited=None):
         """
         Creates or updates the date
         @returns: a tuple containing the RecentProject and a bool indicating whether it was created (`True`) or
             updated (`False`)
         @rtype: tuple[RecentProject, bool]
         """
+        if not date_visited:
+            date_visited = datetime.utcnow()
         return RecentProject.objects.update_or_create({"date_visited": date_visited },
                                                user=userprofile, project=project)
 
