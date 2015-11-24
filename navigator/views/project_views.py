@@ -61,7 +61,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
         context["what"] = self.kwargs.get('what', 'favourites')
         context["favaction"] = "unsetfav" if context['what'] == 'favourites' else "setfav"
         context["main_active"] = 'Projects'
-        return contextuser_last_used_at
+        return context
 
     def get_breadcrumbs(self):
         return [("Projects", "#")]
