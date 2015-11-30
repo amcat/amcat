@@ -53,6 +53,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
 
         return super(ProjectListView, self).get(*args, **kargs)
 
+
     def get_datatable_kwargs(self):
         return {"checkboxes": True}
 
@@ -61,7 +62,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
         context["what"] = self.kwargs.get('what', 'favourites')
         context["favaction"] = "unsetfav" if context['what'] == 'favourites' else "setfav"
         context["main_active"] = 'Projects'
-        return contextuser_last_used_at
+        return context
 
     def get_breadcrumbs(self):
         return [("Projects", "#")]
@@ -79,8 +80,6 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
         favids = favids.values_list("id", flat=True)
         if what == 'favourites':
             ids = favids
-        elif what == "recent":
-            ids = self.request.user.userprofile.get_recent_projects()
         else:
             ids = Project.objects.filter(projectrole__user=self.request.user).exclude(pk__in=favids)
             ids = ids.values_list("id", flat=True)
@@ -90,11 +89,6 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
         else:
             return table.filter(name="This is a really stupid way to force an empty table (so sue me!)")
 
-    def get_resource(self):
-        if self.kwargs.get('what', 'favourites') == "recent":
-            res = resources.get_resource_for_model(Project)
-            return
-        return super(ProjectListView, self).get_resource()
 
 from django import forms
 from amcat.models import Role

@@ -18,7 +18,6 @@
 ###########################################################################
 
 import re
-from datetime import datetime
 
 from django.views.generic.base import RedirectView
 from django.views.generic.edit import FormView, UpdateView
