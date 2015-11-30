@@ -308,6 +308,9 @@ class ArticleSetCreateView(HierarchicalViewMixin, ProjectViewMixin, CreateView):
         else:
             return super(ArticleSetCreateView, self).get_form(form_class)
 
+    def get_success_url(self):
+        return reverse("navigator:articleset-details", args=[self.project.id, self.object.id])
+
 class ArticleSetUploadListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     parent = ArticleSetListView
     model = Plugin
