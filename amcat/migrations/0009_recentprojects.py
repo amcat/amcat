@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('date_visited', models.DateTimeField()),
-                ('project', models.ForeignKey(to='amcat.Project')),
+                ('project', models.ForeignKey(related_name='last_visited_at', to='amcat.Project')),
                 ('user', models.ForeignKey(to='amcat.UserProfile')),
             ],
             options={
