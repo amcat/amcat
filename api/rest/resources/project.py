@@ -19,7 +19,7 @@
 
 from amcat.models.project import Project, LAST_VISITED_FIELD_NAME
 from django.db.models import Q
-
+from django.db.models.expressions import RawSQL
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.viewsets.project import ProjectSerializer
 
@@ -32,9 +32,32 @@ class ProjectResource(AmCATResource):
 
     def filter_queryset(self, queryset):
         qs = super(ProjectResource, self).filter_queryset(queryset)
+
         # only show projects that are either public or the user has a role in
         if self.request.user.is_anonymous():
             qs = qs.filter(guest_role__isnull=False)
         elif not self.request.user.is_superuser: 
             qs = qs.filter(Q(guest_role__isnull=False) | Q(projectrole__user_id=self.request.user.id)).distinct()
+
+
+        qs = self._filter_order_null_last(qs)
+        return qs
+
+    def _filter_order_null_last(self, qs):
+        orderby = self.request.query_params.get('order_by', [])
+        if type(orderby) is unicode or type(orderby) is str:
+            orderby = [orderby]
+        try:
+            idx = orderby.index(LAST_VISITED_FIELD_NAME
+                                if LAST_VISITED_FIELD_NAME in orderby
+                                else ("-" + LAST_VISITED_FIELD_NAME))
+        except ValueError:
+            #Not ordered by last visited
+            pass
+        else:
+            qs = qs.annotate(val=
+                RawSQL("select projects.project_id in (select urp.project_id from user_recent_projects as urp where user_id = %s)",
+                    (self.request.user.userprofile.id,)))
+            orderby.insert(idx, '-val')
+            qs = qs.order_by(*orderby)
         return qs

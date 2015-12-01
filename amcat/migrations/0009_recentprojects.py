@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
                 ('user', models.ForeignKey(to='amcat.UserProfile')),
             ],
             options={
-                'ordering': ['-date_visited'],
+                'ordering': ['date_visited'],
                 'db_table': 'user_recent_projects',
             },
         ),

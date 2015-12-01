@@ -204,4 +204,4 @@ class RecentProject(AmcatModel):
         db_table = 'user_recent_projects'
         unique_together = ("user", "project")
         app_label = "amcat"
-        ordering = ["-date_visited"]
+        ordering = ["date_visited"]

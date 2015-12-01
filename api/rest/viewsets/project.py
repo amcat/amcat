@@ -116,6 +116,8 @@ class ProjectSerializer(AmCATProjectModelSerializer):
     def project_visited_at(self, project):
         from datetime import datetime
         date = self.project_visited_dates.get(project)
+        if date is None:
+            return "Never"
         timediff = (datetime.now() - date).total_seconds()
         timespans = [1, 60, 3600, 86400, 604800, 1814400]
         names = ["second", "minute", "hour", "day", "week", None]
