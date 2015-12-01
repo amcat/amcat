@@ -17,7 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.models import Project
+from amcat.models.project import Project, LAST_VISITED_FIELD_NAME
 from django.db.models import Q
 
 from api.rest.resources.amcatresource import AmCATResource
@@ -26,7 +26,7 @@ from api.rest.viewsets.project import ProjectSerializer
 class ProjectResource(AmCATResource):
     model = Project
     extra_filters = ['projectrole__user__id']
-    ordering_fields = ("id", "name", "description", "insert_date", "active", "last_visited_at")
+    ordering_fields = ("id", "name", "description", "insert_date", "active", LAST_VISITED_FIELD_NAME)
     serializer_class = ProjectSerializer
     queryset = Project.objects.all()
 

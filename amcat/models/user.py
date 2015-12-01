@@ -20,20 +20,19 @@
 """ORM Module representing users"""
 
 from __future__ import print_function, absolute_import
-from datetime import datetime
+
 import logging
-import string
 import random
+import string
 
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.db.models.signals import post_save
 
-from amcat.models.language import Language
-from amcat.models.authorisation import Role, ADMIN_ROLE
 from amcat.models import authorisation as auth
-from amcat.models.project import Project
-
+from amcat.models.authorisation import Role, ADMIN_ROLE
+from amcat.models.language import Language
+from amcat.models.project import Project, RecentProject
 
 log = logging.getLogger(__name__)
 
@@ -41,43 +40,6 @@ from django.db import models
 from amcat.tools.model import AmcatModel
 
 LITTER_USER_ID = 1
-
-class RecentProject(AmcatModel):
-
-    user = models.ForeignKey("UserProfile")
-
-    #related_name should be the same as the ProjectSerializer's column name to assert sortability
-    project = models.ForeignKey("amcat.project", related_name="last_visited_at")
-    date_visited = models.DateTimeField()
-
-    @classmethod
-    def get_recent_projects(cls, userprofile):
-        """
-        Returns recently created projects
-        @param userprofile: the userprofile
-        @return: The queryset of recent projects, ordered by date (descending)
-        @rtype: django.db.models.query.QuerySet
-        """
-        return RecentProject.objects.filter(user=userprofile)
-
-    @classmethod
-    def update_visited(cls, userprofile, project, date_visited=None):
-        """
-        Creates or updates the date
-        @returns: a tuple containing the RecentProject and a bool indicating whether it was created (`True`) or
-            updated (`False`)
-        @rtype: tuple[RecentProject, bool]
-        """
-        if not date_visited:
-            date_visited = datetime.utcnow()
-        return RecentProject.objects.update_or_create({"date_visited": date_visited },
-                                               user=userprofile, project=project)
-
-    class Meta():
-        db_table = 'user_recent_projects'
-        unique_together = ("user", "project")
-        app_label = "amcat"
-        ordering = ["-date_visited"]
 
 
 class Affiliation(AmcatModel):
@@ -112,7 +74,7 @@ class UserProfile(AmcatModel):
     language = models.ForeignKey(Language, default=1)
     role = models.ForeignKey(Role, default=0)
 
-    recent_projects = models.ManyToManyField("amcat.project", through="RecentProject",
+    recent_projects = models.ManyToManyField(Project, through=RecentProject,
                                              through_fields=("user", "project"), related_name="recent_projects")
 
     favourite_projects = models.ManyToManyField("amcat.project", related_name="favourite_users")

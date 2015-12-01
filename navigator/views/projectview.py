@@ -25,7 +25,8 @@ from django.views.generic.detail import DetailView
 from django.core.urlresolvers import reverse
 from django.core.exceptions import PermissionDenied
 
-from amcat.models import authorisation, Project, RecentProject
+from amcat.models import authorisation, Project
+from amcat.models.project import RecentProject
 from navigator.views.scriptview import ScriptView
 
 from amcat.tools.usage import log_request_usage

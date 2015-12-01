@@ -114,7 +114,26 @@ class ProjectSerializer(AmCATProjectModelSerializer):
         return dict((rp.project, rp.date_visited) for rp in user.userprofile.get_recent_projects())
 
     def project_visited_at(self, project):
-        return self.project_visited_dates.get(project)
+        from datetime import datetime
+        date = self.project_visited_dates.get(project)
+        timediff = (datetime.now() - date).total_seconds()
+        timespans = [1, 60, 3600, 86400, 604800, 1814400]
+        names = ["second", "minute", "hour", "day", "week", None]
+
+        name = None
+        timespan = None
+        for (n, t) in zip(names, timespans):
+            if timediff / t < 1:
+                break
+            name = n
+            timespan = t
+
+        net_timespan = int(timediff / timespan)
+        plural = "" if net_timespan == 1 else "s"
+        if name:
+            return "{} {}{} ago".format(net_timespan, name, plural)
+
+        return date
 
     class Meta:
         model = Project
