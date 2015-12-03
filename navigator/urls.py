@@ -50,7 +50,7 @@ urlpatterns = patterns(
     url(r'^user/change-password$', password_change, name='user-change-password',
         kwargs=dict(
             template_name="change_password.html",
-            post_change_redirect='change-password-done'
+            post_change_redirect='./change-password-done'
         )),
     url(r'^user/change-password-done$', password_change_done, name='change-password-done',
         kwargs=dict(

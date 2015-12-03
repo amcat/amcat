@@ -60,10 +60,10 @@ def all(request):
 @check(User)
 def view(request, user=None, form=None):
     if user is None:
-        return redirect(reverse(view, args=[request.user.id]))
+        return redirect(reverse("navigator:user", args=[request.user.id]))
 
     ref = request.META.get('HTTP_REFERER', '')
-    success = ref.endswith(reverse(view, args=[user.id])) and not form
+    success = ref.endswith(reverse("navigator:user", args=[user.id])) and not form
     form = form or forms.UserDetailsForm(request, instance=user)
 
     # Generate projects-table javascript
@@ -84,7 +84,7 @@ def edit(request, user):
     form = forms.UserDetailsForm(request, data=request.POST or None, instance=user)
     if form.is_valid():
         form.save()
-        return redirect(reverse(view, args=[user.id]))
+        return redirect(reverse("navigator:user", args=[user.id]))
     return view(request, id=user.id, form=form)
 
 @check(User, action='create', args=None)
