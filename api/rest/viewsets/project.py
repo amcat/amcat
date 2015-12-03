@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from datetime import datetime
+
 from rest_framework import serializers, permissions, exceptions, status
 from rest_framework.viewsets import ModelViewSet, ViewSetMixin
 from amcat.models import Project, Role
@@ -111,31 +113,10 @@ class ProjectSerializer(AmCATProjectModelSerializer):
         if user.is_anonymous():
             return dict()
 
-        return dict((rp.project, rp.date_visited) for rp in user.userprofile.get_recent_projects())
+        return dict((rp.project, rp.format_date_visited_as_delta()) for rp in user.userprofile.get_recent_projects())
 
     def project_visited_at(self, project):
-        from datetime import datetime
-        date = self.project_visited_dates.get(project)
-        if date is None:
-            return "Never"
-        timediff = (datetime.now() - date).total_seconds()
-        timespans = [1, 60, 3600, 86400, 604800, 1814400]
-        names = ["second", "minute", "hour", "day", "week", None]
-
-        name = None
-        timespan = None
-        for (n, t) in zip(names, timespans):
-            if timediff / t < 1:
-                break
-            name = n
-            timespan = t
-
-        net_timespan = int(timediff / timespan)
-        plural = "" if net_timespan == 1 else "s"
-        if name:
-            return "{} {}{} ago".format(net_timespan, name, plural)
-
-        return date
+        return self.project_visited_dates.get(project, "Never")
 
     class Meta:
         model = Project

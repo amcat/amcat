@@ -16,8 +16,10 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import itertools as it
+
 from django.shortcuts import render
-from amcat.models import ArticleSet
+from amcat.models import ArticleSet, RecentProject
 from amcat.models.authorisation import ROLE_PROJECT_READER
 
 def index(request):
@@ -33,5 +35,8 @@ def index(request):
     
     featured_sets = [(aset, aset.project.get_role_id(user=request.user) >= ROLE_PROJECT_READER)
                      for aset in ArticleSet.objects.filter(featured=True)]
+
+    recent_projects = it.islice(((rp, rp.project.get_role_id(user=request.user) >= ROLE_PROJECT_READER)
+                     for rp in RecentProject.get_recent_projects(request.user.userprofile)), 5)
 
     return render(request, 'index.html', locals())

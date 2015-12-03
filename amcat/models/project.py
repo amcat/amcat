@@ -177,6 +177,26 @@ class RecentProject(AmcatModel):
     project = models.ForeignKey(Project, related_name=LAST_VISITED_FIELD_NAME)
     date_visited = models.DateTimeField()
 
+    def format_date_visited_as_delta(self):
+        timediff = (datetime.now() - self.date_visited).total_seconds()
+        timespans = [1, 60, 3600, 86400, 604800, 1814400]
+        names = ["second", "minute", "hour", "day", "week", None]
+
+        name = None
+        timespan = None
+        for (n, t) in zip(names, timespans):
+            if timediff / t < 1:
+                break
+            name = n
+            timespan = t
+
+        net_timespan = int(timediff / timespan)
+        plural = "" if net_timespan == 1 else "s"
+        if name:
+            return "{} {}{} ago".format(net_timespan, name, plural)
+
+        return self.date_visited
+
     @classmethod
     def get_recent_projects(cls, userprofile):
         """
@@ -185,7 +205,7 @@ class RecentProject(AmcatModel):
         @return: The queryset of recent projects, ordered by date (descending)
         @rtype: django.db.models.query.QuerySet
         """
-        return RecentProject.objects.filter(user=userprofile)
+        return RecentProject.objects.filter(user=userprofile).order_by('-date_visited')
 
     @classmethod
     def update_visited(cls, userprofile, project, date_visited=None):

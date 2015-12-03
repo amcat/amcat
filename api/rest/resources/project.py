@@ -55,9 +55,9 @@ class ProjectResource(AmCATResource):
             #Not ordered by last visited
             pass
         else:
-            qs = qs.annotate(val=
+            qs = qs.annotate(visited=
                 RawSQL("select projects.project_id in (select urp.project_id from user_recent_projects as urp where user_id = %s)",
                     (self.request.user.userprofile.id,)))
-            orderby.insert(idx, '-val')
+            orderby.insert(idx, '-visited')
             qs = qs.order_by(*orderby)
         return qs
