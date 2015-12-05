@@ -55,7 +55,7 @@ class TestSerializer(ApiTestCase):
                           u'owner': p1.owner.id,
                           u'active': True,
                            u'id': p1.id,
-                          u'last_visited_at': None,
+                          u'last_visited_at': "Never",
                           u'favourite' : False,
         }
 
