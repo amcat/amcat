@@ -1,47 +1,47 @@
 <script type="text/javascript">
-  $(function () {
-    var form_data;
-    require(["query/utils/serialize"], function(serialize){
-      var form = $("#query-form");
-      var jobs = form.data("jobs");
-      var sets = form.data("sets");
-      form_data = serialize(form, jobs, sets);
-      console.log(form_data);
-      form_data["interval"] = "day";
-    });
+    $(function(){
+        var form_data;
+        require(["query/utils/serialize"], function(serialize){
+            var form = $("#query-form");
+            var jobs = form.data("jobs");
+            var sets = form.data("sets");
+            form_data = serialize(form, jobs, sets);
+            console.log(form_data);
+            form_data["interval"] = "day";
+        });
 
 
-    $('#date-aggregation').highcharts({
-      chart: { zoomType: 'x', type: 'column' },
-      title: { text: 'Articles aggregated by day.' },
-      xAxis: { type: 'datetime' },
-      yAxis: {
-        title: { text: 'Number of articles' },
-        floor: 0
-      },
-      legend: { enabled: false },
-      series: [{
-        name: 'Articles',
-        data: [
-          {% for date, count in date_aggr %}
-            [Date.UTC({{ date.year }}, {{ date.month }} - 1, {{ date.day }}), {{ count }}],
-          {% endfor %}
-        ]
-      }],
-      plotOptions: {
-        series:{
-          events:{
-            click: function(event){
-              articles_popup = require("query/utils/articlemodal");
+        $('#date-aggregation').highcharts({
+            chart: { zoomType: 'x', type: 'column' },
+            title: { text: 'Articles aggregated by day.' },
+            xAxis: { type: 'datetime' },
+            yAxis: {
+                title: { text: 'Number of articles' },
+                floor: 0
+            },
+            legend: { enabled: false },
+            series: [{
+                name: 'Articles',
+                data: [
+                    {% for date, count in date_aggr %}
+                        [Date.UTC({{ date.year }}, {{ date.month }} -1, {{ date.day }}), {{ count }}],
+                    {% endfor %}
+                ]
+            }],
+            plotOptions: {
+                series: {
+                    events: {
+                        click: function(event){
+                            articles_popup = require("query/utils/articlemodal");
 
-              var filters = {};
-              filters["date"] = event.point.x;
-              articles_popup().show(form_data, filters);
+                            var filters = {};
+                            filters["date"] = event.point.x;
+                            articles_popup().show(form_data, filters);
+                        }
+                    }
+                }
             }
-          }
-        }
-      }
 
+        });
     });
-  });
 </script>
