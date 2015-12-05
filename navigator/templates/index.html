@@ -11,7 +11,7 @@
 </div>
 
 {% if recent_projects %}
-<h3>Projects visited recently:</h3>
+<h3>Recently visited projects:</h3>
 <ul class='list-group'>
 {% for a, canread in recent_projects %}
 <li class="list-group-item"><a href="{% url 'navigator:articleset-list' a.project.id %}"><strong>{{a.project}}</strong>, last visited: {{a.format_date_visited_as_delta}}</a>
