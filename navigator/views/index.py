@@ -22,6 +22,8 @@ from django.shortcuts import render
 from amcat.models import ArticleSet, RecentProject
 from amcat.models.authorisation import ROLE_PROJECT_READER
 
+MAX_RECENT_PROJECTS = 5
+
 def index(request):
     try:
         fluid = int(request.GET['fluid'])
@@ -36,7 +38,7 @@ def index(request):
     featured_sets = [(aset, aset.project.get_role_id(user=request.user) >= ROLE_PROJECT_READER)
                      for aset in ArticleSet.objects.filter(featured=True)]
 
-    recent_projects = it.islice(((rp, rp.project.get_role_id(user=request.user) >= ROLE_PROJECT_READER)
-                     for rp in RecentProject.get_recent_projects(request.user.userprofile)), 5)
+    recent_projects = list(it.islice(((rp, rp.project.get_role_id(user=request.user) >= ROLE_PROJECT_READER)
+                     for rp in RecentProject.get_recent_projects(request.user.userprofile)), MAX_RECENT_PROJECTS))
 
     return render(request, 'index.html', locals())
