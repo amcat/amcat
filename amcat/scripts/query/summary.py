@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-import json
+import json, datetime
 
 from django.forms import IntegerField, BooleanField
 from django.http import QueryDict
@@ -33,6 +33,15 @@ import re
 
 TEMPLATE = get_template('query/summary/summary.html')
 
+TIMEDELTAS = [
+    ("day", datetime.timedelta(1)),
+    ("week", datetime.timedelta(7)),
+    ("month", datetime.timedelta(30)),
+    ("quarter", datetime.timedelta(120)),
+    ("year", datetime.timedelta(365)),
+]
+
+MAX_DATE_GROUPS = 60
 
 @order_fields(("offset", "size"))
 class SummaryActionForm(QueryActionForm):
@@ -74,8 +83,15 @@ class SummaryAction(QueryAction):
             articles = [escape_article_result(art) for art in selection.get_articles(size=size, offset=offset)]
             if show_aggregation:
                 self.monitor.update(69, "Aggregating..".format(**locals()))
-                date_aggr = selection.get_aggregate(x_axis="date", y_axis="total", interval="day")
-                medium_aggr = selection.get_aggregate(x_axis="medium", y_axis="date", interval="day")
+                statistics = selection.get_statistics()
+                try:
+                    delta_start_end = statistics.end_date - statistics.start_date
+                    interval = next(interval for (interval, delta) in TIMEDELTAS
+                                    if MAX_DATE_GROUPS * delta > delta_start_end)
+                except (StopIteration, TypeError):
+                    interval = "day"
+                date_aggr = selection.get_aggregate(x_axis="date", y_axis="total", interval=interval)
+                medium_aggr = selection.get_aggregate(x_axis="medium", y_axis="date", interval=interval)
             
             self.monitor.update(79, "Rendering results..".format(**locals()))
 
