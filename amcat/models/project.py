@@ -179,6 +179,8 @@ class RecentProject(AmcatModel):
 
     def format_date_visited_as_delta(self):
         timediff = (datetime.now() - self.date_visited).total_seconds()
+        if timediff < 1:
+            return "just now"
         timespans = [1, 60, 3600, 86400, 604800, 1814400]
         names = ["second", "minute", "hour", "day", "week", None]
 
@@ -189,7 +191,6 @@ class RecentProject(AmcatModel):
                 break
             name = n
             timespan = t
-
         net_timespan = int(timediff / timespan)
         plural = "" if net_timespan == 1 else "s"
         if name:
