@@ -51,7 +51,6 @@ class CodedArticleSerializer(AmCATModelSerializer):
     length = serializers.SerializerMethodField()
     article_id = serializers.SerializerMethodField()
     medium = PseudoSerializerMethodField()
-
     get_headline = article_property("headline")
     get_date = article_property("date")
     get_pagenr = article_property("pagenr")
@@ -79,6 +78,7 @@ class CodedArticleSerializer(AmCATModelSerializer):
     def get_medium(self, coded_article):
         return self.get_article(coded_article).medium_id
 
+
     class Meta:
         model = CodedArticle
 
@@ -104,7 +104,8 @@ class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
         "date": "article__date",
         "pagenr": "article__pagenr",
         "length": "article__length",
-        "article_id": "article__id"
+        "article_id": "article__id",
+        "status": "status__id"
     }
 
     ordering_fields = (('id', "article_id")
