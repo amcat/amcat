@@ -19,7 +19,6 @@
 ***************************************************************************/
 
 var API = null;
-
 define([
     "jquery", "query/multiselect-defaults", "query/utils/serialize",
     "query/renderers", "query/utils/poll", "query/api", "pnotify", "URIjs/URI",
@@ -31,19 +30,21 @@ define([
     $.fn.datepicker.defaults.format = "yyyy-mm-dd";
 
     var self = {};
-    var form = $(this);
 
+    var form = $(this);
+    var result = $("#result");
     var query_screen = $("#query-screen");
 
-    var USER = $("#query-form").data("user");
+    var query_form = $("#query-form");
+    var USER = query_form.data("user");
     var PROJECT = query_screen.data("project");
-    var SETS = $("#query-form").data("sets");
-    var JOBS = $("#query-form").data("jobs");
+    var SETS = query_form.data("sets");
+    var JOBS = query_form.data("jobs");
     API = api({"host": ""});
+
 
     var DEFAULT_SCRIPT = "summary";
     var SAVED_QUERY_API_URL = "/api/v4/projects/{project_id}/querys/{query_id}";
-    var QUERY_API_URL = "/api/v4/query/";
     var CODEBOOK_LANGUAGE_API_URL = "/api/v4/projects/{project_id}/codebooks/{codebook_id}/languages/";
     var SELECTION_FORM_FIELDS = [
         "include_all", "articlesets", "mediums", "article_ids",
@@ -53,13 +54,13 @@ define([
     ];
 
     var HOTKEYS = {
-        "ctrl_q": function(event){ $("#run-query").click(); },
-        "ctrl_r": function(event){ $("#new-query").click(); },
-        "ctrl_shift_s": function(event){
-            $("#save-query-dialog .save:visible").click();
+        "ctrl_q": function(){ $("#run-query").click(); },
+        "ctrl_r": function(){ $("#new-query").click(); },
+        "ctrl_shift_s": function(){
+            $("#save-query-dialog").find(".save:visible").click();
             $("#save-query-as").click();
         },
-        "ctrl_s": function(event){
+        "ctrl_s": function(){
             var save_query = $("#save-query");
 
             if (!save_query.hasClass("disabled")){
@@ -68,8 +69,8 @@ define([
                 $("#save-query-as").click();
             }
         },
-        "ctrl_o": function(event){
-            $("#load-query > button").click();
+        "ctrl_o": function(){
+            $("#load-query").find("> button").click();
 
         }
     };
@@ -92,14 +93,14 @@ define([
     var form_data = null;
 
     var saved_query = {
-        id: $("#query-form").data("query"),
+        id: query_form.data("query"),
         name: null,
         private: true,
         user: null
     };
 
 
-    self.form_invalid = function form_invalid(data){
+    self.form_invalid = function(data){
         // Add error class to all
         $.each(data, function(field_name, errors){
             $("[name=" + field_name + "]", $("#query-form"))
@@ -126,7 +127,7 @@ define([
     /**
      * Massages given data into a format easily parseable by renderers.
      */
-    self.prepare_data = function prepare_data(data){
+    self.prepare_data = function(data){
         // 'Total' is actually a 1D aggregation; we're fitting the data below to
         // look like it is a 2D aggregation.
         if (form_data["y_axis"] === "total"){
@@ -138,11 +139,11 @@ define([
         return data;
     };
 
-    self.get_accepted_mimetypes = function get_accepted_mimetypes(){
+    self.get_accepted_mimetypes = function(){
         return $.map(renderers, function(_, mimetype){ return mimetype; });
     };
 
-    self.hashchange = function hashchange(event){
+    self.hashchange = function(){
         var hash;
 
         if(!location.hash || !location.hash.slice(1)){
@@ -156,7 +157,7 @@ define([
         $("#script_" + hash).click();
     };
 
-    self.codebook_changed = function codebook_changed(event){
+    self.codebook_changed = function(event){
         var codebook_id = $(event.currentTarget).val();
 
         var url = CODEBOOK_LANGUAGE_API_URL.format({
@@ -202,7 +203,10 @@ define([
         })
     };
 
-    self.run_query = function run_query(event) {
+    self.update_history_state = function(form_data){
+
+    };
+    self.run_query = function(event) {
         event.preventDefault();
         $(window).off("scroll");
         $(".error").removeClass("error").tooltip("destroy");
@@ -213,14 +217,15 @@ define([
         progress_bar.css("width", 0);
         message_element.text(message_element.attr("placeholder"));
 
-        var $result = $("#result")
-        var table = $result.find(".dataTables_scrollBody table")
+        var $result = $("#result");
+        var table = $result.find(".dataTables_scrollBody table");
 
         if (table.length > 0){
             table.DataTable().destroy();
         }
 
         form_data = serializeForm($("#query-form"), JOBS, SETS);
+        self.update_history_state(form_data);
         $result.find(".panel-body").html("<i>No results yet</i>");
 
         var script = scripts_container.find(".active")[0].id.replace("script_","");
@@ -239,7 +244,7 @@ define([
         }).fail(self.fail);
     };
 
-    self.script_changed = function script_changed(event){
+    self.script_changed = function(event){
         var name = $(event.target).attr("name");
         $(".query-submit .btn").addClass("disabled");
         $("#scripts").find(".active").removeClass("active");
@@ -261,11 +266,11 @@ define([
         script_form.text("Loading script form..");
     };
 
-    self.script_form_loaded = function script_form_loaded(data){
+    self.script_form_loaded = function(data){
         $("#script-line").show();
         if (data.help_text) {
-            $("#script-help").text(data.help_text);
-            $("#script-help").show();
+            $("#script-help").text(data.help_text)
+                .show();
         } else {
             $("#script-help").hide();
         }
@@ -302,9 +307,9 @@ define([
             $(".depends", widget).depends();
         });
 
-        $("select[multiple=multiple]", $("#script-form")).multiselect(MULTISELECT_DEFAULTS);
+        $("select[multiple=multiple]", script_form).multiselect(MULTISELECT_DEFAULTS);
 
-        $.map($("select", $("#script-form")), function(el){
+        $.map($("select", script_form), function(el){
             if ($(el).attr("multiple") === "multiple") return;
             $(el).multiselect({ disableIfEmpty: true });
         });
@@ -318,7 +323,7 @@ define([
         var post_func = post_script_loaded[window.location.hash.slice(1)];
         if(post_func) post_func();
 
-        $("#loading-dialog").modal("hide");
+        loading_dialog.modal("hide");
         $(".query-submit .btn").removeClass("disabled");
 
         if (document.location.search.indexOf("autorun") !== -1){
@@ -328,10 +333,10 @@ define([
         }
     };
 
-    self.init_saved_query = function init_saved_query(query_id){
+    self.init_saved_query = function(query_id){
         var url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: query_id});
-        $("#loading-dialog").modal({keyboard: false, backdrop: "static"});
-        $("#loading-dialog .message").text("Loading saved query..");
+        loading_dialog.modal({keyboard: false, backdrop: "static"});
+        loading_dialog.find(".message").text("Loading saved query..");
         progress_bar.css("width", "10%");
 
         $.ajax({
@@ -343,8 +348,8 @@ define([
             saved_query = data;
             saved_query.loading = true;
 
-            $("#loading-dialog .message").html("Retrieved <i class='name'></i>. Loading script..");
-            $("#loading-dialog .message .name").text(data.name);
+            loading_dialog.find(".message").html("Retrieved <i class='name'></i>. Loading script..");
+            loading_dialog.find(".message .name").text(data.name);
             progress_bar.css("width", "50%");
             self.fill_form();
 
@@ -361,7 +366,7 @@ define([
     /*
      * Called when 'run query' is clicked.
      */
-    self.save_query = function save_query(event){
+    self.save_query = function(event){
         event.preventDefault();
         var dialog = $("#save-query-dialog");
         var confirm_dialog = $('#confirm-overwrite-dialog');
@@ -389,14 +394,13 @@ define([
         
 
         if (!dialog_visible && this.confirm === true) {
-            var modal
             if(method === "PATCH"){
-                confirm_dialog.modal()
+                confirm_dialog.modal();
                 return $('.save', confirm_dialog)[0].focus();
             }
             else{
-                dialog.modal()
-                return $(modal.find("input").get(0)).focus();
+                dialog.modal();
+                return $(dialog.find("input").get(0)).focus();
             }    
         }
 
@@ -454,20 +458,21 @@ define([
         save_btn.addClass("disabled");
     };
 
-    self.init_delete_query_button = function init_delete_query_button(){
-        $("#delete-query").addClass("disabled");
+    self.init_delete_query_button = function(){
+        var dq = $("#delete-query");
+        dq.addClass("disabled");
 
         if (saved_query.user === USER){
-            $("#delete-query").removeClass("disabled");
+            dq.removeClass("disabled");
         }
     };
 
-    self.delete_query = function delete_query(event){
+    self.delete_query = function(event){
         event.preventDefault();
 
-        $("#loading-dialog").modal({keyboard: false, backdrop: "static"});
-        $("#loading-dialog").find(".message").text("Deleting saved query..");
-        $("#loading-dialog").find(".message .name").text(saved_query.name);
+        loading_dialog.modal({keyboard: false, backdrop: "static"});
+        loading_dialog.find(".message").text("Deleting saved query..");
+        loading_dialog.find(".message .name").text(saved_query.name);
         progress_bar.css("width", "20%");
 
         var url = SAVED_QUERY_API_URL.format({
@@ -484,7 +489,7 @@ define([
             headers: {
                 "X-CSRFTOKEN": $.cookie("csrftoken")
             }
-        }).done(function(data){
+        }).done(function(){
             $("#load-query-menu li[query={id}]".format(saved_query)).remove();
 
             saved_query = {
@@ -515,7 +520,7 @@ define([
         $("#delete-query").addClass("disabled");
     };
 
-    self.save_query_clicked = function save_query_clicked(event){
+    self.save_query_clicked = function(event){
         var args = {};
         if (saved_query.id === null || saved_query.user !== USER) {
             args.confirm = true;
@@ -528,13 +533,13 @@ define([
         self.save_query.bind(args)(event);
     };
 
-    self.change_articlesets_clicked = function change_articlesets_clicked(event){
+    self.change_articlesets_clicked = function(event){
         event.preventDefault();
         $("#change-articlesets-query-dialog").modal();
     };
 
-    self.change_articlesets_confirmed_clicked = function change_articlesets_confirmed_clicked(event){
-        var options = $('#change-articlesets-select option:selected');
+    self.change_articlesets_confirmed_clicked = function(){
+        var options = $('#change-articlesets-select').find('option:selected');
 
         SETS = $.map(options, function(option){
             return parseInt($(option).val());
@@ -555,7 +560,7 @@ define([
         })).click();
     };
 
-    self.get_window_url = function get_window_url(jobs, sets, hash){
+    self.get_window_url = function(jobs, sets, hash){
         return "?sets={sets}&jobs={jobs}#{hash}".format({
             sets: sets.join(","),
             jobs: jobs.join(","),
@@ -563,7 +568,7 @@ define([
         });
     };
 
-    self.fill_form = function fill_form(){
+    self.fill_form = function(){
         $.each(saved_query.parameters, function(name, value){
             var inputs = "input[name={name}]";
             inputs += ",textarea[name={name}]";
@@ -602,7 +607,7 @@ define([
     };
 
 
-    self.datetype_changed = function datetype_changed(){
+    self.datetype_changed = function(){
         date_inputs.prop("disabled", true).addClass("hidden");
         $.each(dates_enabling[datetype_input.val()], function(i, selector){
             $("#dates").find("input[name=" + selector + "]").prop("disabled", false).removeClass("hidden");
@@ -618,7 +623,7 @@ define([
     /**
      * Called when the depends widget needs data
      */
-    var dependsFetchDataAggregation = function(options, elements, url){
+    var dependsFetchDataAggregation = function(options, elements){
         var form_data = serializeForm($("#query-form"), JOBS, SETS);
         var y_axis = form_data["y_axis"];
         form_data.output_type = "application/json";
@@ -664,11 +669,11 @@ define([
 
     var post_script_loaded = {
         "aggregation": function(){
-            $("#script-form").find("[name=relative_to]").depends({
+            script_form.find("[name=relative_to]").depends({
                 fetchData: dependsFetchDataAggregation
             });
 
-            $("#script-form").find("[name=relative_to]").parent().append(
+            script_form.find("[name=relative_to]").parent().append(
                 $("<button data-toggle='tooltip' title='Refresh options manually' class='btn btn-default'>").append(
                     $("<i class='glyphicon glyphicon-refresh'>")
                 ).tooltip().click(function(event){
@@ -680,7 +685,7 @@ define([
         }
     };
 
-    self.fail = function fail(jqXHR, textStatus, errorThrown){
+    self.fail = function(jqXHR, textStatus, errorThrown){
         if(jqXHR.status === 400){
             // Form not accepted or other type of error
             self.form_invalid(JSON.parse(jqXHR.responseText));
@@ -689,23 +694,57 @@ define([
             self.show_jqXHR_error(jqXHR, errorThrown);
         }
 
-        $("#loading-dialog").modal("hide");
+        loading_dialog.modal("hide");
         progress_bar.css("width", "0%");
     };
 
-    self.init_poll = function init_poll(uuid){
+    self.parse_querystring = function(){
+        var query_string = window.location.search.slice(1);
+        if(query_string.length === 0){
+            return null;
+        }
+        var query_strings = query_string.split("&");
+        var kv_pairs = query_strings.map(function(str){return str.split("=")});
+        var query = {};
+        for(var i = 0; i < kv_pairs.length; i++){
+            var query_part = kv_pairs[i];
+            query[query_part[0]] = query_part[1];
+        }
+        return query;
+    };
+
+    self.render_complete = function(body){
+        var articlelist = body.find("#articlelist-table");
+        if(articlelist.length === 0){
+            return;
+        }
+        articlelist.find("#articlelist-use-in-query").click(function(){
+            var dataTable = articlelist.find(".dataTables_scrollBody > .dataTable").DataTable();
+            var ids = dataTable.rows('.active').data().map(function(r){ return r.id; });
+            var query = self.parse_querystring();
+            query.articles = ids.join(",");
+            var querystring = "?" + $.param(query);
+            var search = window.location.search;
+            if(search.length > 0){
+                var href = window.location.href.replace(search, querystring);
+                window.open(href, "_blank");
+            }
+        });
+
+    };
+    self.init_poll = function(uuid){
         var poll = Poll(uuid, {download: self.download_result()});
 
         poll.done(function(){
             progress_bar.css("width", "100%");
             message_element.text("Fetching results..")
-        }).fail(function(data, textStatus, _){
+        }).fail(function(data){
             self.show_error("Server replied with " + data.status + " error: " + data.responseText);
             $("#loading-dialog").modal("hide");
             progress_bar.css("width", "0%");
         }).result(function(data, textStatus, jqXHR){
             var contentType = jqXHR.getResponseHeader("Content-Type");
-            var body = $("#result").find(".panel-body").html("");
+            var body = result.find(".panel-body").html("");
             var renderer = renderers[contentType];
 
             if(renderer === undefined){
@@ -713,9 +752,9 @@ define([
             } else {
                 renderer(form_data, body, self.prepare_data(data));
             }
-
-            $("#result").attr("class", window.location.hash.slice(1));
-            $(window).scrollTo($("#result"), 500);
+            self.render_complete(body);
+            result.attr("class", window.location.hash.slice(1));
+            $(window).scrollTo(result, 500);
         }).always(function() {
             loading_dialog.modal("hide");
             progress_bar.css("width", 0);
@@ -728,8 +767,8 @@ define([
      *
      * @returns boolean
      */
-    self.download_result = function download_result(){
-        var download = $("#query-form [name=download]").is(":checked");
+    self.download_result = function(){
+        var download = query_form.find("[name=download]").is(":checked");
 
         if (download){
             // User explicitly indicated wanting to download
@@ -737,11 +776,11 @@ define([
         }
 
         // If we cannot render the selected output type, we should offer download option
-        var outputType = $("#query-form [name=output_type]").val();
+        var outputType = query_form.find("[name=output_type]").val();
         return $.inArray(outputType.split(";")[0], self.get_accepted_mimetypes()) === -1;
     };
 
-    self.show_jqXHR_error = function show_jqXHR_error(jqXHR, error, hide){
+    self.show_jqXHR_error = function(jqXHR, error){
         self.show_error(
             "Unknown error. Server replied with status code " +
             jqXHR.status + ": " + error
@@ -749,7 +788,7 @@ define([
 
     };
 
-    self.show_error = function show_error(msg, hide){
+    self.show_error = function(msg, hide){
         new PNotify({type: "error", hide: (hide === undefined) ? false : hide, text: msg});
     };
 
@@ -757,7 +796,7 @@ define([
     ////////////////////////////////////////////////
     //           INITIALISE FUNCTIONS             //
     ////////////////////////////////////////////////
-    self.init_dates = function init_dates(){
+    self.init_dates = function(){
         datetype_input
             // Enable / disable widgets
             .change(self.datetype_changed)
@@ -767,7 +806,7 @@ define([
             .trigger("change");
     };
 
-    self.init_scripts = function init_scripts(){
+    self.init_scripts = function(){
         // Load default or chosen scripts
         $(window).bind('hashchange', self.hashchange);
         $("#load-query").removeClass("disabled");
@@ -779,7 +818,7 @@ define([
         }
     };
 
-    self.init_shortcuts = function initialise_shortcuts(){
+    self.init_shortcuts = function(){
         $.each(HOTKEYS, function(keys, callback){
             $(document).delegate('*', 'keydown.' + keys, function(event){
                 event.preventDefault();
@@ -789,7 +828,7 @@ define([
         })
     };
 
-    self.init = function init(){
+    self.init = function(){
         $("#codebooks").change(self.codebook_changed);
         $("#run-query").click(self.run_query);
         $("#content").find("> form").submit(self.run_query);
@@ -819,8 +858,8 @@ define([
                 window.location = url;
             }
 
-            $("#loading-dialog").modal({keyboard: false, backdrop: "static"});
-            $("#loading-dialog").find(".message").text("Refreshing..");
+            loading_dialog.modal({keyboard: false, backdrop: "static"});
+            loading_dialog.find(".message").text("Refreshing..");
         });
 
         self.init_dates();

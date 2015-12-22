@@ -100,6 +100,8 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         query_id = self.request.GET.get("query", "null")
         user_id = self.request.user.id
 
+        article_ids = self._get_ids("articles")
+        article_ids_lines = "\n".join(str(id) for id in article_ids)
         articleset_ids = self._get_ids("sets")
         codingjob_ids = self._get_ids("jobs")
         codingjob_ids_json = json.dumps(list(codingjob_ids))
