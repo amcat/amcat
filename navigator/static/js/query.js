@@ -713,23 +713,109 @@ define([
         return query;
     };
 
+    self.on_use_in_query_clicked = function(){
+        var dataTable = $("#articlelist-table").find(".dataTables_scrollBody > .dataTable").DataTable();
+        var ids = dataTable.rows('.active').data().map(function(r){
+            return r.id;
+        });
+        var query = self.parse_querystring();
+        query.articles = ids.join(",");
+        var querystring = "?" + $.param(query);
+        var search = window.location.search;
+        if(search.length > 0){
+            var href = window.location.href.replace(search, querystring);
+            window.open(href, "_blank");
+        }
+    };
+
+    self.add_articles_to_set = function(modal, ids, set_id){
+        // hackish: mock an appendtoset query to add selected articles to set
+        // todo: cleaner solution using a proper api call
+        var params = {
+            project: PROJECT,
+            sets: SETS.join(","),
+            jobs: JOBS.join(","),
+            format: "json"
+        };
+        var url = "/api/v4/query/appendtoset?" + $.param(params);
+
+        var data = $.extend({}, form_data);
+        data.article_ids = ids.join("\n");
+        data.articlesets = SETS.join(",");
+        data.jobs = JOBS;
+        data.project = PROJECT;
+        data.articleset = set_id;
+        data.columns = undefined;
+        $.ajax({
+            "url": url,
+            "type": "POST",
+            "headers": {
+                "X-CSRFTOKEN": csrf_middleware_token,
+            },
+            "dataType" : "json",
+            "data": data
+        }).done(function(data){
+            var poll = Poll(data.uuid);
+            poll.result(function(data){
+               new PNotify({type: "success", text: data})
+            });
+            modal.modal("hide");
+        }).fail(function(){
+            new PNotify({ type : "error", text: "Failed to add articles to set." });
+            modal.modal("hide");
+        });
+    };
+
+    self.on_add_to_set = function(){
+        var dataTable = $("#articlelist-table").find(".dataTables_scrollBody > .dataTable").DataTable();
+        var ids = dataTable.rows('.active').data().toArray().map(function(r){
+            return r.id;
+        });
+        var modal = $("#add_to_set_modal");
+        $.ajax({
+            type: "GET",
+            url: "/api/v4/projects/" + PROJECT + "/articlesets/?page_size=9999&order_by=name",
+            dataType: "json"
+        }).success(function(data){
+            var select = $("<select>");
+
+            $.each(data.results, function(i, aset){
+                var name = aset.name + " (" + aset.id + ") (" + aset.articles + " articles)";
+                select.append($("<option>").prop("value", aset.id).text(name).data(aset));
+            });
+
+
+            // Add selector, multiselect and open filtering
+            modal.find(".modal-body > p").html(select);
+            select.multiselect({
+                enableFiltering: true
+            });
+            modal.find(".modal-body > p .ui-multiselect").click();
+            $(".ui-multiselect-filter input[type=search]").focus();
+
+            // Enable 'ok' button
+            modal.find(".btn-primary").removeClass("disabled").click(function(){
+                $(this).addClass("disabled");
+                var checked = $("> option:selected", select);
+                var set_id = checked.map(function(){ return this.value; })[0];
+                self.add_articles_to_set(modal, ids, set_id);
+            });
+            modal.modal("show");
+        });
+        modal.find(".btn-primary").addClass("disabled").off("click");
+    };
+
     self.render_complete = function(body){
-        var articlelist = body.find("#articlelist-table");
+        var articlelist = $("#articlelist-table");
         if(articlelist.length === 0){
             return;
         }
-        articlelist.find("#articlelist-use-in-query").click(function(){
-            var dataTable = articlelist.find(".dataTables_scrollBody > .dataTable").DataTable();
-            var ids = dataTable.rows('.active').data().map(function(r){ return r.id; });
-            var query = self.parse_querystring();
-            query.articles = ids.join(",");
-            var querystring = "?" + $.param(query);
-            var search = window.location.search;
-            if(search.length > 0){
-                var href = window.location.href.replace(search, querystring);
-                window.open(href, "_blank");
-            }
-        });
+
+        $("#articlelist-add-to-set").click(self.on_add_to_set);
+
+
+
+        $("#articlelist-use-in-query").click(self.on_use_in_query_clicked);
 
     };
     self.init_poll = function(uuid){

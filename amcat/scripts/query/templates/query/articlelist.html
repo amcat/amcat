@@ -1,8 +1,11 @@
 <div id="articlelist-table">
     {{ table|safe }}
     <div id="{{ table.get_name }}-actions">
-        <a id="articlelist-use-in-query" class="btn btn-success">
+        <a id="articlelist-use-in-query" class="btn btn-default">
             <i class="glyphicon glyphicon-search"></i> Use in query
+        </a>
+        <a id="articlelist-add-to-set" class="btn btn-default">
+            <i class="glyphicon glyphicon-plus"></i> Add selected to set
         </a>
     </div>
 </div>
