@@ -36,12 +36,12 @@ admin.autodiscover()
 
 urlpatterns = patterns(
     '',
-    ('^$', RedirectView.as_view(url='navigator')),
+    #('^$', RedirectView.as_view(pattern_name='navigator:index')),
     (r'^admin/', include(admin.site.urls)),
     (r'^accounts/', include('accounts.urls')),
-    (r'^navigator/', include('navigator.urls', namespace="navigator")),
+    (r'^', include('navigator.urls', namespace="navigator")),
     (r'^api/', include('api.urls', namespace="api")),
-    (r'^annotator/', include('annotator.urls', namespace="annotator")),
+    (r'^', include('annotator.urls', namespace="annotator")),
     url(r'^restframework', include('rest_framework.urls', namespace='rest_framework'))
     )
 
