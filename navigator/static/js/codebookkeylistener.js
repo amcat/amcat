@@ -268,6 +268,8 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
         },
         set: function(value) {
             this._active = value;
+            $('.code.active').removeClass('active');
+            $(this._active.dom_element).addClass('active');
             var part = $('> .parts', this._active.dom_element)[0];
             if(part !== document.activeElement){
                 $('> .parts', this._active.dom_element).focus();
@@ -297,7 +299,7 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
             this.active = visibleChildren[0];
             return;
         }
-        var node = lowestVisible;
+        node = lowestVisible;
         while (node !== this.root) {
             if (node.parent) {
                 var visibleSiblings = _filter_visible(node.parent.children);
@@ -321,8 +323,9 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
         if (this.active !== this.root) {
             var visibleSiblings = _filter_visible(this.active.parent.children);
             var prevIdx = visibleSiblings.indexOf(this.active) - 1;
+            var node;
             if (prevIdx >= 0) {
-                var node = visibleSiblings[prevIdx];
+                node = visibleSiblings[prevIdx];
                 var visibleChildren = _filter_visible(node.children);
                 while (visibleChildren.length > 0) {
                     node = visibleChildren[visibleChildren.length - 1];
@@ -331,7 +334,7 @@ define(["jquery", "amcat/keyboardlistener"], function($, kl) {
                 this.active = node;
                 return;
             }
-            var node = this.active.parent;
+            node = this.active.parent;
             var lowestVisible = this.active.parent;
             while (node !== this.root) {
                 if (!node.dom_element.is_visible) {

@@ -7,6 +7,12 @@
     font-family:serif;
 }
 
+.codebook .code.active > .parts{
+    border-left: 2px solid goldenrod;
+    margin-left: -5px;
+    padding-left: 3px;
+}
+
 .codebook .options{
     padding-left:5px;
 }
