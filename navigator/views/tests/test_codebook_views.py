@@ -1,5 +1,6 @@
 import json
 from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
 from amcat.models import Codebook
 from amcat.tools import amcattest
 from amcat.tools.amcattest import create_test_user
@@ -25,7 +26,7 @@ class TestCodebookViews(amcattest.AmCATTestCase):
             self.fail("{response.status_code} Error on action:\n {error}".format(**locals()))
 
     def test_change_name(self):
-        url = "/navigator/projects/{self.cb.project.id}/codebooks/{self.cb.id}/change-name/".format(**locals())
+        url = reverse("navigator:codebook-change-name", args=(self.cb.project_id, self.cb.id))
         response = self.client.post(url, {"codebook_name" : "bla"})
         self.assert_status(response)
         cb = Codebook.objects.get(pk=self.cb.id)
@@ -34,7 +35,7 @@ class TestCodebookViews(amcattest.AmCATTestCase):
 
     def test_save_changesets(self):
         # nog geen inhoudelijke test
-        url = "/navigator/projects/{self.cb.project.id}/codebooks/{self.cb.id}/save-changesets/".format(**locals())
+        url = reverse("navigator:codebook-save-changesets", args=(self.cb.project_id, self.cb.id))
         data = {'moves' : json.dumps({"bla" : [1,2,{"meerbla" : "abc"}]})}
         #response = self.client.post(url, data)
         #self.assert_status(response)
@@ -43,7 +44,7 @@ class TestCodebookViews(amcattest.AmCATTestCase):
 
     def test_save_labels(self):
         # nog geen inhoudelijke test
-        url = "/navigator/projects/{self.cb.project.id}/codebooks/{self.cb.id}/save-labels/".format(**locals())
+        url = reverse("navigator:codebook-save-labels", args=(self.cb.project_id, self.cb.id))
         data = {}
         #response = self.client.post(url, data)
         #self.assert_status(response)
