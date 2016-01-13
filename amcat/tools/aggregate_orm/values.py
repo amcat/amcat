@@ -18,9 +18,8 @@
 ###########################################################################
 from decimal import Decimal
 from operator import itemgetter
-from amcat.models import CodingSchemaField, FIELDTYPE_IDS
-from amcat.tools.aggregate_orm.sqlobj import SQLObject, JOINS
-
+from amcat.models import CodingSchemaField, FIELDTYPE_IDS, Coding, CodedArticle, CodingValue
+from amcat.tools.aggregate_orm.sqlobj import SQLObject, JOINS, INNER_JOIN
 
 __all__ = (
     "AverageValue",
@@ -33,6 +32,17 @@ __all__ = (
 class Value(SQLObject):
     def __init__(self, **kwargs):
         super(Value, self).__init__(**kwargs)
+        self._last_field_hack = None
+
+    def _set_last_field_aggregation(self, field):
+        """HACK: the caller may set the last field aggregation (SchemafieldCategory). This is
+        currently used in AverageValue, to determine which JOINS are needed. For example, a user
+        might aggregate on an article schema, and still expect sentence field value aggregations
+        to work (which would be included due to the first aggregation). In other words; and extra
+        join is needed. On the other hand, aggregating on a sentence field AND aggregating on a
+        sentence value should not yield the same join.
+        """
+        self._last_field_hack = field
 
     def aggregate(self, values):
         """
@@ -60,15 +70,50 @@ class AverageValue(Value):
         assert isinstance(field, CodingSchemaField), assert_msg
         self.field = field
 
+    @property
+    def need_extra_joins(self):
+        if self._last_field_hack is None:
+            return False
+        field_schema = self.field.codingschema
+        last_field_schema = self._last_field_hack.field.codingschema
+        return field_schema.isarticleschema is not last_field_schema.isarticleschema
+
     def get_joins(self):
+        prefix = "{}_2".format(self.prefix)
+
+        if self.need_extra_joins:
+            # codings -> coded_article -> codings -> coding_values
+            yield JOINS.coded_articles.format(prefix=self.prefix)
+            yield "INNER JOIN {} AS {} ON ({} = {})".format(
+                Coding._meta.db_table,
+                "T{}_{}".format(prefix, Coding._meta.db_table),
+                "T{}_{}.id".format(self.prefix, CodedArticle._meta.db_table),
+                "T{}_{}.coded_article_id".format(prefix, Coding._meta.db_table),
+            )
+            yield "INNER JOIN {} AS {} ON ({} = {})".format(
+                CodingValue._meta.db_table,
+                "T{}_{}".format(prefix, CodingValue._meta.db_table),
+                "T{}_{}.coding_id".format(prefix, Coding._meta.db_table),
+                "T{}_{}.coding_id".format(prefix, CodingValue._meta.db_table),
+            )
+
+
         yield JOINS.codings_values.format(prefix=self.prefix)
 
     def get_wheres(self):
+        prefix = "{}_2".format(self.prefix) if self.need_extra_joins else self.prefix
         where_sql = 'T{prefix}_codings_values.field_id = {field_id}'
-        yield where_sql.format(field_id=self.field.id, prefix=self.prefix)
+        yield where_sql.format(field_id=self.field.id, prefix=prefix)
+
+        if self.need_extra_joins:
+            if self.field.codingschema.isarticleschema:
+                yield "T{}_{}.sentence_id IS NULL".format(prefix, Coding._meta.db_table)
+            else:
+                yield "T{}_{}.sentence_id IS NOT NULL".format(prefix, Coding._meta.db_table)
 
     def get_selects(self):
-        sql = '{{method}}(T{prefix}_codings_values.intval)'.format(prefix=self.prefix)
+        prefix = "{}_2".format(self.prefix) if self.need_extra_joins else self.prefix
+        sql = '{{method}}(T{prefix}_codings_values.intval)'.format(prefix=prefix)
 
         # Yield weight select
         yield sql.format(method="COUNT")

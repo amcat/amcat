@@ -95,6 +95,9 @@ class TestAggregateORM(TransactionTestCase):
         self.c4 = amcattest.create_test_coding(codingjob=self.job, article=self.a4)
         self.c4.update_values({self.codef: self.code_A1.id, self.intf: 1})
 
+        self.sentence_coding = amcattest.create_test_coding(codingjob=self.job, article=self.a1, sentence=self.a1.sentences.all()[0])
+        self.sentence_coding.update_values({self.scodef: self.scode_A1.id, self.sintf: 1})
+
         # Try to confuse aggregator by inserting multiple codingjobs
         job = amcattest.create_test_job(articleset=self.s1, articleschema=self.schema)
         c4 = amcattest.create_test_coding(codingjob=job, article=self.a3)
@@ -126,23 +129,15 @@ class TestAggregateORM(TransactionTestCase):
         Aggregation should work when using an article schemafield as aggregation and
         a sentence schemafield as value.
         """
-        # Test without sentence codings
+        # Aggregate on article coding, request sentence value
         aggr = self._get_aggr(flat=True)
-        result = set(aggr.get_aggregate([
-            SchemafieldCategory(self.codef),
-            SchemafieldCategory(self.scodef)
-        ], [CountArticlesValue()]))
+        result = set(aggr.get_aggregate([SchemafieldCategory(self.codef, prefix="A")], [AverageValue(self.sintf, prefix="B")]))
+        self.assertEqual(result, {(self.scode_A, 1)})
 
-        self.assertEqual(result, set([]))
-
-        # Add sentence codings and test again
-        sentence_coding = amcattest.create_test_coding(codingjob=self.job, article=self.a1, sentence=self.a1.sentences.all()[0])
-        sentence_coding.update_values({self.scodef: self.scode_A1.id, self.sintf: 1})
-
+        # Aggregate on sentence coding, request article value
         aggr = self._get_aggr(flat=True)
-        result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [AverageValue(self.sintf)]))
-
-        self.assertEqual(result, {(self.codef, 1)})
+        result = set(aggr.get_aggregate([SchemafieldCategory(self.scodef, prefix="A")], [AverageValue(self.intf, prefix="B")]))
+        self.assertEqual(result, {(self.code_A1, 4)})
 
 
     def test_articleset_category(self):
