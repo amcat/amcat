@@ -63,8 +63,8 @@ def coded_article_property(prop):
 
 class Coding(AmcatModel):
     """
-    Model class for codings. Codings provide the link between a Coding Job 
-    and actual Coding Values. 
+    Model class for codings. Codings provide the link between a CodingJob
+    and actual CodingValue's.
     """
     id = models.AutoField(primary_key=True, db_column='coding_id')
 
