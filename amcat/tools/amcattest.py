@@ -216,7 +216,7 @@ def create_test_job(narticles=1, **kargs):
     if "insertuser" not in kargs: kargs["insertuser"] = create_test_user()
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "unitschema" not in kargs: kargs["unitschema"] = create_test_schema()
-    if "articleschema" not in kargs: kargs["articleschema"] = create_test_schema()
+    if "articleschema" not in kargs: kargs["articleschema"] = create_test_schema(isarticleschema=True)
     if "coder" not in kargs: kargs["coder"] = create_test_user()
     if "articleset" not in kargs: kargs["articleset"] = create_test_set(articles=narticles)
     if "id" not in kargs: kargs["id"] = _get_next_id()

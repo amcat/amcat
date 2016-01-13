@@ -20,11 +20,12 @@ import datetime
 
 from django.test import TransactionTestCase
 
-from amcat.models import Coding
+from amcat.models import Coding, create_coded_articles
 from amcat.tools import amcattest, aggregate_orm
 from amcat.tools.aggregate_orm import MediumCategory, CountArticlesValue, TermCategory, ArticleSetCategory, \
     IntervalCategory
 from amcat.tools.aggregate_orm import SchemafieldCategory, AverageValue
+from amcat.tools.sbd import get_or_create_sentences
 
 
 class TestAggregateORM(TransactionTestCase):
@@ -39,6 +40,10 @@ class TestAggregateORM(TransactionTestCase):
         self.m4 = self.a4.medium
         self.a3.medium = self.m2
         self.a3.save()
+
+        self.a1.text = "aap."
+        self.a2.text = "aap. noot."
+        self.a3.text = "aap. noot. mies."
 
         self.a1.date = datetime.datetime(2015, 01, 01)
         self.a2.date = datetime.datetime(2015, 01, 01)
@@ -57,12 +62,26 @@ class TestAggregateORM(TransactionTestCase):
         self.schema, self.codebook, self.strf, self.intf, self.codef, self.boolf, self.qualf = (
             amcattest.create_test_schema_with_fields(isarticleschema=True))
 
+        self.sschema, self.scodebook, self.sstrf, self.sintf, self.scodef, self.sboolf, self.squalf = (
+            amcattest.create_test_schema_with_fields(isarticleschema=False))
+
+        # Article
         self.codes = self.codebook.get_codes()
         self.code_A, = [c for c in self.codes if c.label == "A"]
         self.code_B, = [c for c in self.codes if c.label == "B"]
         self.code_A1, = [c for c in self.codes if c.label == "A1"]
 
-        self.job = amcattest.create_test_job(articleset=self.s1, articleschema=self.schema)
+        # Sentence
+        self.scodes = self.codebook.get_codes()
+        self.scode_A, = [c for c in self.scodes if c.label == "A"]
+        self.scode_B, = [c for c in self.scodes if c.label == "B"]
+        self.scode_A1, = [c for c in self.scodes if c.label == "A1"]
+
+        # Does not get fired in unit test?
+        for article in [self.a1, self.a2, self.a3, self.a4, self.a5]:
+            get_or_create_sentences(article)
+
+        self.job = amcattest.create_test_job(articleset=self.s1, articleschema=self.schema, unitschema=self.sschema)
 
         self.c1 = amcattest.create_test_coding(codingjob=self.job, article=self.a1)
         self.c1.update_values({self.codef: self.code_A.id, self.intf: 4, self.qualf: 4})
@@ -101,6 +120,29 @@ class TestAggregateORM(TransactionTestCase):
             (datetime.datetime(2015, 02, 01), 1),
             (datetime.datetime(2016, 01, 01), 1),
         })
+
+    def test_mixed_article_sentence_aggregation(self):
+        """
+        Aggregation should work when using an article schemafield as aggregation and
+        a sentence schemafield as value.
+        """
+        # Test without sentence codings
+        aggr = self._get_aggr(flat=True)
+        result = set(aggr.get_aggregate([
+            SchemafieldCategory(self.codef),
+            SchemafieldCategory(self.scodef)
+        ], [CountArticlesValue()]))
+
+        self.assertEqual(result, set([]))
+
+        # Add sentence codings and test again
+        sentence_coding = amcattest.create_test_coding(codingjob=self.job, article=self.a1, sentence=self.a1.sentences.all()[0])
+        sentence_coding.update_values({self.scodef: self.scode_A1.id, self.sintf: 1})
+
+        aggr = self._get_aggr(flat=True)
+        result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [AverageValue(self.sintf)]))
+
+        self.assertEqual(result, {(self.codef, 1)})
 
 
     def test_articleset_category(self):
