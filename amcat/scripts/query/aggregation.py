@@ -18,6 +18,7 @@
 ###########################################################################
 from __future__ import unicode_literals
 
+import collections
 import json
 from datetime import datetime
 from time import mktime
@@ -29,8 +30,7 @@ from amcat.models import Medium, ArticleSet, CodingSchemaField, Code, CodingJob
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools import aggregate_es
 from amcat.tools.aggregate_es.categories import ELASTIC_TIME_UNITS
-from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
-
+from amcat.tools.keywordsearch import SelectionSearch, SearchQuery, to_sortable_tuple
 
 AGGREGATION_FIELDS = (
     ("articleset", "Articleset"),
@@ -45,6 +45,52 @@ AGGREGATION_FIELDS = (
     ))
 )
 
+EMPTY_MATRIX = {
+    "rows": (),
+    "columns": (),
+    "data": ()
+}
+
+def aggregation_to_matrix(aggregation, categories):
+    """
+    Converts an aggregation of the form [(categories, values)] to a matrix represented by
+    a matrix with the keys 'columns', 'rows', and 'data'. The result is guaranteed to be
+    sorted.
+
+    @param aggregation: aggregation from either ES or ORM backend
+    @param categories: list of instances of Category
+    @return: matrix / dict
+    """
+    if not aggregation:
+        return dict(EMPTY_MATRIX)
+
+    # No real "columns" exist if only one category is selected
+    if len(categories) == 1:
+        return {
+            "columns": ["Value"],
+            "rows": [cats[0] for cats, vals in aggregation],
+            "data": [(vals,) for cats, vals in aggregation]
+        }
+
+    if len(categories) > 2:
+        raise ValueError("More than two categories not yet supported by aggregation_to_matrix()")
+
+    # Two categories, plus an arbitrary number of values.
+    rows = sorted({cats[0] for cats, vals in aggregation}, key=to_sortable_tuple)
+    cols = sorted({cats[1] for cats, vals in aggregation}, key=to_sortable_tuple)
+
+    row_positions = {r: n for n, r in enumerate(rows)}
+    col_positions = {c: n for n, c in enumerate(cols)}
+
+    matrix = [[None]*len(cols) for _ in range(len(rows))]
+    for (row, col), values in aggregation:
+        matrix[row_positions[row]][col_positions[col]] = values
+
+    return {
+        "data": matrix,
+        "rows": rows,
+        "columns": cols
+    }
 
 class AggregationEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -64,6 +110,9 @@ MEDIUM_ERR = "Could not find medium with id={column} or name={column}"
 class AggregationActionForm(QueryActionForm):
     primary = ChoiceField(label="Primary aggregation", choices=AGGREGATION_FIELDS)
     secondary = ChoiceField(label="Secondary aggregation", choices=(("", "------"),) + AGGREGATION_FIELDS, required=False)
+
+    value1 = ChoiceField(label="First value", initial="count(articles)", choices=[("count(articles)", "Article count")])
+    value2 = ChoiceField(label="Second value", required=False, initial="", choices=())
 
     #relative_to = CharField(widget=Select, required=False)
 
@@ -123,7 +172,13 @@ class AggregationAction(QueryAction):
         primary = form.cleaned_data["primary"]
         secondary= form.cleaned_data["secondary"]
         categories = list(filter(None, [primary, secondary]))
-        aggregation = selection.get_aggregate(categories, flat=False)
+        aggregation = list(selection.get_aggregate(categories, flat=False))
+
+        # Matrices are very annoying to construct in javascript due to missing hashtables. If
+        # the user requests a table, we thus first convert it to a different format which should
+        # be easier to render.
+        if form.cleaned_data["output_type"] == "text/json+aggregation+table":
+            aggregation = aggregation_to_matrix(aggregation, categories)
 
         self.monitor.update(60, "Serialising..".format(**locals()))
-        return json.dumps(list(aggregation), cls=AggregationEncoder, check_circular=False)
+        return json.dumps(aggregation, cls=AggregationEncoder, check_circular=False)

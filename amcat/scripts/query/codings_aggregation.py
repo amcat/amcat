@@ -23,7 +23,7 @@ from itertools import chain
 from django.core.exceptions import ValidationError
 from django.forms import ChoiceField, BooleanField
 
-from aggregation import AggregationEncoder
+from aggregation import AggregationEncoder, aggregation_to_matrix
 from amcat.models import CodedArticle
 from amcat.models import CodingSchemaField, Code, CodingValue, Coding
 from amcat.models import Medium, ArticleSet, CodingJob
@@ -162,11 +162,12 @@ class CodingAggregationActionForm(QueryActionForm):
         return self._clean_value("value2", prefix="4")
 
     def clean(self):
+        output_type = self.cleaned_data["output_type"]
         primary = self.cleaned_data["primary"]
         secondary = self.cleaned_data["secondary"]
         value2 = self.cleaned_data["value2"]
 
-        if primary and secondary and value2:
+        if primary and secondary and value2 and output_type != "text/json+aggregation+table":
             error_msg =  "When selecting two aggregations (primary and secondary), "
             error_msg += "you can only select one value."
             raise ValidationError(error_msg)
@@ -202,11 +203,11 @@ def get_code_filter(codebook, codes, include_descendants):
 
 class CodingAggregationAction(QueryAction):
     output_types = (
-        ("text/json+aggregation+codings+barplot", "Bar plot"),
-        ("text/json+aggregation+codings+table", "Table"),
-        ("text/json+aggregation+codings+scatter", "Scatter plot"),
-        ("text/json+aggregation+codings+line", "Line plot"),
-        ("text/json+aggregation+codings+heatmap", "Heatmap"),
+        ("text/json+aggregation+barplot", "Bar plot"),
+        ("text/json+aggregation+table", "Table"),
+        ("text/json+aggregation+scatter", "Scatter plot"),
+        ("text/json+aggregation+line", "Line plot"),
+        ("text/json+aggregation+heatmap", "Heatmap"),
         ("text/csv", "CSV (Download)"),
     )
     form_class = CodingAggregationActionForm
@@ -257,8 +258,14 @@ class CodingAggregationAction(QueryAction):
         aggregation = orm_aggregate.get_aggregate(categories, values)
         aggregation = sorted(aggregation, key=to_sortable_tuple)
 
+        # Matrices are very annoying to construct in javascript due to missing hashtables. If
+        # the user requests a table, we thus first convert it to a different format which should
+        # be easier to render.
+        if form.cleaned_data["output_type"] == "text/json+aggregation+table":
+            aggregation = aggregation_to_matrix(aggregation, categories)
+
         self.monitor.update(60, "Serialising..".format(**locals()))
-        return json.dumps(list(aggregation), cls=AggregationEncoder, check_circular=False)
+        return json.dumps(aggregation, cls=AggregationEncoder, check_circular=False)
 
 
 class AggregationColumnAction(QueryAction):
