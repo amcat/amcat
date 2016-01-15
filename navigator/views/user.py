@@ -16,20 +16,17 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from django.core.urlresolvers import reverse
 from django.db.transaction import atomic
 from django.shortcuts import render, redirect
-from django.core.urlresolvers import reverse
 
+from amcat.models.user import User
 from api.rest.datatable import Datatable
 from api.rest.resources import UserResource, ProjectResource
-
-from amcat.models.user import User, Affiliation
-from amcat.models.language import Language
-
+from navigator import forms
 from navigator.utils.auth import check, create_user, check_perm
 from navigator.utils.misc import session_pop
 
-from navigator import forms
 USER_MENU = None
 
 import smtplib, itertools
@@ -60,10 +57,10 @@ def all(request):
 @check(User)
 def view(request, user=None, form=None):
     if user is None:
-        return redirect(reverse(view, args=[request.user.id]))
+        return redirect(reverse("navigator:user", args=[request.user.id]))
 
     ref = request.META.get('HTTP_REFERER', '')
-    success = ref.endswith(reverse(view, args=[user.id])) and not form
+    success = ref.endswith(reverse("navigator:user", args=[user.id])) and not form
     form = form or forms.UserDetailsForm(request, instance=user)
 
     # Generate projects-table javascript
@@ -84,7 +81,7 @@ def edit(request, user):
     form = forms.UserDetailsForm(request, data=request.POST or None, instance=user)
     if form.is_valid():
         form.save()
-        return redirect(reverse(view, args=[user.id]))
+        return redirect(reverse("navigator:user", args=[user.id]))
     return view(request, id=user.id, form=form)
 
 @check(User, action='create', args=None)
