@@ -17,21 +17,18 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from django.core.urlresolvers import reverse
-
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView
-from navigator.views.datatableview import DatatableMixin
-from amcat.models import User, authorisation
-from django.views.generic.detail import DetailView
-from django.views.generic.list import ListView
-from django.views.generic.edit import UpdateView
-
-from django.views.generic.base import RedirectView
-from api.rest.resources import ProjectRoleResource
-from amcat.models import Project, ProjectRole, Role
 from django import forms
+from django.core.urlresolvers import reverse
+from django.views.generic.base import RedirectView
+from django.views.generic.list import ListView
+
 from amcat.forms.widgets import BootstrapMultipleSelect
+from amcat.models import Project, ProjectRole, Role
+from amcat.models import User, authorisation
+from api.rest.resources import ProjectRoleResource
 from navigator.forms import gen_user_choices
+from navigator.views.datatableview import DatatableMixin
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
 
 class ProjectRoleForm(forms.ModelForm):
     user = forms.MultipleChoiceField(widget=BootstrapMultipleSelect)

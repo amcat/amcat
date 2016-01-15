@@ -19,20 +19,16 @@
 
 from __future__ import unicode_literals, print_function, absolute_import
 
+import logging
 
-from django.conf.urls import include, patterns, url
-from django.views.generic import RedirectView
-from django.contrib import admin
 from django.conf import settings
+from django.conf.urls import include, patterns, url
+from django.contrib import admin
+from django.views.generic import RedirectView
 
-from os.path import abspath, dirname, join
-import os; from os.path import isdir
+log = logging.getLogger(__name__)
 
-import logging; log = logging.getLogger(__name__)
-
-from navigator.utils.error_handlers import handler404, handler500, handler403, handler503
-
-admin.autodiscover() 
+admin.autodiscover()
 
 urlpatterns = patterns(
     '',
