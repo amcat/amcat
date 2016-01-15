@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from __future__ import unicode_literals
+
 from collections import OrderedDict, defaultdict
 from operator import itemgetter
 from amcat.models import Medium, ArticleSet, Code
@@ -65,6 +67,14 @@ class Category(SQLObject):
     def get_group_by(self):
         return next(iter(self.get_selects()))
 
+    def get_column_names(self):
+        """Returns names of columns when serializing to a flat format (csv)."""
+        raise NotImplementedError("get_column_names() should be implemented by subclasses.")
+
+    def get_column_values(self, obj):
+        """Returns values for each column yielded by get_column_names() for an instance."""
+        raise NotImplementedError("get_column_values() should be implemented by subclasses.")
+
 
 class ModelCategory(Category):
     model = None
@@ -74,6 +84,13 @@ class ModelCategory(Category):
 
     def get_object(self, objects, id):
         return objects[id]
+
+    def get_column_names(self):
+        model_name = self.model.__name__.lower()
+        return model_name + "_id", model_name + "_label"
+
+    def get_column_values(self, obj):
+        return obj.id, getattr(obj, obj.__label__)
 
 
 class IntervalCategory(Category):
@@ -94,6 +111,12 @@ class IntervalCategory(Category):
     def __repr__(self):
         return "<Interval: %s>" % self.interval
 
+    def get_column_names(self):
+        yield "date"
+
+    def get_column_values(self, obj):
+        """@type obj: datetime.datetime"""
+        yield obj.isoformat()
 
 class MediumCategory(ModelCategory):
     model = Medium
@@ -160,6 +183,13 @@ class TermCategory(Category):
 
     def copy(self, terms):
         return self.__class__(terms)
+
+    def get_column_names(self):
+        yield "term"
+
+    def get_column_values(self, obj):
+        """@type obj: SearchQuery"""
+        yield obj.label
 
 
 class SchemafieldCategory(ModelCategory):

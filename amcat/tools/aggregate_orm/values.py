@@ -59,6 +59,12 @@ class Value(SQLObject):
         """
         return value
 
+    def get_column_names(self):
+        yield "Value"
+
+    def get_column_values(self, obj):
+        yield obj
+
 
 class AverageValue(Value):
     joins_needed = ("codings",)
@@ -143,7 +149,6 @@ class AverageValue(Value):
 
     def __repr__(self):
         return "<AverageValue: %s>" % self.field
-
 
 class CountValue(Value):
     def postprocess(self, value):

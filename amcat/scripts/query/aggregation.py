@@ -18,9 +18,11 @@
 ###########################################################################
 from __future__ import unicode_literals
 
-import collections
+import StringIO
+import csv
 import json
 from datetime import datetime
+from itertools import chain, repeat
 from time import mktime
 
 from django.core.exceptions import ValidationError
@@ -30,6 +32,7 @@ from amcat.models import Medium, ArticleSet, CodingSchemaField, Code, CodingJob
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools import aggregate_es
 from amcat.tools.aggregate_es.categories import ELASTIC_TIME_UNITS
+from amcat.tools.aggregate_orm import CountArticlesValue
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery, to_sortable_tuple
 
 AGGREGATION_FIELDS = (
@@ -82,7 +85,7 @@ def aggregation_to_matrix(aggregation, categories):
     row_positions = {r: n for n, r in enumerate(rows)}
     col_positions = {c: n for n, c in enumerate(cols)}
 
-    matrix = [[None]*len(cols) for _ in range(len(rows))]
+    matrix = [[(None,)]*len(cols) for _ in range(len(rows))]
     for (row, col), values in aggregation:
         matrix[row_positions[row]][col_positions[col]] = values
 
@@ -91,6 +94,23 @@ def aggregation_to_matrix(aggregation, categories):
         "rows": rows,
         "columns": cols
     }
+
+def aggregation_to_csv(aggregation, categories, values):
+    aggregation = map(chain.from_iterable, aggregation)
+
+    csvio = StringIO.StringIO()
+    csvf = csv.writer(csvio)
+
+    catvals = repeat(list(chain(categories, values)))
+    header = chain.from_iterable(c.get_column_names() for c in next(catvals))
+    csvf.writerow(list(header))
+
+    for catval, row in zip(catvals, aggregation):
+        values = (c.get_column_values(obj) for obj, c in zip(row, catval))
+        csvf.writerow(list(chain.from_iterable(values)))
+
+    return csvio.getvalue()
+
 
 class AggregationEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -179,6 +199,9 @@ class AggregationAction(QueryAction):
         # be easier to render.
         if form.cleaned_data["output_type"] == "text/json+aggregation+table":
             aggregation = aggregation_to_matrix(aggregation, categories)
+
+        if form.cleaned_data["output_type"] == "text/csv":
+            return aggregation_to_csv(aggregation, categories, [CountArticlesValue()])
 
         self.monitor.update(60, "Serialising..".format(**locals()))
         return json.dumps(aggregation, cls=AggregationEncoder, check_circular=False)
