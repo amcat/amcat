@@ -52,7 +52,7 @@ class CodingSchema(AmcatModel):
 
     project = models.ForeignKey("amcat.Project")
     highlighters = models.ManyToManyField("amcat.Codebook")
-    highlight_language = models.ForeignKey("amcat.Language", null=True)
+    highlight_language = models.ForeignKey("amcat.Language", null=True, blank=True)
 
     def __unicode__(self):
         return "%s - %s" % (self.id, self.name)

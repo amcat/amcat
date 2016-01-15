@@ -39,7 +39,7 @@ from api.rest.resources.search import SearchResource
 from api.rest.resources.plugin import PluginResource
 from api.rest.resources.aggregate import AggregateResource
 from api.rest.resources.ruleset import RuleSetResource
-from api.rest.resources.task import TaskResource, TaskResultResource, single_task_result
+from api.rest.resources.task import single_task_result, TaskResource, TaskResultResource
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework.reverse import reverse

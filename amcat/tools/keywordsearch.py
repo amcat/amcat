@@ -145,6 +145,8 @@ class SelectionSearch:
             codebook.cache_labels()
 
         queries = map(unicode.strip, self.data.query.split("\n"))
+        #filter empty lines
+        queries = filter(lambda x: x, queries)
         queries = map(SearchQuery.from_string, queries)
 
         resolved = resolve_queries(

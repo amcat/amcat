@@ -73,6 +73,10 @@ ES_MAPPING = {
             "type": "string",
             "index": "not_analyzed",
         },
+        "uuid": {
+            "type": "string",
+            "index": "not_analyzed",
+        },
     },
 }
 ES_SETTINGS = {"analysis": {

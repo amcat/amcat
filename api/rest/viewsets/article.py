@@ -25,7 +25,7 @@ from amcat.models import Medium, Project
 from amcat.tools.amcates import ES
 from amcat.tools.caching import cached
 from api.rest.mixins import DatatablesMixin
-from api.rest.serializer import AmCATModelSerializer
+from api.rest.serializer import AmCATProjectModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.articleset import ArticleSetViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
@@ -43,6 +43,11 @@ class ArticleViewSetMixin(AmCATViewSetMixin):
 
 
 class MediumField(ModelField):
+
+    def __init__(self, model_field, representation="name", *args, **kargs):
+        super(MediumField, self).__init__(model_field, *args, **kargs)
+        self.representation = representation
+    
     def to_internal_value(self, data):
         try:
             int(data)
@@ -52,35 +57,25 @@ class MediumField(ModelField):
             return super(MediumField, self).to_internal_value(data)
 
     def to_representation(self, obj):
-        return obj.medium_id
+        return obj.medium.name if self.representation == "name" else obj.medium_id
 
 
-class ArticleSerializer(AmCATModelSerializer):
+class ArticleSerializer(AmCATProjectModelSerializer):
     project = ModelChoiceField(queryset=Project.objects.all(), required=True)
     medium = MediumField(model_field=ModelChoiceField(queryset=Medium.objects.all()))
+    mediumid = MediumField(model_field=ModelChoiceField(queryset=Medium.objects.all()), representation="id", required=False)
     uuid = CharField(read_only=False, required=False)
 
-    def validate(self, attrs):
-        validated_data = super(ArticleSerializer, self).validate(attrs)
-        validated_data["project"] = self.context["view"].project
-        return validated_data
-
     def create(self, validated_data):
-        try:
-            article = Article.objects.get(uuid=validated_data["uuid"])
-        except (Article.DoesNotExist, KeyError) as e:
-            article = super(ArticleSerializer, self).create(validated_data)
-
-        elastic = ES()
-        elastic.add_articles([article.id])
-        elastic.flush()
-
-        self.context["view"].articleset.add_articles([article])
-        return article
+        art = Article(**validated_data)
+        articleset = self.context["view"].kwargs.get('articleset')
+        if articleset: articleset = ArticleSet.objects.get(pk=articleset)
+        Article.create_articles([art], articleset=articleset)
+        return art
 
     class Meta:
         model = Article
-        read_only_fields = ('id', 'project', 'length', 'insertdate', 'insertscript')
+        read_only_fields = ('id', 'length', 'insertdate', 'insertscript')
 
 
 class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMixin, DatatablesMixin, ModelViewSet):

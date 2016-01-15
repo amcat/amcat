@@ -16,7 +16,7 @@
             <div class="panel-heading">Foreign codebook</div>
             <div class="panel-body">
                 <p>You are viewing this codebook from project <i><a href="{% url "navigator:project" project.id %}">{{ project }}</a></i>,
-                    but the codebook is part of project <i><a href="{%  url "project" object.project.id %}">{{ object.project }}</a></i>.
+                    but the codebook is part of project <i><a href="{%  url "navigator:project" object.project.id %}">{{ object.project }}</a></i>.
                     Therefore, all changes made to this codebook will also affect the project this codebook is a part of.
                     If this was not your intention, please download this codebook and reupload it to this project.</p>
             </div>

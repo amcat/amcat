@@ -47,9 +47,9 @@ class CodebookListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin,
 
     def get_context_data(self, **kwargs):
         ctx = super(CodebookListView, self).get_context_data(**kwargs)
-        all_codebooks = Datatable(CodebookViewSet, rowlink='./{id}', url_kwargs={"project" : self.project.id})
-        owned_codebooks = all_codebooks.filter(project=self.project)
-        #linked_codebooks = all_codebooks.filter(projects_set=self.project)
+        all_codebooks = Datatable(CodebookViewSet, rowlink='./{id}', url_kwargs={"project" : self.project.id}).hide("codes")
+        owned_codebooks = all_codebooks.filter(project=self.project).hide("project")
+        linked_codebooks = all_codebooks.filter(projects_set=self.project)
 
         ctx.update(locals())
         return ctx
@@ -162,9 +162,9 @@ class CodebookUnlinkView(ProjectActionRedirectView):
     parent = CodebookDetailsView
     url_fragment = "unlink"
 
-    def action(self, project_id, codebook_id):
-        cb = Codebook.objects.get(pk=codebook_id)
-        project = Project.objects.get(pk=project_id)
+    def action(self, project, codebook):
+        cb = Codebook.objects.get(pk=codebook)
+        project = Project.objects.get(pk=project)
         project.codebooks.remove(cb)
 
     def get_redirect_url(self, **kwargs):
@@ -178,8 +178,8 @@ class CodebookDeleteView(ProjectActionRedirectView):
     def get_redirect_url(self, **kwargs):
         return CodebookListView._get_breadcrumb_url(kwargs, self)
 
-    def action(self, project_id, codebook_id):
-        cb = Codebook.objects.get(pk=codebook_id)
+    def action(self, project, codebook):
+        cb = Codebook.objects.get(pk=codebook)
         cb.recycle()
 
 class CodebookFormActionView(ProjectFormView):

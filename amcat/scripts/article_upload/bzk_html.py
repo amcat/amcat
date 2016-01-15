@@ -28,7 +28,7 @@ import logging
 from lxml import html
 from html2text import html2text
 
-from amcat.scripts.article_upload.upload import UploadScript
+from amcat.scripts.article_upload.upload import UploadScript, ParseError
 from amcat.tools.toolkit import readDate
 from amcat.models.medium import Medium
 from amcat.models.article import Article
@@ -75,16 +75,16 @@ class BZK(UploadScript):
             raise ValueError("Neither 'werkmap' nor 'intranet/rss' in html.")
 
         for div in divs:
-            article = Article(metastring={'html': div})
+            article = Article(metastring=div.text_content())
             article.headline = div.cssselect("#articleTitle")[0].text_content()
-            article.text = div.cssselect("#articleIntro")[0]
+            article.text = div.cssselect("#articleIntro")[0].text_content()
             articlepage = div.cssselect("#articlePage")
 
             if articlepage:
-                article.pagenr, article.section = self.get_pagenum(articlepage[0].text)
+                article.pagenr, article.section = self.get_pagenum(articlepage[0].text_content())
 
-            article.medium = self.get_medium(div.cssselect("#sourceTitle")[0].text)
-            date_str = div.cssselect("#articleDate")[0].text
+            article.medium = self.get_medium(div.cssselect("#sourceTitle")[0].text_content())
+            date_str = div.cssselect("#articleDate")[0].text_content()
 
             try:
                 article.date = readDate(date_str)
@@ -105,14 +105,11 @@ class BZK(UploadScript):
         item = []
         
         if len(_html.cssselect("body > hr")) == 0:
-            if len(_html.cssselect("body > div > hr")) == 0:
-                # extra extra div  and span wrapper as of 2014-11-20
-                #tags = _html.cssselect("body > div > div > span > *")
-                pass
-            else:
-                # extra div wrapper as of 2014-04-08
-                #tags = _html.cssselect("body > div > *")
-                pass
+            # select MS Word div wrapper
+            tags = _html.cssselect("body > div.WordSection1 > *")
+            if len(tags) == 0:
+                    raise ParseError("Document format is not supported")
+
         else:
             tags = _html.cssselect("body > *")
 
@@ -172,7 +169,7 @@ class BZK(UploadScript):
 
     def parse_item(self, item):
         #item: a list of html tags
-        article = Article(metastring={})
+        article = Article()
         article.text = self._parse_text(item)
         for tag in item:
             if tag.tag == "h2":

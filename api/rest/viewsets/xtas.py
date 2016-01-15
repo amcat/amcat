@@ -1,15 +1,50 @@
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
+"""
+API Viewsets for dealing with NLP (pre)processing via xtas
+"""
+
+from collections import namedtuple
+import itertools
+import json
+import tempfile
+import logging
 
 from rest_framework.response import Response
-from rest_framework.viewsets import ViewSet
+from rest_framework.exceptions import APIException
+from rest_framework.decorators import api_view
+from rest_framework.status import HTTP_200_OK
+from rest_framework import serializers
+from rest_framework.mixins import ListModelMixin, CreateModelMixin
+from rest_framework.viewsets import ModelViewSet, ViewSet, GenericViewSet
+
+from amcat.tools.amcatxtas import get_adhoc_result
+from amcat.tools.amcates import ES
+from amcat.models import Article, ArticleSet
+
 from api.rest.viewsets.articleset import ArticleSetViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
 from api.rest.viewsets.article import ArticleViewSetMixin
 from api.rest.mixins import DatatablesMixin
 
-from amcat.models import RuleSet
-from amcat.tools.amcatxtas import ANALYSES, get_result
-import json
-
+from amcat.tools.amcatxtas import ANALYSES, get_result, get_results, preprocess_set_background, get_preprocessed_results
 
 class XTasViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMixin, ViewSet):
     model_key = "xta"# HACK to get xtas in url. Sorry!
@@ -29,13 +64,26 @@ class XTasViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMix
 
         return Response(plugins)
 
-from rest_framework.serializers import Serializer
-from amcat.models import Article, ArticleSet
-from rest_framework.viewsets import ModelViewSet
-import itertools
 
-class ArticleXTasSerializer(Serializer):
+class ArticleLemmataSerializer(serializers.Serializer):
 
+    class Meta:
+        class list_serializer_class(serializers.ListSerializer):
+            def to_representation(self, data):
+                only_cached = self.context['request'].GET.get('only_cached', 'N')
+                only_cached = only_cached[0].lower() in ['1', 'y']
+                import time; t = time.time() 
+                if only_cached:
+                    self.child._cache = dict(get_preprocessed_results(data, self.child.module))
+                else:
+                    self.child._cache = dict(get_results(data, self.child.module))
+                logging.debug("Cached xtas results in {t}s".format(t=time.time()-t))
+                result = serializers.ListSerializer.to_representation(self, data)
+                # flatten list of lists
+                result = itertools.chain(*result)
+                return result
+
+        
     @property
     def module(self):
         module = self.context['request'].GET.get('module')
@@ -45,88 +93,28 @@ class ArticleXTasSerializer(Serializer):
         elif not module in dir(ANALYSES):
             raise Exception("Unknown module: {module}".format(**locals()))
         return module
-
-    def field_to_native(self, obj, field_name):
-        result =  super(ArticleXTasSerializer, self).field_to_native(obj, field_name)
-        if field_name == "results":
-            # flatting lists of tokens
-            result = itertools.chain(*result)
-        return result
-
-    def to_native(self, article):
-        if article is None: return {}
-        saf = get_result(article.pk, self.module)
-        return list(self.get_xtas_results(article.pk, saf))
-
-class ArticleLemmataSerializer(ArticleXTasSerializer):
-
-    @property
-    def filter_pos(self):
-        return self.context['request'].GET.get('pos1')
-
-    def output_token(self, token):
-        for key, vals in self.context['request'].GET.iterlists():
-            if key in token and token[key] not in vals:
-                return False
-        return True
-
-    def get_xtas_results(self, aid, saf):
-        #rules = self.context['request'].GET.get('rules')
-        #if rules:
-        #    return self.get_transformed(aid, saf, rules)
-        if 'clauses' in saf:
-            return self.get_clauses(aid, saf)
-        elif 'sources' in saf:
-            return self.get_sources(aid, saf)
-        else:
-            return self.get_tokens(aid, saf)
-
-    def get_transformed(self, aid, saf, rules):
-        print(saf)
-        ruleset = RuleSet.objects.get(label=rules)
-        from syntaxrules.soh import SOHServer
-        from syntaxrules.syntaxtree import SyntaxTree
-        soh = SOHServer("http://localhost:3030/x")
-        t = SyntaxTree(soh)
-        for sid in {token['sentence'] for token in saf['tokens']}:
-            t.load_saf(saf, sid)
-            t.apply_ruleset(ruleset.get_ruleset())
-            yield sid
-
-    def get_tokens(self, aid, saf):
-        for token in saf.get('tokens', []):
-            token["aid"] = aid
-            #if self.output_token(token):
-            yield token
-
-    def get_clauses(self, aid, saf):
-        if not 'tokens' in saf and 'clauses' in saf:
-            return
+    
+    def to_representation(self, article):
         from saf.saf import SAF
-        saf = SAF(saf)
-        tokens = saf.resolve()
-        for token in tokens:
-            token["aid"] = aid
-            yield token
+        if article is None: return {}
+        saf = self._cache.get(article.pk)
+        if saf is None: return {}
+        try:
+            result = list(SAF(saf).resolve(aid=article.pk))
+            return result
+        except:
+            with tempfile.NamedTemporaryFile(prefix="saf_{article.pk}_".format(**locals()),
+                                             suffix=".json", delete=False) as f:
+                json.dump(saf, f)
+                logging.exception("Error on resolving saf for article {article.pk}, written to {f.name}"
+                                  .format(**locals()))
+                raise
 
-
-    def get_sources(self, aid, saf):
-        if not 'tokens' in saf and 'sources' in saf:
-            return
-        tokendict = {t['id'] : t for t in saf['tokens']}
-        for sid, source in enumerate(saf['sources']):
-            for place, tokens in source.iteritems():
-                for tid in tokens:
-                    token = tokendict[tid]
-                    #if self.output_token(token):
-                    token["aid"] = aid
-                    token["source_id"] = sid
-                    token["source_place"] = place
-                    yield token
 
 class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
     model_key = "token"
     model = Article
+    queryset = Article.objects.all()
     serializer_class = ArticleLemmataSerializer
 
     def filter_queryset(self, queryset):
@@ -134,13 +122,13 @@ class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatables
         # only(.) would be better on serializer, but meh
         queryset = queryset.filter(articlesets_set=self.articleset).only("pk")
         return queryset
+    
+    def get_renderer_context(self):
+        context = super(XTasLemmataViewSet, self).get_renderer_context()
+        context['fast_csv'] = True 
+        return context
 
 
-
-from rest_framework.response import Response
-from rest_framework.exceptions import APIException
-from rest_framework.decorators import api_view
-from amcat.tools.amcatxtas import get_adhoc_result
 @api_view(http_method_names=("GET",))
 def get_adhoc_tokens(request):
     sentence = request.GET.get('sentence')
@@ -152,3 +140,42 @@ def get_adhoc_tokens(request):
     data = list(serializer.get_xtas_results(None, saf))
 
     return Response(data)
+
+ModuleCount = namedtuple("ModuleCount", ["module", "n"])
+
+class PreprocessViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin,
+                        ListModelMixin, CreateModelMixin, GenericViewSet):
+    model_key = "preproces"
+    model = None
+    base_name = "preprocess"
+
+    class serializer_class(serializers.Serializer):
+        module = serializers.CharField()
+        n = serializers.IntegerField()
+    
+    def filter_queryset(self, queryset):
+        return queryset
+    
+    def get_queryset(self):
+        prefix = "article__"
+        class Result(list):
+            pass
+
+        result = [ModuleCount("Total #articles", self.articleset.get_count())]
+        for t, n in ES().get_child_type_counts(sets=self.articleset.id):
+            if t.startswith(prefix) and "xtas.tasks.single" not in t:
+                t = t[len(prefix):]
+                t = t.replace(u"__", u" \u21D2 ")
+                result.append(ModuleCount(module=t, n=n))
+
+        return result
+
+    def get_filter_fields(self):
+        return []
+
+    
+        
+    def perform_create(self, serializer):
+        module, n = [serializer.data.get(f) for f in ['module', 'n']]
+        preprocess_set_background(self.articleset, module, limit=n)
+        

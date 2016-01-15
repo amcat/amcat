@@ -148,7 +148,7 @@ class TestLexisNexis(amcattest.AmCATTestCase):
 
         arts = list(ArticleSet.objects.get(id=ln.run()[0]).articles.all())
         self.assertEqual(len(arts), len(self.test_body_sols))
-        self.assertIn("LexisNexis query: u'(((Japan OR Fukushima)", ln.articleset.provenance)
+        self.assertIn("LexisNexis query: u'(((Japan OR Fukushima)", ln.articlesets[0].provenance)
 
         articleset = amcattest.create_test_set()
         ln = LexisNexis(project=amcattest.create_test_project().id,
@@ -157,4 +157,4 @@ class TestLexisNexis(amcattest.AmCATTestCase):
 
         arts = ln.run()
         # no query so provenance is the 'standard' message
-        self.assertTrue(ln.articleset.provenance.endswith("test2.txt' using LexisNexis"))
+        self.assertTrue(ln.articlesets[0].provenance.endswith("test2.txt' using LexisNexis"))

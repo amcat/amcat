@@ -22,6 +22,7 @@
 import urllib
 from django import forms
 from django.core.exceptions import ValidationError
+from django.core.urlresolvers import reverse
 from django.template import Context
 from django.template.loader import get_template
 from amcat.scripts.query import QueryAction, QueryActionForm
@@ -33,6 +34,7 @@ from api.rest.resources import SearchResource
 
 COLUMNS = ["id"] + sorted(set(HASH_FIELDS) | {"medium"})
 TABLE_TEMPLATE = get_template("query/articlelist.html")
+ARTICLE_ROWLINK = "{}articles/{}"
 
 API_KEYWORD_MAP = {
     "query": "q",
@@ -79,9 +81,10 @@ class ArticleListAction(QueryAction):
         selection = SelectionSearch(form)
         data = {API_KEYWORD_MAP.get(k, k): v for k,v in self.data.iterlists()}
         data["q"] = ["{}#{}".format(q.label, q.query) for q in selection.get_queries()]
+        data["ids"] = data.get("ids", selection.get_filters().get("ids", []))
         url = urllib.urlencode(data, doseq=True)
-
-        table = Datatable(SearchResource, url="/api/v4/search")
+        rowlink = ARTICLE_ROWLINK.format(reverse("navigator:project-details", args=[self.project.id]), "{id}")
+        table = Datatable(SearchResource, url="/api/v4/search", rowlink=rowlink, rowlink_open_in="new", checkboxes=True)
         table = table.add_arguments(minimal="1")
         table = table.add_arguments(project=str(self.project.id))
 

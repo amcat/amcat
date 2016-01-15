@@ -249,7 +249,21 @@ define([
     self.from_api = function from_api(url){
         return $.getJSON("{0}?page_size={1}".f(url, self.API_PAGE_SIZE));
     };
+    
 
+    self.display_lost_code = function(code_id, code_value){
+        var lostCodes = $('#lost-codes');
+        if(lostCodes.hasClass("dont-show")){
+            return;
+        }
+        var triggeredBy = lostCodes.find('.triggered-by');
+        var text = "{0}: {1}".format(code_id, code_value);
+        if(triggeredBy.text() !== ""){
+            text = triggeredBy.text() + ", " + text;
+        }
+        triggeredBy.text(text);
+        lostCodes.show();
+    };
     /*
      * Counts currently selection of words in article.
      *
@@ -463,8 +477,13 @@ define([
     self.set_sentence_codingvalues = function set_sentence_codingvalues(coding_el, values, sentence){
         var widget;
         $.each(values, function(_, codingvalue){
-            widget = widgets.find(codingvalue.field, coding_el);
-            widgets.set_value(widget, codingvalue);
+            if(codingvalue.field === undefined){
+                self.display_lost_code(codingvalue.id, codingvalue.strval || codingvalue.intval); 
+            }
+            else{
+                widget = widgets.find(codingvalue.field, coding_el);
+                widgets.set_value(widget, codingvalue);
+            }
         });
 
         if (sentence !== undefined && sentence !== null){
@@ -793,6 +812,9 @@ define([
     };
 
     self.pre_serialise_codingvalue = function pre_serialise_codingvalue(codingvalue){
+        if(codingvalue.field === undefined){
+            return null;
+        }
         return {
             codingschemafield_id : codingvalue.field.id,
             intval : codingvalue.intval,
@@ -1480,10 +1502,15 @@ define([
             self.scroll_timeout = setTimeout(self.stopped_scrolling.bind(e), self.SCROLL_TIMEOUT);
         }
     };
-
+    
     self.initialise = function initialise(project_id, codingjob_id, coder_id, language_id){
         $("#lost-codes").hide();
-
+        $("#lost-codes").append($("<a>").attr('href','#').text("Don't show this message again")
+            .addClass("pull-right")).click(
+            function(e){
+                $("#lost-codes").addClass("dont-show").hide();
+                e.preventDefault();
+            });
         self.project_id = project_id;
         self.codingjob_id = codingjob_id;
         self.coder_id = coder_id;

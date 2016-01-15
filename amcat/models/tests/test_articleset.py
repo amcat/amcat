@@ -59,7 +59,7 @@ class TestArticleSet(amcattest.AmCATTestCase):
         p = amcattest.create_test_project()
 
         arts = [amcattest.create_test_article(project=p, medium=m, create=False) for _x in range(1213)]
-        Article.create_articles(arts, s, create_id=True)
+        Article.create_articles(arts, s)
         ES().flush()
         self.assertEqual(len(arts), s.get_count())
         s2.add_articles(arts, monitor=ProgressMonitor())

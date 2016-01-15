@@ -62,3 +62,32 @@ class TestArticleViewSet(APITestCase):
         self.assertEqual(res[0]["headline"], a['headline'])
         self.assertEqual(toolkit.readDate(res[0]["date"]), toolkit.readDate(a['date']))
         self.assertEqual(res[0]["uuid"], a['uuid'])
+
+    @amcattest.use_elastic
+    def test_dupes(self):
+        """Test whether deduplication works"""
+        self.set_up()
+        
+        a = {
+            'date': datetime.datetime(2000,1,1),
+            'headline': 'Test child',
+            'text': 'Hello Universe',
+            'pagenr': 1,
+            'url': 'http://example.org',
+        }
+        
+        article = amcattest.create_test_article(**a)
+        amcates.ES().flush()
+        a['medium'] = article.medium.name
+        
+        p = amcattest.create_test_project(owner=self.user)
+        s = amcattest.create_test_set(project=p)
+        url = "/api/v4/projects/{p.id}/articlesets/{s.id}/articles/".format(**locals())
+        _status, response = self.post(url, a, self.user)
+        self.assertEqual(response['id'], article.id)
+        # is it not added (ie we only have one article with this medium)
+        self.assertEqual(set(amcates.ES().query_ids(filters={'mediumid':article.medium.id})), {article.id})
+        # is it added to elastic for this set?
+        amcates.ES().flush()
+        self.assertEqual(set(amcates.ES().query_ids(filters={'sets':s.id})), {article.id})
+        #TODO: WvA test error handling

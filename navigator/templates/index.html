@@ -9,6 +9,20 @@
 <div class="btn-group btn-group-lg">
   <a class="btn btn-primary" href="{% url "navigator:codingjobs" %}">Annotator</a></span>
 </div>
+
+{% if recent_projects %}
+<h3>Recently visited projects:</h3>
+<ul class='list-group'>
+{% for a, canread in recent_projects %}
+<li class="list-group-item"><a href="{% url 'navigator:articleset-list' a.project.id %}"><strong>{{a.project}}</strong>, last visited: {{a.format_date_visited_as_delta}}</a>
+{% if not canread %}
+<abbr class="text-warning" title="This project does not give full read access to the articles (probably because of copyright restrictions), so you might not be able to read the full text of all articles">(restricted access)</small>
+{% endif %}
+
+
+{% endfor %}
+</ul>
+{% endif %}
 {% if featured_sets %}
 <h3>Or explore one of our featured articlesets:</h3>
 <ul class='list-group'>

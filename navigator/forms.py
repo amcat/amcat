@@ -17,39 +17,28 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+import logging;
+
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.forms.widgets import HiddenInput
 
 from amcat import models
-from amcat.scripts import article_upload
-from amcat.tools import toolkit
-
-from django.core.exceptions import ValidationError
-
-from amcat.models.authorisation import Role, ProjectRole
+from amcat.forms import widgets, fields, forms
+from amcat.models.article import Article
+from amcat.models.articleset import ArticleSet
+from amcat.models.authorisation import Role
+from amcat.models.coding.code import Code
+from amcat.models.coding.codebook import Codebook, CodebookCode
+from amcat.models.coding.codingjob import CodingJob
+from amcat.models.coding.codingschema import CodingSchema
+from amcat.models.language import Language
 from amcat.models.project import Project
 from amcat.models.user import Affiliation, THEMES
-from amcat.models.articleset import ArticleSet
-from amcat.models.article import Article
-from amcat.models.language import Language
-from amcat.models.coding.codebook import Codebook, CodebookCode
-from amcat.models.coding.code import Code
-from amcat.models.coding.codingschema import CodingSchema
-from amcat.models.coding.codingschemafield import CodingSchemaField, CodingSchemaFieldType
-from amcat.models.coding.codingjob import CodingJob
-from amcat.models.coding.serialiser import BooleanSerialiser, CodebookSerialiser
-from amcat.models.coding.codingrule import CodingRule
-from amcat.models.coding import codingruletoolkit
-
-from navigator.utils.auth import get_request
+from amcat.tools import toolkit
 from navigator.utils.misc import cache_function
 
-from amcat.forms import widgets, fields, forms
-
-import zipfile
-
-import logging; logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 name_sort = lambda x: x[0].name.lower()
 
@@ -168,7 +157,8 @@ class UserForm(forms.ModelForm):
         fields = ("affiliation", "role", "language", "theme")
 
 class UserDetailsForm(UserForm):
-    pass
+    def __init__(self, request, *args, **kwargs):
+        super(UserDetailsForm, self).__init__(request, True, *args, **kwargs)
 
 
 class AddUserForm(UserForm):

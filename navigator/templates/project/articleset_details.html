@@ -31,36 +31,13 @@
 
 {% block details %}
     <div style="display:none;" class="btn-group" id="{{ table.get_name }}-actions">
-        <btn onclick="remove_from_set(event);" class="btn btn-default disabled"><i class="glyphicon glyphicon-remove"></i> Remove</btn>
-        <btn onclick="add_to_set(event, {{ project.id }});" class="btn btn-default disabled" data-toggle="modal" data-target="#add_to_set_modal">
+        <button id="btn-remove-selected-from-set" class="btn btn-default disabled"><i class="glyphicon glyphicon-remove"></i> Remove</button>
+        <button id="btn-add-to-set" class="btn btn-default disabled" data-toggle="modal" data-project-id="{{ project.id }}" data-target="#add_to_set_modal">
             <i class="glyphicon glyphicon-plus"></i> Add to other
-        </btn>
+        </button>
     </div>
 
-    <style type="text/css">
-        .modal-extra-footer{
-            text-align: center;
-            border-bottom: 1px groove grey;
-        }
-    </style>
-
-    <div id="add_to_set_modal" class="modal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                    <h4 class="modal-title">Add <span class="num"></span> article(s) to another set</h4>
-                </div>
-                <div class="modal-body modal-extra-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary"><i class="glyphicon glyphicon-plus"></i> Add</button>
-                </div>
-                <div class="modal-body">
-                    <p></p>
-                </div>
-            </div>
-        </div>
-    </div>
+    {% include "project/modal_add_to_set.html" %}
 
     <div class="panel panel-default" style="margin-bottom: 1em">
         <div class="panel-heading">

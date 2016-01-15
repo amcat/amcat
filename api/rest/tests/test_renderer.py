@@ -16,43 +16,32 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from copy import copy
 
-from rest_framework.decorators import api_view
-from django.http import HttpResponse
+from amcat.tools import amcattest
+from amcat.tools.toolkit import readDate
 
-from amcat.models.task import Task, TaskPending
-from api.rest.resources.amcatresource import AmCATResource
-from api.rest.viewsets.task import TaskSerializer, TaskResultSerializer
+from api.rest.tablerenderer import TableRenderer
 
-
-class TaskResource(AmCATResource):
-    model = Task
-    serializer_class = TaskSerializer
-    queryset = Task.objects.all()
-
-#TODO: WvA: Isn't it redundant to have both taskresult and single_task_result?
-class TaskResultResource(AmCATResource):
-    model = Task
-
-    @classmethod
-    def get_model_name(cls):
-        return "taskresult"
-
-    serializer_class = TaskResultSerializer
+class TestTableRenderer(amcattest.AmCATTestCase):
+    def _test(self, d, header, data):
+        t = TableRenderer().tablize(d)
+        # check contents are the same while allowing for header order changes
+        mapping = {str(col): i for (i, col) in enumerate(t.getColumns())}
+        self.assertEqual(set(header), set(mapping))
+        found = [tuple(row[mapping[h]] for h in header)
+                 for row in t.to_list(tuple_name=None)]
+        #import json; print json.dumps(found, indent=2)
+        self.assertEqual(data, found)
     
-@api_view(http_method_names=("GET",))
-def single_task_result(request, task_id, uuid=False):
-    task = Task.objects.get(**{ "uuid" if uuid else "id" : task_id})
+    def test_tablize(self):
+        self._test([{"a": 1}], ["a"], [(1,)])
 
-    try:
-        return copy(task.get_handler().get_response())
-    except TaskPending:
-        return HttpResponse(status=404)
-    except Exception, e:
-        if e.__class__.__name__ in ('QueryValidationError', 'QueryError', 'QueryParseError'):
-            error_msg= "Cannot parse query: {e}".format(e=e.message)
+        self._test([{"a": 1, "c": 3}, {"a": 1, "b": 2}], ["a", "c", "b"], [(1, 3, None), (1, None, 2)])
 
-        else:
-            error_msg = "{e.__class__.__name__}: {e}".format(**locals())
-        return HttpResponse(content=error_msg, status=500)
+        self._test([{"a": 1, "c": 3}, {"a": 1, "b": {"x": "X", "y": "Y"}}],
+                    ["a", "c", "b.x", "b.y"], [(1, 3, None, None), (1, None, "X", "Y")])
+
+
+        self._test([{"a": 1, "c": 3}, {"a": 4, "d": [{"a":"DA"}, {"b":"DB"}]}],
+                   ["a", "c", "d.0.a", "d.1.b"],
+                   [(1, 3, None, None), (4, None, "DA", "DB")])

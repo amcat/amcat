@@ -39,7 +39,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         d = amcattest.create_test_article(text='noot mies wim zus', medium=m2, date='2001-02-03', create=False)
         e = amcattest.create_test_article(text='aap noot mies', medium=m3, articleset=s2)
 
-        Article.create_articles([a, b, c, d], articleset=s1, check_duplicate=False, create_id=True)
+        Article.create_articles([a, b, c, d], articleset=s1)
         ES().flush()
         return m1, m2, m3, s1, s2, a, b, c, d, e
 
@@ -104,12 +104,12 @@ class TestAmcatES(amcattest.AmCATTestCase):
         arts = [amcattest.create_test_article(medium=m, create=False) for m in media]
 
         s1 = amcattest.create_test_set()
-        Article.create_articles(arts[:5], articleset=s1, check_duplicate=False, create_id=True)
+        Article.create_articles(arts[:5], articleset=s1)
         ES().flush()
         self.assertEqual(set(s1.get_mediums()), set(media[:5]))
 
         s2 = amcattest.create_test_set(project=s1.project)
-        Article.create_articles(arts[5:], articleset=s2, check_duplicate=False, create_id=True)
+        Article.create_articles(arts[5:], articleset=s2)
         ES().flush()
         self.assertEqual(set(s2.get_mediums()), set(media[5:]))
 
@@ -122,7 +122,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         from amcat.models import Article
         arts = [amcattest.create_test_article(create=False) for _ in range(20)]
         s = amcattest.create_test_set()
-        Article.create_articles(arts, articleset=s, check_duplicate=False, create_id=True)
+        Article.create_articles(arts, articleset=s)
         ES().flush()
 
         r = ES().query(filters=dict(sets=s.id), size=10)

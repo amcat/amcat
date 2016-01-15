@@ -22,7 +22,6 @@ from django.core.urlresolvers import reverse
 from django.shortcuts import redirect
 from django.views.generic import ListView, DetailView
 from amcat.models import Task
-from api.rest.resources import TaskResource
 from navigator.utils import set_notice
 from navigator.views.datatableview import DatatableMixin
 from navigator.views.project_views import ProjectDetailsView
@@ -79,8 +78,9 @@ class TaskListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, Dat
         return table.filter(project=self.project, user=self.request.user)
 
     def get_resource(self):
-        return TaskResource
-
+        from api.rest.viewsets.task import TaskViewSet
+        return TaskViewSet
+        
     def filter_table(self, table):
         return getattr(self, "filter_{}_table".format(self.what), lambda t: t)(table)
 

@@ -26,6 +26,7 @@ from django.core.urlresolvers import reverse
 from django.core.exceptions import PermissionDenied
 
 from amcat.models import authorisation, Project
+from amcat.models.project import RecentProject
 from navigator.views.scriptview import ScriptView
 
 from amcat.tools.usage import log_request_usage
@@ -92,9 +93,13 @@ class ProjectViewMixin(object):
         # HACK: remove query from session to prevent 'permanent' highlighting
         self.last_query = self.request.session.pop("query", None)
 
+        if not self.request.user.is_anonymous():
+            RecentProject.update_visited(self.request.user.userprofile, self.project)
+
         self.check_permission()
         return super(ProjectViewMixin, self).dispatch(
             request, *args, **kwargs)
+
 
     def has_permission(self, perm):
         return self.request.user.userprofile.has_role(perm, self.project)

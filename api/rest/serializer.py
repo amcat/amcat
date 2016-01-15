@@ -25,6 +25,8 @@ import collections
 from rest_framework import serializers
 from rest_framework.relations import ManyRelatedField
 
+from amcat.models import Project
+import logging
 
 class AmCATModelSerializer(serializers.ModelSerializer):
     def get_fields(self):
@@ -35,3 +37,25 @@ class AmCATModelSerializer(serializers.ModelSerializer):
               if not isinstance(field, ManyRelatedField)]
         )
 
+
+class AmCATProjectModelSerializer(AmCATModelSerializer):
+    
+    @property
+    def project_id(self):
+        project_id = self.context["view"].kwargs.get('project')
+        if not project_id:
+            logging.warn("Could not find project in kwargs: {}".format(self.context["view"].kwargs))
+        return project_id
+                         
+            
+    @property
+    def project(self):
+        if self.project_id:
+            return Project.objects.get(pk=self.project_id)
+
+    def to_internal_value(self, data):
+        if 'project' not in data:
+            data = dict(data.iteritems())
+            data['project'] = self.project_id
+        value = super(AmCATProjectModelSerializer, self).to_internal_value(data)
+        return value

@@ -16,13 +16,14 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from django.core.urlresolvers import reverse
+from datetime import datetime
+
 from rest_framework import serializers, permissions, exceptions, status
 from rest_framework.viewsets import ModelViewSet, ViewSetMixin
 from amcat.models import Project, Role
 from amcat.tools.caching import cached
 from api.rest.mixins import DatatablesMixin
-from api.rest.serializer import AmCATModelSerializer
+from api.rest.serializer import AmCATProjectModelSerializer
 from amcat.models.authorisation import (ROLE_PROJECT_READER, ROLE_PROJECT_WRITER,
                                         ROLE_PROJECT_ADMIN, ROLE_PROJECT_METAREADER)
 
@@ -82,12 +83,13 @@ class ProjectPermission(permissions.BasePermission):
         return actual_role_id >= required_role_id
 
 
-class ProjectSerializer(AmCATModelSerializer):
+class ProjectSerializer(AmCATProjectModelSerializer):
     """
     This serializer includes another boolean field `favourite` which is is True
     when the serialized project is in request.user.user_profile.favourite_projects.
     """
     favourite = serializers.SerializerMethodField("is_favourite")
+    last_visited_at = serializers.SerializerMethodField("project_visited_at", allow_null=True)
 
     @property
     @cached
@@ -104,11 +106,17 @@ class ProjectSerializer(AmCATModelSerializer):
         if project is None: return
         return project.id in self.favourite_projects
 
-    def restore_fields(self, data, files):
-        data = data.copy()
-        if 'project' not in data:
-            data['project'] = self.context['view'].project.id
-        return super(ProjectSerializer, self).restore_fields(data, files)
+    @property
+    @cached
+    def project_visited_dates(self):
+        user = self.context['request'].user
+        if user.is_anonymous():
+            return dict()
+
+        return dict((rp.project, rp.format_date_visited_as_delta()) for rp in user.userprofile.get_recent_projects())
+
+    def project_visited_at(self, project):
+        return self.project_visited_dates.get(project, "Never")
 
     class Meta:
         model = Project
@@ -118,13 +126,6 @@ class ProjectViewSetMixin(AmCATViewSetMixin):
     serializer_class = ProjectSerializer
     model_key = "project"
     queryset = Project.objects.all()
-
-    @classmethod
-    def get_url(cls, base_name=None, view='list', **kwargs):
-        if base_name is None:
-            base_name = cls.get_default_basename()
-        name = 'api:{base_name}-{view}'.format(**locals())
-        return reverse(name, kwargs=kwargs)
 
 class ProjectViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     model = Project

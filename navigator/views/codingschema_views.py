@@ -140,13 +140,13 @@ class CodingSchemaDeleteView(ProjectViewMixin, HierarchicalViewMixin, RedirectVi
     url_fragment = "delete"
     model = CodingSchema
     
-    def get_redirect_url(self, project_id, codingschema_id):
+    def get_redirect_url(self, project, codingschema):
         schema = self.get_object()
         schema.project_id = LITTER_PROJECT_ID
         schema.save()
-        self.request.session['deleted_schema'] = codingschema_id
+        self.request.session['deleted_schema'] = codingschema
         
-        return reverse("navigator:codingschema-list", args=(project_id, ))
+        return reverse("navigator:codingschema-list", args=(project, ))
 
 class CodingSchemaCreateView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, CreateView):
     required_project_permission = authorisation.ROLE_PROJECT_WRITER
@@ -445,9 +445,9 @@ class CodingSchemaUnlinkView(ProjectActionRedirectView):
     parent = CodingSchemaDetailsView
     url_fragment = "unlink"
 
-    def action(self, project_id, codingschema_id):
-        schema = CodingSchema.objects.get(pk=codingschema_id)
-        project = Project.objects.get(pk=project_id)
+    def action(self, project, codingschema):
+        schema = CodingSchema.objects.get(pk=codingschema)
+        project = Project.objects.get(pk=project)
         project.codingschemas.remove(schema)
 
     def get_redirect_url(self, **kwargs):

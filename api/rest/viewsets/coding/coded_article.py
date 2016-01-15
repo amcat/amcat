@@ -21,7 +21,8 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from amcat.models import Sentence, CodedArticle, Article, Medium
 from amcat.tools.caching import cached
-from api.rest.resources.amcatresource import DatatablesMixin
+from amcat.tools import sbd
+from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.coding.codingjob import CodingJobViewSetMixin
@@ -50,7 +51,6 @@ class CodedArticleSerializer(AmCATModelSerializer):
     length = serializers.SerializerMethodField()
     article_id = serializers.SerializerMethodField()
     medium = PseudoSerializerMethodField()
-
     get_headline = article_property("headline")
     get_date = article_property("date")
     get_pagenr = article_property("pagenr")
@@ -78,6 +78,7 @@ class CodedArticleSerializer(AmCATModelSerializer):
     def get_medium(self, coded_article):
         return self.get_article(coded_article).medium_id
 
+
     class Meta:
         model = CodedArticle
 
@@ -103,7 +104,8 @@ class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
         "date": "article__date",
         "pagenr": "article__pagenr",
         "length": "article__length",
-        "article_id": "article__id"
+        "article_id": "article__id",
+        "status": "status__id"
     }
 
     ordering_fields = (('id', "article_id")
@@ -124,5 +126,7 @@ class CodedArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
 
     def filter_queryset(self, queryset):
         qs = super(CodedArticleSentenceViewSet, self).filter_queryset(queryset)
-        return qs.filter(article__id=self.coded_article.article_id)
+        article = Article.objects.get(id=self.coded_article.article_id)
+        sentences = qs.filter(id__in=sbd.get_or_create_sentences(article))
+        return sentences
 

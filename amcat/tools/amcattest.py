@@ -33,6 +33,7 @@ import os
 from contextlib import contextmanager
 from functools import wraps
 import datetime
+from uuid import uuid4
 from urlparse import urljoin
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.db import connections
@@ -159,7 +160,7 @@ def create_test_medium(**kargs):
     if "name" not in kargs: kargs["name"] = "Medium_%i" % kargs["id"]
     return Medium.objects.create(**kargs)
 
-def create_test_article(create=True, articleset=None, check_duplicate=False, **kargs):
+def create_test_article(create=True, articleset=None, **kargs):
     """Create a test article"""
     from amcat.models.article import Article
 
@@ -169,13 +170,12 @@ def create_test_article(create=True, articleset=None, check_duplicate=False, **k
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "date" not in kargs: kargs["date"] = datetime.date(2000, 1, 1)
     if "medium" not in kargs: kargs["medium"] = create_test_medium()
-    if "id" not in kargs: kargs["id"] = _get_next_id()
-    if 'headline' not in kargs: kargs['headline'] = 'test headline'
-    if 'text' not in kargs: kargs["text"] = "\n\n".join(map(str, range(5)))
+    if 'headline' not in kargs: kargs['headline'] = 'test headline {} : {}'.format(_get_next_id(), uuid4())
+    if 'text' not in kargs: kargs["text"] = 'test text {}'.format(_get_next_id())
 
     a = Article(**kargs)
     if create:
-        Article.create_articles([a], articleset, check_duplicate=check_duplicate, create_id=True)
+        Article.create_articles([a], articleset)
     return a
 
 def create_test_sentence(**kargs):
@@ -198,8 +198,8 @@ def create_test_set(articles=0, **kargs):
     s = ArticleSet.objects.create(**kargs)
     if type(articles) == int:
         if articles > 0:
-            articles = [create_test_article(create=False) for _x in range(articles)]
-            Article.create_articles(articles, articleset=s, check_duplicate=False, create_id=True)
+            arts = [create_test_article(create=False) for _x in range(articles)]
+            Article.create_articles(arts, articleset=s)
     elif articles:
         s.add_articles(articles)
     return s
@@ -303,7 +303,7 @@ class AmCATTestCase(TestCase):
     @classmethod
     def tearDownClass(cls):
         if settings.ES_INDEX.endswith("__unittest"):
-            settings.ES_INDEX = settings.ES_INDEX[:len("__unittest")]
+            settings.ES_INDEX = settings.ES_INDEX[:-len("__unittest")]
         super(AmCATTestCase, cls).tearDownClass()
 
 class AmCATLiveServerTestCase(StaticLiveServerTestCase):

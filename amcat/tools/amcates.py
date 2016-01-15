@@ -31,14 +31,13 @@ from types import NoneType
 
 from django.conf import settings
 from elasticsearch import Elasticsearch, ImproperlyConfigured
-from elasticsearch.client import indices
 from elasticsearch.helpers import scan
 
 from amcat.tools import queryparser, toolkit
 from amcat.tools.caching import cached
 from amcat.tools.djangotoolkit import get_model_field
-from amcat.tools.progress import NullMonitor
 from amcat.tools.toolkit import multidict, splitlist
+from amcat.tools.progress import ProgressMonitor
 
 log = logging.getLogger(__name__)
 
@@ -117,10 +116,7 @@ def get_article_dict(article, sets=None):
     article_dict["uuid"] = str(article_dict["uuid"])
     article_dict["sets"] = sets
 
-    if settings.ES_USE_LEGACY_HASH_FUNCTION:
-        article_dict['hash'] = _get_legacy_hash(article_dict)
-    else:
-        article_dict['hash'] = _get_hash(article_dict)
+    article_dict['hash'] = _get_hash(article_dict)
     return article_dict
 
 
@@ -138,6 +134,8 @@ def _get_legacy_hash(article_dict):
 
 
 def _get_hash(article):
+    if settings.ES_USE_LEGACY_HASH_FUNCTION:
+        return _get_legacy_hash(article)
     article_dict = [(fn, article[fn]) for fn in HASH_FIELDS]
     return hash_class(json.dumps(article_dict)).hexdigest()
 
@@ -270,7 +268,7 @@ class ES(object):
         self.doc_type = settings.ES_ARTICLE_DOCTYPE if doc_type is None else doc_type
 
     def flush(self):
-        indices.IndicesClient(self.es).flush()
+        self.es.indices.flush()
 
     def highlight_article(self, aid, query):
         query = queryparser.parse_to_terms(query).get_dsl()
@@ -299,11 +297,11 @@ class ES(object):
             log.exception("Could not get highlights from {r!r}".format(**locals()))
 
     def clear_cache(self):
-        indices.IndicesClient(self.es).clear_cache()
+        self.es.indices.clear_cache()
 
     def delete_index(self):
         try:
-            indices.IndicesClient(self.es).delete(self.index)
+            self.es.indices.delete(self.index)
         except Exception, e:
             if 'IndexMissingException' in unicode(e): return
             raise
@@ -320,7 +318,7 @@ class ES(object):
             }
         }
 
-        indices.IndicesClient(self.es).create(self.index, body)
+        self.es.indices.create(self.index, body)
 
     def check_index(self):
         """
@@ -330,11 +328,17 @@ class ES(object):
         """
         if not self.es.ping():
             raise Exception("Elastic server cannot be reached")
-        if not indices.IndicesClient(self.es).exists(self.index):
+        if not self.es.indices.exists(self.index):
             log.info("Index {self.index} does not exist, creating".format(**locals()))
             self.create_index()
         return self.es.cluster.health(self.index, wait_for_status='yellow')
 
+    def exists_type(self, doc_type, **kargs):
+        return self.es.indices.exists_type(index=self.index, doc_type=doc_type, **kargs)
+
+    def put_mapping(self, doc_type, body, **kargs):
+        return self.es.indices.put_mapping(index=self.index, doc_type=doc_type, body=body, **kargs)
+        
     def status(self):
         nodes = self.es.nodes.info()['nodes'].values()
         return {"ping": self.es.ping(),
@@ -355,6 +359,17 @@ class ES(object):
         kargs.update(options)
         return self.es.get_source(id=id, **kargs)
 
+    def mget(self, ids, doc_type=None, parents=None):
+        """
+        Get multiple articles from the index.
+        If paret is given, it should be a sequence of the same length as ids
+        """
+        if parents is None: parents = [None] * len(ids)
+        if doc_type is None: doc_type = self.doc_type
+        getdocs = [{"_index" : self.index, "_id" : id, "_parent" : parent, "_type" : doc_type}
+                   for (id, parent) in zip(ids, parents)]
+        return self.es.mget({"docs": getdocs})['docs']
+        
     def search(self, body, **options):
         """
         Perform a 'raw' search on the underlying ES index
@@ -370,20 +385,25 @@ class ES(object):
         """
         return scan(self.es, index=self.index, doc_type=self.doc_type, query=query, **kargs)
         
-    def query_ids(self, query=None, filters={}, **kwargs):
+    def query_ids(self, query=None, filters={}, body=None, limit=None, **kwargs):
         """
         Query the index returning a sequence of article ids for the mathced articles
 
         @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
         @param filter: field filter DSL query dict
+        @param body: if given, use this instead of constructing from query/filters
         @param filters: if filter is None, build filter from filters as accepted by build_query, e.g. sets=12345
 
         Note that query and filters can be combined in a single call
         """
-        body = dict(build_body(query, filters, query_as_filter=True))
-        for a in scan(self.es, query=body, index=self.index, doc_type=self.doc_type,
-                      size=1000, fields=""):
+        if body is None:
+            body = dict(build_body(query, filters, query_as_filter=True))
+        for i, a in enumerate(scan(self.es, query=body, index=self.index, doc_type=self.doc_type,
+                                   size=(limit or 1000), fields="")):
+            if limit and i >= limit:
+                return
             yield int(a['_id'])
+
 
     def query(self, query=None, filters={}, highlight=False, lead=False, fields=[], score=True, **kwargs):
         """
@@ -408,6 +428,7 @@ class ES(object):
         if lead or False and query == "" and highlight: 
             body['script_fields'] = LEAD_SCRIPT_FIELD
 
+            
         result = self.search(body, fields=fields, **kwargs)
         return SearchResult(result, fields, score, body, query=query)
 
@@ -438,7 +459,7 @@ class ES(object):
                                  for aa in ArticleSetArticle.objects.filter(article__in=batch))
             dicts = (get_article_dict(article, list(all_sets.get(article.id, [])))
                      for article in Article.objects.filter(pk__in=batch))
-            self.bulk_insert(dicts)
+            self.bulk_insert(dicts, batch_size=None)
 
     def remove_from_set(self, setid, article_ids, flush=True):
         """Remove the given articles from the given set. This is done in batches, so there
@@ -447,7 +468,7 @@ class ES(object):
         for batch in splitlist(article_ids, itemsperbatch=1000):
             self.bulk_update(batch, UPDATE_SCRIPT_REMOVE_FROM_SET, params={'set': setid})
 
-    def add_to_set(self, setid, article_ids, monitor=NullMonitor()):
+    def add_to_set(self, setid, article_ids, monitor=ProgressMonitor()):
         """Add the given articles to the given set. This is done in batches, so there
         is no limit on the length of article_ids (which can be a generator)."""
         if not article_ids: return
@@ -457,15 +478,22 @@ class ES(object):
             monitor.update(40/nbatches, "Added batch {iplus}/{nbatches}".format(iplus=i+1, **locals()))
             self.bulk_update(batch, UPDATE_SCRIPT_ADD_TO_SET, params={'set' : setid})
 
-    def bulk_insert(self, dicts):
+    def bulk_insert(self, dicts, batch_size=1000, monitor=ProgressMonitor()):
         """
-        Add the given article dict objects to the index using a bulk insert call
+        Bulk insert the given articles in batches of batch_size
         """
-        body = get_bulk_body({d["id"]: serialize(d) for d in dicts})
-        resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
-
-        if resp["errors"]:
-            raise ElasticSearchError(resp)
+        if batch_size:
+            batches = list(toolkit.splitlist(dicts, itemsperbatch=batch_size))
+        else:
+            batches = [dicts]
+        nbatches = len(batches)
+        for i, batch in enumerate(batches):
+            monitor.update(40/nbatches, "Added batch {iplus}/{nbatches}".format(iplus=i+1, **locals()))
+            body = get_bulk_body({d["id"]: serialize(d) for d in batch})
+            resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
+            if resp["errors"]:
+                raise ElasticSearchError(resp)
+            
 
     def update_values(self, article_id, values):
         """Update properties of existing article.
@@ -756,7 +784,24 @@ class ES(object):
         query =  {"query": {"constant_score": {"filter": {"missing": {"field": "sets"}}}}}
         self.es.delete_by_query(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=query)
 
-        
+     
+    def get_child_type_counts(self, **filters):        
+        """Get the number of child documents per type"""
+        filters = dict(build_body(filters=filters))
+        filter = {"has_parent": {"parent_type": self.doc_type, "filter": filters['filter']}}
+        aggs = {"module": {"terms": {"field": "_type"}}}
+        body = {"aggs": {"prep": {"filter": filter, "aggs": aggs}}}
+        r = self.es.search(index=self.index, search_type="count", body=body)
+        for b in r['aggregations']['prep']['module']['buckets']:
+            yield b['key'], b['doc_count']   
+
+    def get_articles_without_child(self, child_doctype, limit=None, **filters):
+        """Return the ids of all articles without a child of the given doctype"""
+        nochild =  {"not" : {"has_child" : { "type": child_doctype,
+                                             "query" : {"match_all" : {}}}}}        
+        filter = dict(build_body(filters=filters))['filter']
+        body = {"filter": {"bool" : {"must" : [filter, nochild]}}}
+        return self.query_ids(body=body, limit=limit)
 
 def get_date(timestamp):
     d = datetime.datetime.fromtimestamp(timestamp / 1000)
@@ -769,9 +814,9 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
     For convenience, the singular versions (mediumid, id) etc are allowed as aliases
     """
 
-    def _list(x):
+    def _list(x, number=True):
         if isinstance(x, (str, unicode, int)):
-            return [int(x)]
+            return [int(x) if number else x]
         elif hasattr(x, 'pk'):
             return [x.pk]
         return x
@@ -787,6 +832,7 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
     f = {}
     for singular, plural in [("mediumid", "mediumids"),
                              ("id", "ids"),
+                             ("uuid", "uuids"),
                              ("set", "sets"),
                              ("section", "sections"),
                              ("page", "pages"),
@@ -806,6 +852,8 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
     if 'id' in f: yield dict(ids={'values': _list(f['id'])})
     if 'section' in f: yield dict(terms={'section' : _list(f['section'])})
     if 'page' in f: yield dict(terms={'page' : _list(f['page'])})
+    if 'uuid' in f: yield dict(terms={'uuid' : _list(f['uuid'], number=False)})
+    if 'hash' in f: yield dict(terms={'hash' : _list(f['hash'], number=False)})
 
     date_range = {}
     if start_date: date_range['gte'] = parse_date(start_date)
@@ -814,11 +862,6 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
     if on_date: date_range={"gte": parse_date(on_date),
                             "lt": parse_date(on_date)+"||+1d"}
     if date_range: yield dict(range={'date' : date_range})
-
-    if 'hash' in f:
-        hashes = f['hash']
-        if isinstance(hashes, str): hashes = [hashes]
-        yield dict(terms={'hash': hashes})
 
 
 def combine_filters(filters):

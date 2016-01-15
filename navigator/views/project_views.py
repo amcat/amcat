@@ -30,6 +30,8 @@ from amcat.scripts.actions.add_project import AddProject
 
 from amcat.tools.usage import log_request_usage
 
+from api.rest import resources
+
 class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
     model = Project
     template_name = "project/project_list.html"
@@ -50,6 +52,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
                 [func(id) for id in ids]
 
         return super(ProjectListView, self).get(*args, **kargs)
+
 
     def get_datatable_kwargs(self):
         return {"checkboxes": True}
@@ -87,7 +90,6 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
             return table.filter(name="This is a really stupid way to force an empty table (so sue me!)")
 
 
-
 from django import forms
 from amcat.models import Role
 class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, UpdateView):
@@ -97,7 +99,7 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
     model = Project
 
     def get_success_url(self):
-        return reverse(self.get_view_name(), args=(self.project.id,))
+        return reverse("navigator:{}".format(self.get_view_name()), args=(self.project.id,))
 
 
     @classmethod

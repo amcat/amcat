@@ -1,9 +1,21 @@
+<style scoped>
+    #saved-queries .DTTT.btn-group{
+        display:none!important;
+    }
+    #active-articlesets .DTTT.btn-group .btn:last-child, #codingjobjobs .DTTT.btn-group .btn:last-child{
+        display: none!important;
+    }
+    #active-articlesets .DTTT.btn-group, #codingjobjobs .DTTT.btn-group{
+        margin-top: -40px;
+    }
+
+</style>
 <div class="row">
     <div id="active-articlesets" class="col-md-6">
         <h2>Active articlesets</h2>
         {{ articlesets_table|safe }}
 
-        <div id="{{ articlesets_table.get_name }}-actions">
+        <div id="{{ articlesets_table.get_name }}-actions" style="clear: both">
             <a id="use-in-query" class="btn btn-success">
                 <i class="glyphicon glyphicon-search"></i> Use in query
             </a>
@@ -26,11 +38,7 @@
         {{ saved_queries_table|safe }}
     </div>
 
-    <style>
-        .DTTT.btn-group{
-            display:none!important;
-        }
-    </style>
+
 </div>
 
 <div id="codingjobjobs" class="row">

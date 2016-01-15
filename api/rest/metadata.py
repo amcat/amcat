@@ -84,13 +84,14 @@ class AmCATMetadata(SimpleMetadata):
         grfm = api.rest.resources.get_resource_for_model
 
         serializer = view.get_serializer()
-        model = serializer.Meta.model
+        if hasattr(serializer, "Meta") and  hasattr(serializer.Meta, "model"):
+            model = serializer.Meta.model
 
-        metadata['models'] = {
-            name: grfm(_get_model_by_field(model, name)).get_url()
-            for (name, field) in serializer.get_fields().iteritems()
-            if hasattr(field, 'queryset')
-        }
+            metadata['models'] = {
+                name: grfm(_get_model_by_field(model, name)).get_url()
+                for (name, field) in serializer.get_fields().iteritems()
+                if hasattr(field, 'queryset')
+            }
 
         metadata['filter_fields'] = list(view.get_filter_fields())
         metadata["fields"] = dict(self.get_metadata_fields(view))

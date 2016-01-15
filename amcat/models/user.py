@@ -20,19 +20,19 @@
 """ORM Module representing users"""
 
 from __future__ import print_function, absolute_import
+
 import logging
-import string
 import random
+import string
 
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.db.models.signals import post_save
 
-from amcat.models.language import Language
-from amcat.models.authorisation import Role, ADMIN_ROLE
 from amcat.models import authorisation as auth
-from amcat.models.project import Project
-
+from amcat.models.authorisation import Role, ADMIN_ROLE
+from amcat.models.language import Language
+from amcat.models.project import Project, RecentProject
 
 log = logging.getLogger(__name__)
 
@@ -74,6 +74,9 @@ class UserProfile(AmcatModel):
     language = models.ForeignKey(Language, default=1)
     role = models.ForeignKey(Role, default=0)
 
+    recent_projects = models.ManyToManyField(Project, through=RecentProject,
+                                             through_fields=("user", "project"), related_name="recent_projects")
+
     favourite_projects = models.ManyToManyField("amcat.project", related_name="favourite_users")
 
     theme = models.CharField(max_length=255, choices=[(t, t) for t in THEMES], default="AmCAT")
@@ -101,6 +104,9 @@ class UserProfile(AmcatModel):
             Q(projectrole__user=self.user) |
             Q(guest_role__id__lte=role.id)
         )
+
+    def get_recent_projects(self):
+        return RecentProject.get_recent_projects(self)
 
     def has_role(self, role, onproject=None):
         """

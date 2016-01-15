@@ -21,6 +21,7 @@
 
 from __future__ import unicode_literals, print_function, absolute_import
 import itertools
+from datetime import datetime
 
 from django.conf import settings
 from django.db import models
@@ -35,6 +36,8 @@ from amcat.models.articleset import ArticleSetArticle, ArticleSet
 
 ROLEID_PROJECT_READER = 11
 LITTER_PROJECT_ID = 1
+
+LAST_VISITED_FIELD_NAME = "last_visited_at"
 
 import logging; log = logging.getLogger(__name__)
 
@@ -165,3 +168,61 @@ class Project(AmcatModel):
         if guest_role is None: return project_role
         return max(project_role, guest_role)
 
+
+class RecentProject(AmcatModel):
+
+    user = models.ForeignKey("amcat.UserProfile")
+
+    #related_name should be the same as the ProjectSerializer's column name to assert sortability
+    project = models.ForeignKey(Project, related_name=LAST_VISITED_FIELD_NAME)
+    date_visited = models.DateTimeField()
+
+    def format_date_visited_as_delta(self):
+        timediff = (datetime.now() - self.date_visited).total_seconds()
+        if timediff < 1:
+            return "just now"
+        timespans = [1, 60, 3600, 86400, 604800, 1814400]
+        names = ["second", "minute", "hour", "day", "week", None]
+
+        name = None
+        timespan = None
+        for (n, t) in zip(names, timespans):
+            if timediff / t < 1:
+                break
+            name = n
+            timespan = t
+        net_timespan = int(timediff / timespan)
+        plural = "" if net_timespan == 1 else "s"
+        if name:
+            return "{} {}{} ago".format(net_timespan, name, plural)
+
+        return self.date_visited
+
+    @classmethod
+    def get_recent_projects(cls, userprofile):
+        """
+        Returns recently created projects
+        @param userprofile: the userprofile
+        @return: The queryset of recent projects, ordered by date (descending)
+        @rtype: django.db.models.query.QuerySet
+        """
+        return RecentProject.objects.filter(user=userprofile).order_by('-date_visited')
+
+    @classmethod
+    def update_visited(cls, userprofile, project, date_visited=None):
+        """
+        Creates or updates the date
+        @returns: a tuple containing the RecentProject and a bool indicating whether it was created (`True`) or
+            updated (`False`)
+        @rtype: tuple[RecentProject, bool]
+        """
+        if not date_visited:
+            date_visited = datetime.now()
+        return RecentProject.objects.update_or_create({"date_visited": date_visited },
+                                               user=userprofile, project=project)
+
+    class Meta():
+        db_table = 'user_recent_projects'
+        unique_together = ("user", "project")
+        app_label = "amcat"
+        ordering = ["date_visited"]

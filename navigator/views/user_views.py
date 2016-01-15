@@ -80,10 +80,10 @@ class ProjectUserAddView(ProjectViewMixin, HierarchicalViewMixin, RedirectView):
     url_fragment = "add"
     model = User
 
-    def get_redirect_url(self, project_id):
-        project = Project.objects.get(id=project_id)
+    def get_redirect_url(self, project):
+        project = Project.objects.get(id=project)
         role = self.request.POST['role']
-        role = None if role == 'None' else Role.objects.get(id=self.request.POST['role'], projectlevel=True)
+        role = None if role == 'None' or role == "" else Role.objects.get(id=role, projectlevel=True)
         for user in User.objects.filter(id__in=self.request.REQUEST.getlist('user')):
             try:
                 r = ProjectRole.objects.get(project=project, user=user)
@@ -96,4 +96,4 @@ class ProjectUserAddView(ProjectViewMixin, HierarchicalViewMixin, RedirectView):
                 if role is not None:
                     r = ProjectRole(project=project, user=user, role=role)
                     r.save()
-        return reverse("user-list", args=[project_id])
+        return reverse("navigator:user-list", args=[project.id])

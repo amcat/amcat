@@ -288,7 +288,8 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'api.rest.tokenauth.ExpiringTokenAuthentication',
-    )
+    ),
+    'EXCEPTION_HANDLER': 'api.rest.exception.exception_handler',
 }
 
 if not DEBUG:

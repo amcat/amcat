@@ -1,35 +1,55 @@
 {% load jsonify %}
 
 <script type="text/javascript">
-  $(function () {
-    series = [];
+    $(function(){
+        var form_data;
+        require(["query/utils/serialize"], function(serialize){
+            var form = $("#query-form");
+            var jobs = form.data("jobs");
+            var sets = form.data("sets");
+            form_data = serialize(form, jobs, sets);
+            console.log(form_data);
+            form_data["interval"] = "day";
+        });
 
-    $('#medium-aggregation').highcharts({
-      chart: { zoomType: 'x', type: 'column' },
-      title: { text: 'Articles aggregated per medium per day.' },
-      xAxis: { type: 'datetime' },
-      yAxis: {
-        title: { text: 'Number of articles' },
-        floor: 0
-      },
-      plotOptions: {
-        column: {
-          stacking: 'normal'
-        }
-      },
-      series: [
-        {% for medium, data in medium_aggr %}
-          {
-            type: 'column',
-            name: '{{ medium.name }}',
-            data: [
-              {% for date, count in data %}
-                [Date.UTC({{ date.year }}, {{ date.month }}, {{ date.day }}), {{ count }}],
-              {% endfor %}
-            ]
-          },
-        {% endfor %}
-      ]
+        $('#medium-aggregation').highcharts({
+            chart: { zoomType: 'x', type: 'column' },
+            title: { text: 'Articles aggregated per medium per {{ interval }}.' },
+            xAxis: { type: 'datetime' },
+            yAxis: {
+                title: { text: 'Number of articles' },
+                floor: 0
+            },
+            series: [
+                {% for medium, data in medium_aggr %}
+                    {
+                        type: 'column',
+                        name: '{{ medium.name }}',
+                        data: [
+                            {% for date, count in data %}
+                                [Date.UTC({{ date.year }}, {{ date.month }} -1, {{ date.day }}), {{ count }}],
+                            {% endfor %}
+                        ],
+                        obj: { id: {{medium.id}} }
+                    },
+                {% endfor %}
+            ],
+            plotOptions: {
+                column: {
+                    stacking: 'normal'
+                },
+                series: {
+                    events: {
+                        click: function(event){
+                            articles_popup = require("query/utils/articlemodal");
+                            var filters = {};
+                            filters["medium"] = event.point.series.options.obj;
+                            filters["date"] = event.point.x;
+                            articles_popup().show(form_data, filters);
+                        }
+                    }
+                }
+            }
+        });
     });
-  });
 </script>
