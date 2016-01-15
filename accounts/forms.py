@@ -47,6 +47,7 @@ class UserPasswordResetForm(PasswordResetForm):
         email = cleaned_data.get("email")
         username = cleaned_data.get("username")
         usererror = self._errors.get("username")
+
         if usererror:
             del self._errors["username"]
         if email:
@@ -54,17 +55,12 @@ class UserPasswordResetForm(PasswordResetForm):
         if username:
             self.users_cache = User.objects.filter(username=username)
             if  len(self.users_cache) == 0:
-                print "Add unknown user error\n"
                 msg = u"User unknown"
                 self._errors["username"] = self.error_class([msg])
-                print "EEE:", self._errors.get("username")
             else:
                 emailerror = self._errors.get("email")
                 if emailerror:
                     del self._errors["email"]
                     cleaned_data["email"] = self.users_cache[0]
-                else:
-                    print "UNEXPECTED not error email"
-                print repr(self.users_cache[0].email)
         return self.cleaned_data
 
