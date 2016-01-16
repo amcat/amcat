@@ -12,7 +12,7 @@
 
 
         $('#date-aggregation').highcharts({
-            chart: { zoomType: 'x', type: 'column' },
+            chart: { zoomType: 'x'},
             title: { text: 'Articles aggregated by {{ interval }}.' },
             xAxis: { type: 'datetime' },
             yAxis: {
@@ -21,6 +21,7 @@
             },
             legend: { enabled: false },
             series: [{
+                type: 'area',
                 name: 'Articles',
                 data: [
                     {% for date, count in date_aggr %}
@@ -39,6 +40,30 @@
                             articles_popup().show(form_data, filters);
                         }
                     }
+                },
+                area: {
+                    fillColor: {
+                        linearGradient: {
+                            x1: 0,
+                            y1: 0,
+                            x2: 0,
+                            y2: 1
+                        },
+                        stops: [
+                            [0, Highcharts.getOptions().colors[0]],
+                            [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+                        ]
+                    },
+                    marker: {
+                        radius: 2
+                    },
+                    lineWidth: 1,
+                    states: {
+                        hover: {
+                            lineWidth: 1
+                        }
+                    },
+                    threshold: null
                 }
             }
 

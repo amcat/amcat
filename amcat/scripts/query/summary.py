@@ -91,7 +91,7 @@ class SummaryAction(QueryAction):
                 except (StopIteration, TypeError):
                     interval = "day"
                 date_aggr = selection.get_aggregate(x_axis="date", y_axis="total", interval=interval)
-                medium_aggr = selection.get_aggregate(x_axis="medium", y_axis="date", interval=interval)
+                medium_aggr = selection.get_aggregate(x_axis="medium", y_axis="total", interval=interval)
             
             self.monitor.update(79, "Rendering results..".format(**locals()))
 
