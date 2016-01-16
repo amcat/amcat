@@ -187,7 +187,7 @@ class Codebook(AmcatModel):
                 codes.remove((code_id, lan_id))
 
             for code_id, lan_id in codes:
-                # These codes don't have a label. We need to explicitely cache them to prevent
+                # These codes don't have a label. We need to explicitly cache them to prevent
                 # database trips.
                 self._codes[code_id]._cache_label(lan_id, None)
 
