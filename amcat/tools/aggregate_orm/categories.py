@@ -20,6 +20,9 @@ from __future__ import unicode_literals
 
 from collections import OrderedDict, defaultdict
 from operator import itemgetter
+
+from django.db.models import Q
+
 from amcat.models import Medium, ArticleSet, Code
 from amcat.tools.aggregate_orm.sqlobj import SQLObject, JOINS
 
@@ -48,7 +51,6 @@ __all__ = (
     "TermCategory",
     "SchemafieldCategory"
 )
-
 
 class Category(SQLObject):
     def aggregate(self, categories, value, rows):
@@ -118,9 +120,97 @@ class IntervalCategory(Category):
         """@type obj: datetime.datetime"""
         yield obj.isoformat()
 
+class DuplicateLabelError(ValueError):
+    pass
+
+class InvalidReferenceError(ValueError):
+    pass
+
 class MediumCategory(ModelCategory):
     model = Medium
     joins_needed = ("codings", "coded_articles", "articles")
+
+    def __init__(self, codebook=None):
+        """
+        Mediums can be aggregated using a codebook of the form:
+
+        A
+        - B
+        - C
+        D
+
+        Mediums with the label A, B, or C will all be grouped under 'A'. D will not be considered,
+        which is the same as just leaving it out.
+
+        @param codebook: codebook to use for grouping
+        @type codebook: Codebook
+        """
+        super(MediumCategory, self).__init__()
+        self.codebook = codebook
+        self.aggregation_map = {}
+
+        if self.codebook is not None:
+            self.codebook.cache()
+
+            # Sanity check 1: labels must be unique
+            labels = [c.label for c in self.codebook.codes]
+            if len(set(labels)) != len(labels):
+                dcount= defaultdict(int)
+                for label in labels:
+                    dcount[label] += 1
+                duplicates = {l for l in labels if dcount[l] > 1}
+                raise DuplicateLabelError("Duplicate labels in codebook {}: {}".format(codebook, duplicates))
+
+            # Sanity check 2: labels must refer to mediums
+            qfilter = Q()
+            for label in labels:
+                qfilter |= Q(name__iexact=label)
+            mediums = Medium.objects.filter(qfilter)
+            if mediums.distinct("id").count() != len(labels):
+                real_labels = set(mediums.values_list("name", flat=True))
+                error_message = "Some labels in {} did not refer to mediums: {}"
+                raise InvalidReferenceError(error_message.format(self.codebook, set(labels) - real_labels))
+
+            # Determine code -> code mapping
+            root_map = {}
+            for root_node in self.codebook.get_tree():
+                root_map[root_node.code_id] = root_node.code_id
+                for descendant in root_node.get_descendants():
+                    root_map[descendant.code_id] = root_node.code_id
+
+            # Replace code ids by labels
+            root_map = {self.codebook._codes[k]: self.codebook._codes[v] for k, v in root_map.items()}
+
+            # Replace codes by labels
+            root_map = {k.label: v.label for k, v in root_map.items()}
+
+            # Replace labels by mediums
+            medium_map = {m.name: m.id for m in mediums.only("id", "name")}
+            medium_map = {medium_map[k]: medium_map[v] for k, v in root_map.items()}
+
+            # Set as global :)
+            self.aggregation_map = medium_map
+
+    def _aggregate(self, categories, value, rows):
+        num_categories = len(categories)
+        self_index = categories.index(self)
+
+        # Create a mapping from key -> rownrs which need to be aggregated
+        to_aggregate = defaultdict(list)
+        for n, row in enumerate(rows):
+            medium_id = row[self_index]
+            new_medium_id = self.aggregation_map.get(medium_id, medium_id)
+            key = row[:self_index] + [new_medium_id] + row[self_index+1:num_categories]
+            to_aggregate[tuple(key)].append(n)
+
+        for key, rownrs in to_aggregate.items():
+            values = [row[num_categories:] for row in [rows[rownr] for rownr in rownrs]]
+            yield list(key) + value.aggregate(values)
+
+    def aggregate(self, categories, value, rows):
+        if self.codebook is None:
+            return super(MediumCategory, self).aggregate(categories, value, rows)
+        return self._aggregate(categories, value, rows)
 
     def get_selects(self):
         yield 'T_articles.medium_id'
