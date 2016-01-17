@@ -10,14 +10,12 @@ Release 3.3: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=relea
 
 ### Prerequisites
 
-Most of the (python) prerequisites for AmCAT are automatically installed using pip (see below). To install the non-python requirements, you can use the following (on ubuntu):
+Most of the (python) prerequisites for AmCAT are automatically installed using pip (see below). To install the non-python requirements, you can use the following (on Ubuntu 15.10 or 16.04):
 
 ```sh
 sudo apt-get install antiword unrtf rabbitmq-server python-pip postgresql postgresql-contrib python-virtualenv git
 sudo apt-get build-dep python-psycopg2 python-lxml
 ```
-
-
 
 It is probably best to install AmCAT in a virtual environment. Run the following commands to setup and activate a virtual environment for AmCAT: (on ubuntu)
 
@@ -63,7 +61,8 @@ export ES_CLASSPATH
 
 # Save file and close editor
 # Restart elasticsearch
-sudo service elasticsearch restart
+sudo systemctl reload
+sudo systemctl restart elasticsearch
 ```
 
 ### Installing AmCAT (pip install from git)
