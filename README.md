@@ -13,7 +13,8 @@ Release 3.3: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=relea
 Most of the (python) prerequisites for AmCAT are automatically installed using pip (see below). To install the non-python requirements, you can use the following (on ubuntu):
 
 ```sh
-sudo apt-get install antiword unrtf rabbitmq-server python-pip python-dev libxml2-dev libxslt-dev lib32z1-dev postgresql postgresql-server-dev-9.4 postgresql-contrib-9.4
+sudo apt-get install antiword unrtf rabbitmq-server python-pip postgresql postgresql-contrib python-virtualenv git
+sudo apt-get build-dep python-psycopg2 python-lxml
 ```
 
 
@@ -21,7 +22,6 @@ sudo apt-get install antiword unrtf rabbitmq-server python-pip python-dev libxml
 It is probably best to install AmCAT in a virtual environment. Run the following commands to setup and activate a virtual environment for AmCAT: (on ubuntu)
 
 ```sh
-sudo apt-get install python-virtualenv
 virtualenv amcat-env
 source amcat-env/bin/activate
 ```
@@ -39,38 +39,17 @@ createdb amcat
 
 ### Elastic
 
-AmCAT uses elasticsearch for searching articles. Since we use a custom similarity to provide hit counts instead of relevance, this needs to be installed 'by hand'. You can probably skip this and rely on a pre-packaged elasticsearch if you don't care about hit counts, although you still need to install the elasticsearch plugins.
-
-First, install oracle java (from http://www.webupd8.org/2012/01/install-oracle-java-jdk-7-in-ubuntu-via.html)
-For java 8 visit: http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html
+AmCAT uses elasticsearch for searching articles. Elasticsearch is provided as a debian package, but it does need some extra plugins to be ready for AmCAT.
 
 ```sh
-sudo add-apt-repository ppa:webupd8team/java
-sudo apt-get update
-sudo apt-get install oracle-java7-installer #for java 7
-sudo apt-get install oracle-java8-installer #for java 8
-```
-
-
-Next, download and extract elasticsearch and our custom hitcount jar, and install the required plugins:
-
-```sh
-cd /tmp
-
-# Download and install elasticsearch
-wget "https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.4.4.deb"
-sudo dpkg -i elasticsearch-1.4.4.deb
+sudo apt-get install elasticsearch
 
 # Install plugins
 cd /usr/share/elasticsearch
-# sudo bin/plugin -install elasticsearch/elasticsearch-lang-python/2.4.1 (no longer needed for master)
-sudo bin/plugin -install elasticsearch/elasticsearch-analysis-icu/2.4.2
-sudo bin/plugin -install mobz/elasticsearch-head
+sudo bin/plugin --install mobz/elasticsearch-head
+sudo bin/plugin --install elasticsearch/elasticsearch-analysis-icu/2.6.0  # Ubuntu 15.10
+sudo bin/plugin --install elasticsearch/elasticsearch-analysis-icu/2.7.0  # Ubuntu 16.04
 sudo wget http://hmbastiaan.nl/martijn/amcat/hitcount.jar
-
-# Allow dynamic scripting (no longer needed for master)
-# cd /etc/elasticsearch
-# echo -e "\nscript.disable_dynamic: false" | sudo tee -a elasticsearch.yml
 
 # Make sure elasticsearch detects hitcount.jar
 sudo editor /etc/init.d/elasticsearch
@@ -85,7 +64,6 @@ export ES_CLASSPATH
 # Save file and close editor
 # Restart elasticsearch
 sudo service elasticsearch restart
-cd
 ```
 
 ### Installing AmCAT (pip install from git)
@@ -122,16 +100,6 @@ AmCAT uses [bower](http://bower.io/) to install javascript/CSS libraries. On Ubu
 
 ```sh
 sudo apt-get install nodejs-legacy npm
-sudo npm install -g bower
-```
-
-On older ubuntu versions, if the above does not work, try installing nodejs via Chris Lea's ppa:
-
-```sh
-sudo add-apt-repository ppa:chris-lea/node.js
-sudo apt-get update
-sudo apt-get install nodejs
-sudo apt-get upgrade nodejs
 sudo npm install -g bower
 ```
 
