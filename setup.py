@@ -43,7 +43,6 @@ package = dict(
         'api.rest.viewsets.coding',
         'api.rest',
         'api.rest.resources',
-        'api.webscripts',
         'api',
         'annotator.views',
         'annotator',
