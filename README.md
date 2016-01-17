@@ -59,8 +59,10 @@ export ES_CLASSPATH
 # Add to DAEMON_OPTS:
 -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider
 
+# Uncomment START_DAEMON=true
+sudo editor /etc/default/elasticsearch
+
 # Save file and close editor
-# Restart elasticsearch
 sudo systemctl reload
 sudo systemctl restart elasticsearch
 ```
