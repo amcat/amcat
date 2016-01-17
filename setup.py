@@ -27,7 +27,6 @@ package = dict(
         'amcat.scripts',
         'amcat.scripts.forms',
         'amcat.scripts.actions',
-        'amcat.scripts.searchscripts',
         'amcat.scripts.article_upload',
         'amcat.tools',
         'amcat.tools.table',
