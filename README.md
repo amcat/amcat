@@ -13,7 +13,7 @@ Release 3.3: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=relea
 Most of the (python) prerequisites for AmCAT are automatically installed using pip (see below). To install the non-python requirements, you can use the following (on ubuntu):
 
 ```sh
-$ sudo apt-get install antiword unrtf rabbitmq-server python-pip python-dev libxml2-dev libxslt-dev lib32z1-dev postgresql postgresql-server-dev-9.4 postgresql-contrib-9.4
+sudo apt-get install antiword unrtf rabbitmq-server python-pip python-dev libxml2-dev libxslt-dev lib32z1-dev postgresql postgresql-server-dev-9.4 postgresql-contrib-9.4
 ```
 
 
@@ -21,9 +21,9 @@ $ sudo apt-get install antiword unrtf rabbitmq-server python-pip python-dev libx
 It is probably best to install AmCAT in a virtual environment. Run the following commands to setup and activate a virtual environment for AmCAT: (on ubuntu)
 
 ```sh
-$ sudo apt-get install python-virtualenv
-$ virtualenv amcat-env
-$ source amcat-env/bin/activate
+sudo apt-get install python-virtualenv
+virtualenv amcat-env
+source amcat-env/bin/activate
 ```
 
 If you use a virtual environment, every time you start working with AmCAT you need to repeat the `source` line to load the environment. If you don't use a virtual environment, you will need to run most pip command below using `sudo`. 
@@ -33,8 +33,8 @@ If you use a virtual environment, every time you start working with AmCAT you ne
 AmCAT requires a database to store its documents in. The default settings look for a postgres database 'amcat' on localhost. To set up the current user as a superuser in postgres and create the database, use:
 
 ```sh
-$ sudo -u postgres createuser -s $USER
-$ createdb amcat
+sudo -u postgres createuser -s $USER
+createdb amcat
 ```
 
 ### Elastic
@@ -45,10 +45,10 @@ First, install oracle java (from http://www.webupd8.org/2012/01/install-oracle-j
 For java 8 visit: http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html
 
 ```sh
-$ sudo add-apt-repository ppa:webupd8team/java
-$ sudo apt-get update
-$ sudo apt-get install oracle-java7-installer #for java 7
-$ sudo apt-get install oracle-java8-installer #for java 8
+sudo add-apt-repository ppa:webupd8team/java
+sudo apt-get update
+sudo apt-get install oracle-java7-installer #for java 7
+sudo apt-get install oracle-java8-installer #for java 8
 ```
 
 
