@@ -384,7 +384,7 @@ define([
         }
 
         var method = saved_query.method.toUpperCase();
-        
+        var dialogtype = typeof(this.dialogtype) === "undefined" ? "FULL" : this.dialogtype.toUpperCase();
         if (!dialog_visible){
             name_btn.val(saved_query.name);
             private_btn.prop("checked", saved_query.private);
@@ -394,7 +394,7 @@ define([
         
 
         if (!dialog_visible && this.confirm === true) {
-            if(method === "PATCH"){
+            if(dialogtype === "CONFIRM-ONLY"){
                 confirm_dialog.modal();
                 return $('.save', confirm_dialog)[0].focus();
             }
@@ -416,7 +416,7 @@ define([
 
         var url;
         if (method === "PATCH"){
-            url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: saved_query.id})
+            url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: saved_query.id});
         } else {
             url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: ''})
         }
@@ -524,12 +524,13 @@ define([
         var args = {};
         if (saved_query.id === null || saved_query.user !== USER) {
             args.confirm = true;
+            args.dialogtype = "full";
             args.method = "post";
         } else {
             args.confirm = true;
+            args.dialogtype = "confirm-only";
             args.method = "patch";
         }
-
         self.save_query.bind(args)(event);
     };
 
@@ -911,7 +912,7 @@ define([
                 event.stopPropagation();
                 callback(event);
             });
-        })
+        });
     };
 
     self.init = function(){
@@ -922,7 +923,7 @@ define([
 
         $("#delete-query").click(self.delete_query);
         $("#confirm-overwrite-dialog, #save-query-dialog").find(".save").click(self.save_query.bind({confirm: false}));
-        $("h4.name").click(self.save_query.bind({confirm: true, method: "patch"}));
+        $("h4.name").click(self.save_query.bind({confirm: true, method: saved_query.id ? "patch" : "post", dialogtype:"full"}));
         $("#save-query").click(self.save_query_clicked);
         $("#change-articlesets").click(self.change_articlesets_clicked);
         $("#change-articlesets-confirm").click(self.change_articlesets_confirmed_clicked);
