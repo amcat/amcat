@@ -459,11 +459,10 @@ define([
     };
 
     self.init_delete_query_button = function(){
-        var dq = $("#delete-query");
-        dq.addClass("disabled");
-
+        var deleteSaveBtns = $("#delete-query, #save-query");
+        deleteSaveBtns.addClass("disabled");
         if (saved_query.user === USER){
-            dq.removeClass("disabled");
+            deleteSaveBtns.removeClass("disabled");
         }
     };
 
@@ -519,10 +518,16 @@ define([
 
         $("#delete-query").addClass("disabled");
     };
-
+    self.save_query_as_clicked = function(event){
+        var args = {};
+        args.confirm = true;
+        args.dialogtype = "full";
+        args.method = "post";
+        self.save_query.bind(args)(event);
+    };
     self.save_query_clicked = function(event){
         var args = {};
-        if (saved_query.id === null || saved_query.user !== USER) {
+        if (saved_query.id === null) {
             args.confirm = true;
             args.dialogtype = "full";
             args.method = "post";
@@ -533,7 +538,16 @@ define([
         }
         self.save_query.bind(args)(event);
     };
-
+    self.change_name_clicked = function(event){
+        console.log(USER);
+        if(saved_query.user === USER){
+            return self.save_query.bind({
+                confirm: true,
+                method: saved_query.id ? "patch" : "post",
+                dialogtype: "full"
+            })(event);
+        }
+    };
     self.change_articlesets_clicked = function(event){
         event.preventDefault();
         $("#change-articlesets-query-dialog").modal();
@@ -915,6 +929,7 @@ define([
         });
     };
 
+
     self.init = function(){
         $("#codebooks").change(self.codebook_changed);
         $("#run-query").click(self.run_query);
@@ -923,8 +938,9 @@ define([
 
         $("#delete-query").click(self.delete_query);
         $("#confirm-overwrite-dialog, #save-query-dialog").find(".save").click(self.save_query.bind({confirm: false}));
-        $("h4.name").click(self.save_query.bind({confirm: true, method: saved_query.id ? "patch" : "post", dialogtype:"full"}));
+        $("h4.name").click(self.change_name_clicked);
         $("#save-query").click(self.save_query_clicked);
+        $("#save-query-as").click(self.save_query_as_clicked);
         $("#change-articlesets").click(self.change_articlesets_clicked);
         $("#change-articlesets-confirm").click(self.change_articlesets_confirmed_clicked);
 

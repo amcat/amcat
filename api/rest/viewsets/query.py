@@ -64,7 +64,8 @@ class QuerySerializer(AmCATModelSerializer):
 
 class QueryPermission(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        public_or_owned = request.user.is_superuser or obj.user_id == request.user.id or not obj.private
+        public_and_get = request.method == "GET" and not obj.private
+        public_or_owned = request.user.is_superuser or obj.user_id == request.user.id or public_and_get
         return public_or_owned
 
 class QueryViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
