@@ -19,6 +19,7 @@
 import StringIO
 import csv
 import json
+import base64
 from django import forms
 from django.core.exceptions import ValidationError
 from amcat.scripts.query import QueryAction, QueryActionForm, QueryActionHandler
@@ -95,6 +96,10 @@ class AssociationAction(QueryAction):
     def get_formatter(self, form):
         return FORMATS[form.cleaned_data["number_format"]]
 
+    def svg_to_image_tag(self, svg):
+        tag = '<img class="svg-image save-image" src="data:image/svg+xml;base64,{}">'
+        return tag.format(base64.b64encode(svg))
+
     def run(self, form):
         association = self.get_association(form)
         content_type, meaning = get_content_type(form)
@@ -115,7 +120,7 @@ class AssociationAction(QueryAction):
             threshold = form.cleaned_data["graph_threshold"]
             include_labels = form.cleaned_data["graph_label"]
             graphs = association.get_graphs(formatter, threshold, include_labels)
-            return json.dumps([(interval, graph.getHTMLSVG()) for interval, graph in graphs])
+            return json.dumps([(interval, self.svg_to_image_tag(graph.getHTMLSVG())) for interval, graph in graphs])
 
         # text/csv;fromto
         elif meaning == "fromto":
