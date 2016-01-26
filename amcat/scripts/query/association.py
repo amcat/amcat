@@ -69,10 +69,9 @@ class AssociationAction(QueryAction):
 
     output_types = (
         ("application/json+table;fromto", "Table (from-to)"),
-        ("application/json+crosstables;cross", "Table (cross)"),
+        ("application/json+crosstables;cross", "Table (cross table)"),
         ("text/csv;fromto", "CSV (from-to)"),
-        ("text/csv;cross", "CSV (cross)"),
-        ("text/csv;cross", "CSV (cross)"),
+        ("text/csv;cross", "CSV (cross table)"),
         ("application/json+image+svg+multiple;", "Graph"),
     )
 
