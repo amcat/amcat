@@ -130,7 +130,7 @@ class MediumCategory(ModelCategory):
     model = Medium
     joins_needed = ("codings", "coded_articles", "articles")
 
-    def __init__(self, codebook=None):
+    def __init__(self, prefix=None, codebook=None):
         """
         Mediums can be aggregated using a codebook of the form:
 
@@ -145,7 +145,7 @@ class MediumCategory(ModelCategory):
         @param codebook: codebook to use for grouping
         @type codebook: Codebook
         """
-        super(MediumCategory, self).__init__()
+        super(MediumCategory, self).__init__(prefix=prefix)
         self.codebook = codebook
         self.aggregation_map = {}
 
