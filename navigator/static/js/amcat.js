@@ -72,13 +72,17 @@ define(["jquery", "bootstrap"], function() {
                 $("body").focus();
 
                 // Resize datatables
-                $.each($.fn.dataTable.tables(), function (i, table) {
-                    var settings = $(table).DataTable().settings()[0];
-                    settings.oApi._fnAdjustColumnSizing(settings);
-                });
-
+                try{
+                    $.each($.fn.dataTable.tables(), function(i, table){
+                        var settings = $(table).DataTable().settings()[0];
+                        settings.oApi._fnAdjustColumnSizing(settings);
+                    });
+                }
+                catch(TypeError){
+                    console.warn("Datatables not loaded");
+                }
                 // Make change permanent. TODO: Make it an API call.
-                $.get("/navigator/?fluid=" + $("body > .container-fluid").length)
+                $.get("/?fluid=" + $("body > .container-fluid").length)
             });
         });
     }

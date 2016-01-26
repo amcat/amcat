@@ -37,7 +37,8 @@ def index(request, coder=None):
 
     coder = coder if coder is not None else request.user
 
-    jobs = Datatable(CodingJobResource, rowlink='/annotator/codingjob/{id}')
+    jobs = Datatable(CodingJobResource)
+    jobs = jobs.rowlink_reverse("annotator:annotator-codingjob", args=[9999999999])
     jobs = jobs.filter(coder=coder).hide('coder', 'articleset', 'unitschema', 'articleschema')#.filter(status='unfinished')
 
     ctx = locals()
