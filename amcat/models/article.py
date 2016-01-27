@@ -259,7 +259,6 @@ class Article(AmcatModel):
         cls._create_articles_per_layer(articles)
         if articlesets is None:
             articlesets = [articleset] if articleset else []
-
         es = amcates.ES()
         dupes, new = [], []
         for a in articles:
@@ -335,8 +334,11 @@ class Article(AmcatModel):
                     a =values[getattr(r, attr)]
                     if a.hash != r.hash: 
                         raise ValueError("Cannot modify existing articles: {a.hash} != {r.hash}".format(**locals()))
-                    if a.uuid and unicode(a.uuid) != unicode(r.uuid): # not part of hash
-                        raise ValueError("Cannot modify existing articles: {a.uuid} != {r.uuid}".format(**locals()))
+                    if a.uuid and not r.uuid: # old article without uuid -> update old article! (but not very efficient)
+                        Article.objects.filter(pk=r.id).update(uuid=a.uuid)
+                    elif a.uuid and unicode(a.uuid) != unicode(r.uuid): # not part of hash
+                        #TODO: we keep old uuid, maybe client should get a warning of some sort?
+                        a.uuid = r.uuid 
                     a.duplicate = r
                     a.id = r.id
                 
