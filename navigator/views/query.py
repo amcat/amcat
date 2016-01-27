@@ -18,21 +18,21 @@
 ###########################################################################
 from __future__ import unicode_literals
 
-import logging
 import json
+import logging
 
 from django import conf
 from django.core.urlresolvers import reverse
 from django.db.models.query_utils import Q
 from django.views.generic.base import TemplateView, RedirectView
 
-from amcat.models import Query, CodingJob
+from amcat.models import Query
+from amcat.scripts.forms import SelectionForm
 from amcat.tools import amcates
 from api.rest.datatable import Datatable
 from api.rest.viewsets import QueryViewSet, FavouriteArticleSetViewSet, CodingJobViewSet
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
-from amcat.scripts.forms import SelectionForm
 from navigator.views.project_views import ProjectDetailsView
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
 
 log = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
             url_kwargs={"project": self.project.id},
             rowlink="{id}"
         )
-        table = table.hide("last_saved", "parameters", "private", "project")
+        table = table.hide("last_saved", "parameters", "project")
         return table
 
     def get_articlesets_table(self):

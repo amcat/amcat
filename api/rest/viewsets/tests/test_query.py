@@ -34,8 +34,7 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
         ProjectRole.objects.create(project=self.project, user=self.member, role_id=ROLE_PROJECT_WRITER)
         ProjectRole.objects.create(project=self.project, user=self.owner, role_id=ROLE_PROJECT_WRITER)
 
-        self.private_query = amcattest.create_test_query(user=self.owner, project=self.project, parameters='[1,2,"ab"]')
-        self.public_query = amcattest.create_test_query(user=self.owner, project=self.project, private=False, parameters='[1,2,"ab"]')
+        self.query = amcattest.create_test_query(user=self.owner, project=self.project, parameters='[1,2,"ab"]')
 
         self.client = Client()
 
@@ -77,23 +76,13 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
         status_code, results = self.json(self.get_url())
         self.assertEqual(200, status_code)
         self.assertEqual(1, len(results))
-        self.assertEqual(self.public_query.id, results[0]["id"])
-
-    def test_get_authenticated(self):
-        """Non-owners (even though they are project members) should not be able to access
-        private queries of other project members."""
-        self.assertTrue(self.client.login(username=self.member.username, password="test"))
-
-        status_code, results = self.json(self.get_url())
-        self.assertEqual(200, status_code)
-        self.assertEqual(1, len(results))
-        self.assertEqual(self.public_query.id, results[0]["id"])
+        self.assertEqual(self.query.id, results[0]["id"])
 
     def test_get_authorised(self):
         self.assertTrue(self.client.login(username=self.owner.username, password="test"))
         status_code, results = self.json(self.get_url())
         self.assertEqual(200, status_code)
-        self.assertEqual(2, len(results))
+        self.assertEqual(1, len(results))
 
     def test_get_parameters(self):
         self.assertTrue(self.client.login(username=self.member.username, password="test"))
@@ -136,7 +125,6 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
         self.assertEqual("test_post", results["name"])
         self.assertEqual(self.project.id, results["project"])
         self.assertEqual(self.member.id, results["user"])
-        self.assertEqual(True, results["private"])
 
     def test_post_parameters_as_string(self):
         self.client.login(username=self.member.username, password="test")
@@ -167,12 +155,12 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
         should result in a not found."""
         self.client.login(username=self.member.username, password="test")
         data = {"name": "test", "parameters": "[1,2,null]"}
-        status_code, results =self.json(self.get_url(self.private_query.id), data=data, method="put")
-        self.assertEqual(404, status_code)
+        status_code, results =self.json(self.get_url(self.query.id), data=data, method="put")
+        self.assertEqual(403, status_code)
 
     def test_put_empty(self):
         self.client.login(username=self.owner.username, password="test")
-        status_code, results = self.json(self.get_url(self.private_query.id), data={}, method="put")
+        status_code, results = self.json(self.get_url(self.query.id), data={}, method="put")
 
         self.assertIn("name", results)
         self.assertIn("parameters", results)
@@ -181,55 +169,50 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
     def test_put(self):
         self.client.login(username=self.owner.username, password="test")
         data = {"name": "blaat", "parameters": "[1, 2]"}
-        status_code, results = self.json(self.get_url(self.private_query.id), data=data, method="put")
+        status_code, results = self.json(self.get_url(self.query.id), data=data, method="put")
 
         self.assertEqual(results["name"], "blaat")
         self.assertEqual(results["parameters"], "[1, 2]")
-        self.assertEqual(Query.objects.get(id=self.private_query.id).name, "blaat")
-        self.assertEqual(Query.objects.get(id=self.private_query.id).parameters, [1, 2])
+        self.assertEqual(Query.objects.get(id=self.query.id).name, "blaat")
+        self.assertEqual(Query.objects.get(id=self.query.id).parameters, [1, 2])
         self.assertEqual(200, status_code)
 
     def test_patch_unauthorised(self):
         self.client.login(username=self.member.username, password="test")
-        status_code, results = self.json(self.get_url(self.private_query.id), data={}, method="patch")
-        self.assertEqual(404, status_code)
+        status_code, results = self.json(self.get_url(self.query.id), data={}, method="patch")
+        self.assertEqual(403, status_code)
 
     def test_patch_empty(self):
         self.client.login(username=self.owner.username, password="test")
-        status_code, results = self.json(self.get_url(self.private_query.id), data={}, method="patch")
+        status_code, results = self.json(self.get_url(self.query.id), data={}, method="patch")
         self.assertEqual(200, status_code)
 
     def test_patch(self):
         self.client.login(username=self.owner.username, password="test")
-        data = {"private": False}
-        status_code, results = self.json(self.get_url(self.private_query.id), data=data, method="patch")
+        data = {"name": "a"}
+        status_code, results = self.json(self.get_url(self.query.id), data=data, method="patch")
 
         self.assertEqual(200, status_code)
-        self.assertFalse(results["private"])
+        self.assertEqual(results["name"], "a")
 
-        data = {"private": True}
-        status_code, results = self.json(self.get_url(self.private_query.id), data=data, method="patch")
+        data = {"name": "b"}
+        status_code, results = self.json(self.get_url(self.query.id), data=data, method="patch")
 
         self.assertEqual(200, status_code)
-        self.assertTrue(results["private"])
+        self.assertEqual(results["name"], "b")
 
     def test_delete_unauthorised(self):
         self.client.login(username=self.member.username, password="test")
 
-        # Deleting another member's PRIVATE query should result in a 404
-        status_code, results = self.json(self.get_url(self.private_query.id), method="delete")
-        self.assertEqual(404, status_code)
-        self.assertTrue(Query.objects.filter(id=self.private_query.id).exists())
-
         # Deleting another member's PUBLIC query should result in
-        status_code, results = self.json(self.get_url(self.public_query.id), method="delete")
+        status_code, results = self.json(self.get_url(self.query.id), method="delete")
         self.assertEqual(403, status_code)
-        self.assertTrue(Query.objects.filter(id=self.public_query.id).exists())
+        self.assertTrue(Query.objects.filter(id=self.query.id).exists())
 
     def test_delete(self):
         self.client.login(username=self.owner.username, password="test")
-        status_code, results = self.json(self.get_url(self.public_query.id), method="delete")
+        status_code, results = self.json(self.get_url(self.query.id), method="delete")
         self.assertEqual(204, status_code)
-        self.assertFalse(Query.objects.filter(id=self.public_query.id).exists())
+        self.assertFalse(Query.objects.filter(id=self.query.id).exists())
 
 

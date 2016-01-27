@@ -36,7 +36,6 @@ class Query(AmcatModel):
 
     name = models.TextField()
     parameters = JSONField()
-    private = models.BooleanField(default=True, db_index=True)
 
     project = models.ForeignKey("amcat.Project")
     user = models.ForeignKey(User)

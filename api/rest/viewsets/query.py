@@ -18,13 +18,11 @@
 ###########################################################################
 import json
 
-from django.core.validators import BaseValidator
-from django.db.models import Q
 from rest_framework import permissions
 from rest_framework.exceptions import ValidationError
+from rest_framework.fields import Field
 from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.fields import Field
 
 from amcat.models import Query, ROLE_PROJECT_WRITER
 from api.rest.mixins import DatatablesMixin
@@ -89,6 +87,5 @@ class QueryViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
 
     def filter_queryset(self, queryset):
         queryset = super(QueryViewSet, self).filter_queryset(queryset)
-        non_private_or_owned = Q(private=False) | Q(user__id=self.request.user.id)
-        return queryset.filter(project__id=self.project.id).filter(non_private_or_owned)
+        return queryset.filter(project__id=self.project.id)
 

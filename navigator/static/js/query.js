@@ -98,7 +98,6 @@ define([
     var saved_query = {
         id: query_form.data("query"),
         name: null,
-        private: true,
         user: null
     };
 
@@ -374,7 +373,6 @@ define([
         var dialog = $("#save-query-dialog");
         var confirm_dialog = $('#confirm-overwrite-dialog');
         var name_btn = $("[name=name]", dialog);
-        var private_btn = $("[name=private]", dialog);
         var save_btn = $(".save", dialog);
 
         save_btn.removeClass("disabled");
@@ -390,7 +388,6 @@ define([
         
         if (!dialog_visible){
             name_btn.val(saved_query.name);
-            private_btn.prop("checked", saved_query.private);
         }
         var form = name_btn.closest('form');
 
@@ -409,7 +406,6 @@ define([
 
 
         // Save query in modal clicked
-        var _private = private_btn.is(":checked");
         var name = name_btn.val();
 
         // Must have non-empty name
@@ -434,7 +430,6 @@ define([
             url: url + "?format=json",
             data: {
                 name: name,
-                private: _private ? true : false,
                 parameters: JSON.stringify(data)
             },
             headers: {
@@ -499,7 +494,6 @@ define([
                 parameters: null,
                 name: null,
                 id: null,
-                private: true,
                 user: null
             };
 
