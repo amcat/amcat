@@ -35,24 +35,24 @@ class TestMediumCategory(TestCase):
         codes["A1"].label = "A"
         codes["A1"].save()
 
-        self.assertRaises(DuplicateLabelError, MediumCategory, codebook)
+        self.assertRaises(DuplicateLabelError, MediumCategory, codebook=codebook)
 
     def test_invalid_reference(self):
         codebook, codes = amcattest.create_test_codebook_with_codes()
         Medium.objects.bulk_create(Medium(name=l) for l in codes)
 
         # Should raise no error..
-        MediumCategory(codebook)
+        MediumCategory(codebook=codebook)
 
         # Delete one medium, so one reference doesn't exist
         Medium.objects.all()[0].delete()
-        self.assertRaises(InvalidReferenceError, MediumCategory, codebook)
+        self.assertRaises(InvalidReferenceError, MediumCategory, codebook=codebook)
 
     def test_aggregate(self):
         codebook, codes = amcattest.create_test_codebook_with_codes()
         Medium.objects.bulk_create(Medium(name=l) for l in codes)
 
-        category = MediumCategory(codebook)
+        category = MediumCategory(codebook=codebook)
         value = AverageValue(CodingSchemaField())
 
         # Should all collapse into 'A'
@@ -69,5 +69,5 @@ class TestMediumCategory(TestCase):
 
         self.assertEqual(
             set(map(tuple, category.aggregate([category], value, rows))),
-            {(1, 4, Decimal(2))}
+            {(medium_A.id, 4, Decimal(2))}
         )
