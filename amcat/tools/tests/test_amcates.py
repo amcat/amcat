@@ -20,7 +20,7 @@ from __future__ import unicode_literals
 
 import datetime
 from unittest import skip
-from amcat.models import Article
+from amcat.models import Article, ArticleSet
 from amcat.tools import amcattest
 from amcat.tools.amcates import ES, get_article_dict, HASH_FIELDS, _get_hash
 from amcat.tools.amcattest import create_test_medium, create_test_project, create_test_set
@@ -42,6 +42,26 @@ class TestAmcatES(amcattest.AmCATTestCase):
         Article.create_articles([a, b, c, d], articleset=s1)
         ES().flush()
         return m1, m2, m3, s1, s2, a, b, c, d, e
+
+    @amcattest.use_elastic
+    def test_purge_orphans(self):
+        m1, m2, m3, s1, s2, a, b, c, d, e = self.setup()
+
+        # Query without deleting
+        all_ids = {a.id, b.id, c.id, d.id, e.id}
+        ES().flush()
+        self.assertEqual(all_ids, set(ES().query_ids()))
+
+        # Delete but do not purge orphans, query again
+        missing_query =  {"query": {"constant_score": {"filter": {"missing": {"field": "sets"}}}}}
+        s1.delete(purge_orphans=False)
+        ES().flush()
+        self.assertEqual(all_ids, set(ES().query_ids()))
+        self.assertEqual(all_ids - {e.id}, set(ES().query_ids(body=missing_query)))
+
+        # Purge orphans, query again
+        ES().purge_orphans()
+        ES().flush()
 
     @amcattest.use_elastic
     def test_aggregate(self):

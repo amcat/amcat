@@ -31,7 +31,7 @@ from types import NoneType
 
 from django.conf import settings
 from elasticsearch import Elasticsearch, ImproperlyConfigured
-from elasticsearch.helpers import scan
+from elasticsearch.helpers import scan, bulk
 
 from amcat.tools import queryparser, toolkit
 from amcat.tools.caching import cached
@@ -773,14 +773,21 @@ class ES(object):
                     yield offset, token
                 offset += len(token)
 
+    def _get_purge_actions(self, query):
+        for id in self.query_ids(body=query):
+            yield {
+                "_op_type": "delete",
+                "_id": id,
+                "_index": self.index,
+                "_type": settings.ES_ARTICLE_DOCTYPE
+            }
 
     def purge_orphans(self):
         """Remove all articles without set from the index"""
         query =  {"query": {"constant_score": {"filter": {"missing": {"field": "sets"}}}}}
-        self.es.delete_by_query(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=query)
+        return bulk(self.es, self._get_purge_actions(query))
 
-     
-    def get_child_type_counts(self, **filters):        
+    def get_child_type_counts(self, **filters):
         """Get the number of child documents per type"""
         filters = dict(build_body(filters=filters))
         filter = {"has_parent": {"parent_type": self.doc_type, "filter": filters['filter']}}
