@@ -221,6 +221,7 @@ class ArticleSet(AmcatModel):
             amcates.ES().remove_from_set(self.id, aids)
 
         if purge_orphans:
+            amcates.ES().flush()
             amcates.ES().purge_orphans()
 
         super(ArticleSet, self).delete() # cascade deletes all article references
