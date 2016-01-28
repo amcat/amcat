@@ -253,7 +253,7 @@ def lucene_span(quote, field, slop):
     return Span(clause.terms, slop, field)
 
 
-def get_term(tokens):
+def get_term(tokens, default_fieldname=None):
     if 'slop' in tokens:
         return lucene_span(tokens.quote, tokens.field, tokens.slop)
     elif 'quote' in tokens:
@@ -265,8 +265,7 @@ def get_term(tokens):
         else:
             return Quote(tokens.quote, tokens.field)
     else:
-        t = Term(tokens.term, tokens.field)
-        return t
+        return Term(tokens.term, tokens.field or default_fieldname)
 
 
 def get_boolean_or_term(tokens):
@@ -296,46 +295,54 @@ def pprint(q, indent=0):
         print(i, type(q).__name__, q)
 
 
-_grammar = None
+_grammar = {}
 
+def get_grammar(default_fieldname=None):
+    if default_fieldname not in _grammar:
+        _grammar[default_fieldname] = _get_grammar(default_fieldname)
+    return _grammar[default_fieldname]
 
-def get_grammar():
-    global _grammar
-    if _grammar is None:
-        from pyparsing import (Literal, Word, QuotedString, Optional, operatorPrecedence,
-                               nums, alphas, opAssoc)
+def _get_grammar(default_fieldname):
+    """
 
-        # literals
-        AND = Literal("AND")
-        OR = Literal("OR")
-        NOT = Literal("NOT").setResultsName("operator")
-        SPAN = (Literal("W/") + Word(nums).setResultsName("slop"))
-        OP = Optional(AND | OR | NOT | SPAN, default="implicit_OR").setResultsName("operator")
+    @param default_fieldname:
+    @return:
+    """
+    from pyparsing import (Literal, Word, QuotedString, Optional, operatorPrecedence,
+                           nums, alphas, opAssoc)
 
-        COLON = Literal(":").suppress()
-        TILDE = Literal("~").suppress()
-        LETTERS = u''.join(unichr(c) for c in xrange(65536)
-                           if not unichr(c).isspace() and unichr(c) not in '":()~')
+    # literals
+    AND = Literal("AND")
+    OR = Literal("OR")
+    NOT = Literal("NOT").setResultsName("operator")
+    SPAN = (Literal("W/") + Word(nums).setResultsName("slop"))
+    OP = Optional(AND | OR | NOT | SPAN, default="implicit_OR").setResultsName("operator")
 
-        # terms
-        term = Word(LETTERS)
-        slop = Word(nums).setResultsName("slop")
-        quote = QuotedString('"').setResultsName("quote") + Optional(TILDE + slop)
-        #quote.setParseAction(Quote)
+    COLON = Literal(":").suppress()
+    TILDE = Literal("~").suppress()
+    LETTERS = u''.join(unichr(c) for c in xrange(65536)
+                       if not unichr(c).isspace() and unichr(c) not in '":()~')
 
-        field = Word(alphas).setResultsName("field")
-        fterm = Optional(field + COLON) + (quote | term).setResultsName("term")
-        fterm.setParseAction(get_term)
+    # terms
+    term = Word(LETTERS)
+    slop = Word(nums).setResultsName("slop")
+    quote = QuotedString('"').setResultsName("quote") + Optional(TILDE + slop)
+    #quote.setParseAction(Quote)
 
-        # boolean combination
-        boolean_expr = operatorPrecedence(fterm, [
-            (NOT, 1, opAssoc.RIGHT),
-            (OP, 2, opAssoc.LEFT)
-        ])
-        boolean_expr.setParseAction(get_boolean_or_term)
-        _grammar = boolean_expr
-    return _grammar
+    field = Word(alphas).setResultsName("field")
+    fterm = Optional(field + COLON) + (quote | term).setResultsName("term")
+    fterm.setParseAction(lambda tokens: get_term(tokens, default_fieldname))
 
+    # boolean combination
+    boolean_expr = operatorPrecedence(fterm, [
+        (NOT, 1, opAssoc.RIGHT),
+        (OP, 2, opAssoc.LEFT)
+    ])
+    boolean_expr.setParseAction(get_boolean_or_term)
+    return boolean_expr
+
+# Cache on startup
+get_grammar()
 
 def simplify(term):
     if isinstance(term, Boolean):
@@ -354,11 +361,11 @@ class QueryParseError(ValidationError):
     pass
 
 
-def parse_to_terms(s, simplify_terms=True, strip_accents=True):
+def parse_to_terms(s, simplify_terms=True, strip_accents=True, default_fieldname=None):
     if strip_accents:
         s = stripAccents(s)
     try:
-        terms = get_grammar().parseString(s, parseAll=True)[0]
+        terms = get_grammar(default_fieldname).parseString(s, parseAll=True)[0]
     except Exception, e:
         raise QueryParseError("{e.__class__.__name__}: {e}".format(**locals()))
 
@@ -367,8 +374,8 @@ def parse_to_terms(s, simplify_terms=True, strip_accents=True):
     return terms
 
 
-def parse(s):
-    terms = parse_to_terms(s)
+def parse(s, default_fieldname=None):
+    terms = parse_to_terms(s, default_fieldname=default_fieldname)
     dsl = terms.get_dsl()
     return dsl
 

@@ -255,10 +255,12 @@ class Result(object):
         items = ("{}={!r}".format(k, self.__dict__[k]) for k in keys)
         return "{}({})".format(type(self).__name__, ", ".join(items))
 
+def get_highlight_query(query, fieldname):
+    query = queryparser.parse(query, fieldname)
+    return {"highlight_query": query, "number_of_fragments": 0}
 
 class ElasticSearchError(Exception):
     pass
-
 
 class ES(object):
     def __init__(self, index=None, doc_type=None, timeout=300, **args):
@@ -271,30 +273,20 @@ class ES(object):
         self.es.indices.flush()
 
     def highlight_article(self, aid, query):
-        query = queryparser.parse_to_terms(query).get_dsl()
-
-        highlight_opts = {
-            "highlight_query": query,
-            "number_of_fragments": 0
-        }
-
         body = {
             'filter': build_filter(ids=aid),
             'highlight': {
                 "fields": {
-                    "text": highlight_opts,
-                    "headline": highlight_opts,
-                    "byline": highlight_opts
+                    "text": get_highlight_query(query, "text"),
+                    "headline": get_highlight_query(query, "headline"),
+                    "byline": get_highlight_query(query, "byline"),
                 }
             }
         }
 
-        r = self.search(body, fields=[])
-        try:
-            hl = r['hits']['hits'][0]['highlight']
-            return {f: hl[f][0] for f in hl}
-        except KeyError:
-            log.exception("Could not get highlights from {r!r}".format(**locals()))
+        result = self.search(body, fields=[])
+        hits = result['hits']['hits'][0].get("highlight", {})
+        return {f: hits[f][0] for f in hits}
 
     def clear_cache(self):
         self.es.indices.clear_cache()
