@@ -61,7 +61,9 @@ class Watcher(threading.Thread):
     def join(self, timeout=None):
         self.running = False
         self.stop_event_wtree.set()
+        self.celery.terminate()
         self.wtree.join()
+        self.celery.wait()
         super(Watcher, self).join(timeout=timeout)
 
     def restart_celery(self):
