@@ -694,12 +694,15 @@ class ES(object):
                     build_body(query, filters, query_as_filter=True)
                 )
             },
-            'facets': {
-                'stats': {'statistical': {'field': 'date'}}
+            'aggregations': {
+                'stats': {
+                    'stats': {'field': 'date'}
+                }
             }
         }
 
-        stats = self.search(body, size=0)['facets']['stats']
+
+        stats = self.search(body, size=0)['aggregations']['stats']
         result = Result()
         result.n = stats['count']
         if result.n == 0:
