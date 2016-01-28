@@ -613,7 +613,8 @@ class ES(object):
                 group: {
                     'date_histogram': {
                         'field': group,
-                        'interval': date_interval
+                        'interval': date_interval,
+                        "min_doc_count" : 1
                     }
                 }
             }
@@ -675,6 +676,7 @@ class ES(object):
 
         log.debug("es.search(body={body})".format(**locals()))
         result = self.search(body)
+        print(result)
         result = self._parse_aggregate(result["aggregations"], list(group_by), terms, sets)
         return result
 
