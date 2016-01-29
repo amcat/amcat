@@ -142,7 +142,7 @@ class Association(object):
 
     def _get_scores(self):
         # Ideally, we would like to use elastic aggregations for the
-        # intervals, but we need scores simultainiously so we can't.
+        # intervals, but we need scores simultaneously so we can't.
         for query in self.queries:
             for a in self._get_query(query):
                 interval = self.interval_func(getattr(a, "date", None))
@@ -177,7 +177,6 @@ class Association(object):
                     continue
 
                 if sumprob1 == 0:
-                    # Obviously while q1=q1, the probability is 1 / no articles for query1.
                     yield ArticleAssociation(interval, "-", query1, query2)
                     continue
 
