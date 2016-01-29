@@ -256,6 +256,7 @@ class Article(AmcatModel):
         @param articles: a collection of objects with the necessary properties (.headline etc)
         @param articleset(s): articleset object(s), specify either or none
         """
+        _check_index(articles)
         cls._create_articles_per_layer(articles)
         if articlesets is None:
             articlesets = [articleset] if articleset else []
@@ -373,3 +374,20 @@ class Article(AmcatModel):
         return ArticleTree(self, [c.get_tree(include_parents=False) for c in children
                                   if c.id != self.id])
 
+def _check_index(articles):
+    # since dupe checking is done using ES, things go wrong if articles are missing in ES.
+    # the ones with uuid we can refresh, the others will just be added as dupe
+    es = amcates.ES()
+    uuids = {a.uuid for a in articles if a.uuid}
+    aids = list(Article.objects.filter(uuid__in=uuids).values_list("pk", flat=True))
+    in_index = set(es.query_ids(filters={"ids":aids}))
+    missing = set(aids) - in_index
+    if missing:
+        log.info("Adding {} articles to index".format(len(missing)))
+        es.add_articles(missing)
+    es.flush() 
+            
+
+
+    
+    
