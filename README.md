@@ -46,9 +46,9 @@ rm elasticsearch-2.1.1.deb
 
 # Install plugins
 cd /usr/share/elasticsearch
-sudo bin/plugin --install mobz/elasticsearch-head
-sudo bin/plugin --install analysis-icu
-sudo bin/plugin --install amcat/hitcount
+sudo bin/plugin install mobz/elasticsearch-head
+sudo bin/plugin install analysis-icu
+sudo bin/plugin install amcat/hitcount
 
 # Enable hitcount as default similarity provider, and enable groovy scripting
 cat <<EOT | sudo tee --append /etc/elasticsearch/elasticsearch.yml
