@@ -50,17 +50,9 @@ sudo bin/plugin --install elasticsearch/elasticsearch-analysis-icu/2.7.0  # Ubun
 sudo wget http://hmbastiaan.nl/martijn/amcat/hitcount.jar
 
 # Make sure elasticsearch detects hitcount.jar
-sudo editor /etc/init.d/elasticsearch
-
-# Add after ES_HOME:
-ES_CLASSPATH=$ES_HOME/hitcount.jar
-export ES_CLASSPATH
-
-# Add to DAEMON_OPTS:
--Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider
-
-# Uncomment START_DAEMON=true
-sudo editor /etc/default/elasticsearch
+hitcount_opt="index.similarity.default.type: nl.vu.amcat.HitCountSimilarityProvider"
+sudo sed -i '/^ES_HOME/a export ES_CLASSPATH=$ES_HOME/hitcount.jar' /etc/init.d/elasticsearch
+echo "$hitcount_opt" | sudo tee --append /etc/elasticsearch/elasticsearch.yml
 
 # Save file and close editor
 sudo systemctl reload
