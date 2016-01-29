@@ -62,6 +62,8 @@ sudo systemctl stop elasticsearch
 sudo systemctl start elasticsearch
 ```
 
+**Warning**: We enabled a non-sandboxed scripting language (Groovy). Make sure to restrict access to the elastic instance by untrusted parties, as this allows executing arbitrary code as the user `elasticsearch`.
+
 ### Installing AmCAT (pip install from git)
 
 Now you are ready to install AmCAT. The easiest way to do this is to `pip install` it direct from github. 
