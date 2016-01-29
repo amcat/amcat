@@ -40,23 +40,26 @@ createdb amcat
 AmCAT uses elasticsearch for searching articles. Elasticsearch is provided as a debian package, but it does need some extra plugins to be ready for AmCAT.
 
 ```sh
-sudo apt-get install elasticsearch
+wget https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/deb/elasticsearch/2.1.1/elasticsearch-2.1.1.deb
+sudo dpkg -i elasticsearch-2.1.1.deb
+rm elasticsearch-2.1.1.deb
 
 # Install plugins
 cd /usr/share/elasticsearch
 sudo bin/plugin --install mobz/elasticsearch-head
-sudo bin/plugin --install elasticsearch/elasticsearch-analysis-icu/2.6.0  # Ubuntu 15.10
-sudo bin/plugin --install elasticsearch/elasticsearch-analysis-icu/2.7.0  # Ubuntu 16.04
-sudo wget http://hmbastiaan.nl/martijn/amcat/hitcount.jar
+sudo bin/plugin --install analysis-icu
+sudo bin/plugin --install amcat/hitcount
 
-# Make sure elasticsearch detects hitcount.jar
-hitcount_opt="index.similarity.default.type: nl.vu.amcat.HitCountSimilarityProvider"
-sudo sed -i '/^ES_HOME/a export ES_CLASSPATH=$ES_HOME/hitcount.jar' /etc/init.d/elasticsearch
-echo "$hitcount_opt" | sudo tee --append /etc/elasticsearch/elasticsearch.yml
+# Enable hitcount as default similarity provider, and enable groovy scripting
+cat <<EOT | sudo tee --append /etc/elasticsearch/elasticsearch.yml
+index.similarity.default.type: hitcountsimilarity
+script.inline: on
+script.update: on
+EOT
 
-# Save file and close editor
-sudo systemctl reload
-sudo systemctl restart elasticsearch
+# Restart elastic
+sudo systemctl stop elasticsearch
+sudo systemctl start elasticsearch
 ```
 
 ### Installing AmCAT (pip install from git)
