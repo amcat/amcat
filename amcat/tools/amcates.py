@@ -30,7 +30,7 @@ from json import dumps as serialize
 from types import NoneType
 
 from django.conf import settings
-from elasticsearch import Elasticsearch, ImproperlyConfigured
+from elasticsearch import Elasticsearch, ImproperlyConfigured, NotFoundError
 from elasticsearch.helpers import scan, bulk
 
 from amcat.tools import queryparser, toolkit
@@ -294,8 +294,11 @@ class ES(object):
     def delete_index(self):
         try:
             self.es.indices.delete(self.index)
+        except NotFoundError:
+            pass
         except Exception, e:
-            if 'IndexMissingException' in unicode(e): return
+            if 'IndexMissingException' in unicode(error_msg):
+                return
             raise
 
     def create_index(self, shards=5, replicas=1):
