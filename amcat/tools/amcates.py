@@ -22,6 +22,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 import datetime
 import json
 import logging
+import os
 import re
 
 from collections import namedtuple
@@ -268,6 +269,10 @@ class ES(object):
         self.es = Elasticsearch(hosts=[elhost, ], timeout=timeout, **args)
         self.index = settings.ES_INDEX if index is None else index
         self.doc_type = settings.ES_ARTICLE_DOCTYPE if doc_type is None else doc_type
+
+        # Account for parallel testing (Django 1.9+)
+        if self.index.endswith("__unittest"):
+            self.index += str(os.getpid())
 
     def flush(self):
         self.es.indices.flush()

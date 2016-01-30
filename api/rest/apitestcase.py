@@ -109,8 +109,6 @@ class ApiTestCase(TestCase):
         t = collections.namedtuple(resource.model.__name__, keys)
         return t(*values)
     
-
-
     def assertDictsEqual(self, a,b):
         if a != b:
             msg = []

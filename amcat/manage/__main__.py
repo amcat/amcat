@@ -18,9 +18,9 @@ except ImportError:
 
 # need to import this AFTER settings django_settings_module and importing the settings
 # to prevent the import from loading the settings using the "old" DJANGO_SETTINGS_MODULE
-from amcat.tools import initialize
+#from amcat.tools import initialize
 
-initialize.set_signals()
+#initialize.set_signals()
 
 execute_from_command_line(sys.argv)
 # execute_manager(settings)

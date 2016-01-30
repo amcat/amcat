@@ -17,11 +17,11 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import json
+from collections import OrderedDict
 
 from django.views.generic.list import ListView
 from django import forms
 from django.core.urlresolvers import reverse
-from django.utils.datastructures import SortedDict
 
 from api.rest.viewsets import CodingJobViewSet
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectActionRedirectView, ProjectEditView, ProjectDetailView, ProjectFormView
@@ -213,7 +213,7 @@ class CodingJobExportView(ProjectScriptView):
 
         # Add fields for schema fields
         # section : [(id, field, subfields) ..]
-        sections = SortedDict()
+        sections = OrderedDict()
 
         # fieldname -> subfields reference
         subfields = {}

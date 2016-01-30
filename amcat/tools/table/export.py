@@ -153,17 +153,23 @@ class XLSX(TableExporter):
 
 HTML_FILENAME = os.path.join(os.path.dirname(__file__), "templates/articles.html")
 
+template = None
+def get_template():
+    global template
+    if template is None:
+        template = Template(open(HTML_FILENAME).read())
+    return template
+
 
 class HTML(TableExporter):
     extension = "html"
-    template = Template(open(HTML_FILENAME).read())
 
     def to_bytes(self, table, encoding):
         context = Context({
             "articles": table.getRows(), "encoding": encoding,
             "non_meta": {"text", "headline", "byline"}
         })
-        return self.template.render(context).encode(encoding)
+        return get_template().render(context).encode(encoding)
 
 
 class SPSS(TableExporter):

@@ -23,7 +23,7 @@ of the default behaviour of Django Forms.
 """
 
 from django.forms import *
-from django.forms.util import ErrorList
+from django.forms.utils import ErrorList
 
 
 def _remove_duplicates(seq):

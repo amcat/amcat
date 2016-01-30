@@ -23,25 +23,24 @@ It will load the initial_data file, create the default admin account,
 and unhook the interactive auth prompt
 """
 
-import os.path
-
 import logging
+import os.path
 log = logging.getLogger(__name__)
 
-from django.db.models.signals import post_syncdb
+from django.db.models.signals import post_migrate
 from django.core.management.commands.loaddata import Command
 
-from django.contrib.auth import models as auth_models
-from amcat.models.authorisation import Role
-
 import amcat.models
-from amcat.tools import db_upgrader, amcates
+from amcat.tools import amcates
 from amcat.tools import amcatxtas
 INITIAL_DATA_MODULE = amcat.models
 INITIAL_DATA_FILE = "_initial_data.json"
 
 def create_admin():
     """Create the admin account if it doesn't exit"""
+    from django.contrib.auth import models as auth_models
+    from amcat.models.authorisation import Role
+
     try:
         auth_models.User.objects.get(username='amcat')
     except auth_models.User.DoesNotExist:
@@ -70,9 +69,11 @@ def set_signals():
     Add load_data to amcat.models::post_syncdb to make sure data is loaded before
     auth, and unhook the django.auth create_superuser hook
     """
-    post_syncdb.connect(initialize, sender=amcat.models)
+    from django.contrib.auth import models as auth_models
+    post_migrate.connect(initialize, sender=amcat.models)
+
     # From http://stackoverflow.com/questions/1466827/ --
-    post_syncdb.disconnect(
+    post_migrate.disconnect(
         auth_models.User.objects.create_superuser,
         sender=auth_models,
         dispatch_uid='django.contrib.auth.management.create_superuser'

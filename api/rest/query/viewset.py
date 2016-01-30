@@ -102,7 +102,7 @@ class QueryActionView(APIView):
     def get_query_action(self):
         return self.query_action(
             user=self.request.user, project=self.get_project(), codingjobs=self.get_codingjobs(),
-            articlesets=self.get_articlesets(), data=self.request.POST or self.request.DATA or None
+            articlesets=self.get_articlesets(), data=self.request.POST or self.request.data or None
         )
 
     def get_form(self):

@@ -1,13 +1,10 @@
 {% extends "project/base.html" %}
-{% load compress %}
 {% load staticfiles %}
 
 {% block help_context %}Create_codebooks{% endblock %}
 
 {% block css %}
-{% compress css %}
 <link href="{% static 'css/jquery.codebookeditor.css' %}" rel="stylesheet" type="text/css" />
-{% endcompress %}
 {% endblock %}
 
 {% block content %}

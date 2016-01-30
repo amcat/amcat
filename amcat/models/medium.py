@@ -19,7 +19,7 @@
 from __future__ import unicode_literals, print_function, absolute_import
 
 from django.db import models
-from django.db.models.query import QuerySet, ValuesQuerySet
+from django.db.models import query
 from amcat.tools.amcates import ES
 
 from amcat.tools.model import AmcatModel
@@ -36,7 +36,7 @@ def to_medium_ids(mediums):
     if isinstance(mediums, Medium):
         return (mediums.id,)
 
-    if isinstance(mediums, QuerySet) and mediums.model is Medium:
+    if isinstance(mediums, query.QuerySet) and mediums.model is Medium:
         return mediums.values_list("id", flat=True)
 
     return ((m.id if isinstance(m, Medium) else m) for m in mediums)
@@ -51,7 +51,7 @@ def get_mediums(articlesets):
 
     @rtype: QuerySet
     """
-    if isinstance(articlesets, QuerySet) and not isinstance(articlesets, ValuesQuerySet):
+    if isinstance(articlesets, query.QuerySet):
         articlesets = articlesets.values_list("id", flat=True)
 
     if not articlesets:

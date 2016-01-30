@@ -17,7 +17,6 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from functools import partial
-from django.utils.functional import memoize
 from inspect import isclass
 from itertools import imap, chain
 from django.core.management.base import BaseCommand
@@ -36,7 +35,6 @@ PLUGIN_MODULE = plugins.__name__
 def get_plugin_types():
     """Return all classes which represent a plugintype"""
     return tuple(p.get_class() for p in PluginType.objects.all())
-get_plugin_types = memoize(get_plugin_types, {}, 0)
 
 def is_plugin(cls):
     """Determines whether given class represents a plugin.

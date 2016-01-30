@@ -36,9 +36,6 @@ else:
     DEBUG = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
                  or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
 
-COMPRESS_ENABLED = os.environ.get("DJANGO_COMPRESS", not DEBUG) in (True, "1", "Y", "ON")
-COMPRESS_PARSER = 'compressor.parser.LxmlParser'
-
 LOCAL_DEVELOPMENT = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
                          or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
 
@@ -171,8 +168,7 @@ MIDDLEWARE_CLASSES = [
 
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
-    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-    'compressor.finders.CompressorFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder'
 )
 
 AUTHENTICATION_BACKENDS = (
@@ -211,9 +207,9 @@ INSTALLED_APPS = [
     'api',
     'amcat',
     'django_extensions',
-    'compressor',
     'method_override',
     'markdown_deux',
+    'djcelery'
 ]
 
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"

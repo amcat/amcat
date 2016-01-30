@@ -97,14 +97,14 @@ class AggregateResource(AmCATResource):
     @property
     @cached
     def axes(self):
-        params = self.request.QUERY_PARAMS or self.request.DATA
+        params = self.request.query_params or self.request.data
         axes = ("axis{i}".format(**locals()) for i in itertools.count(1))
         return [params[x] for x in itertools.takewhile(params.__contains__, axes)]
 
     @property
     @cached
     def queries(self):
-        params = self.request.QUERY_PARAMS or self.request.DATA
+        params = self.request.query_params or self.request.data
         return [keywordsearch.SearchQuery.from_string(q)
                 for q in params.getlist("q")]
 
@@ -112,8 +112,7 @@ class AggregateResource(AmCATResource):
         return AggregateES(self.axes, self.queries)
 
     def filter_queryset(self, queryset):
-        params = self.request.QUERY_PARAMS or self.request.DATA
-        print(">>>> params:", params)
+        params = self.request.query_params or self.request.data
         for k in FILTER_FIELDS:
             if k in params:
                 queryset.filter(k, params.getlist(k))

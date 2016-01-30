@@ -16,26 +16,32 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-import json
 import itertools
+import json
 
-from django.http import HttpResponse, HttpResponseBadRequest
-from django.views.generic.list import ListView
 from django import forms
-from json_field.forms import JSONFormField
+from django.http import HttpResponse
+from django.views.generic.list import ListView
 
-from api.rest.datatable import Datatable
+try:
+    from json_field.forms import JSONFormField
+except ImportError:
+    # Django 1.9
+    from django.contrib.postgres.forms import JSONField as JSONFormField
+
+
+from amcat.forms import widgets
+from amcat.models import Codebook
 from amcat.models import Language, Project, Code, CodebookCode, Label
-from amcat.scripts.actions.import_codebook import ImportCodebook
 from amcat.scripts.actions.export_codebook import ExportCodebook
 from amcat.scripts.actions.export_codebook_as_xml import ExportCodebookAsXML
+from amcat.scripts.actions.import_codebook import ImportCodebook
+from api.rest.datatable import Datatable
 from api.rest.resources import CodebookHierarchyResource
 from api.rest.viewsets import CodebookViewSet
 from navigator.views.project_views import ProjectDetailsView
-from navigator.views.scriptview import TableExportMixin
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectFormView, ProjectDetailView, ProjectActionRedirectView
-from amcat.models import Codebook
-from amcat.forms import widgets
+from navigator.views.scriptview import TableExportMixin
 
 
 class CodebookListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, ListView):

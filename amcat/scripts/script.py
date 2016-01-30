@@ -28,11 +28,15 @@ a command line script.
 
 from django import forms
 from django.http import QueryDict, HttpResponse
-from django.utils.datastructures import MergeDict
 from amcat.forms import validate
 from amcat.models.plugin import Plugin, PluginType
 from amcat.tools.progress import ProgressMonitor
 
+try:
+    from django.utils.datastructures import MergeDict
+except ImportError:
+    # Removed in Django 1.9
+    MergeDict = dict
 
 class Script(object):
     """

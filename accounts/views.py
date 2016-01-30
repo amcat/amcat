@@ -28,7 +28,7 @@ def _redirect_login(request):
     """
     Redirect a successful login
     """
-    next1 = request.REQUEST.get("next")
+    next1 = request.GET.get("next")
     if next1 is not None:
         return redirect(next1)
 
