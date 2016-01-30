@@ -23,22 +23,21 @@ Useful functions for dealing with django (models)x
 
 from __future__ import unicode_literals, print_function, absolute_import
 
-from datetime import datetime
 import collections
-from itertools import chain
+import json
 import re
 import time
-import json
 import urllib
-from django.db.models import sql
-
-from django.http import QueryDict
-
-from django.db.models.fields.related import ForeignKey, OneToOneField, ManyToManyField
-from django.db import models, connection
-from django.db import connections
+import django
 from contextlib import contextmanager
+from datetime import datetime
+
 from django.conf import settings
+from django.db import connections
+from django.db import models, connection
+from django.db.models import sql
+from django.db.models.fields.related import ForeignKey, OneToOneField, ManyToManyField
+from django.http import QueryDict
 
 from amcat.tools.table.table3 import ObjectTable, SortedTable
 
@@ -94,8 +93,14 @@ def bulk_insert_returning_ids(new_objects, fields=None):
         model = new_objects[0].__class__
         query = sql.InsertQuery(model)
         query.insert_values(model._meta.fields[1:], new_objects)
+
+        if django.VERSION[:3] < (1, 9, 0):
+            pk = "{pk.db_column} AS {pk.name}".format(pk=model._meta.pk)
+        else:
+            pk = model._meta.pk.db_column
+
         raw_sql, params = query.sql_with_params()[0]
-        fields = ", ".join([model._meta.pk.db_column] + (fields if fields else []))
+        fields = ", ".join([pk] + (fields if fields else []))
         new_objects = list(model.objects.raw("{raw_sql} RETURNING {fields}".format(**locals()), params))
     else:
         # Do naive O(n) approach
