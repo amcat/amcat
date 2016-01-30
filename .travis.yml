@@ -28,16 +28,16 @@ install:
  - sudo service rabbitmq-server start
 
  # Elasticsearch
- - wget --no-check-certificate https://hmbastiaan.nl/martijn/amcat/hitcount.jar
- - wget --no-check-certificate https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.4.3.tar.gz -O - | tar xvz
- - cd elasticsearch-1*
- - bin/plugin -install elasticsearch/elasticsearch-lang-python/2.4.1
- - bin/plugin -install elasticsearch/elasticsearch-analysis-icu/2.4.2
- - bin/plugin -install mobz/elasticsearch-head
- # I'm absolutely, thorougly annoyed by the syntax below.
- - "tee -a ./config/elasticsearch.yml <<< 'script.disable_dynamic: false'"
- - cd ..
- - ES_CLASSPATH=hitcount.jar elasticsearch-1*/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider -d
+ - wget --no-check-certificate https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/deb/elasticsearch/2.1.1/elasticsearch-2.1.1.deb
+ - sudo dpkg -i elasticsearch-2.1.1.deb
+ - sudo /usr/share/elasticsearch/bin/plugin install mobz/elasticsearch-head
+ - sudo /usr/share/elasticsearch/bin/plugin install analysis-icu
+ - sudo /usr/share/elasticsearch/bin/plugin install amcat/hitcount
+ - "sudo tee -a /etc/elasticsearch/elasticsearch.yml <<< 'index.similarity.default.type: hitcountsimilarity'"
+ - "sudo tee -a /etc/elasticsearch/elasticsearch.yml <<< 'script.inline: on'"
+ - "sudo tee -a /etc/elasticsearch/elasticsearch.yml <<< 'script.update: on'"
+ - sudo service elasticsearch stop
+ - sudo service elasticsearch start
  - pip install -r requirements.txt
  - pip install coverage coveralls
  - celery -A amcat.amcatcelery worker -l DEBUG -Q amcat &
