@@ -14,7 +14,6 @@ Most of the (python) prerequisites for AmCAT are automatically installed using p
 
 ```sh
 sudo apt-get install antiword unrtf rabbitmq-server python-pip postgresql postgresql-contrib python-virtualenv git
-sudo apt-get build-dep python-psycopg2 python-lxml
 ```
 
 If you want to compile lxml and psycopg2 yourself (through pip), you need to install:
