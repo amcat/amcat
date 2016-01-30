@@ -550,7 +550,14 @@ define([
     };
     self.change_articlesets_clicked = function(event){
         event.preventDefault();
+
+        $("#change-articlesets-select").change(function(){
+            var noneSelected = $(this).find('option:selected').length === 0;
+            $("#change-articlesets-confirm").toggleClass('disabled', noneSelected);
+        });
+
         $("#change-articlesets-query-dialog").modal();
+
     };
 
     self.change_articlesets_confirmed_clicked = function(){
