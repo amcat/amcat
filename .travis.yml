@@ -1,6 +1,10 @@
+sudo: required
+dist: trusty
 language: python
 python:
   - "2.7"
+jvm:
+  - "oraclejdk8"
 
 services:
  - postgresql
