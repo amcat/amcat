@@ -33,3 +33,4 @@ django-celery
 amqplib
 pygments
 lxml
+django-extensions
