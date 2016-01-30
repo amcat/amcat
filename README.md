@@ -17,6 +17,18 @@ sudo apt-get install antiword unrtf rabbitmq-server python-pip postgresql postgr
 sudo apt-get build-dep python-psycopg2 python-lxml
 ```
 
+If you want to compile lxml and psycopg2 yourself (through pip), you need to install:
+
+```sh
+sudo apt-get build-dep python-psycopg2 python-lxml
+```
+
+You can avoid compiling libraries by installing some dependencies through apt:
+
+```sh
+sudo apt-get install python-lxml python-amqplib python-psycopg2 python-requests python-pygments
+```
+
 It is probably best to install AmCAT in a virtual environment. Run the following commands to setup and activate a virtual environment for AmCAT: (on ubuntu)
 
 ```sh
