@@ -46,7 +46,7 @@ API_KEYWORD_MAP = {
 class ArticleListActionForm(QueryActionForm):
     columns = forms.MultipleChoiceField(
         choices=(
-            ("Calculated", (("hits", "hits"), ("kwic", "kwic"))),
+            ("Calculated", (("hits", "# hits per keyword"), ("kwic", "keyword in context"))),
             ("Properties", [(f, f) for f in COLUMNS])
         ),
         initial=("id", "date", "mediumid", "medium", "headline")
