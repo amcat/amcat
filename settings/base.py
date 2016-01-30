@@ -206,11 +206,18 @@ INSTALLED_APPS = [
     'navigator',
     'api',
     'amcat',
-    'django_extensions',
     'method_override',
     'markdown_deux',
     'djcelery'
 ]
+
+try:
+    import django_extensions
+except ImportError:
+    print("Django extensions not found, not adding to INSTALLED_APPS")
+else:
+    INSTALLED_APPS += "django_extensions"
+
 
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
 
