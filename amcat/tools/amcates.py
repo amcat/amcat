@@ -270,9 +270,8 @@ class ES(object):
         self.index = settings.ES_INDEX if index is None else index
         self.doc_type = settings.ES_ARTICLE_DOCTYPE if doc_type is None else doc_type
 
-        # Account for parallel testing (Django 1.9+)
-        if self.index.endswith("__unittest"):
-            self.index += str(os.getpid())
+        if settings.TESTING:
+            self.index += "_{pid}".format(pid=os.getpid())
 
     def flush(self):
         self.es.indices.flush()

@@ -29,25 +29,25 @@ functions create_test_* create test objects for use in unit tests
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
+
+import datetime
+import logging
 import os
+import unittest
 from contextlib import contextmanager
 from functools import wraps
-import datetime
-from uuid import uuid4
 from urlparse import urljoin
-from django.contrib.staticfiles.testing import StaticLiveServerTestCase
-from django.db import connections
-from django.test.runner import DiscoverRunner
+from uuid import uuid4
 
-from django.test import TestCase, LiveServerTestCase
-import unittest
-import logging;
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+from django.test import TestCase
 from splinter import Browser
+
+from amcat.tools.amcates import ES
 from amcat.tools.toolkit import read_date
 
 log = logging.getLogger(__name__)
 
-from django.conf import settings
 
 # use unique ids for different model objects to avoid false negatives
 ID = 1000000000
@@ -286,6 +286,13 @@ def create_test_plugin(**kargs):
 class AmCATTestCase(TestCase):
     fixtures = ['_initial_data.json',]
 
+    @classmethod
+    def setUpClass(cls):
+        ES().check_index()
+        ES().flush()
+        super(AmCATTestCase, cls).setUpClass()
+
+
     @contextmanager
     def checkMaxQueries(self, n=0, action="Query", **outputargs):
         """Check that the action took at most n queries (which should be collected in seq)"""
@@ -299,12 +306,6 @@ class AmCATTestCase(TestCase):
             for i, q in enumerate(l):
                 msg += "\n({}) {}".format(i+1, q["sql"])
             self.fail(msg)
-
-    @classmethod
-    def tearDownClass(cls):
-        if settings.ES_INDEX.endswith("__unittest"):
-            settings.ES_INDEX = settings.ES_INDEX[:-len("__unittest")]
-        super(AmCATTestCase, cls).tearDownClass()
 
 class AmCATLiveServerTestCase(StaticLiveServerTestCase):
     fixtures = ['_initial_data.json',]
@@ -354,13 +355,10 @@ def use_elastic(func):
     """
     Decorate a test function to make sure that:
     - The ElasticSearch server can be reached (skips otherwise)
-    - The '__unittest' index exists and is empty
     """
     @wraps(func)
     def inner(*args, **kargs):
         from amcat.tools.amcates import ES
-        if not settings.ES_INDEX.endswith("__unittest"):
-            settings.ES_INDEX += "__unittest"
         es = ES()
         if not es.es.ping():
             raise unittest.SkipTest("ES not enabled")

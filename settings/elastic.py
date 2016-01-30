@@ -21,12 +21,19 @@
 Configuration options to change how AmCAT uses elastic
 """
 import os
+import sys
+
+TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 
 # Host/port on which elastic can be reached:
 ES_HOST = os.environ.get("AMCAT_ES_HOST", 'localhost')
 ES_PORT = os.environ.get("AMCAT_ES_PORT", 9200)
 
-ES_INDEX = os.environ.get('AMCAT_ES_INDEX', 'amcat')
+# Emulate Django behaviour by prepending index name with 'test_' if running
+ES_TEST_INDEX = "test_amcat"
+ES_PROD_INDEX = "amcat"
+
+ES_INDEX = os.environ.get('AMCAT_ES_INDEX', ES_TEST_INDEX if TESTING else ES_PROD_INDEX)
 ES_ARTICLE_DOCTYPE = 'article'
 
 ES_MAPPING_STRING_OPTIONS = {
