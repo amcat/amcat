@@ -789,7 +789,7 @@ define([
     self.show_jqXHR_error = function(jqXHR, error){
         self.show_error(
             "Unknown error. Server replied with status code " +
-            jqXHR.status + ": " + error
+            jqXHR.status + ": " + error + ". Full error: \n" + jqXHR.responseText
         );
 
     };
