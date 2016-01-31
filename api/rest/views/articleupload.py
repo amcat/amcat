@@ -31,10 +31,6 @@ from api.rest.serializer import AmCATProjectModelSerializer
 from api.rest.viewsets.article import MediumField
 
 class ArticleListUploadSerializer(serializers.ListSerializer):
-    def to_representation(self, data):
-        result = serializers.ListSerializer.to_representation(self, data)
-        return list(itertools.chain(*result))
-    
 
     def create(self, validated_data):
         #print validated_data

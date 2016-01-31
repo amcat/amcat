@@ -158,7 +158,7 @@ def create_test_medium(**kargs):
     if "name" not in kargs: kargs["name"] = "Medium_%i" % kargs["id"]
     return Medium.objects.create(**kargs)
 
-def create_test_article(create=True, articleset=None, **kargs):
+def create_test_article(create=True, articleset=None, deduplicate=True, **kargs):
     """Create a test article"""
     from amcat.models.article import Article
 
@@ -173,7 +173,7 @@ def create_test_article(create=True, articleset=None, **kargs):
 
     a = Article(**kargs)
     if create:
-        Article.create_articles([a], articleset)
+        Article.create_articles([a], articleset, deduplicate=deduplicate)
     return a
 
 def create_test_sentence(**kargs):

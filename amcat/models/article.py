@@ -244,7 +244,7 @@ class Article(AmcatModel):
                 yield aid
 
     @classmethod
-    def create_articles(cls, articles, articleset=None, articlesets=None,
+    def create_articles(cls, articles, articleset=None, articlesets=None, deduplicate=True,
                         monitor=ProgressMonitor()):
         """
         Add the given articles to the database, the index, and the given set
@@ -257,7 +257,7 @@ class Article(AmcatModel):
         @param articleset(s): articleset object(s), specify either or none
         """
         _check_index(articles)
-        cls._create_articles_per_layer(articles)
+        cls._create_articles_per_layer(articles, deduplicate=deduplicate)
         if articlesets is None:
             articlesets = [articleset] if articleset else []
         es = amcates.ES()
@@ -279,7 +279,7 @@ class Article(AmcatModel):
                 aset.add_articles(dupes, add_to_index=True)
             
     @classmethod
-    def _create_articles_per_layer(cls, articles):
+    def _create_articles_per_layer(cls, articles, deduplicate=True):
         """Call _do_create_articles for each layer of the .parent tree"""
         while articles:
             to_save, todo = [], []
@@ -296,11 +296,11 @@ class Article(AmcatModel):
                     todo.append(a)
             if not to_save:
                 raise ValueError("Parent cycle")
-            cls._do_create_articles(to_save)
+            cls._do_create_articles(to_save, deduplicate=deduplicate)
             articles = todo
     
     @classmethod
-    def _do_create_articles(cls, articles):
+    def _do_create_articles(cls, articles, deduplicate=True):
         """Check duplicates and save the articles to db.
         Does *not* save to elastic or add to articlesets
         Assumes that if .parent is given, it has an id
@@ -308,7 +308,7 @@ class Article(AmcatModel):
         modifies all articles in place with .hash and either .duplicate or .id and .uuid
         """
         es = amcates.ES()
-        dupe_values = {'uuid': {}, 'hash': {}}
+        dupe_values = {'uuid': {}, 'hash': {}} if deduplicate else {}
         # Iterate over articles, remove duplicates within addendum and build dupe values dictionary 
         for a in articles:
             if a.id:
