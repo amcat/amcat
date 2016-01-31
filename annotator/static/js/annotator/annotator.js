@@ -90,6 +90,8 @@ define([
 
 
     /******** STATE & CONSTANTS *******/
+    self.PING_INTERVAL = null;
+
     self.API_URL = "/api/v4/";
     self.API_PAGE_SIZE = 999999;
 
@@ -151,6 +153,8 @@ define([
     self.SCROLL_TIMEOUT = 100;
     self.scroll_timeout = null;
     self.last_scroll = null;
+
+    self.offline = false;
 
     /* Containers & dialogs. These can only be set if DOM is ready. */
     self.initialise_containers = function initialise_containers(){
@@ -1502,6 +1506,38 @@ define([
             self.scroll_timeout = setTimeout(self.stopped_scrolling.bind(e), self.SCROLL_TIMEOUT);
         }
     };
+
+    self.ping = function(){
+        $.get("/", function(data, textStatus, jqXHR){
+            var ping_test_pos = data.indexOf("nKLTZ56t Annotator Ping Test wf6tw6Mb");
+            var offline = ping_test_pos !== -1;
+
+            if(offline){
+                self.show_message(
+                    "You're currently not logged in.",
+                    "You've probably logged out in another tab of your browser. Please login again " +
+                        "on a different tab. After having logged in, this message will remove itself " +
+                        "within a few seconds."
+                );
+
+                if (!self.offline){
+                    self.initialise_ping(3000);
+                }
+
+                self.offline = true;
+            } else if (self.offline) {
+                self.hide_message();
+                self.offline = false;
+            }
+        });
+
+    };
+
+    self.initialise_ping = function(interval){
+        interval = (interval === undefined) ? 15000 : interval;
+        if (self.PING_INTERVAL !== null) clearInterval(self.PING_INTERVAL);
+        self.PING_INTERVAL = setInterval(self.ping, interval);
+    };
     
     self.initialise = function initialise(project_id, codingjob_id, coder_id, language_id){
         $("#lost-codes").hide();
@@ -1544,6 +1580,10 @@ define([
 
         window.onbeforeunload = self.on_unload;
         $(window).on("scroll", self.on_scroll);
+
+        // Check if we're still logged in, each 10 seconds
+        self.initialise_ping();
+
     };
 
     return self;
