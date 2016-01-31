@@ -57,7 +57,7 @@ def _get_next_id():
 
 def skip_slow_tests():
     """Should we skip the slow tests, e.g. Solr, Alpino etc"""
-    return os.environ.get('DJANGO_SKIP_SLOW_TESTS') in ("1","Y", "ON")
+    return os.environ.get('AMCAT_SKIP_SLOW_TESTS') in ("1","Y", "ON")
 
 def create_test_query(**kargs):
     from amcat.models import Query
@@ -321,7 +321,7 @@ class AmCATLiveServerTestCase(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super(AmCATLiveServerTestCase, cls).setUpClass()
-        cls.browser = Browser(driver_name=os.environ.get("DJANGO_WEBDRIVER", "firefox"))
+        cls.browser = Browser(driver_name=os.environ.get("AMCAT_WEBDRIVER", "firefox"))
 
     def setUp(self):
         self.browser.visit(self.live_server_url)
