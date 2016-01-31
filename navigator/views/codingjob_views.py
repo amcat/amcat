@@ -58,12 +58,12 @@ class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin,
 
     @property
     def what(self):
-        return self.kwargs.get("what", "favourites")
+        return self.kwargs.get("what", "active")
 
     @classmethod
     def get_url_patterns(cls):
         patterns = list(super(CodingJobListView, cls).get_url_patterns())
-        patterns.append(patterns[0][:-1] + "(?P<what>|favourites|archived)?/?$")
+        patterns.append(patterns[0][:-1] + "(?P<what>|active|archived)?/?$")
         return patterns
 
     def get_datatable(self, **kwargs):
@@ -71,7 +71,7 @@ class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin,
         return super(CodingJobListView, self).get_datatable(url_kwargs=url_kwargs, **kwargs)
 
     def filter_table(self, table):
-        table = table.filter(archived=(self.what != "favourites"))
+        table = table.filter(archived=(self.what != "active"))
         return table.hide("project", "articleset", "favourite")
 
     def get_datatable_kwargs(self):
@@ -85,7 +85,7 @@ class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin,
         if added:
             added = [CodingJob.objects.get(pk=i) for i in added]
         what = self.what
-        favaction = "unsetfav" if what == 'favourites' else "setfav"
+        favaction = "unsetfav" if what == 'active' else "setfav"
         ctx.update(**locals())
         return ctx
 
@@ -162,7 +162,7 @@ class CodingJobExportSelectView(ProjectFormView):
         kwargs.update(project=self.project)
 
         if "data" in kwargs and "codingjobs" not in kwargs["data"]:
-            archived = kwargs['data']['what'] != 'favourites'
+            archived = kwargs['data']['what'] != 'active'
             all_jobs = self.project.codingjob_set.filter(archived=archived).values_list("id", flat=True)
             kwargs["data"] = kwargs["data"].copy()
             kwargs["data"].setlist("codingjobs", all_jobs)

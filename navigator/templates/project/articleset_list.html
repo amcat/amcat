@@ -44,7 +44,7 @@
         <div class="alert alert-success">Successfully unlinked an articleset.</div>
     {% endif %}
     <ul class="nav nav-tabs nav-justified" style="margin-bottom: 1em">
-        <li {% if what == 'favourites' %}class="active"{% endif %}><a href='{% url "navigator:articleset-list" project.id "favourites"%}'>
+        <li {% if what == 'active' %}class="active"{% endif %}><a href='{% url "navigator:articleset-list" project.id "active"%}'>
             <i class="glyphicon glyphicon-star"></i>Active Sets
         </a></li>
         <li {% if what == 'archived' %}class="active"{% endif %}><a  href='{% url "navigator:articleset-list" project.id "archived"%}'>Archived Sets</a></li>
@@ -61,7 +61,7 @@
             project, or navigate to an articleset in another project and select
             'use in another project' to link that set to this project.
         </div>
-    {% elif no_favourites %}
+    {% elif no_active %}
         <div class="alert alert-info">
             No active sets? Use the 'activate set' button to add sets to the favourite list!
         </div>

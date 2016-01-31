@@ -77,12 +77,12 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
     @classmethod
     def get_url_patterns(cls):
         patterns = list(super(ArticleSetListView, cls).get_url_patterns())
-        patterns.append(patterns[0][:-1] + "(?P<what>|favourites|archived|coding)?/?$")
+        patterns.append(patterns[0][:-1] + "(?P<what>|active|archived|coding)?/?$")
         return patterns
 
     @property
     def what(self):
-        default = "favourites" if self.project.favourite_articlesets.exists() else "archived"
+        default = "active" if self.project.favourite_articlesets.exists() else "archived"
         return self.kwargs.get("what", default)
 
     def get_context_data(self, **kwargs):
@@ -97,14 +97,14 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
                                          | Q(project=self.project)).exists():
             no_sets = True
         if not self.project.favourite_articlesets.exists():
-            no_favourites = True
-        favaction = "unsetfav" if what == 'favourites' else "setfav"
+            no_active = True
+        favaction = "unsetfav" if what == 'active' else "setfav"
 
         context.update(locals())
         return context
 
     def get_resource(self):
-        if self.what == "favourites":
+        if self.what == "active":
             return FavouriteArticleSetViewSet
         elif self.what == "coding":
             return CodingjobArticleSetViewSet

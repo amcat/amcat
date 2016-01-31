@@ -59,8 +59,8 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super(ProjectListView, self).get_context_data(**kwargs)
-        context["what"] = self.kwargs.get('what', 'favourites')
-        context["favaction"] = "unsetfav" if context['what'] == 'favourites' else "setfav"
+        context["what"] = self.kwargs.get('what', 'active')
+        context["favaction"] = "unsetfav" if context['what'] == 'active' else "setfav"
         context["main_active"] = 'Projects'
         return context
 
@@ -69,7 +69,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
 
     def filter_table(self, table):
         table = table.rowlink_reverse('navigator:articleset-list', args=['{id}'])
-        what = self.kwargs.get('what', 'favourites')
+        what = self.kwargs.get('what', 'active')
         if what == 'all':
             return table
 
@@ -78,7 +78,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
         table = table.hide('favourite', 'active')
         favids = self.request.user.userprofile.favourite_projects.all()
         favids = favids.values_list("id", flat=True)
-        if what == 'favourites':
+        if what == 'active':
             ids = favids
         else:
             ids = Project.objects.filter(projectrole__user=self.request.user).exclude(pk__in=favids)

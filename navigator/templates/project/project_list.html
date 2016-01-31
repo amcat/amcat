@@ -26,7 +26,7 @@
 
 
 <ul class="nav nav-tabs nav-justified" style="margin-bottom: 1em">
-  <li {% if what == 'favourites' %}class="active"{% endif %}><a href='{% url "navigator:projects" "favourites"%}'>
+  <li {% if what == 'active' %}class="active"{% endif %}><a href='{% url "navigator:projects" "active"%}'>
     <i class="glyphicon glyphicon-star"></i>Active Projects
   </a></li>
   <li {% if what == 'own' %}class="active"{% endif %}><a  href='{% url "navigator:projects" "own"%}'>My Archived Projects</a></li>

@@ -82,7 +82,7 @@
 
 
 <ul class="nav nav-tabs nav-justified" style="margin-bottom: 1em">
-  <li {% if what == 'favourites' %}class="active"{% endif %}><a href='{% url "navigator:codingjob-list" project.id "favourites"%}'>
+  <li {% if what == 'active' %}class="active"{% endif %}><a href='{% url "navigator:codingjob-list" project.id "active"%}'>
     <i class="glyphicon glyphicon-star"></i>Active Jobs
   </a></li>
   <li {% if what == 'archived' %}class="active"{% endif %}><a  href='{% url "navigator:codingjob-list" project.id "archived"%}'>Archived Jobs</a></li>
