@@ -16,38 +16,34 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from __future__ import unicode_literals
+
+import datetime
+import json
+
 from django import forms
 from django.core.exceptions import PermissionDenied
-
-import json
-import datetime
-
 from django.core.urlresolvers import reverse
 from django.db.models import Q
-from amcat.scripts.actions.deduplicate import Deduplicate
-from amcat.tools.amcates import ES
-from api.rest.resources import PluginResource
+from django.forms.widgets import HiddenInput
+from django.views.generic.detail import DetailView
+from django.views.generic.edit import CreateView
+from django.views.generic.list import ListView
 
 from amcat.models import Plugin, Article
+from amcat.models import Project, ArticleSet
 from amcat.models.project import LITTER_PROJECT_ID
-
-from amcat.scripts.actions.sample_articleset import SampleSet
 from amcat.scripts.actions.deduplicate_set import DeduplicateSet
 from amcat.scripts.actions.import_articleset import ImportSet
+from amcat.scripts.actions.sample_articleset import SampleSet
+from amcat.tools.amcates import ES
+from api.rest.resources import PluginResource
+from api.rest.resources import SearchResource
 from api.rest.viewsets import FavouriteArticleSetViewSet, ArticleSetViewSet, CodingjobArticleSetViewSet
-
+from navigator.views.datatableview import DatatableMixin
+from navigator.views.project_views import ProjectDetailsView
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectActionRedirectView, ProjectEditView
 from navigator.views.scriptview import ScriptHandler
-
-from navigator.views.datatableview import DatatableMixin
-from amcat.models import Project, ArticleSet
-from api.rest.resources import SearchResource
-from django.views.generic.detail import DetailView
-from django.views.generic.list import ListView
-from django.views.generic.edit import CreateView
-from django.forms.widgets import HiddenInput
-
-from navigator.views.project_views import ProjectDetailsView
 UPLOAD_PLUGIN_TYPE = 1
 
 from django.utils.safestring import SafeText
@@ -262,10 +258,12 @@ class ArticleSetSampleView(ProjectScriptView):
 
     def success_message(self, result=None):
         old = ArticleSet.objects.get(pk=self.kwargs['articleset'])
-        return SafeText("Created sample set {newname} as shown below. "
-                        "<a href='{oldurl}'>Return to original set {old.id} : {oldname}</a>"
-                        .format(newname=escape(self.result.name), oldurl=reverse('navigator:articleset-details', kwargs=self.kwargs),
-                                oldname=escape(old.name), **locals()))
+        old_name = escape(old.name)
+        new_name = escape(self.result.name)
+        old_url = reverse('navigator:articleset-details', kwargs=self.kwargs)
+        return SafeText("""Created sample set {new_name} as shown below.
+                            <a href='{old_url}'>Return to original set {old.id}: {old_name}</a>"""
+                            .format(**locals()))
 
 class ArticleSetDeduplicateView(ProjectScriptView):
     parent = ArticleSetDetailsView
