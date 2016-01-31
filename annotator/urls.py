@@ -25,11 +25,11 @@ article_patterns = patterns('',
 )
 
 codingjob_patterns = patterns('',
-                              url('^$', codingjob.index, name="annotator-codingjob"),
-                              url(r'^codedarticle/(?P<coded_article_id>\d+)/', include(article_patterns)),
+    url('^$', codingjob.index, name="annotator-codingjob"),
+    url(r'^codedarticle/(?P<coded_article_id>\d+)/', include(article_patterns)),
 )
 
 urlpatterns = patterns('',
     url(r"^codingjob/(?P<codingjob_id>\d+)$", codingjob.redirect, name="annotator-codingjob"),
-    url(r"projects/(?P<project_id>\d+)/codingjobs/(?P<codingjob_id>\d+)/code", include(codingjob_patterns)),
+    url(r"projects/(?P<project_id>\d+)/codingjobs/(?P<codingjob_id>\d+)/", include(codingjob_patterns)),
 )
