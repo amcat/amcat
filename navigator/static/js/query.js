@@ -126,21 +126,6 @@ define([
     };
 
 
-    /**
-     * Massages given data into a format easily parseable by renderers.
-     */
-    self.prepare_data = function(data){
-        // 'Total' is actually a 1D aggregation; we're fitting the data below to
-        // look like it is a 2D aggregation.
-        if (form_data["y_axis"] === "total"){
-            data = $.map(data, function(values){
-                return [[values[0], [["Total", values[1]]]]]
-            })
-        }
-
-        return data;
-    };
-
     self.get_accepted_mimetypes = function(){
         return $.map(renderers, function(_, mimetype){ return mimetype; });
     };
@@ -771,7 +756,7 @@ define([
             if(renderer === undefined){
                 self.show_error("Server replied with unknown datatype: " + contentType);
             } else {
-                renderer(form_data, body, self.prepare_data(data));
+                renderer(form_data, body, data);
             }
             self.render_complete(body);
             result.attr("class", window.location.hash.slice(1));
