@@ -606,6 +606,11 @@ define([
         "aggregation": function(){
             $("#id_value1").closest(".row").hide();
             $("#id_value2").closest(".row").hide();
+        },
+        "codingaggregation": function(){
+            $("#id_primary_use_codebook").closest(".row").before($("<hr>"));
+            $("#id_secondary_use_codebook").closest(".row").before($("<hr>"));
+            $("#id_value1").closest(".row").before($("<hr>"));
         }
     };
 

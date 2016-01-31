@@ -37,6 +37,25 @@ class TestMediumCategory(TestCase):
 
         self.assertRaises(DuplicateLabelError, MediumCategory, codebook=codebook)
 
+    def test_create_missing(self):
+        codebook, codes = amcattest.create_test_codebook_with_codes()
+        Medium.objects.bulk_create(Medium(name=l) for l in codes)
+
+        # Should raise no error..
+        MediumCategory(codebook=codebook)
+
+        # Delete one medium, so one reference doesn't exist
+        medium = Medium.objects.all()[0]
+        medium.delete()
+        self.assertRaises(Medium.DoesNotExist, Medium.objects.get, id=medium.id)
+        self.assertRaises(Medium.DoesNotExist, Medium.objects.get, name=medium.name)
+
+        # Medium should exist again after instantiating MediumCategory
+        MediumCategory(codebook=codebook, create_missing=True)
+        self.assertRaises(Medium.DoesNotExist, Medium.objects.get, id=medium.id)
+        self.assertEqual(1, Medium.objects.filter(name=medium.name).count())
+
+
     def test_invalid_reference(self):
         codebook, codes = amcattest.create_test_codebook_with_codes()
         Medium.objects.bulk_create(Medium(name=l) for l in codes)

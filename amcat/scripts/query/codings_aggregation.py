@@ -23,7 +23,7 @@ import re
 from itertools import chain
 
 from django.core.exceptions import ValidationError
-from django.forms import ChoiceField, BooleanField
+from django.forms import ChoiceField, BooleanField, ModelChoiceField
 
 from aggregation import AggregationEncoder, aggregation_to_matrix, aggregation_to_csv
 from amcat.models import CodedArticle
@@ -75,15 +75,16 @@ def get_value_fields(fields):
 
 
 class CodingAggregationActionForm(QueryActionForm):
-    primary_use_codebook = BooleanField(initial=False, required=False)
-    primary = ChoiceField(label="Primary aggregation", choices=AGGREGATION_FIELDS)
-    secondary_use_codebook = BooleanField(initial=False, required=False)
-    secondary = ChoiceField(label="Secondary aggregation", choices=(("", "------"),) + AGGREGATION_FIELDS, required=False)
+    primary_use_codebook = BooleanField(initial=False, required=False, label="Group codings using codebook")
+    primary_group_mediums = ModelChoiceField(queryset=Medium.objects.all(), label="Group mediums using", required=False)
+    primary = ChoiceField(choices=AGGREGATION_FIELDS, label="Aggregate on (primary)")
+
+    secondary_use_codebook = BooleanField(initial=False, required=False, label="Group codings using codebook")
+    secondary_group_mediums = ModelChoiceField(queryset=Medium.objects.all(), label="Group mediums using", required=False)
+    secondary = ChoiceField(choices=(("", "------"),) + AGGREGATION_FIELDS, required=False, label="Aggregate on (secondary)")
 
     value1 = ChoiceField(label="First value", initial="count(articles)")
     value2 = ChoiceField(label="Second value", required=False, initial="")
-
-    #relative_to = CharField(widget=Select, required=False)
 
     def __init__(self, *args, **kwargs):
         super(CodingAggregationActionForm, self).__init__(*args, **kwargs)
@@ -99,6 +100,10 @@ class CodingAggregationActionForm(QueryActionForm):
         self.fields["primary"].choices += schema_choices
         self.fields["secondary"].choices += schema_choices
 
+        project_codebooks = self.project.get_codebooks()
+        self.fields["primary_group_mediums"].queryset = project_codebooks
+        self.fields["secondary_group_mediums"].queryset = project_codebooks
+
     def _clean_aggregation(self, field_name, prefix=None):
         field_value = self.cleaned_data[field_name]
 
@@ -109,7 +114,8 @@ class CodingAggregationActionForm(QueryActionForm):
             return aggregate_orm.IntervalCategory(field_value, prefix=prefix)
 
         if field_value == "medium":
-            return aggregate_orm.MediumCategory(prefix=prefix)
+            codebook = self.cleaned_data["{}_group_mediums".format(field_name)]
+            return aggregate_orm.MediumCategory(prefix=prefix, codebook=codebook, create_missing=True)
 
         if field_value == "articleset":
             return aggregate_orm.ArticleSetCategory(prefix=prefix)

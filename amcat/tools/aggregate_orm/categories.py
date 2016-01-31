@@ -18,6 +18,8 @@
 ###########################################################################
 from __future__ import unicode_literals
 
+import logging
+
 from collections import OrderedDict, defaultdict
 from operator import itemgetter
 
@@ -25,6 +27,8 @@ from django.db.models import Q
 
 from amcat.models import Medium, ArticleSet, Code
 from amcat.tools.aggregate_orm.sqlobj import SQLObject, JOINS
+
+log = logging.getLogger(__name__)
 
 POSTGRES_DATE_TRUNC_VALUES = [
     "microseconds",
@@ -130,7 +134,7 @@ class MediumCategory(ModelCategory):
     model = Medium
     joins_needed = ("codings", "coded_articles", "articles")
 
-    def __init__(self, prefix=None, codebook=None):
+    def __init__(self, prefix=None, codebook=None, create_missing=False):
         """
         Mediums can be aggregated using a codebook of the form:
 
@@ -166,10 +170,21 @@ class MediumCategory(ModelCategory):
             for label in labels:
                 qfilter |= Q(name__iexact=label)
             mediums = Medium.objects.filter(qfilter)
+
             if mediums.distinct("id").count() != len(labels):
                 real_labels = set(mediums.values_list("name", flat=True))
-                error_message = "Some labels in {} did not refer to mediums: {}"
-                raise InvalidReferenceError(error_message.format(self.codebook, set(labels) - real_labels))
+                missing_labels = set(labels) - real_labels
+
+                error_message = "Some labels in {} did not refer to mediums: {}. Creating them.."
+                error_message = error_message.format(self.codebook, missing_labels)
+
+                if create_missing:
+                    log.info(error_message)
+                    new_mediums = (Medium(name=label) for label in missing_labels)
+                    Medium.objects.bulk_create(new_mediums)
+                    mediums = Medium.objects.filter(qfilter)
+                else:
+                    raise InvalidReferenceError(error_message)
 
             # Determine code -> code mapping
             root_map = {}
