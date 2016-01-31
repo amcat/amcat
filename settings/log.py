@@ -68,7 +68,7 @@ LOGGING = {
                             'level': 'WARN',
         },
         '': {
-            'handlers': ['console'],
+            'handlers': [],
             'level': LOG_LEVEL,
         },
     }
@@ -102,3 +102,5 @@ if 'DJANGO_LOG_FILE' in os.environ:
     LOGGING['loggers']['']['handlers'] += ['logfile']
 
 
+if os.environ.get('DJANGO_LOG_TO_CONSOLE', 'Y') in ("1", "Y", "ON"):
+    LOGGING['loggers']['']['handlers'] += ['console']
