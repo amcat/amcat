@@ -9,7 +9,6 @@ requirejs.config({
         "jquery": "jquery/dist/jquery",
         "jquery.hotkeys": "jquery.hotkeys/jquery.hotkeys",
         "papaparse": "papaparse/papaparse",
-        "highlight": "highlight/build/highlight.pack",
         "highcharts.core": "highcharts/highcharts",
         "highcharts.data": "highcharts/modules/data",
         "highcharts.exporting": "highcharts/modules/exporting",
