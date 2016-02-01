@@ -177,9 +177,11 @@ class SelectionSearch:
         """
 
         """
+        query = self.get_query()
+        lead = not query
         fields = ['headline','text','date', 
                   'length','medium','author','section']
-        articles = ES().query(self.get_query(), self.get_filters(), True, size=size, from_=offset, fields=fields)
+        articles = ES().query(query, self.get_filters(), True, size=size, from_=offset, fields=fields, lead=lead)
         
         return articles
 

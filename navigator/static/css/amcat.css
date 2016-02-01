@@ -53,3 +53,7 @@ article em {
 }
 
 ul.articles li {margin-top: .5em; margin-bottom: .5em; list-style-type: none}
+ul.articles {padding-left: 0px}
+.article-meta {
+    font-size:80%; color: grey;
+}
