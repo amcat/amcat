@@ -124,10 +124,16 @@ cd -
 
 ### Setting up the database
 
-Whichever way you installed AmCAT, you need tocall the syncdb command to populate the database and set the elasticsearch mapping:
+Whichever way you installed AmCAT, you need to call the migrate command to populate the database and set the elasticsearch mapping:
 
 ```sh
-python -m amcat.manage syncdb
+python -m amcat.manage migrate
+```
+
+You can create a superuser by running:
+
+```sh
+python -m amcat.manage createsuperuser
 ```
 
 ### Start AmCAT web server
