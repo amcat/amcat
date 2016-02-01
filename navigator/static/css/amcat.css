@@ -51,3 +51,5 @@ font-size: 14px;
 article em {
     background-color: yellow; font-style:normal;
 }
+
+ul.articles li {margin-top: .5em; margin-bottom: .5em; list-style-type: none}
