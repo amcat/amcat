@@ -11,31 +11,107 @@
 
 </div>
 <div class="jumbotron">
-
-<div class="login_help">
-<h1>Welcome to AmCAT3</h1>
-<p>Please log in or create a new account
-  below. See <a href="http://vanatteveldt.com/amcat">vanatteveldt.com</a>
-  for more information.</p>
+<div class="container">
+<div class="row">
+<div class="col-md-8">
+<h1>AmCAT</h1>
+<p>The Amsterdam Content Analysis Toolkit (AmCAT) is an open source infrastructure that makes it easy to do large-scale automatic and manual content analysis (text analysis) for the social sciences and humanities.</p>
 </div>
-<div class="login_buttons well">
+<div class="col-md-4 login_buttons well">
  <form method="POST" action = "">
  {% csrf_token %}
- <input {% if username %}value="{{username}}"{% endif %} name="username" type="text" class="input-small" placeholder="Username" />
-  <input name="password" type="password" class="input-small" placeholder="Password" />
-  <button type="submit" class="btn">Sign in</button>
+ <div class="form-group"><input {% if username %}value="{{username}}"{% endif %} name="username" type="text" class="form-control" placeholder="Username" /></div>
+  <div class="form-group"><input name="password" type="password" class="form-control" placeholder="Password" /></div>
+  <button type="submit" class="btn btn-block btn-primary">Sign in</button>
  </form>
-
-or <form method="POST" class="">
-    <a href="{% url "accounts-register" %}" class="btn
-    btn-primary">Create a new Account</a>
- </form>
-    <small>If you forgot your username or password use
-           <a href="{% url "accounts-recover" %}">this</a> form.
+    <small>
+           <a href="{% url "accounts-recover" %}">Forgot your username or password?</a>
     </small>
+
+<hr/>
+<form method="POST" class="">
+    <a href="{% url "accounts-register" %}" class="btn btn-block btn-success">Create a new Account</a>
+ </form>
 </p>
 
 
 </div>
+</div>
+</div>
+</div>
+
+<div class="container">
+<p>AmCAT was originally developed by <a href="http://vanatteveldt.com">Wouter van Atteveldt</a> and is currently maintained by him together with Martijn Bastiaan and Christian Stuart. This server is hosted by the <a href="http://vu.nl">VU University Amsterdam</a> and can be used free of charge for small scale projects. AmCAT is completely open source, and you are welcome to <a href="https://github.com/amcat/amcat/blob/master/README.md">to set up your own server</a>. Help improve AmCAT by contributing to the <a href="http://wiki.amcat.nl">documentation</a>, <a href="http://github.com/amcat/amcat/issues">reporting issues</a>, and <a href="http://github.com/amcat/amcat">contribute to the development</a>!
+</div>
+
+<hr />
+
+<div class="container">
+<h1>What is AmCAT?</h1>
+<div class="row">
+<div class="col-md-4">
+<h2>Document Management</h2>
+<p>
+AmCAT is a document management and analysis infrastructure aimed at (e-)humanities and (e-)social science.
+</p>
+</div>
+<div class="col-md-4">
+<h2>Your data</h2>
+<p>
+AmCAT makes it easy to upload, analyse, and sample your data.
+You keep full control over your data, you can share it, keep it closed, and export it when needed.
+</p>
+</div><div class="col-md-4">
+<h2>Powerful analysis</h2>
+<p>
+AmCAT makes it easy to access both
+simple and sophisticated quantitative analyses.
+AmCAT allows power users to directly
+access data and processing actions
+through the REST interface, allowing
+easy integration with e.g. R analyses.
+</p>
+</div>
+</div>
+</div>
+<hr />
+
+<div class="container">
+<h1>Why AmCAT?</h1>
+<div class="row">
+<div class="col-md-4">
+<h2>Open source</h2>
+<p>
+AmCAT is fully open source and published on github. 
+This means that you can inspect the code, 
+suggest improvements, and setup your own server as needed.
+You are never dependent on us for your data or analyses.
+</p>
+</div>
+<div class="col-md-4">
+<h2>Open platform</h2>
+<p>
+AmCAT makes your data available using existing open standards and a public API,
+so you can always get to your data, from your browser or directly from your analysis scripts.
+By using a flexible plugin structure where, AmCAT makes it easy to add your own analyses.
+</p>
+</div><div class="col-md-4">
+<h2>Open for business</h2>
+<p>
+AmCAT has been running for more than 10 years, and is continuously improved.
+It has been used in various national and international research projects,
+and is used in teaching quantitative content analysis to hundreds of undergrad students each year.
+</p>
+</div>
+</div>
+</div>
+<hr />
+
+<div class="container">
+<h3>Curious? Visit the <a href="http://wiki.amcat.nl">wiki</a> for more information, or just create an account and have a look!</h3>
+
+
+</div>
+
 
 {% endblock %}
