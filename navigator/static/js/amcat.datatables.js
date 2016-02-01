@@ -257,8 +257,8 @@ amcat.datatables.truncate_row = function(row, limit){
         txt = $(cell).text();
 	// HACK: treat kwic 'left' context differently, better would be to specify this as an option/class somehow
 
-	th = $('table.datatable').find('th').eq($(cell).index());
-	header = $(th).attr('aria-label');
+	var th = $('table.datatable').find('th').eq($(cell).index());
+	var header = $(th).text();
 
 	if (header == 'left') {
 	    if (txt.length > limit) {
@@ -819,13 +819,13 @@ amcat.datatables.fetched_initial_success = function (data, textStatus, jqXHR) {
     // If the API didn't return a column as valid, remove it from column list
     var cols = [], that = this;
 
-    // ~O(n^3); long hair don't care.
-    $.map(api_columns, function(api_col){
-        $.map(that.datatables_options.aoColumns, function(col){
-            if (col.mData === api_col.mData && $.inArray(col, cols) === -1){
-                cols.push(col);
-            }
-        });
+    var api_column_has_mData = {};
+    api_columns.forEach(function(col){
+        api_column_has_mData[col.mData] = true;
+    });
+
+    cols = this.datatables_options.aoColumns.filter(function(x){
+        return api_column_has_mData[x.mData];
     });
 
     this.datatables_options.aoColumns = cols;

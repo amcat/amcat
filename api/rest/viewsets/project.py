@@ -118,6 +118,13 @@ class ProjectSerializer(AmCATProjectModelSerializer):
     def project_visited_at(self, project):
         return self.project_visited_dates.get(project, "Never")
 
+    def get_fields(self):
+        fields = super(ProjectSerializer, self).get_fields()
+
+        #push last_visited_at on top for better column ordering
+        fields['last_visited_at'] = fields.pop('last_visited_at')
+        return fields
+
     class Meta:
         model = Project
 
