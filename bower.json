@@ -11,7 +11,7 @@
     "jquery-csv": "",
     "jquery.hotkeys": "",
     "bootstrap-datepicker": "",
-    "highcharts": "",
+    "highcharts": "~4.1.9",
     "moment": "",
     "jquery-cookie": "",
     "papaparse": "4.1.0",
@@ -19,7 +19,7 @@
     "renderjson": "",
     "highlight": "",
     "requirejs": "",
-    "amcat-query-js": "git://github.com/amcat/amcat-query-js.git",
+    "amcat-query-js": "git://github.com/amcat/amcat-query-js.git#3.4.x",
     "jshashtable": "git://github.com/timdown/jshashtable.git",
     "uri.js": ""
   },
