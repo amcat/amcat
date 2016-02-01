@@ -13,7 +13,7 @@ Release 3.3: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=relea
 Most of the (python) prerequisites for AmCAT are automatically installed using pip (see below). To install the non-python requirements, you can use the following (on Ubuntu 15.10 or 16.04):
 
 ```sh
-sudo apt-get install antiword unrtf rabbitmq-server python-pip postgresql postgresql-contrib python-virtualenv git
+sudo apt-get install antiword unrtf rabbitmq-server python-pip postgresql postgresql-contrib python-virtualenv git postgresql-server-dev-9.4 python-dev libxml2-dev libxslt-dev
 ```
 
 If you want to compile lxml and psycopg2 yourself (through pip), you need to install:
