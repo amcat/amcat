@@ -26,7 +26,7 @@
                     {
                         data: [
                             {% for medium, count in medium_aggr %}
-                                ["{{ medium.name }}", {{ count }}],
+                                {'name': "{{ medium.name }}", 'y': {{ count }}, 'id': {{ medium.id }} },
                             {% endfor %}
                         ]
                     }
@@ -40,8 +40,7 @@
                         click: function(event){
                             articles_popup = require("query/utils/articlemodal");
                             var filters = {};
-                            filters["medium"] = event.point.series.options.obj;
-                            filters["date"] = event.point.x;
+                            filters["medium"] = event.point;
                             articles_popup().show(form_data, filters);
                         }
                     }

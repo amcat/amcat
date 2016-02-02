@@ -7,7 +7,7 @@
             var sets = form.data("sets");
             form_data = serialize(form, jobs, sets);
             console.log(form_data);
-            form_data["interval"] = "day";
+            form_data["interval"] = "{{ interval }}";
         });
 
 
