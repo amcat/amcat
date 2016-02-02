@@ -339,7 +339,7 @@ def stripAccents(s, usemap=ACCENTS_MAP, latin1=False):
 
 
 def random_alphanum(size=10):
-    return ''.join([random.choice(string.letters + string.digits) for i in range(size)])
+    return ''.join([random.choice(string.ascii_letters + string.digits) for i in range(size)])
 
 
 ###########################################################################

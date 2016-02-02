@@ -223,7 +223,7 @@ def create_user_profile(sender, instance, created, **kwargs):
 post_save.connect(create_user_profile, sender=User, dispatch_uid="create_user_profile")
 
 
-def _random_password(length=8, chars=string.letters + string.digits):
+def _random_password(length=8, chars=string.ascii_letters + string.digits):
     #http://code.activestate.com/recipes/59873/
     return ''.join([random.choice(chars) for i in range(length)])
 
