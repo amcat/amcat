@@ -14,8 +14,8 @@ html2text==2014.7.3
 jdcal==1.2
 kombu==3.0.21
 openpyxl==2.0.4
-pdfminer==20140328
 pyparsing==2.0.2
+pdfminer3k==1.3.0
 PyPDF2==1.22
 python-dateutil==2.2
 sh==1.09
