@@ -38,8 +38,7 @@ $ createdb amcat
 
 AmCAT uses elasticsearch for searching articles. Since we use a custom similarity to provide hit counts instead of relevance, this needs to be installed 'by hand'. You can probably skip this and rely on a pre-packaged elasticsearch if you don't care about hit counts, although you still need to install the elasticsearch plugins.
 
-First, install oracle java (from http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html)
-
+First, install oracle java: 
 ```sh
 $ sudo add-apt-repository ppa:webupd8team/java
 $ sudo apt-get update
