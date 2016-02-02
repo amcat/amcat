@@ -127,7 +127,7 @@ def _get_legacy_hash(article_dict):
         v = article_dict[k]
         if isinstance(v, int):
             c.update(str(v))
-        elif isinstance(v, unicode):
+        elif isinstance(v, str):
             c.update(v.encode('utf-8'))
         elif v is not None:
             c.update(v)
@@ -300,8 +300,8 @@ class ES(object):
             self.es.indices.delete(self.index)
         except NotFoundError:
             pass
-        except Exception, e:
-            if 'IndexMissingException' in unicode(error_msg):
+        except Exception as e:
+            if 'IndexMissingException' in str(error_msg):
                 return
             raise
 
@@ -826,7 +826,7 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
     """
 
     def _list(x, number=True):
-        if isinstance(x, (str, unicode, int)):
+        if isinstance(x, (str, int)):
             return [int(x) if number else x]
         elif hasattr(x, 'pk'):
             return [x.pk]
@@ -835,7 +835,7 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
     def parse_date(d):
         if isinstance(d, list) and len(d) == 1:
             d = d[0]
-        if isinstance(d, (str, unicode)):
+        if isinstance(d, str):
             d = toolkit.readDate(d)
         return d.isoformat()
 
