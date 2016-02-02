@@ -28,7 +28,6 @@ import re
 from collections import namedtuple
 from hashlib import sha224 as hash_class
 from json import dumps as serialize
-from types import NoneType
 
 from django.conf import settings
 from elasticsearch import Elasticsearch, ImproperlyConfigured, NotFoundError
@@ -107,7 +106,7 @@ def get_article_dict(article, sets=None):
     # Previous versions of get_article_dict() accepted strings as dates,
     # which current versions do not accept. Thus, explicitely assert type.
     date = article_dict["date"]
-    assert isinstance(date, (NoneType, datetime.date, datetime.datetime))
+    assert isinstance(date, (datetime.date, datetime.datetime)) or date is None
 
     # We need to convert it to datetime.datetime to get an uniform isoformat() representation.
     if not isinstance(date, datetime.datetime) and isinstance(date, datetime.date):
