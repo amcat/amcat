@@ -6,7 +6,7 @@ Master: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=master)](h
 Release 3.4: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=release-3.4)](https://travis-ci.org/amcat/amcat)
 
 
-## Installation and Configuration
+## Installation and Configuration for release 3.4 (stable)
 
 ### Prerequisites
 
