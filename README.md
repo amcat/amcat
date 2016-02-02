@@ -3,7 +3,7 @@ AmCAT - Amsterdam Content Analysis Toolkit
 
 Master: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=master)](https://travis-ci.org/amcat/amcat)
 
-Release 3.3: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=release-3.3)](https://travis-ci.org/amcat/amcat)
+Release 3.4: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=release-3.4)](https://travis-ci.org/amcat/amcat)
 
 
 ## Installation and Configuration
@@ -13,15 +13,12 @@ Release 3.3: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=relea
 Most of the (python) prerequisites for AmCAT are automatically installed using pip (see below). To install the non-python requirements, you can use the following (on ubuntu):
 
 ```sh
-$ sudo apt-get install antiword unrtf rabbitmq-server python-pip python-dev libxml2-dev libxslt-dev lib32z1-dev postgresql postgresql-server-dev-9.4 postgresql-contrib-9.4
+$ sudo apt-get install antiword unrtf rabbitmq-server python-pip python-dev libxml2-dev libxslt-dev lib32z1-dev postgresql postgresql-server-dev-9.4 postgresql-contrib-9.4 python-virtualenv
 ```
-
-
 
 It is probably best to install AmCAT in a virtual environment. Run the following commands to setup and activate a virtual environment for AmCAT: (on ubuntu)
 
 ```sh
-$ sudo apt-get install python-virtualenv
 $ virtualenv amcat-env
 $ source amcat-env/bin/activate
 ```
@@ -41,13 +38,11 @@ $ createdb amcat
 
 AmCAT uses elasticsearch for searching articles. Since we use a custom similarity to provide hit counts instead of relevance, this needs to be installed 'by hand'. You can probably skip this and rely on a pre-packaged elasticsearch if you don't care about hit counts, although you still need to install the elasticsearch plugins.
 
-First, install oracle java (from http://www.webupd8.org/2012/01/install-oracle-java-jdk-7-in-ubuntu-via.html)
-For java 8 visit: http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html
+First, install oracle java (from http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html)
 
 ```sh
 $ sudo add-apt-repository ppa:webupd8team/java
 $ sudo apt-get update
-$ sudo apt-get install oracle-java7-installer #for java 7
 $ sudo apt-get install oracle-java8-installer #for java 8
 ```
 
@@ -62,17 +57,16 @@ wget "https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsear
 sudo dpkg -i elasticsearch-1.4.4.deb
 
 # Install plugins
-cd /usr/share/elasticsearch
-# sudo bin/plugin -install elasticsearch/elasticsearch-lang-python/2.4.1 (no longer needed for master)
-sudo bin/plugin -install elasticsearch/elasticsearch-analysis-icu/2.4.2
-sudo bin/plugin -install mobz/elasticsearch-head
-sudo wget http://hmbastiaan.nl/martijn/amcat/hitcount.jar
+sudo /usr/share/elasticsearch/bin/plugin -install elasticsearch/elasticsearch-analysis-icu/2.4.2
+sudo /usr/share/elasticsearch/bin/plugin -install mobz/elasticsearch-head
+sudo /usr/share/elasticsearch/bin/plugin -install lukas-vlcek/bigdesk
 
-# Allow dynamic scripting (no longer needed for master)
-# cd /etc/elasticsearch
-# echo -e "\nscript.disable_dynamic: false" | sudo tee -a elasticsearch.yml
 
-# Make sure elasticsearch detects hitcount.jar
+# Allow dynamic scripting 
+echo -e "\nscript.disable_dynamic: false" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
+
+# Install hitcount.jar (from master this is a plugin)
+sudo wget http://hmbastiaan.nl/martijn/amcat/hitcount.jar -o /usr/share/elasticsearch/hitcount.jar
 sudo editor /etc/init.d/elasticsearch
 
 # Add after ES_HOME:
@@ -85,7 +79,6 @@ export ES_CLASSPATH
 # Save file and close editor
 # Restart elasticsearch
 sudo service elasticsearch restart
-cd
 ```
 
 ### Installing AmCAT (pip install from git)
