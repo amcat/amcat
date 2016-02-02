@@ -43,18 +43,17 @@ First, install oracle java (from http://www.webupd8.org/2012/09/install-oracle-j
 ```sh
 $ sudo add-apt-repository ppa:webupd8team/java
 $ sudo apt-get update
-$ sudo apt-get install oracle-java8-installer #for java 8
+$ sudo apt-get install oracle-java8-installer 
 ```
 
 
 Next, download and extract elasticsearch and our custom hitcount jar, and install the required plugins:
 
 ```sh
-cd /tmp
-
 # Download and install elasticsearch
 wget "https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.4.4.deb"
 sudo dpkg -i elasticsearch-1.4.4.deb
+rm elasticsearch-1.4.4.deb
 
 # Install plugins
 sudo /usr/share/elasticsearch/bin/plugin -install elasticsearch/elasticsearch-analysis-icu/2.4.2
@@ -65,8 +64,8 @@ sudo /usr/share/elasticsearch/bin/plugin -install lukas-vlcek/bigdesk
 # Allow dynamic scripting 
 echo -e "\nscript.disable_dynamic: false" | sudo tee -a /etc/elasticsearch/elasticsearch.yml
 
-# Install hitcount.jar (from master this is a plugin)
-sudo wget http://hmbastiaan.nl/martijn/amcat/hitcount.jar -o /usr/share/elasticsearch/hitcount.jar
+# Install hitcount.jar (this has been converted to a proper plugin in 3.5)
+sudo wget http://hmbastiaan.nl/martijn/amcat/hitcount.jar -O /usr/share/elasticsearch/hitcount.jar
 sudo editor /etc/init.d/elasticsearch
 
 # Add after ES_HOME:
