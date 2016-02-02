@@ -62,7 +62,7 @@ class FieldTerm(object):
         return self.field or "_all"
 
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return str(self).encode('utf-8')
 
 
 class BaseTerm(FieldTerm):
@@ -79,7 +79,7 @@ class Term(BaseTerm):
         return "{self.qfield}::{self.text}".format(**locals())
 
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return str(self).encode('utf-8')
 
     def get_dsl(self):
         if self.text == "*":
@@ -103,10 +103,10 @@ class Term(BaseTerm):
 
 class Quote(BaseTerm):
     def __unicode__(self):
-        return u'{self.qfield}::QUOTE[{self.text}]'.format(**locals())
+        return '{self.qfield}::QUOTE[{self.text}]'.format(**locals())
 
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return str(self).encode('utf-8')
 
     def get_dsl(self):
         return {"match_phrase": {self.qfield: self.text}}
@@ -119,11 +119,11 @@ class Boolean(object):
         self.implicit = implicit
 
     def __unicode__(self):
-        terms = " ".join(unicode(t) for t in self.terms)
+        terms = " ".join(str(t) for t in self.terms)
         return '{self.operator}[{terms}]'.format(**locals())
 
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return str(self).encode('utf-8')
 
     def _get_not_dsl(self, func="get_dsl"):
         if len(self.terms) == 1:
@@ -204,12 +204,12 @@ class Span(Boolean, FieldTerm):
         self.in_order = in_order
 
     def __unicode__(self):
-        terms = " ".join(unicode(t) for t in self.terms)
+        terms = " ".join(str(t) for t in self.terms)
         terms = terms.replace("_all::", "")
-        return u'{self.qfield}::PROX/{self.slop}[{terms}]'.format(**locals())
+        return '{self.qfield}::PROX/{self.slop}[{terms}]'.format(**locals())
 
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return str(self).encode('utf-8')
 
     def get_dsl(self):
         # we cannot directly use disjunctions in a span query, but we can put the disjunction outside the span
@@ -320,8 +320,8 @@ def _get_grammar(default_fieldname):
 
     COLON = Literal(":").suppress()
     TILDE = Literal("~").suppress()
-    LETTERS = u''.join(unichr(c) for c in xrange(65536)
-                       if not unichr(c).isspace() and unichr(c) not in '":()~')
+    LETTERS = ''.join(chr(c) for c in xrange(65536)
+                       if not chr(c).isspace() and chr(c) not in '":()~')
 
     # terms
     term = Word(LETTERS)
@@ -366,7 +366,7 @@ def parse_to_terms(s, simplify_terms=True, strip_accents=True, default_fieldname
         s = stripAccents(s)
     try:
         terms = get_grammar(default_fieldname).parseString(s, parseAll=True)[0]
-    except Exception, e:
+    except Exception as e:
         raise QueryParseError("{e.__class__.__name__}: {e}".format(**locals()))
 
     if simplify_terms:

@@ -76,11 +76,11 @@ class IDLabel(Identity):
         return "%s %s" % (type(self).__name__, self.idlabel())
 
     def idlabel(self):
-        return u"%s: %s" % (self.id, unicode(self))
+        return "%s: %s" % (self.id, str(self))
 
     def __str__(self):
         try:
-            if type(self.label) == unicode:
+            if type(self.label) == str:
                 return self.label.encode('ascii', 'replace')
             else:
                 return str(self.label)
@@ -89,12 +89,12 @@ class IDLabel(Identity):
 
     def __unicode__(self):
         try:
-            if type(self.label) == unicode:
+            if type(self.label) == str:
                 return self.label
             else:
                 return str(self.label).decode('latin-1')
         except AttributeError:
-            return unicode(repr(self))
+            return str(repr(self))
 
     def __repr__(self):
         return "%s(%s)" % (type(self).__name__, self.id)

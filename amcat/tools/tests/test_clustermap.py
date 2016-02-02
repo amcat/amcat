@@ -18,6 +18,7 @@
 ###########################################################################
 from __future__ import unicode_literals
 
+from __future__ import absolute_import
 from amcat.tools.amcattest import AmCATTestCase
 from amcat.tools.clustermap import get_clusters, get_cluster_queries, get_clustermap_table, \
     get_intersections

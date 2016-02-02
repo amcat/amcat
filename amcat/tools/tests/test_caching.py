@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
 from amcat.tools import amcattest
 from amcat.tools.caching import cached, invalidates, cached_named, invalidates_named, reset, \
     set_cache, get_object, clear_cache, get_objects

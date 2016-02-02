@@ -17,6 +17,8 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+from __future__ import absolute_import
+from __future__ import unicode_literals
 from amcat.tools import amcattest
 from amcat.tools import classtools
 
@@ -66,7 +68,7 @@ class TestClassTools(amcattest.AmCATTestCase):
         self.assertRaises(ImportError, classtools.import_attribute,
                           "amcat.tools.classtools.__wva_does_not_exist")
 
-        self.assertEqual(classtools.import_attribute(u"amcat.models.article").__name__, "amcat.models.article")
+        self.assertEqual(classtools.import_attribute("amcat.models.article").__name__, "amcat.models.article")
 
     def test_get_classes_from_package(self):
         package = self.__module__

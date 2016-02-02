@@ -81,7 +81,7 @@ class AmcatAPI(object):
             # form encoded request
             return self.request(url, method="post", data=options)
         else:
-            if not isinstance(json_data, (str, unicode)):
+            if not isinstance(json_data, str):
                 
                 json_data = DjangoJSONEncoder().encode(json_data)
             headers = {'content-type': 'application/json'}
@@ -98,7 +98,7 @@ class AmcatAPI(object):
             # form encoded request
             return self.request(url, method="post", data=options)
         else:
-            if not isinstance(json_data, (str, unicode)):
+            if not isinstance(json_data, str):
                 json_data = DjangoJSONEncoder().encode(json_data)
             headers = {'content-type': 'application/json'}
             return self.request(url, method='post', data=json_data, headers=headers)
@@ -146,7 +146,7 @@ if __name__ == '__main__':
 
         try:
             result = action(*args, **kargs)
-        except TypeError,e :
+        except TypeError as e :
             print("TypeError on calling {action.__name__}: {e}\n".format(**locals()))
             print(pydoc.render_doc(action, "Help on %s"), file=sys.stderr)
             sys.exit(1)

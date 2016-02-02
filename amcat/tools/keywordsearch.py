@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from __future__ import unicode_literals, print_function, absolute_import
 
 """
 Utility module for keyword searches. This module is full of misnomers, maybe
@@ -144,7 +145,7 @@ class SelectionSearch:
         if codebook:
             codebook.cache_labels()
 
-        queries = map(unicode.strip, self.data.query.split("\n"))
+        queries = map(str.strip, self.data.query.split("\n"))
         #filter empty lines
         queries = filter(lambda x: x, queries)
         queries = map(SearchQuery.from_string, queries)
@@ -303,7 +304,7 @@ def get_date_filters(start_date, end_date, on_date, datetype):
 
 def _clean(s):
     if s is None: return
-    s = unicode(s)
+    s = str(s)
     s = stripAccents(s)
     s = re.sub("[<>+*]", " ", s)
     s = re.sub("\s+", " ", s)

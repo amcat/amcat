@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from __future__ import unicode_literals, print_function, absolute_import
 
 """
 Toolkit of methods to deal with python classes and modules
@@ -55,7 +56,7 @@ def get_classes_from_module(module, superclass=None):
     m = import_attribute(module)
     for name in dir(m):
         obj = getattr(m, name)
-        if not isinstance(obj, (type, types.ClassType)): continue
+        if not isinstance(obj, (type, type)): continue
         if superclass is not None and not issubclass(obj, superclass): continue
         if obj.__module__ == module:
             yield obj

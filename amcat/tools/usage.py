@@ -1,4 +1,7 @@
-import logging, datetime
+from __future__ import unicode_literals, absolute_import
+
+import logging
+
 from amcat.models import Project
 
 usage_log = logging.getLogger("amcat.usage")

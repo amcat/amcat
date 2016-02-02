@@ -25,15 +25,16 @@ visualisation software such as:
     http://www.aduna-software.com/technology/clustermap
 """
 
-from __future__ import unicode_literals, print_function
+from __future__ import unicode_literals, print_function, absolute_import
 
+import sh
 import os
+
 from collections import defaultdict
 from functools import partial
 from itertools import chain, product, repeat
 from tempfile import NamedTemporaryFile
 
-import sh
 from django.conf import settings
 from django.template import Context
 from django.template.loader import get_template

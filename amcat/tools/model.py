@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from __future__ import unicode_literals, print_function, absolute_import
 
 from django.db import models
 
@@ -32,9 +33,9 @@ class AmcatModel(models.Model):
 
     def __unicode__(self):
         try:
-            return unicode(getattr(self, self.__label__))
+            return str(getattr(self, self.__label__))
         except AttributeError:
-            return unicode(self.id)
+            return str(self.id)
 
     @classmethod
     def get_or_create(cls, **attributes):
