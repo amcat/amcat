@@ -127,7 +127,7 @@ class Table(object):
 
     def getColumnByLabel(self, label):
         """Return the column that matches the given label, or None"""
-        stringify = unicode if type(label) == unicode else str
+        stringify = str if type(label) == str else str
         for c in self.getColumns():
             if stringify(c) == label: return c
 
@@ -230,7 +230,7 @@ class ObjectTable(Table):
             if label == '<lambda>': label = ''
 
             col = ObjectColumn(label, col, **kargs)
-        elif type(col) in (str, unicode):
+        elif type(col) in (str, str):
             col = AttributeColumn(col, label, **kargs)
         if index is not None:
             self.columns.insert(index, col)
@@ -271,7 +271,7 @@ class ObjectColumn(object):
         return self.label.encode('utf-8')
 
     def __unicode__(self):
-        return unicode(self.label)
+        return str(self.label)
 
 
 class AttributeColumn(ObjectColumn):

@@ -1,4 +1,4 @@
-from __future__ import with_statement, absolute_import
+from __future__ import with_statement, absolute_import, unicode_literals
 
 import sys
 import csv
@@ -19,15 +19,15 @@ def getTable(table, colnames=None):
 # ###################### table2ascii / unicode ##########################
 
 CONNECTORS = {  # (unicode, box) : (sep2t, sep2b, sep, line)
-                (True, False): (None, None, u" \u2500\u253c ", u" \u2502 "),
-                (True, True): (u"\u2554\u2550\u2564\u2557", u"\u255a\u2550\u2567\u255d", u"\u255f\u2500\u253c\u2562",
-                               u"\u2551\u2502\u2551"),
+                (True, False): (None, None, " \u2500\u253c ", " \u2502 "),
+                (True, True): ("\u2554\u2550\u2564\u2557", "\u255a\u2550\u2567\u255d", "\u255f\u2500\u253c\u2562",
+                               "\u2551\u2502\u2551"),
                 (False, True): ("+=++", "+=++", "+-++", "|||"),
                 (False, False): (None, None, " -+ ", " | "),
 }
 SORTINDICATORS = {
-    (True, True): u"\u25b2",
-    (True, False): u"\u25bc",
+    (True, True): "\u25b2",
+    (True, False): "\u25bc",
     (False, True): "^",
     (False, False): "v",
 }
@@ -65,7 +65,7 @@ def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True,
     con_sep2t, con_sep2b, con_sep, con_line = CONNECTORS[useunicode, box]
     cols, rows = table.getColumns(), table.getRows()
     if type(cols) not in (list, tuple): cols = list(cols)
-    if formats is None: formats = [u"%s"] * len(cols)
+    if formats is None: formats = ["%s"] * len(cols)
     headers = cols
     sortcols = None
     try:
@@ -77,28 +77,28 @@ def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True,
         for col in cols:
             # if isinstance(col, idlabel.IDLabel) and
             if col in sortcols:
-                headers.append(u"%s %s" % (str(col), SORTINDICATORS[useunicode, sortcols[col]]))
+                headers.append("%s %s" % (str(col), SORTINDICATORS[useunicode, sortcols[col]]))
             else:
                 headers.append(str(col))
 
     def cell(row, col, fmt):
         val = table.getValue(row, col)
         if type(val) == str: val = val.decode('latin-1')
-        if not useunicode and type(val) == unicode: val = val.encode('ascii', 'replace')
+        if not useunicode and type(val) == str: val = val.encode('ascii', 'replace')
         try:
             val = fmt % (val,) if (val is not None) else ""
             return val
-        except Exception, e:
+        except Exception as e:
             return str(e)
 
     def formatheader(h):
         if not h: return h
-        if type(h) in (list, tuple, set): return ",".join(map(unicode, h))
-        return unicode(h)
+        if type(h) in (list, tuple, set): return ",".join(map(str, h))
+        return str(h)
 
 
     data = []
-    collengths = [len(unicode(hdr)) for hdr in headers]
+    collengths = [len(str(hdr)) for hdr in headers]
     for row in rows:
         data.append([])
         if rownames:
@@ -151,21 +151,27 @@ def table2html(table, colnames=None, printRowNames=True, border=True):
 def getstr(val):
     if val is None: return ""
     if type(val) == str: return val
-    if type(val) == unicode: return val.encode('utf-8')
+    if type(val) == str: return val.encode('utf-8')
     return str(val)
 
 
 def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecolnames=True, writerownames=False,
               tabseparated=False, encoding='utf-8'):
     table = getTable(table, colnames)
-    if table.rowNamesRequired == True:
-        writerownames = True
+
+    writerownames = table.rowNamesRequired or writerownames
+
     if csvwriter is None:
         dialect = csv.excel_tab if tabseparated else csv.excel
         csvwriter = csv.writer(outfile, dialect=dialect)
+
     cols = list(table.getColumns())
-    if writecolnames == True: writecolnames = lambda col: unicode(col).encode(encoding)
-    if writerownames == True: writerownames = str
+    if writecolnames:
+        writecolnames = lambda col: str(col).encode(encoding)
+
+    if writerownames:
+        writerownames = str
+
     if writecolnames:
         c = ([""] + cols) if writerownames else cols
         csvwriter.writerow(map(writecolnames, c))
@@ -177,8 +183,4 @@ def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecol
         values += map(getstr, (table.getValue(row, col) for col in cols))
         csvwriter.writerow(values)
 
-
-OUTPUT_FUNCTIONS = dict(
-    csv=table2csv,
-)
 

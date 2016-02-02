@@ -19,6 +19,7 @@
 
 # exportfunction(table, outfile
 
+from __future__ import absolute_import, unicode_literals
 from cStringIO import StringIO
 import csv
 import zipfile
@@ -82,7 +83,7 @@ class CSV(TableExporter):
     def to_stream(self, table, stream, encoding):
         def encode(val):
             if val is None: return val
-            return unicode(val).encode(encoding)
+            return str(val).encode(encoding)
 
         csvwriter = csv.writer(stream, dialect=self.dialect)
 
@@ -119,7 +120,7 @@ def _convert_value(value):
 def _get_values(table, row):
     # TODO: Remove hacks by accessing type info?
     if table.rowNamesRequired:
-        yield unicode(row)
+        yield str(row)
 
     for column in table.getColumns():
         yield _convert_value(table.getValue(row, column))
@@ -133,9 +134,9 @@ class XLSX(TableExporter):
         ws = wb.create_sheet()
 
         # Determine columns. We may need an extra (first) column which 'names' the row
-        columns = list(map(unicode, list(table.getColumns())))
+        columns = list(map(str, list(table.getColumns())))
         if table.rowNamesRequired:
-            columns.insert(0, u"")
+            columns.insert(0, "")
         ws.append(columns)
 
         # Write rows to worksheet
