@@ -1,9 +1,12 @@
 AmCAT - Amsterdam Content Analysis Toolkit
 ==========================================
 
-Master: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=master)](https://travis-ci.org/amcat/amcat)
+Master: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=master)](https://travis-ci.org/amcat/amcat) Release 3.4: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=release-3.3)](https://travis-ci.org/amcat/amcat)
 
-Release 3.3: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=release-3.3)](https://travis-ci.org/amcat/amcat)
+*Note:* the following instructions are for the unstable development version. 
+To install stable releases, please see the readme file for those releases:
+
+[Installation instructions for 3.4 (stable)](https://github.com/amcat/amcat/blob/release-3.4/README.md)
 
 
 ## Installation and Configuration
