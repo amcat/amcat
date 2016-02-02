@@ -26,20 +26,23 @@ visualisation software such as:
 """
 
 from __future__ import unicode_literals, print_function
-from StringIO import StringIO
-from collections import defaultdict
-from functools import partial
-from itertools import chain, product, permutations, repeat
 
 import os
+from collections import defaultdict
+from functools import partial
+from itertools import chain, product, repeat
 from tempfile import NamedTemporaryFile
-import datetime
-from django.template import Context
-from lxml import html
+
 import sh
 from django.conf import settings
+from django.template import Context
 from django.template.loader import get_template
+from lxml import html
 
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 # XML template given to Aduna binary
 XML_TEMPLATE = get_template("query/clustermap/cluster.xml")

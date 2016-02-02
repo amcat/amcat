@@ -17,11 +17,10 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from __future__ import unicode_literals, print_function
+
 import csv
 import json
-from base64 import b64encode, b64decode
-import StringIO
-import traceback
+from base64 import b64encode
 
 from django.core.exceptions import ValidationError
 
@@ -30,7 +29,12 @@ from amcat.tools.clustermap import get_clustermap_image, clustermap_html_to_coor
     get_clustermap_table
 from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.table.table2spss import table2sav
-from amcat.tools.table.table3 import Table, ListTable
+from amcat.tools.table.table3 import Table
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 
 class ClusterMapHandler(QueryActionHandler):
@@ -99,7 +103,7 @@ class ClusterMapAction(QueryAction):
         if form.cleaned_data["output_type"] == "text/csv+tab":
             dialect = 'excel-tab'
 
-        result = StringIO.StringIO()
+        result = StringIO()
         csvf = csv.writer(result, dialect=dialect)
         csvf.writerow(map(str, headers))
         csvf.writerows(sorted(rows))

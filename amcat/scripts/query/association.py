@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-import StringIO
 import csv
 import json
 from django import forms
@@ -24,6 +23,11 @@ from django.core.exceptions import ValidationError
 from amcat.scripts.query import QueryAction, QueryActionForm, QueryActionHandler
 from amcat.tools.association import FORMATS, INTERVALS, Association
 from amcat.tools.keywordsearch import SelectionSearch
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 
 def get_content_type(form):
@@ -131,7 +135,7 @@ class AssociationAction(QueryAction):
 
 
         # Write table to CSV and return
-        result = StringIO.StringIO()
+        result = StringIO()
         csvf = csv.writer(result)
         csvf.writerow(map(str, headers))
         csvf.writerows(rows)

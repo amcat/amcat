@@ -27,7 +27,6 @@ Currently hardwired to copy to amcatdb2
 import subprocess
 import logging
 import csv
-from cStringIO import StringIO
 
 from django import forms
 from django.conf import settings
@@ -38,6 +37,12 @@ from amcat.models import Project, ArticleSet, Article, Medium
 from amcat.scripts.script import Script
 
 from amcat.tools.toolkit import splitlist
+
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 log = logging.getLogger(__name__)
 

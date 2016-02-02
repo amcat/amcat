@@ -20,7 +20,7 @@
 # exportfunction(table, outfile
 
 from __future__ import absolute_import, unicode_literals
-from cStringIO import StringIO
+
 import csv
 import zipfile
 import io
@@ -31,6 +31,11 @@ from openpyxl import Workbook
 from openpyxl.writer.dump_worksheet import ExcelDumpWriter
 import re
 import datetime
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 # Used in _get_value()
 INT_RE = re.compile('^[0-9]+$')

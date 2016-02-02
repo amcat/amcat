@@ -1,8 +1,12 @@
 import csv
-from cStringIO import StringIO
 
 from amcat.tools import amcattest
 from amcat.scripts.actions.import_codebook import ImportCodebook
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 def _run_test(bytes, **options):
     if 'project' not in options: options['project'] = amcattest.create_test_project().id

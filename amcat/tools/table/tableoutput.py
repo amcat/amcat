@@ -2,8 +2,12 @@ from __future__ import with_statement, absolute_import, unicode_literals
 
 import sys
 import csv
-import StringIO
 import logging
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +64,7 @@ def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True,
 
     returnstring = (not stream)
     if returnstring:
-        stream = StringIO.StringIO()
+        stream = StringIO()
     table = getTable(table, colnames)
     con_sep2t, con_sep2b, con_sep, con_line = CONNECTORS[useunicode, box]
     cols, rows = table.getColumns(), table.getRows()

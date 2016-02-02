@@ -25,7 +25,6 @@ This module contains a (semi-machine readable) lexisnexis parser.
 from __future__ import unicode_literals
 import re
 import collections
-import StringIO
 import logging
 
 from amcat.scripts.article_upload.upload import UploadScript, ParseError
@@ -34,6 +33,10 @@ from amcat.tools import toolkit
 from amcat.models.article import Article
 from amcat.models.medium import Medium
 
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 log = logging.getLogger(__name__)
 
@@ -164,12 +167,12 @@ def split_body(body):
 
     @return: generator yielding unicode strings
     """
-    art = StringIO.StringIO()
+    art = StringIO()
     for line in body.split("\n")[1:]:
         if RES.DOCUMENT_COUNT.match(line):
             yield art.getvalue()
 
-            art = StringIO.StringIO()
+            art = StringIO()
 
         else:
             art.write(line)

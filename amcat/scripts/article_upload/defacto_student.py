@@ -25,7 +25,6 @@ of the popup window as HTML.
 """
 
 import re
-from cStringIO import StringIO
 
 from lxml import etree
 
@@ -35,6 +34,10 @@ from amcat.models.medium import Medium
 from amcat.tools.djangotoolkit import get_or_create
 from amcat.tools import toolkit
 
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 class DeFactoStudent(UploadScript):
     def split_file(self, f):

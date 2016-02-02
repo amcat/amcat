@@ -1,4 +1,3 @@
-from cStringIO import StringIO
 import csv
 import json
 import unittest
@@ -9,6 +8,10 @@ from amcat.tools import amcattest
 from amcat.tools.amcattest import create_test_coding
 from amcat.tools.sbd import get_or_create_sentences
 
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 class TestGetCodingJobResults(amcattest.AmCATTestCase):
     def _get_results_script(self, jobs, options, include_uncoded_articles=False,

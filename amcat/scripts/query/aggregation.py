@@ -18,7 +18,11 @@
 ###########################################################################
 from __future__ import unicode_literals
 
-import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+
 import csv
 import json
 from datetime import datetime
@@ -98,7 +102,7 @@ def aggregation_to_matrix(aggregation, categories):
 def aggregation_to_csv(aggregation, categories, values):
     aggregation = map(chain.from_iterable, aggregation)
 
-    csvio = StringIO.StringIO()
+    csvio = StringIO()
     csvf = csv.writer(csvio)
 
     catvals = repeat(list(chain(categories, values)))

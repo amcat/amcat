@@ -21,6 +21,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+import csv
+
 from collections import OrderedDict
 from functools import partial
 
@@ -28,8 +30,11 @@ from rest_framework.renderers import *
 from amcat.tools.table import table3
 import logging
 
-from cStringIO import StringIO
-import csv
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 class TableRenderer(BaseRenderer):
     """

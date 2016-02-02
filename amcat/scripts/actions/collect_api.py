@@ -1,6 +1,6 @@
 from amcat.scripts.script import Script
 from django import forms
-import logging;
+import logging
 import re
 import requests
 import itertools
@@ -9,7 +9,10 @@ import csv
 import time
 import tempfile
 
-from cStringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 log = logging.getLogger(__name__)
 
