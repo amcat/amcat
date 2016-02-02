@@ -98,7 +98,7 @@ def _convert_pdf(file):
     pdf = PdfFileReader(_file)
     text = ""
     n = pdf.getNumPages()
-    for i in xrange(0,n):
+    for i in range(0,n):
         page = pdf.getPage(i)
         text += page.extractText()
     return text

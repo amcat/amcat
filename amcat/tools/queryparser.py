@@ -320,7 +320,7 @@ def _get_grammar(default_fieldname):
 
     COLON = Literal(":").suppress()
     TILDE = Literal("~").suppress()
-    LETTERS = ''.join(chr(c) for c in xrange(65536)
+    LETTERS = ''.join(chr(c) for c in range(65536)
                        if not chr(c).isspace() and chr(c) not in '":()~')
 
     # terms

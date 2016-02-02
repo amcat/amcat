@@ -48,7 +48,7 @@ def getVarName(col, seen):
     fn = re.sub('^_+', '', fn)
     fn = fn[:16]
     if fn in seen:
-        for i in xrange(400):
+        for i in range(400):
             if "%s_%i" % (fn, i) not in seen:
                 fn = "%s_%i" % (fn, i)
                 break
