@@ -75,15 +75,6 @@ class TestToolkit(amcattest.AmCATTestCase):
                 date2 = toolkit.readDate(s, lax=lax, american=american)
                 self.assertEqual(date2, date)
 
-
-    def test_dateoutput(self):
-        for date, iso, isotime, yw, ym, yq in (
-                (datetime.datetime(1990, 1, 10, 13, 1, 0), "1990-01-10", "1990-01-10 13:01:00", 1990.02, 1990.01,
-                 1990.1),
-        ):
-            self.assertEqual(toolkit.writeDate(date), iso)
-            self.assertEqual(toolkit.writeDateTime(date), isotime)
-
     def test_head(self):
         it = iter(range(10))
         self.assertEqual(0, toolkit.head(it))
