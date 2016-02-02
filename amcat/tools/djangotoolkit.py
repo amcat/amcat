@@ -32,6 +32,7 @@ import django
 from contextlib import contextmanager
 from datetime import datetime
 
+from django.dispatch import Signal
 from django.conf import settings
 from django.db import connections
 from django.db import models, connection
@@ -221,8 +222,6 @@ def get_ids(objects):
             obj = obj.pk
         yield obj
 
-from django.dispatch import Signal
-from types import NoneType
 
 def receiver(signal, sender=None, **kwargs):
     """
@@ -239,7 +238,7 @@ def receiver(signal, sender=None, **kwargs):
             signals = [signal]
         else:
             signals = signal
-        if isinstance(sender, (NoneType, type)):
+        if sender is None or isinstance(sender, type):
             senders = [sender]
         else:
             senders = sender
