@@ -23,30 +23,22 @@ articles database table.
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
-from copy import copy
-from itertools import chain, count
-from operator import attrgetter
+
 import logging
-import collections
-import uuid
 
-from django.template.loader import get_template
+from django.db import models
 from django.template import Context
-from django.db import models, transaction
-from django.db.utils import IntegrityError, DatabaseError
-from django.core.exceptions import ValidationError
 from django.template.defaultfilters import escape as escape_filter
-from amcat.tools.djangotoolkit import bulk_insert_returning_ids
+from django.template.loader import get_template
 
-from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
-from amcat.tools import amcates
 from amcat.models.authorisation import Role
 from amcat.models.medium import Medium
+from amcat.tools import amcates
+from amcat.tools.djangotoolkit import bulk_insert_returning_ids
+from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
+from amcat.tools.progress import ProgressMonitor
 from amcat.tools.toolkit import splitlist
 from amcat.tools.tree import Tree
-from amcat.tools.progress import ProgressMonitor
-
-from amcat.tools.amcates import Result
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +59,7 @@ def word_len(txt):
 def unescape_em(txt):
     """
     @param txt: text to be unescaped
-    @type txt: unicode
+    @type txt: str
     """
     return (txt
             .replace("&lt;em&gt;", "<em>")
@@ -154,7 +146,7 @@ class Article(AmcatModel):
         call save() after calling this method.
 
         @param query: elastic query used for highlighting
-        @type query: unicode
+        @type query: str
 
         @param escape: escape html entities in result
         @type escape: bool
@@ -267,7 +259,7 @@ class Article(AmcatModel):
                 dupes.append(a)
             else:
                 a.es_dict.update(dict(sets=[aset.id for aset in articlesets],
-                                      uuid=unicode(a.uuid), id=a.id))
+                                      uuid=str(a.uuid), id=a.id))
                 new.append(a)
 
         if new:
@@ -321,7 +313,7 @@ class Article(AmcatModel):
             for attr in dupe_values:
                 val = getattr(a, attr)
                 if val:
-                    val = unicode(val)
+                    val = str(val)
                     if val in dupe_values[attr]:
                         a.duplicate = dupe_values[attr][val] # within-set duplicate
                     else:
@@ -335,7 +327,7 @@ class Article(AmcatModel):
                     a =values[getattr(r, attr)]
                     if a.hash != r.hash: 
                         raise ValueError("Cannot modify existing articles: {a.hash} != {r.hash}".format(**locals()))
-                    if a.uuid and unicode(a.uuid) != unicode(r.uuid): # not part of hash
+                    if a.uuid and str(a.uuid) != str(r.uuid): # not part of hash
                         raise ValueError("Cannot modify existing articles: {a.uuid} != {r.uuid}".format(**locals()))
                     a.duplicate = r
                     a.id = r.id

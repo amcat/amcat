@@ -233,7 +233,7 @@ class CSVRenderer(TableRenderer):
             extra = keys - set(header)
             if extra:
                 header += list(extra)
-            row = [(unicode(d[h]).encode("utf-8") if h in d else "") for h in header]
+            row = [(str(d[h]).encode("utf-8") if h in d else "") for h in header]
             w.writerow(row)
         out_h = StringIO()
         csv.writer(out_h).writerow(header)

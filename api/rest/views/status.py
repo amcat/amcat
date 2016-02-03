@@ -53,9 +53,9 @@ def git_status():
     # there is probably a better place for this!
     repo = Repo()
     return {
-        "active_branch": unicode(repo.active_branch),
+        "active_branch": str(repo.active_branch),
         "last_commit": {
             "summary": repo.head.commit.summary,
             "committed_date": date2iso(repo.head.commit.committed_date),
-            "commtter": unicode(repo.head.commit.committer)}}
+            "commtter": str(repo.head.commit.committer)}}
         

@@ -25,7 +25,7 @@ def _run_test(bytes, **options):
 def _csv_bytes(rows, encoding="utf-8", **kargs):
     def encode(x):
         if x is None or isinstance(x, str): return x
-        return unicode(x).encode(encoding)
+        return str(x).encode(encoding)
 
 
     out = StringIO()

@@ -85,7 +85,7 @@ class TestArticle(amcattest.AmCATTestCase):
         structure = {1:0, 2:1, 3:1, 4:0}
         adict= dict(medium=m, date=datetime.date(2001,1,1), project=s.project)
         def _articles(n, structure):
-            articles = [Article(headline=unicode(i), text=unicode(i), **adict) for i in range(n)]        
+            articles = [Article(headline=str(i), text=str(i), **adict) for i in range(n)]
             articles[0].parent = root
             for child, parent in structure.items():
                 articles[child].parent = articles[parent]
@@ -136,8 +136,8 @@ class TestArticle(amcattest.AmCATTestCase):
         db_a = Article.objects.get(pk=a.id)
         amcates.ES().flush()
         es_a = list(amcates.ES().query(filters={'ids': [a.id]}, fields=["date", "headline", "uuid"]))[0]
-        self.assertEqual(unicode(a.uuid), unicode(db_a.uuid))
-        self.assertEqual(unicode(a.uuid), unicode(es_a.uuid))
+        self.assertEqual(str(a.uuid), str(db_a.uuid))
+        self.assertEqual(str(a.uuid), str(es_a.uuid))
         self.assertEqual(a.headline, db_a.headline)
         self.assertEqual(a.headline, es_a.headline)
         self.assertEqual('2010-12-31T00:00:00', db_a.date.isoformat())
@@ -210,15 +210,15 @@ class TestArticle(amcattest.AmCATTestCase):
         for saved in articles:
             indb = Article.objects.get(pk=saved.id)
             self.assertEqual(indb.headline, saved.headline)
-        
-        
+
+
     @amcattest.use_elastic
-    def test_unicode(self):
+    def test_str(self):
         """Test unicode headlines"""
         for offset in range(1, 10000, 1000):
             s = "".join(chr(offset + c) for c in range(1, 1000, 100))
             a = amcattest.create_test_article(headline=s)
-            self.assertIsInstance(a.headline, unicode)
+            self.assertIsInstance(a.headline, str)
             self.assertEqual(a.headline, s)
 
         

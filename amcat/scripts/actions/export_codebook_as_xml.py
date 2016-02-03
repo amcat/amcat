@@ -33,14 +33,14 @@ from amcat.scripts.script import Script
 
 def _create_element(tag, value):
     el = Element(tag)
-    el.text = unicode(value)
+    el.text = str(value)
     return el
 
 
 def _node_to_xml(treeitem):
     code = Element("code")
-    code.append(_create_element("id", unicode(treeitem.code_id)))
-    code.append(_create_element("label", unicode(treeitem.label)))
+    code.append(_create_element("id", str(treeitem.code_id)))
+    code.append(_create_element("label", str(treeitem.label)))
 
     children = Element("children")
     for child in treeitem.children:
@@ -55,8 +55,8 @@ def codebook_to_xml(codebook):
 
     # Create Codebook element and add its properties
     xml_root = Element("codebook")
-    xml_root.append(_create_element("id", unicode(codebook.id)))
-    xml_root.append(_create_element("project_id", unicode(codebook.project_id)))
+    xml_root.append(_create_element("id", str(codebook.id)))
+    xml_root.append(_create_element("project_id", str(codebook.project_id)))
     xml_root.append(_create_element("name", codebook.name))
 
     # Get roots of codebook and add them

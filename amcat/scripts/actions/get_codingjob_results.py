@@ -341,7 +341,7 @@ class MetaColumn(table3.ObjectColumn):
     def getCell(self, row):
         obj = getattr(row, self.field.object)
         if obj is not None:
-            return unicode(getattr(obj, self.field.attr))
+            return str(getattr(obj, self.field.attr))
 
 
 class MappingMetaColumn(MetaColumn):

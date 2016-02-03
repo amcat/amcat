@@ -41,7 +41,7 @@ class InvalidFormException(Exception):
     def getErrorDict(self):
         """Returns the fields containing errors as dict, with the fieldname as key
         and the errors as value (in a list, there can be more than one)"""
-        return dict([(field, [unicode(e) for e in errorList]) for field, errorList in self.errors.items()])
+        return dict([(field, [str(e) for e in errorList]) for field, errorList in self.errors.items()])
 
 
 def validate(form):
