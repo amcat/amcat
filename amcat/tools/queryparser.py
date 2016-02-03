@@ -75,11 +75,8 @@ class BaseTerm(FieldTerm):
 
 
 class Term(BaseTerm):
-    def __unicode__(self):
-        return "{self.qfield}::{self.text}".format(**locals())
-
     def __str__(self):
-        return str(self).encode('utf-8')
+        return "{self.qfield}::{self.text}".format(**locals())
 
     def get_dsl(self):
         if self.text == "*":
@@ -102,11 +99,8 @@ class Term(BaseTerm):
 
 
 class Quote(BaseTerm):
-    def __unicode__(self):
-        return '{self.qfield}::QUOTE[{self.text}]'.format(**locals())
-
     def __str__(self):
-        return str(self).encode('utf-8')
+        return '{self.qfield}::QUOTE[{self.text}]'.format(**locals())
 
     def get_dsl(self):
         return {"match_phrase": {self.qfield: self.text}}
@@ -118,12 +112,9 @@ class Boolean(object):
         self.terms = terms
         self.implicit = implicit
 
-    def __unicode__(self):
+    def __str__(self):
         terms = " ".join(str(t) for t in self.terms)
         return '{self.operator}[{terms}]'.format(**locals())
-
-    def __str__(self):
-        return str(self).encode('utf-8')
 
     def _get_not_dsl(self, func="get_dsl"):
         if len(self.terms) == 1:
@@ -203,13 +194,10 @@ class Span(Boolean, FieldTerm):
         self.slop = slop
         self.in_order = in_order
 
-    def __unicode__(self):
+    def __str__(self):
         terms = " ".join(str(t) for t in self.terms)
         terms = terms.replace("_all::", "")
         return '{self.qfield}::PROX/{self.slop}[{terms}]'.format(**locals())
-
-    def __str__(self):
-        return str(self).encode('utf-8')
 
     def get_dsl(self):
         # we cannot directly use disjunctions in a span query, but we can put the disjunction outside the span

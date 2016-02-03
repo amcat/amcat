@@ -31,7 +31,7 @@ class AmcatModel(models.Model):
         abstract=True
         app_label = "model"
 
-    def __unicode__(self):
+    def __str__(self):
         try:
             return str(getattr(self, self.__label__))
         except AttributeError:

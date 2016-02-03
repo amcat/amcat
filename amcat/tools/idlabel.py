@@ -78,23 +78,11 @@ class IDLabel(Identity):
     def idlabel(self):
         return "%s: %s" % (self.id, str(self))
 
-    def __str__(self):
-        try:
-            if type(self.label) == str:
-                return self.label.encode('ascii', 'replace')
-            else:
-                return str(self.label)
-        except AttributeError:
-            return repr(self)
+    def __bytes__(self):
+        return bytes(self.label)
 
-    def __unicode__(self):
-        try:
-            if type(self.label) == str:
-                return self.label
-            else:
-                return str(self.label).decode('latin-1')
-        except AttributeError:
-            return str(repr(self))
+    def __str__(self):
+        return str(self.label)
 
     def __repr__(self):
         return "%s(%s)" % (type(self).__name__, self.id)

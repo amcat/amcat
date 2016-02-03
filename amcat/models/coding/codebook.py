@@ -593,7 +593,7 @@ class CodebookCode(AmcatModel):
             if self.validto and co.validfrom and self.validto <= co.validfrom: continue
             raise ValueError("Codebook code {!r} overlaps with {!r}".format(self, co))
 
-    def __unicode__(self):
+    def __str__(self):
         return "{0.code}:{0.parent} ({0.codebook}, {0.validfrom}-{0.validto})".format(self)
 
     class Meta():

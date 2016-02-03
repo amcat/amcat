@@ -362,9 +362,6 @@ class Datatable(object):
         if isinstance(value, Model):
             return self._filter(selector + '__%s' % value._meta.pk.attname, value.pk, check_can_filter=check_can_filter)
 
-        if isinstance(value, unicode):
-            value = value.encode('utf-8')
-
         return urlencode({selector: value})
 
     def filter(self, **filters):
@@ -401,7 +398,7 @@ class Datatable(object):
         url += "".join(['&%s' % self._filter(sel, val, check_can_filter=False) for (sel, val) in self.extra_args])
         return url
 
-    def __unicode__(self):
+    def __str__(self):
         links = {}
         for fmt in ["api", "csv", "json", "xlsx", "spss", "xhtml"]:
             t = self.set_format(fmt)

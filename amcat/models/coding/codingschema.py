@@ -54,7 +54,7 @@ class CodingSchema(AmcatModel):
     highlighters = models.ManyToManyField("amcat.Codebook")
     highlight_language = models.ForeignKey("amcat.Language", null=True, blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return "%s - %s" % (self.id, self.name)
 
     class Meta():

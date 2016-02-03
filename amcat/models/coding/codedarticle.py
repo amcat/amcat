@@ -92,7 +92,7 @@ class CodedArticle(models.Model):
     article = models.ForeignKey("amcat.Article", related_name="coded_articles")
     codingjob = models.ForeignKey("amcat.CodingJob", related_name="coded_articles")
 
-    def __unicode__(self):
+    def __str__(self):
         return "Article: {self.article}, Codingjob: {self.codingjob}".format(**locals())
 
     def set_status(self, status):

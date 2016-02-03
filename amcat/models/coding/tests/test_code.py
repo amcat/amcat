@@ -29,15 +29,15 @@ class TestCode(amcattest.AmCATTestCase):
         # simple label
         o = amcattest.create_test_code(label="bla")
         self.assertEqual(o.label, "bla")
-        self.assertEqual(unicode(o), o.label)
+        self.assertEqual(str(o), o.label)
         l2 = Language.objects.create(label='zzz')
         o.add_label(l2, "blx")
         self.assertEqual(o.get_label(l2), "blx")
         self.assertEqual(o.label, "bla")
 
         # does .label and .get_label return a unicode object under all circumstances
-        self.assertIsInstance(o.label, unicode)
-        self.assertIsInstance(o.get_label(l2), unicode)
+        self.assertIsInstance(o.label, str)
+        self.assertIsInstance(o.get_label(l2), str)
 
 
     def test_cache(self):

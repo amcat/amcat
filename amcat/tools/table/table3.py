@@ -267,10 +267,10 @@ class ObjectColumn(object):
             log.error("Exception on getting column %r on row %r" % (self.label, row))
             raise
 
-    def __str__(self):
+    def __bytes__(self):
         return self.label.encode('utf-8')
 
-    def __unicode__(self):
+    def __str__(self):
         return str(self.label)
 
 
