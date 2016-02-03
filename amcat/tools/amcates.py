@@ -119,7 +119,6 @@ def get_article_dict(article, sets=None):
     article_dict['hash'] = _get_hash(article_dict)
     return article_dict
 
-
 def _get_legacy_hash(article_dict):
     c = hash_class()
     for k in LEGACY_HASH_FIELDS:
@@ -132,12 +131,24 @@ def _get_legacy_hash(article_dict):
             c.update(v)
     return c.hexdigest()
 
+def _encode_field(object, encoding="utf-8"):
+    if isinstance(object, datetime.datetime):
+        return object.isoformat().encode(encoding)
+    return str(object).encode(encoding)
+
+def _escape_bytes(b):
+    return b.replace(b"\\", b"\\\\").replace(b",", b"\\,")
 
 def _get_hash(article):
     if settings.ES_USE_LEGACY_HASH_FUNCTION:
         return _get_legacy_hash(article)
-    article_dict = [(fn, article[fn]) for fn in HASH_FIELDS]
-    return hash_class(json.dumps(article_dict)).hexdigest()
+
+    c = hash_class()
+    for fn in HASH_FIELDS:
+        c.update(_escape_bytes(_encode_field(fn)))
+        c.update(_escape_bytes(_encode_field(article[fn])))
+        c.update(b",")
+    return c.hexdigest()
 
 
 HIGHLIGHT_OPTIONS = {
