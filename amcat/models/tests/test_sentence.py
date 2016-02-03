@@ -31,7 +31,7 @@ class TestSentence(amcattest.AmCATTestCase):
         for i, offset in enumerate(range(22, 20000, 1000)):
             sentnr = i % 7
             parnr = i // 7
-            sent = "".join(unichr(offset + c) for c in range(47, 1000, 100))
+            sent = "".join(chr(offset + c) for c in range(47, 1000, 100))
             sentences += [(parnr, sentnr, sent)]
             Sentence.objects.create(article=a, parnr=parnr, sentnr=sentnr, sentence=sent)
 

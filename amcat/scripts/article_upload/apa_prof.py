@@ -134,7 +134,7 @@ def get_unencoded(s):
 
 def get_unencoded_unicode(s):
     for groups in (m.groupdict() for m in RE_UNICHAR.finditer(s)):
-        yield bytes(groups['match']), unichr(int(groups['hex']))
+        yield bytes(groups['match']), chr(int(groups['hex']))
 
 
 def to_html(original_rtf, fixed_rtf):

@@ -216,7 +216,7 @@ class TestArticle(amcattest.AmCATTestCase):
     def test_unicode(self):
         """Test unicode headlines"""
         for offset in range(1, 10000, 1000):
-            s = "".join(unichr(offset + c) for c in range(1, 1000, 100))
+            s = "".join(chr(offset + c) for c in range(1, 1000, 100))
             a = amcattest.create_test_article(headline=s)
             self.assertIsInstance(a.headline, unicode)
             self.assertEqual(a.headline, s)
