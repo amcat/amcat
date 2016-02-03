@@ -23,8 +23,6 @@ Utility module for keyword searches. This module is full of misnomers, maybe
 move it to 'queryparser'?
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
-
 import logging
 import re
 from itertools import chain

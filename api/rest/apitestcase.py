@@ -20,14 +20,12 @@
 """
 Unit tests helper class for the REST API
 """
+from urllib.parse import urlencode
 
 from django.test import TestCase
 from django.test.client import Client
 
 from amcat.tools import amcattest
-
-from django.contrib.auth.hashers import make_password
-from urllib import urlencode
 
 import json
 import collections
@@ -78,7 +76,7 @@ class ApiTestCase(TestCase):
     def _request(self, resource, as_user=None, method='get', check_status=200, request_args=[], request_options={}, **options):
         if as_user is not None:
             self._login(as_user=as_user)
-        resource_url = resource if isinstance(resource, (str, unicode)) else resource.get_url()
+        resource_url = resource if isinstance(resource, str) else resource.get_url()
         if options:
             resource_url += "?" + surlencode(options)
         log.info("{method} {resource_url} {request_args} {request_options}".format(**locals()))

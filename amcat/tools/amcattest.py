@@ -36,7 +36,7 @@ import os
 import unittest
 from contextlib import contextmanager
 from functools import wraps
-from urlparse import urljoin
+from urllib.parse import urljoin
 from uuid import uuid4
 
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
