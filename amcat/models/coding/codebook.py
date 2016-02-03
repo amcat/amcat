@@ -499,7 +499,7 @@ class Codebook(AmcatModel):
         # Keep ordering by using order of hierarchy
         roots |= parents - children - {None, }
         hierarchy = OrderedDict(hierarchy)
-        codes = hierarchy.keys() + hierarchy.values()
+        codes = chain(hierarchy.keys(), hierarchy.values())
         codes = {code: i for i, code in enumerate(codes)}
         return sorted(roots, key=codes.get)
 
