@@ -83,7 +83,7 @@ def get_results(articles, analysis, store_intermediate=True):
     analysis = _get_analysis(analysis)
 
     r = pipeline_multiple(docs, analysis, store_intermediate=store_intermediate)
-    for id, result in r.iteritems():
+    for id, result in r.items():
         if result['state'] != 'SUCCESS':
             raise Exception("Exception on processing article {id}: {msg}"
                             .format(msg=result['result'], **locals()))
@@ -139,7 +139,7 @@ def _create_mapping(child_type, properties):
     
 def check_mappings():
     """Make sure the needed parent mappings are active"""
-    for name, analysis in ANALYSES.__dict__.iteritems():
+    for name, analysis in ANALYSES.__dict__.items():
         if name.startswith("__"): continue
         for i in range(len(analysis)):
             child_type = _get_doc_type(analysis[:i+1])

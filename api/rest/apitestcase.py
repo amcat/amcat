@@ -103,7 +103,7 @@ class ApiTestCase(TestCase):
     def get_object(self, resource, pk, **options):
         result = self.get(resource, pk=pk, **options)
         result = result['results'][0]
-        keys, values = zip(*result.iteritems())
+        keys, values = zip(*result.items())
         t = collections.namedtuple(resource.model.__name__, keys)
         return t(*values)
     

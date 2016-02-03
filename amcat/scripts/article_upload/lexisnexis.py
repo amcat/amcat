@@ -513,7 +513,7 @@ def body_to_article(headline, byline, text, date, source, meta):
 
 
 def get_query(header):
-    header = {k.lower().strip(): v for k, v in header.iteritems()}
+    header = {k.lower().strip(): v for k, v in header.items()}
     for key in ["zoektermen", "query", "terms"]:
         if key in header:
             return header[key]

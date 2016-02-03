@@ -108,13 +108,13 @@ class Graph(object):
         return "%s G {%s\n%s\n}" % (graphtype, header, "\n".join(e for e in entries if e))
 
     def getEdgesFrom(self, node):
-        for (subj, obj), edges in self.edges.iteritems():
+        for (subj, obj), edges in self.edges.items():
             if subj == node:
                 for edge in edges:
                     yield edge
 
     def getEdgesTo(self, node):
-        for (subj, obj), edges in self.edges.iteritems():
+        for (subj, obj), edges in self.edges.items():
             if obj == node:
                 for edge in edges:
                     yield edge

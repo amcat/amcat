@@ -179,11 +179,11 @@ class SelectionForm(forms.Form):
         """Include initials in form-data."""
         data = self.data.copy()
 
-        for field_name, value in self.initial.iteritems():
+        for field_name, value in self.initial.items():
             if field_name not in data:
                 _add_to_dict(data, field_name, value)
 
-        for field_name, field in self.fields.iteritems():
+        for field_name, field in self.fields.items():
             if field_name not in data:
                 _add_to_dict(data, field_name, field.initial)
         return data

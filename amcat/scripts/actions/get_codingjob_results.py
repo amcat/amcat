@@ -461,7 +461,7 @@ class GetCodingJobResults(Script):
         for schemafield in self.bound_form.schemafields:
             prefix = _get_field_prefix(schemafield)
             if self.options[prefix + "_included"]:
-                options = {k[len(prefix) + 1:]: v for (k, v) in self.options.iteritems() if k.startswith(prefix)}
+                options = {k[len(prefix) + 1:]: v for (k, v) in self.options.items() if k.startswith(prefix)}
 
                 for label, function in schemafield.serialiser.get_export_columns(**options):
                     table.addColumn(CodingColumn(schemafield, label, function))

@@ -216,7 +216,7 @@ class CSV(UploadScript):
 
     def postprocess(self, articles):
         if self.parent_field:
-            for doc_id, parent_id in self.parents.iteritems():
+            for doc_id, parent_id in self.parents.items():
                 doc = self.articles[doc_id]
                 doc.parent = self.articles[parent_id]
                 if not doc.addressee and self.options['addressee_from_parent']:

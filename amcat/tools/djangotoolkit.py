@@ -65,7 +65,7 @@ def to_querydict(d, mutable=False):
         else:
             return s
             
-    d = {k : encode(v) for (k,v) in d.iteritems()}
+    d = {k : encode(v) for (k,v) in d.items()}
     return QueryDict(urllib.urlencode(d, True), mutable=mutable)
 
 def from_querydict(d):

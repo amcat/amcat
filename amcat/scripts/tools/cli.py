@@ -121,6 +121,6 @@ _FIELD_HELP_MAP = {
 
 def argument_type_from_field(field):
     """Get the proper python type to parse a command line option"""
-    for (ftype, type) in _FIELD_MAP.iteritems():
+    for (ftype, type) in _FIELD_MAP.items():
         if isinstance(field, ftype): return type
     return str

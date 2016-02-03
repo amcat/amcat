@@ -103,7 +103,7 @@ def get_clusters(queries):
             article_clusters[aid].add(query)
 
     clusters = defaultdict(set)
-    for aid, queries in article_clusters.iteritems():
+    for aid, queries in article_clusters.items():
         clusters[frozenset(queries)].add(aid)
 
     return clusters

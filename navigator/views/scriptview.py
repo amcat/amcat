@@ -58,7 +58,7 @@ class ScriptHandler(TaskHandler):
         kwargs = self.task.arguments.copy() # don't modify self.task.arguments['data']
         if 'data' in kwargs:
             d = QueryDict('').copy()
-            for k, v in kwargs['data'].iteritems():
+            for k, v in kwargs['data'].items():
                 if isinstance(v, list):
                     d.setlist(k, v)
                 else:
@@ -141,7 +141,7 @@ class ScriptMixin(FormMixin):
         return self.get_script().options_form
 
     def get_initial(self):
-        initial = {k.replace("_id", ""): v for (k, v) in self.kwargs.iteritems()}
+        initial = {k.replace("_id", ""): v for (k, v) in self.kwargs.items()}
         initial.update(super(ScriptMixin, self).get_initial())
         return initial
 

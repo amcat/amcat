@@ -302,7 +302,7 @@ class Datatable(object):
         ID_REPLACE_NUMBER = 9999999999
         replace = lambda arg: (ID_REPLACE_NUMBER if arg == '{id}' else arg)
         if args: args = [replace(arg) for arg in args]
-        if kwargs: kwargs = {k: replace(v) for k, v in kwargs.iteritems()}
+        if kwargs: kwargs = {k: replace(v) for k, v in kwargs.items()}
 
         url = reverse(viewname, urlconf=urlconf, args=args, kwargs=kwargs, current_app=current_app)
         url = url.replace(str(ID_REPLACE_NUMBER), '{id}')

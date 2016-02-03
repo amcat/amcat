@@ -87,7 +87,7 @@ class TestArticle(amcattest.AmCATTestCase):
         def _articles(n, structure):
             articles = [Article(headline=unicode(i), text=unicode(i), **adict) for i in range(n)]        
             articles[0].parent = root
-            for child, parent in structure.iteritems():
+            for child, parent in structure.items():
                 articles[child].parent = articles[parent]
             return articles
 
@@ -101,7 +101,7 @@ class TestArticle(amcattest.AmCATTestCase):
 
         # Are the parent properties set correctly?
         self.assertEqual(a[0].parent, root)        
-        for child, parent in structure.iteritems():
+        for child, parent in structure.items():
             articles[child].parent = articles[parent]
             self.assertEqual(a[child].parent, a[parent])
 
@@ -121,7 +121,7 @@ class TestArticle(amcattest.AmCATTestCase):
         self.assertEqual(len(ids), 7)
         a = {int(a.text):a for a in Article.objects.filter(pk__in=ids)}
         self.assertEqual(a[0].parent, root)        
-        for child, parent in structure.iteritems():
+        for child, parent in structure.items():
             articles[child].parent = articles[parent]
             self.assertEqual(a[child].parent, a[parent])
         #TODO: WvA: test errors on external unsaved parents and cycles

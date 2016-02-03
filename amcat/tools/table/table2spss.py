@@ -100,7 +100,7 @@ def table2spss(t, writer=sys.stdout, saveas=None):
         vl = valuelabels[c]
         if vl:
             writer.write("VALUE LABELS %s\n" % varnames[c])
-            for id, lbl in sorted(vl.iteritems()):
+            for id, lbl in sorted(vl.items()):
                 writer.write("  %i  '%s'\n" % (id, clean(lbl, 250)))
             writer.write(".\n")
     if saveas:

@@ -148,7 +148,7 @@ class Boolean(object):
                     simple_terms[t.qfield].append(c(t.text))
                 else:
                     clauses.append(t.get_filter_dsl())
-            for field, terms in simple_terms.iteritems():
+            for field, terms in simple_terms.items():
                 clauses.append({"terms": {field: terms}})
 
             return {"bool": {"should": clauses}}

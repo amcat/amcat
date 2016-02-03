@@ -92,7 +92,7 @@ class UploadScript(script.Script):
 
         # avoid django problem/bug with repr(File(open(uncode-string)))
         # https://code.djangoproject.com/ticket/8156
-        o2 = {k:v for k,v in self.options.iteritems() if k != 'file'}
+        o2 = {k:v for k,v in self.options.items() if k != 'file'}
         log.debug(u"Articleset: {self.articlesets!r}, options: {o2}"
                   .format(**locals()))
 

@@ -51,7 +51,7 @@ class TestRules(amcattest.AmCATTestCase):
         Rule.objects.create(ruleset=r, label="x", order=2,
                             where=condition, insert=insert)
 
-        getrules = lambda r : [{k:v for k,v in rule.iteritems()
+        getrules = lambda r : [{k:v for k,v in rule.items()
                                 if k in ["condition", "insert"]}
                                for rule in r.get_rules()]
 

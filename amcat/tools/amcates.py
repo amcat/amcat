@@ -212,7 +212,7 @@ class Result(object):
         """@param hit: elasticsearch hit dict"""
         field_dict = {f: None for f in fields}
         if 'fields' in row:
-            for (k, v) in row['fields'].iteritems():
+            for (k, v) in row['fields'].items():
                 if k != "sets":
                     # elastic 1.0 always returns arrays, we only want
                     # sets in a list, the rest should be 'scalarized'

@@ -37,7 +37,7 @@ def to_querydict(dict):
     Converts a value created by querydict_dict back into a Django QueryDict value.
     """
     q = QueryDict("", mutable=True)
-    for k, v in dict.iteritems():
+    for k, v in dict.items():
         q.setlist(k, v)
     q._mutable = False
     return q
