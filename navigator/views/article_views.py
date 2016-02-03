@@ -258,7 +258,7 @@ def parse_sentence_name(name):
 
     try:
         return int(name.split("-")[1])
-    except IndexError, ValueError:
+    except (IndexError, ValueError):
         pass
 
 def get_sentence_ids(post):

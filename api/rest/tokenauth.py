@@ -8,7 +8,6 @@ class ExpiringTokenAuthentication(TokenAuthentication):
         user, token = super(ExpiringTokenAuthentication, self).authenticate_credentials(key)
 
         valid_until = token.created + timedelta(hours=24)
-        print token.created, valid_until, datetime.now()
         if valid_until < datetime.now():
             raise exceptions.AuthenticationFailed('The token expired on {valid_until}. Please request a new token.'.format(**locals()))
 

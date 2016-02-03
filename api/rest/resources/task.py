@@ -49,7 +49,7 @@ def single_task_result(request, task_id, uuid=False):
         return copy(task.get_handler().get_response())
     except TaskPending:
         return HttpResponse(status=404)
-    except Exception, e:
+    except Exception as e:
         if e.__class__.__name__ in ('QueryValidationError', 'QueryError', 'QueryParseError'):
             error_msg= "Cannot parse query: {e}".format(e=e.message)
 

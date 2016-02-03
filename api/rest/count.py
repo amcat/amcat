@@ -116,14 +116,14 @@ def count(qs):
 
     try:
         return simplify_count(qs)
-    except ValueError, e:
+    except ValueError as e:
         log.debug("Could not simplify count: {e}".format(e=e))
-    except EmptyResultSet, e:
+    except EmptyResultSet as e:
         log.debug("Could not simplify count: {e}".format(e=e))
 
     try:
         return approximate_count(qs)
-    except ValueError, e:
+    except ValueError as e:
         log.debug("Error on approximating: {e}".format(e=e))
 
     return qs.count()
