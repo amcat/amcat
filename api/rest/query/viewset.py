@@ -84,7 +84,7 @@ class QueryActionView(APIView):
     @cached
     def get_articlesets(self):
         # Articlesets are given by GET parameter `sets` and separated by commas
-        articleset_ids = map(int, filter(unicode.isdigit, self.request.GET.get("sets", "").split(",")))
+        articleset_ids = map(int, filter(str.isdigit, self.request.GET.get("sets", "").split(",")))
         articlesets = self.project.all_articlesets().filter(id__in=articleset_ids)
         return articlesets.only("id", "name")
 
@@ -93,7 +93,7 @@ class QueryActionView(APIView):
         # Codingjobs are given by GET parameter `jobs` and separated by commas. If *no* jobs are
         # given, we also return no jobs, in contrast to get_articlesets which yields all articlesets
         # belonging to the current project.
-        codingjob_ids = map(int, filter(unicode.isdigit, self.request.GET.get("jobs", "").split(",")))
+        codingjob_ids = map(int, filter(str.isdigit, self.request.GET.get("jobs", "").split(",")))
         codingjobs = self.project.codingjob_set.filter(id__in=codingjob_ids).only("id", "name")
         return codingjobs if codingjob_ids else CodingJob.objects.none()
 

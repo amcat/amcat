@@ -93,10 +93,10 @@ def split_header(doc):
     Split header from rest of articles.
 
     @param doc: complete lexisnexis document
-    @type doc: unicode
+    @type doc: str
 
-    @return: [(unicode) representation of the header section,
-              (unicode) representation of the body section]
+    @return: [(str) representation of the header section,
+              (str) representation of the body section]
     """
     header = []
     splitted = doc.split("\n")
@@ -127,7 +127,7 @@ def parse_header(header):
              value
 
     @param header: representation of header (as given by split_headers)
-    @type header: unicode / str
+    @type header: str
 
     @return: dictionary
     """
@@ -162,9 +162,9 @@ def split_body(body):
     Split body into multiple text pieces contaning the articles.
 
     @param body: representation of body
-    @type body: unicode / str
+    @type body: str
 
-    @return: generator yielding unicode strings
+    @return: generator yielding strings
     """
     art = StringIO()
     for line in body.split("\n")[1:]:
@@ -470,19 +470,19 @@ def body_to_article(headline, byline, text, date, source, meta):
     an entry in the database.
 
     @param headline: headline of new Article-object
-    @type headline: unicode / str
+    @type headline: str
 
     @param byline: byline for new Article
-    @type byline: NoneType, unicode, str
+    @type byline: NoneType, str
 
     @param text: text for new Article
-    @type text: unicode / str
+    @type text: str
 
     @param date: date(time) for new Article
     @type date: datetime.date, datetime.datetime
 
     @param source: medium-label for new Article
-    @type source: unicode / str
+    @type source: str
 
     @param meta: object containing all sorts of meta-information, most of
                  it suitable for metastring. However, some information

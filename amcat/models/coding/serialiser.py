@@ -78,7 +78,7 @@ class BaseSerialiser(object):
 
     def value_label(self, value):
         """Get a label for the given (deserialised) value"""
-        return unicode(value)
+        return str(value)
 
     def get_export_fields(self):
         """Return a sequence of (id, django form fields) pairs with export options for this field
@@ -100,7 +100,7 @@ class TextSerialiser(BaseSerialiser):
     """Simple str - str serialiser"""
 
     def __init__(self, field):
-        super(TextSerialiser, self).__init__(field, unicode, unicode)
+        super(TextSerialiser, self).__init__(field, str, str)
 
 
 class IntSerialiser(BaseSerialiser):

@@ -43,14 +43,14 @@ log = logging.getLogger(__name__)
 
 import re
 
-WORD_RE = re.compile('[{L}{N}]+')  # {L} --> All (unicode) letters
+WORD_RE = re.compile('[{L}{N}]+')  # {L} --> All letters
 # {N} --> All numbers
 
 
 def word_len(txt):
     """Count words in `txt`
 
-    @type txt: str or unicode"""
+    @type txt: str"""
     if not txt: return 0  # Safe handling of txt=None
     return len(re.sub(WORD_RE, ' ', txt).split())
 

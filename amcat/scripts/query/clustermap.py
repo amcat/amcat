@@ -47,7 +47,7 @@ class ClusterMapHandler(QueryActionHandler):
 class ClusterMapForm(QueryActionForm):
     def clean(self):
         queries = self.cleaned_data["query"].split("\n")
-        queries = filter(bool, map(unicode.strip, queries))
+        queries = filter(bool, map(str.strip, queries))
 
         if len(queries) < 2:
             raise ValidationError("You need to provide at least 2 queries to generate a clustermap")

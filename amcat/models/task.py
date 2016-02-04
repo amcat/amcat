@@ -147,7 +147,7 @@ class TaskHandler(object):
         Create a new task object and start it using this class as handler
         @return: an handler object instantiated with the created task
         """
-        if not isinstance(target_class, (str, unicode)):
+        if not isinstance(target_class, str):
             target_class = classtools.get_qualified_name(target_class)
 
         task = Task.objects.create(

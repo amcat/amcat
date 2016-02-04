@@ -32,7 +32,7 @@ this organisation!
  - decorators
  - sequence functions
  - mapping functions
- - string/unicode functions
+ - string functions
  - date(time) functions
  - process handling and external processes
  - type checking
@@ -141,7 +141,7 @@ def join(seq, sep="\t", fmt="%s", none=''):
     """
 
     def joinformat(elem, fmt, none):
-        """fmt%elem with handling for none, unicode"""
+        """fmt%elem with handling for none, str"""
         if elem is None: return none
         if type(elem) == str:
             elem = elem.encode('latin-1', 'replace')
@@ -319,10 +319,10 @@ if appropriate (e.g. german sz, ellipsis)"""
 def stripAccents(s, usemap=ACCENTS_MAP, latin1=False):
     """Replace accented characters in s by their unaccepted equivalents
 
-    @param s: the string to strip accents from. If it is not a unicode object
-      it is first converted using L{unicode}C{(.., 'latin-1')}
+    @param s: the string to strip accents from. If it is not a str object
+      it is first converted using L{str}C{(.., 'latin-1')}
     @param usemap: an optional translation map to use
-    @return: a unicode string containing the translated input
+    @return: a str string containing the translated input
     """
     #TODO: This is probably not very efficient! Creating a reverse map and
     #Iterating the input while building the output would be better...

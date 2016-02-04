@@ -218,7 +218,7 @@ class ObjectTable(Table):
         a cell is created. The returned data will be used to fill it. If
         if is a string, use it as an attribute getter 
         
-        @type label: str or unicode
+        @type label: str
         @param label: String for user-friendly column-identification.
         If not provided, the __name__ attribute of `col` will be used.
         
@@ -229,7 +229,7 @@ class ObjectTable(Table):
             if label == '<lambda>': label = ''
 
             col = ObjectColumn(label, col, **kargs)
-        elif type(col) in (str, str):
+        elif isinstance(col, str):
             col = AttributeColumn(col, label, **kargs)
         if index is not None:
             self.columns.insert(index, col)

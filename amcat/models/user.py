@@ -118,7 +118,7 @@ class UserProfile(AmcatModel):
 
         if isinstance(role, Role):
             role = role.id
-        elif isinstance(role, (str, unicode)):
+        elif isinstance(role, str):
             role = Role.objects.get(label=role).id
 
         if onproject:

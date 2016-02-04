@@ -96,7 +96,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         return table
 
     def _get_ids(self, key):
-        return set(map(int, filter(unicode.isdigit, self.request.GET.get(key, "").split(","))))
+        return set(map(int, filter(str.isdigit, self.request.GET.get(key, "").split(","))))
 
     def get_context_data(self, **kwargs):
         query_id = self.request.GET.get("query", "null")

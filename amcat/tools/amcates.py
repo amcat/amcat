@@ -85,7 +85,7 @@ _clean_re = re.compile('[\x00-\x08\x0B\x0C\x0E-\x1F]')
 
 def _clean(s):
     """Remove non-printalbe characters
-    @type s: unicode | str | NoneType"""
+    @type s: str | NoneType"""
     if s is not None:
         return _clean_re.sub(' ', s)
 

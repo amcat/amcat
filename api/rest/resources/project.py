@@ -45,7 +45,7 @@ class ProjectResource(AmCATResource):
 
     def _filter_order_null_last(self, qs):
         orderby = self.request.query_params.get('order_by', [])
-        if type(orderby) is unicode or type(orderby) is str:
+        if isinstance(orderby, str):
             orderby = [orderby]
         try:
             idx = orderby.index(LAST_VISITED_FIELD_NAME

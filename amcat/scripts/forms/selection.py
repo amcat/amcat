@@ -278,13 +278,13 @@ class SelectionForm(forms.Form):
 
     def clean_article_ids(self):
         article_ids = self.cleaned_data["article_ids"].split("\n")
-        article_ids = filter(bool, map(unicode.strip, article_ids))
+        article_ids = filter(bool, map(str.strip, article_ids))
 
         # Parse all article ids as integer
         try:
             article_ids = map(int, article_ids)
         except ValueError:
-            offender = repr(next(ifilterfalse(unicode.isnumeric, article_ids)))
+            offender = repr(next(ifilterfalse(str.isnumeric, article_ids)))
             raise ValidationError("{offender} is not an integer".format(**locals()))
 
         # Check if they can be chosen

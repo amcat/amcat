@@ -123,7 +123,7 @@ class SelectionSearch:
     @cached
     def get_query(self):
         """
-        @rtype: unicode
+        @rtype: str
         """
         return ' OR '.join('(%s)' % q.query for q in self.get_queries()) or None
 
@@ -280,7 +280,7 @@ def get_date_filters(start_date, end_date, on_date, datetype):
     @type start_date: datetime.date
     @type end_date: datetime.date
     @type on_date: datetime.date
-    @type datetype: unicode, str
+    @type datetype: str
     """
     if datetype == 'on':
         yield ('start_date', on_date.isoformat())

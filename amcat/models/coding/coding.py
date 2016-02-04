@@ -175,7 +175,7 @@ class CodingValue(AmcatModel):
         if field is None:
             field = next(f for f in self.coding.schema.fields.all() if f.id == self.field_id)
         stype = field.serialiser.deserialised_type
-        if stype == unicode: return self.strval
+        if stype == str: return self.strval
         return self.intval
 
     @property

@@ -104,7 +104,7 @@ class Medium(AmcatModel):
     def get_or_create(cls, medium_name):
         """
         Finds a medium object or creates a new one if not found
-        @type medium name: unicode
+        @type medium name: str
         @return: a Medium object (or None if medium_name was None)
         """
         if medium_name is None: return None

@@ -43,7 +43,7 @@ class Script(object):
     'Abstract' class representing a modular piece of
     functionality. Scripts have three key parameters, specified as class variables:
     - input_type: a class representing the type of input expected by the script, such as
-      None, unicode, Table, or ArticleList. The command line equivalent would be
+      None, str, Table, or ArticleList. The command line equivalent would be
       a (deserialized) stdin stream
     - options: a Django form of required and optional options. The CLI equivalent
       are the command line options and arguments. Can be None
