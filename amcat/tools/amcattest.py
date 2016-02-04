@@ -34,6 +34,7 @@ import datetime
 import logging
 import os
 import unittest
+from collections import OrderedDict
 from contextlib import contextmanager
 from functools import wraps
 from urllib.parse import urljoin
@@ -269,10 +270,18 @@ def  create_test_codebook_with_codes():
      B1
     @return: A pair of the codebook and the {label : code} dict
     """
-    parents = {"A1a":"A1", "A1b":"A1", "A1":"A", "A2":"A", "B1":"B", "A":None, "B":None}
-    codes = {l : create_test_code(label=l) for l in parents}
+    parents = OrderedDict((
+        ("A1a", "A1"),
+        ("A1b", "A1"),
+        ("A1", "A"),
+        ("A2", "A"),
+        ("B1", "B"),
+        ("A", None),
+        ("B", None)
+    ))
+    codes = {l: create_test_code(label=l) for l in parents}
     codebook = create_test_codebook()
-    for code, parent in parents.items():
+    for code, parent in reversed(list(parents.items())):
         codebook.add_code(codes[code], codes.get(parent))
     return codebook, codes
 
