@@ -29,7 +29,6 @@ Interface Table:
 see tableoutput.py for useful methods for rendering tables in different ways
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 from collections import namedtuple
 import types

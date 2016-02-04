@@ -39,7 +39,6 @@ this organisation!
  - misc functions
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 import base64
 import collections

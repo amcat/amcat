@@ -22,7 +22,6 @@ Model module containing the Article class representing documents in the
 articles database table.
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 import logging
 

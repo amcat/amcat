@@ -24,7 +24,6 @@ A coding is a hook for the coding values on a specific article linked
 to a specific codingjob set.
 """
 
-from __future__ import print_function
 from django.db import transaction
 
 from amcat.tools.toolkit import deprecated

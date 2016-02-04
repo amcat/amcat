@@ -22,7 +22,6 @@ Auxilliary classes to aid making comparable classes based on any identity (L{Ide
 or specifically on an integral id with an associated label (L{IDLabel})
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 import logging;
 
 log = logging.getLogger(__name__)

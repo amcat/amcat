@@ -22,7 +22,6 @@ Module for creating an email message and sending it using django
 Can probably be refactored away since it is so trivial now?
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 from django.core.mail import EmailMultiAlternatives
 

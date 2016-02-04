@@ -24,7 +24,6 @@ Decided to roll my own parser since elastic does not support complex phrases
 Also paves the way for more customization, i.e. allowing Lexis style queries
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 import itertools
 import collections
 

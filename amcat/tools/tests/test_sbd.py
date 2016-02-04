@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
 from amcat.models import Sentence
 from amcat.tools import amcattest
 from amcat.tools.sbd import split, create_sentences

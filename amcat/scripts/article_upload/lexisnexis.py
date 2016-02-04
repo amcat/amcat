@@ -22,7 +22,6 @@
 This module contains a (semi-machine readable) lexisnexis parser.
 """
 
-from __future__ import unicode_literals
 import re
 import collections
 import logging

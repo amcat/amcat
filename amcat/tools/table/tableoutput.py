@@ -1,4 +1,3 @@
-from __future__ import with_statement, absolute_import, unicode_literals
 
 import sys
 import csv

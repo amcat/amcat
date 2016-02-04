@@ -21,7 +21,6 @@
 Plugin for uploading pdf files of a certain markup, provided by BZK
 """
 
-from __future__ import unicode_literals, absolute_import
 
 from datetime import date
 import re

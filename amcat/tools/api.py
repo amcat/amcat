@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Lesser General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from __future__ import unicode_literals, print_function, absolute_import
 
 """
 Utility module for accessing the AmCAT API.

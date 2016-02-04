@@ -25,7 +25,6 @@ visualisation software such as:
     http://www.aduna-software.com/technology/clustermap
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 import sh
 import os

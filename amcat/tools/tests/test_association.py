@@ -16,8 +16,6 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from __future__ import absolute_import
-from __future__ import unicode_literals
 from amcat.tools import amcates
 from amcat.tools import amcattest
 from amcat.tools.association import Association

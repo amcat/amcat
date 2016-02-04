@@ -28,7 +28,6 @@ value on the object
 Use reset and set_cache to manually clear and set the cache
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 import logging
 

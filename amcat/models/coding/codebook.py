@@ -23,7 +23,6 @@ collections of codes that can be used as a source of objects to be coded,
 or to derive automatically generated search terms from.
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 import logging
 import itertools

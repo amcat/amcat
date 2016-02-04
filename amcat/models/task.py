@@ -22,7 +22,6 @@ This module contains logic concerning tasks, which are Celery jobs created
 by a Script object.
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 import datetime
 

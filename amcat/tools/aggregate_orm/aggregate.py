@@ -19,7 +19,6 @@
 """
 Contains logic to aggregate using Postgres / Django ORM, similar to amcates.py.
 """
-from __future__ import unicode_literals
 
 from collections import OrderedDict
 from multiprocessing.pool import ThreadPool

@@ -1,5 +1,4 @@
 #from amcat.models.coding import codingjob
-from __future__ import absolute_import, unicode_literals
 
 from amcat.tools import toolkit, idlabel
 

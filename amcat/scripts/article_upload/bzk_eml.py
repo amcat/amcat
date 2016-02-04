@@ -20,7 +20,6 @@
 """
 Plugin for uploading .eml (outlook & others) files of a certain markup, provided by BZK
 """
-from __future__ import unicode_literals, absolute_import
 
 import re
 import logging

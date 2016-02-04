@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
 from amcat.tools import amcattest
 from amcat.tools.queryparser import parse_to_terms, QueryParseError, parse
 

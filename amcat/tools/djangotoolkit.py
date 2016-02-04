@@ -21,7 +21,6 @@
 Useful functions for dealing with django (models)x
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 import collections
 import json

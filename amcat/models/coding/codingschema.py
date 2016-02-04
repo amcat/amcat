@@ -22,7 +22,6 @@ Model module containing CodingSchema, representing a coding or coding
 schema to be used for manual coding
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools.model import AmcatModel
 from django.db import models

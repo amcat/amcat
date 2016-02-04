@@ -28,7 +28,6 @@ the test class subclasses AmCATTestCase, and run testing as normal.
 functions create_test_* create test objects for use in unit tests
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 import datetime
 import logging

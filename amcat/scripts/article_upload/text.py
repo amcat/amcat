@@ -22,7 +22,6 @@
 Plugin for uploading plain text files
 """
 
-from __future__ import unicode_literals
 
 import logging
 
