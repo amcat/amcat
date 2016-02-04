@@ -106,7 +106,7 @@ class Task(AmcatModel):
 
         @type terminate: boolean
         @param terminate: kill currently running task (Celery documentation advises againt using this)
-        @type signal: basestring
+        @type signal: str
         @param signal: signal to send to running process (used in combination with terminate). Default: SIGKILL"""
         return self.get_async_result().revoke(**kwargs)
 

@@ -164,7 +164,7 @@ def create_test_article(create=True, articleset=None, **kargs):
     """Create a test article"""
     from amcat.models.article import Article
 
-    if "date" in kargs and isinstance(kargs["date"], basestring):
+    if "date" in kargs and isinstance(kargs["date"], str):
         kargs["date"] = read_date(kargs["date"])
 
     if "project" not in kargs: kargs["project"] = create_test_project()

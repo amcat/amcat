@@ -92,11 +92,11 @@ class check_perm(object):
         option is set, also provide the keyword argument which receives
         the pk-id for the project you want to check against.
 
-        @type arg: basestring
+        @type arg: str
         @param arg: keyword argument which receives the project id for
         the project to check against (if onproject==True).
         """
-        assert(isinstance(arg, basestring))
+        assert(isinstance(arg, str))
 
         self.priv = priv
         self.onproject = onproject
@@ -201,10 +201,10 @@ class check(object):
         @type cls: subclass of django.models.Model
         @param cls: class to instanciate / check permissions for
 
-        @type action: basestring
+        @type action: str
         @param action: check for specific action.
 
-        @type args: basestring, iterable
+        @type args: str, iterable
         @param args: arguments to pass to cls.objects.get.
                      If this is None, check will not instanciate cls.
 

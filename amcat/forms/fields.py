@@ -45,7 +45,7 @@ class JSONField(models.TextField):
         super(JSONField, self).__init__(*args, **kwargs)
 
     def to_python(self, value):
-        if isinstance(value, basestring):
+        if isinstance(value, str):
             return json.loads(value)
         return value
 

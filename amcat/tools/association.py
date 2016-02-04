@@ -37,7 +37,7 @@ ArticleAssociation = namedtuple("ArticleAssociation", ["interval", "probability"
 
 def format_func(f):
     def ff(float_or_string):
-        if isinstance(float_or_string, basestring):
+        if isinstance(float_or_string, str):
             return float_or_string
         return f(float_or_string)
     return ff
@@ -113,7 +113,7 @@ class Association(object):
     def __init__(self, queries, filters, interval=None, weighted=False):
         """
         @type queries: [SearchQuery]
-        @type interval: basestring
+        @type interval: str
         @type weighted: bool
         """
         self.interval = interval
@@ -233,7 +233,7 @@ class Association(object):
         nodes = {query: get_node(queries, query) for query in queries}
 
         for _, p, of, given in associations:
-            if isinstance(p, basestring) or p <= threshold or of == given or p == 0.0:
+            if isinstance(p, str) or p <= threshold or of == given or p == 0.0:
                 continue
 
             label = format(p) if include_labels else ""

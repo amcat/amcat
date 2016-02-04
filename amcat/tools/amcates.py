@@ -675,7 +675,7 @@ class ES(object):
         @type mediums: bool
         @param mediums: return Medium objects, instead of ids
         """
-        if isinstance(group_by, basestring):
+        if isinstance(group_by, str):
             log.warning("Passing strings to aggregate_query(group_by) is deprecated.")
             group_by = [group_by]
 

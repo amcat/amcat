@@ -105,7 +105,7 @@ class CSV_semicolon(CSV):
 
 
 def _convert_value(value):
-    if not isinstance(value, basestring):
+    if not isinstance(value, str):
         return value
 
     if INT_RE.match(value) is not None:
