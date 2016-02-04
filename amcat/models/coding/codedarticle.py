@@ -125,7 +125,7 @@ class CodedArticle(models.Model):
         new_coding_objects = bulk_insert_returning_ids(new_coding_objects)
 
         coding_values = itertools.chain.from_iterable(
-            _to_codingvalues(co, c["values"]) for c, co in itertools.izip(new_codings, new_coding_objects)
+            _to_codingvalues(co, c["values"]) for c, co in zip(new_codings, new_coding_objects)
         )
 
         return (new_coding_objects, CodingValue.objects.bulk_create(coding_values))

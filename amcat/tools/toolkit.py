@@ -186,7 +186,7 @@ def grouper(iterable, n, fillvalue=None):
     """Collect data into fixed-length chunks or blocks."""
     if n < 1:
         raise ValueError("Size of {} invalid for grouper() / splitlist().".format(n))
-    return itertools.izip_longest(fillvalue=fillvalue, *([iter(iterable)] * n))
+    return itertools.zip_longest(fillvalue=fillvalue, *([iter(iterable)] * n))
 
 
 def splitlist(iterable, itemsperbatch=100):
