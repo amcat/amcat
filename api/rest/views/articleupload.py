@@ -29,12 +29,52 @@ from rest_framework.fields import CharField
 from amcat.models import Article, Medium, ArticleSet
 from api.rest.serializer import AmCATProjectModelSerializer
 from api.rest.viewsets.article import MediumField
+import re
+import logging
+
+from rest_framework.exceptions import ValidationError
+re_uuid = re.compile("[0-F]{8}-[0-F]{4}-[0-F]{4}-[0-F]{4}-[0-F]{12}", re.I)
+
+def is_uuid(val):
+    return isinstance(val, (str, unicode)) and re_uuid.match(val)
+    
 
 class ArticleListUploadSerializer(serializers.ListSerializer):
 
+    def to_internal_value(self, data):
+        # override to change uuid parents into ids
+        # there might be a better place to do this?
+        if not isinstance(data, list):
+            raise ValidationError("Article upload content should be a list of dicts!")
+        internal_uuids = {a['uuid']: a for a in data if a.get('uuid')}
+        parent_uuids = {a['parent']: a for a in data if is_uuid(a.get('parent'))}
+
+        to_lookup = set(parent_uuids) - set(internal_uuids)
+        existing = {unicode(uuid): id for (uuid, id) in
+                    Article.objects.filter(uuid__in = to_lookup).values_list("uuid", "id")}
+
+        result = []
+        for a in data:
+            parent = a.get('parent')
+            if is_uuid(parent):
+                if parent in existing: # update with parent=id from database
+                    a['parent'] = existing[parent]
+                elif parent in internal_uuids: # add child to parent's children list, remove from result
+                    del a['parent']
+                    internal_uuids[parent].setdefault('children', []).append(a)
+                    continue # don't add this to result
+                else:
+                    logging.warn("Unknown parent: {parent}".format(**locals()))
+                    a['parent'] = None
+            result.append(a)
+        
+        return super(ArticleListUploadSerializer, self).to_internal_value(result)
+        
+        
+        
     def create(self, validated_data):
         #print validated_data
-        def _process(article_dicts, parent=None):
+        def _process_children(article_dicts, parent=None):
             for adict in article_dicts:
                 children = adict.pop("children")
                 if parent is not None:
@@ -42,10 +82,10 @@ class ArticleListUploadSerializer(serializers.ListSerializer):
                     adict['parent'] = parent
                 article = Article(**adict)
                 yield article
-                for a in _process(children, parent=article):
+                for a in _process_children(children, parent=article):
                     yield a
-
-        articles = list(_process(validated_data))
+                    
+        articles = list(_process_children(validated_data))
         articleset = self.context["view"].kwargs.get('articleset')
         if articleset: articleset = ArticleSet.objects.get(pk=articleset)
         Article.create_articles(articles, articleset=articleset)

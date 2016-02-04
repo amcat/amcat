@@ -74,6 +74,9 @@ LOGGING = {
     }
 }
 
+if os.environ.get('AMCAT_LOG_QUERIES', 'N').upper() in ("1", "Y", "ON"):
+    LOGGING['loggers']['django.db'] = {}
+
 if os.environ.get('AMCAT_USE_LOGSTASH', 'N').upper() in ("1", "Y", "ON"):
     LOGGING['handlers']['logstash'] =  {
         'level': 'INFO',

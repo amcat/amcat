@@ -21,7 +21,16 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 from amcat.models import Article
 from amcat.tools import amcattest, amcates
+from uuid import uuid4
+import datetime
 
+
+def test_article_dict(**kwargs):
+    if 'date' not in kwargs: kwargs['date'] = datetime.datetime.now().isoformat()
+    if 'headline' not in kwargs: kwargs['headline'] = 'test headline {}'.format(uuid4())
+    if 'text' not in kwargs: kwargs['text'] = 'test text {}'.format(uuid4())
+    if 'medium' not in kwargs: kwargs['medium'] = 'test'
+    return kwargs    
 
 class TestArticleUploadView(APITestCase):
     def setUp(self):
@@ -32,50 +41,31 @@ class TestArticleUploadView(APITestCase):
         self.url_set = reverse("api:articleset-article-upload",
                                kwargs=dict(project=self.project.id, articleset=self.aset.id)) + "?format=json"
 
-    def _post(self, data, to_set=False):
-        return self.client.post(self.url_set if to_set else self.url,
-                                content_type="application/json", data=json.dumps(data))
+    def _post(self, data, to_set=True, expected_status=201):
+        response = self.client.post(self.url_set if to_set else self.url,
+                                    content_type="application/json", data=json.dumps(data))
+        self.assertEqual(response.status_code, expected_status,
+                         "Status code {response.status_code}: {response.content}".format(**locals()))
+        return json.loads(response.content)
+            
 
     @amcattest.use_elastic
     def test_post(self):
         self.client.login(username=self.user.username, password="test", to_set=True)
 
-        response = self._post([
-            {
-                "date": "2011-01-01T11:11",
-                "headline": "test",
-                "medium": "test",
-                "text": "aap noot mies",
-                "children": [{
-                     "date": "2011-01-01T11:11",
-                     "headline": "test 2",
-                     "medium": "test",
-                     "text": "aap, mies in nood",
-                     "children": [{
-                         "date": "2011-01-01T11:11",
-                         "headline": "test 3",
-                         "medium": "test",
-                         "text": "Piet, wie kent hem niet?",
-                         "children": []
-                     }]
-                }]
-             },
-            {
-                "date": "2011-01-01T11:11",
-                "headline": "test kinderloos",
-                "medium": "test",
-                "text": "ik heb geen kinderen :(",
-            }
-        ], to_set=True)
+        a1, a2, a3, a4 = [test_article_dict() for _ in [1,2,3,4]]
+        a1['children'] = [a2]
+        a2['children'] = [a3]
+        
+        result = self._post([a1,a4], to_set=True)
 
-        result = json.loads(response.content)
         self.assertEqual(4, len(result))
-        self.assertEqual(201, response.status_code)
 
         arts = [Article.objects.get(pk=a["id"]) for a in result]
 
-        self.assertEqual(arts[0].headline, "test")
-        self.assertEqual(arts[3].headline, "test kinderloos")
+        print a
+        self.assertEqual(arts[0].headline, a1['headline'])
+        self.assertEqual(arts[3].headline, a4['headline'])
 
         self.assertEqual(arts[0].parent, None)
         self.assertEqual(arts[1].parent, arts[0])
@@ -92,20 +82,20 @@ class TestArticleUploadView(APITestCase):
         article = amcattest.create_test_article()
         amcates.ES().flush()
         
-        response = self._post([
-            {
-                "date": "2011-01-01T11:11",
-                "headline": "test",
-                "medium": "test",
-                "project": self.project.id,
-                "text": "aap noot mies",
-                "parent": article.id,
-                "children": []
-             }
-        ])
-
-        result, = json.loads(response.content)
+        result, = self._post([test_article_dict(parent=article.id)])
         new_article = Article.objects.get(id=result["id"])
-
         self.assertEqual(article, new_article.parent)
 
+        # test posting existing uuid
+        result, = self._post([test_article_dict(parent=article.uuid)])
+        new_article = Article.objects.get(id=result["id"])
+        self.assertEqual(article, new_article.parent)
+
+        # test posting article and child with uuid
+        p = test_article_dict(uuid=unicode(uuid4()))
+        c = test_article_dict(parent=p['uuid'])
+        result = self._post([p,c])
+        pa, ca = [Article.objects.get(pk=a["id"]) for a in result]
+        self.assertEqual(pa, ca.parent)
+        
+        
