@@ -322,7 +322,7 @@ class Article(AmcatModel):
         for attr in dupe_values:
             values = dupe_values[attr]
             if values:
-                results = es.query_all(filters={attr: values.keys()}, fields=["hash", "uuid"], score=False)
+                results = es.query_all(filters={attr: list(values.keys())}, fields=["hash", "uuid"], score=False)
                 for r in results:
                     a =values[getattr(r, attr)]
                     if a.hash != r.hash: 
