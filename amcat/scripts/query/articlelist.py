@@ -84,7 +84,8 @@ class ArticleListAction(QueryAction):
         data["ids"] = data.get("ids", selection.get_filters().get("ids", []))
         url = urllib.urlencode(data, doseq=True)
         rowlink = ARTICLE_ROWLINK.format(reverse("navigator:project-details", args=[self.project.id]), "{id}")
-        table = Datatable(SearchResource, url="/api/v4/search", rowlink=rowlink, rowlink_open_in="new", checkboxes=True)
+        table = Datatable(SearchResource, url="/api/v4/search", rowlink=rowlink, rowlink_open_in="new", checkboxes=True,
+                          allow_export_via_post=True)
         table = table.add_arguments(minimal="1")
         table = table.add_arguments(project=str(self.project.id))
 

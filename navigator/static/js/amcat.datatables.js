@@ -22,7 +22,7 @@
  * calls. It can figure out most of the needed information by just an api-
  * url.
  */
-
+window.amcat = require("amcat/amcat");
 window.amcat = (window.amcat === undefined) ? {} : window.amcat;
 amcat.datatables = {};
 
@@ -33,6 +33,8 @@ _TARGET_ERR = "You can't use number to target columns in columndefs, as " +
 _SORTCOL = "iSortCol_";
 _SORTDIR = "sSortDir_";
 _DPROP = "mDataProp_";
+
+
 
 function export_clicked(){
     var table = this.table.DataTable();
@@ -46,15 +48,20 @@ function export_clicked(){
     var url = this.table.parents(".amcat-table-wrapper").data("url");
     url += "&format=" + this.format.val();
     url += "&page_size=" + this.page_size.val();
-
-    if(pks.length){
-        url += "&pk=" + pks.join("&pk=");
-    }
-
     var order = table.order()[0];
     var order_str = $('th', this.table).eq(order[0]).text();
     var order_dir = order[1] === "desc" ? '-' : '';
     url += "&order_by=" + order_dir + order_str;
+
+    if(this.table.parents(".amcat-table-wrapper").data("allow_export_via_post")){
+        amcat.utils.navigate_with_post_data(url, {
+            pk: pks
+        });
+        return;
+    }
+    if(pks.length){
+        url += "&pk=" + pks.join("&pk=");
+    }
 
     window.location = url;
     this.modal.modal("hide");
