@@ -757,9 +757,71 @@ define([
     };
 
 
-        $("#articlelist-add-to-set").click(self.on_add_to_set);
-        $("#articlelist-use-in-query").click(self.on_use_in_query_clicked);
+    self.onclick_save_image_link = function(link, image, format){
+        var w = image.width;
+        var h = image.height;
+        var canvas = $('<canvas>').attr('width', w).attr('height', h)[0];
+        var render = canvas.getContext('2d');
+        render.drawImage(image, 0, 0);
+        var uri = canvas.toDataURL(format.mime);
+        link.attr('href', uri)
+            .attr('download', $("#query-name").text() + '-graph' + format.extension);
+    };
 
+    self.get_image_save_buttons= function(image){
+        var formats = [
+            {mime: 'image/png', extension: '.png'},
+            {mime: 'image/jpeg', extension: '.jpg'}
+        ];
+        var dropdown = $('<div>').addClass('dropdown');
+        dropdown.append(
+            $('<button>')
+                .addClass('btn btn-default btn-xs dropdown-toggle')
+                .css('vertical-align', 'top')
+                .html('Save <span class="caret"></span>')
+                .attr('data-toggle', 'dropdown')
+        );
+        var list = $('<ul>').addClass('dropdown-menu');
+        var svgLink = $('<a>')
+            .attr('href', image.attr('src'))
+            .attr('download', $("#query-name").text() + '-graph.svg')
+            .text('Save as: image/svg');
+        list.append($('<li>').html(svgLink));
+
+        formats.forEach(function(format){
+            var li = $('<li>').append(
+                $("<a>")
+                    .click(function(event){
+                    self.onclick_save_image_link($(this), image[0], format);
+                })
+                    .text('Save as: ' + format.mime)
+                    .attr('href', '#')
+            );
+            list.append(li);
+        });
+
+        dropdown.append(list);
+        dropdown.css({
+            'display': 'inline',
+            'vertical-align': 'top',
+            'margin-left': 20
+        });
+        return dropdown;
+    };
+
+    self.render_complete = function(body){
+        var articlelist = $("#articlelist-table");
+        if(articlelist.length > 0){
+            $("#articlelist-add-to-set").click(self.on_add_to_set);
+            $("#articlelist-use-in-query").click(self.on_use_in_query_clicked);
+        }
+
+
+        var images = body.find("img.save-image");
+        images.each(function(i, image){
+            image = $(image);
+            image.after(self.get_image_save_buttons(image));
+        });
     };
     self.init_poll = function(uuid){
         var poll = Poll(uuid, {download: self.download_result()});
