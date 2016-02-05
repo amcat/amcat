@@ -98,7 +98,7 @@ class SummaryAction(QueryAction):
                     interval = "day"
 
                 date_aggr = selection.get_nested_aggregate([IntervalCategory(interval)])
-                medium_aggr = selection.get_nested_aggregate([MediumCategory(), IntervalCategory(interval)])
+                medium_aggr = selection.get_nested_aggregate([MediumCategory()])
             
             self.monitor.update(79, "Rendering results..".format(**locals()))
 
