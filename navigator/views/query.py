@@ -143,7 +143,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
 
         saved_queries = Query.objects.filter(project=self.project)
         saved_user_queries = saved_queries.filter(user=self.request.user)[:SHOW_N_RECENT_QUERIES]
-        saved_project_queries = saved_queries.filter(Q(private=False) & ~Q(user=self.request.user))[:SHOW_N_RECENT_QUERIES]
+        saved_project_queries = saved_queries.filter(~Q(user=self.request.user))[:SHOW_N_RECENT_QUERIES]
 
         form.fields["articlesets"].widget.attrs['disabled'] = 'disabled'
         return dict(super(QueryView, self).get_context_data(), **locals())
