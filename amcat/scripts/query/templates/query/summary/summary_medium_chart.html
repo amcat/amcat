@@ -11,28 +11,25 @@
             console.log(form_data);
             form_data["interval"] = "day";
         });
-
         $('#medium-aggregation').highcharts({
-            chart: { zoomType: 'x', type: 'column' },
-            title: { text: 'Articles aggregated per medium per {{ interval }}.' },
-            xAxis: { type: 'datetime' },
+            chart: { zoomType: 'x', type: 'bar' },
+            title: { text: 'Articles per medium.' },
+            xAxis: { type: "category" },
             yAxis: {
                 title: { text: 'Number of articles' },
                 floor: 0
             },
+            legend: {
+                enabled: false
+            },
             series: [
-                {% for medium, data in medium_aggr %}
                     {
-                        type: 'column',
-                        name: '{{ medium.name }}',
                         data: [
-                            {% for date, count in data %}
-                                [Date.UTC({{ date.year }}, {{ date.month }} -1, {{ date.day }}), {{ count }}],
+                            {% for medium, count in medium_aggr %}
+                                {'name': "{{ medium.name }}", 'y': {{ count }}, 'id': {{ medium.id }} },
                             {% endfor %}
-                        ],
-                        obj: { id: {{medium.id}} }
-                    },
-                {% endfor %}
+                        ]
+                    }
             ],
             plotOptions: {
                 column: {
@@ -43,12 +40,12 @@
                         click: function(event){
                             articles_popup = require("query/utils/articlemodal");
                             var filters = {};
-                            filters["medium"] = event.point.series.options.obj;
-                            filters["date"] = event.point.x;
+                            filters["medium"] = event.point;
                             articles_popup().show(form_data, filters);
                         }
                     }
-                }
+                },
+
             }
         });
     });

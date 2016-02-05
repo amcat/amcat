@@ -364,6 +364,9 @@ class QueryParseError(ValidationError):
 def parse_to_terms(s, simplify_terms=True, strip_accents=True, default_fieldname=None):
     if strip_accents:
         s = stripAccents(s)
+    if " *" in s.strip():
+        raise QueryParseError("Can only use wildcard (*) as suffix or at beginning of query")
+        
     try:
         terms = get_grammar(default_fieldname).parseString(s, parseAll=True)[0]
     except Exception, e:

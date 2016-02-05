@@ -156,9 +156,7 @@ HIGHLIGHT_OPTIONS = {
     }
 }
 
-# This assumes that the 'lead' script is installed in elastic, e.g.:
-# echo "if (_source['text']) _source['text'].replace('\r', '').split('\n\n')[0]" > $ES_CONF/scripts/lead.groovy
-LEAD_SCRIPT_FIELD = {"lead": {"script": "lead"}}
+LEAD_SCRIPT_FIELD = {"lead": {"script": r"if (_source['text']) _source['text'].replace('\r', '').split('\n\n')[0]"}}
 
 UPDATE_SCRIPT_REMOVE_FROM_SET = ("s=ctx._source; "
                                  "if (s.sets) {s.sets -= set}")

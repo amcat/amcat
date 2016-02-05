@@ -198,8 +198,10 @@ class SelectionSearch:
         """
 
         """
+        query = self.get_query()
+        lead = not query
         fields = ['headline','text','date', 'length','medium','author','section']
-        return ES().query(self.get_query(), self.get_filters(), True, size=size, from_=offset, fields=fields)
+        return ES().query(query, self.get_filters(), True, size=size, from_=offset, fields=fields, lead=lead)
 
 
 class SearchQuery(object):

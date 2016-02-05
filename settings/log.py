@@ -19,13 +19,13 @@
 
 import os, sys
 
-if os.environ.get('DJANGO_DEBUG', None) is not None:
-    DEBUG = (os.environ['DJANGO_DEBUG'] in ("1", "Y", "ON"))
+if os.environ.get('AMCAT_DEBUG', None) is not None:
+    DEBUG = (os.environ['AMCAT_DEBUG'] in ("1", "Y", "ON"))
 else:
     DEBUG = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
                  or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
 
-LOG_LEVEL = os.environ.get('DJANGO_LOG_LEVEL', 'DEBUG' if DEBUG else 'INFO')
+LOG_LEVEL = os.environ.get('AMCAT_LOG_LEVEL', 'DEBUG' if DEBUG else 'INFO')
 
 LOGGING = {
     'version': 1,
@@ -68,11 +68,14 @@ LOGGING = {
                             'level': 'WARN',
         },
         '': {
-            'handlers': ['console'],
+            'handlers': [],
             'level': LOG_LEVEL,
         },
     }
 }
+
+if os.environ.get('AMCAT_LOG_QUERIES', 'N').upper() in ("1", "Y", "ON"):
+    LOGGING['loggers']['django.db'] = {}
 
 if os.environ.get('AMCAT_USE_LOGSTASH', 'N').upper() in ("1", "Y", "ON"):
     LOGGING['handlers']['logstash'] =  {
@@ -88,8 +91,8 @@ if os.environ.get('AMCAT_USE_LOGSTASH', 'N').upper() in ("1", "Y", "ON"):
         'level': 'INFO',
     }
         
-if 'DJANGO_LOG_FILE' in os.environ:
-    LOG_FILE = os.environ['DJANGO_LOG_FILE']
+if 'AMCAT_LOG_FILE' in os.environ:
+    LOG_FILE = os.environ['AMCAT_LOG_FILE']
 
     LOGGING['handlers']['logfile'] = {
         'level': LOG_LEVEL,
@@ -102,3 +105,5 @@ if 'DJANGO_LOG_FILE' in os.environ:
     LOGGING['loggers']['']['handlers'] += ['logfile']
 
 
+if os.environ.get('AMCAT_LOG_TO_CONSOLE', 'Y') in ("1", "Y", "ON"):
+    LOGGING['loggers']['']['handlers'] += ['console']

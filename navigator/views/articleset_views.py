@@ -123,6 +123,7 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
         table = table.rowlink_reverse('navigator:articleset-details', args=[self.project.id, '{id}'])
         table = table.hide("project")
         table = table.hide("favourite")
+        table = table.hide("featured")
         return table
 
     def get_datatable_kwargs(self):

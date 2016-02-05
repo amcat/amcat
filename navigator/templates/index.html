@@ -23,8 +23,20 @@
 {% endfor %}
 </ul>
 {% endif %}
+<hr/>
 {% if featured_sets %}
-<h3>Or explore one of our featured articlesets:</h3>
+<div class="panel panel-default" style="margin-bottom: 1em">
+        <div class="panel-heading">
+            <h4 class="panel-title" {% if recent_projects|length > 1%}class="collapsed"{% endif %}>
+                <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne" >
+Or explore one of our featured articlesets: 
+                </a>
+            </h4>
+        </div>
+        <div id="collapseOne" class="panel-collapse collapse {% if recent_projects|length <= 1%}in{% endif %}">
+            <div class="panel-body">
+
+
 <ul class='list-group'>
 {% for a, canread in featured_sets %}
 <li class="list-group-item"><a href="{% url 'navigator:articleset-details' a.project_id a.id %}"><strong>{{a}}</strong> in project {{a.project_id}}: {{a.project}}</a>
@@ -35,6 +47,11 @@
 
 {% endfor %}
 </ul>
+	    </div>
+        </div>
+    </div>
+
+
 {% endif %}
 
 </div>

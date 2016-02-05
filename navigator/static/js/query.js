@@ -370,7 +370,7 @@ define([
         }
 
         var method = saved_query.method.toUpperCase();
-        
+        var dialogtype = typeof(this.dialogtype) === "undefined" ? "FULL" : this.dialogtype.toUpperCase();
         if (!dialog_visible){
             name_btn.val(saved_query.name);
         }
@@ -379,7 +379,7 @@ define([
         
 
         if (!dialog_visible && this.confirm === true) {
-            if(method === "PATCH"){
+            if(dialogtype === "CONFIRM-ONLY"){
                 confirm_dialog.modal();
                 return $('.save', confirm_dialog)[0].focus();
             }
@@ -400,7 +400,7 @@ define([
 
         var url;
         if (method === "PATCH"){
-            url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: saved_query.id})
+            url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: saved_query.id});
         } else {
             url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: ''})
         }
@@ -442,11 +442,10 @@ define([
     };
 
     self.init_delete_query_button = function(){
-        var dq = $("#delete-query");
-        dq.addClass("disabled");
-
+        var deleteSaveBtns = $("#delete-query, #save-query");
+        deleteSaveBtns.addClass("disabled");
         if (saved_query.user === USER){
-            dq.removeClass("disabled");
+            deleteSaveBtns.removeClass("disabled");
         }
     };
 
@@ -501,23 +500,46 @@ define([
 
         $("#delete-query").addClass("disabled");
     };
-
+    self.save_query_as_clicked = function(event){
+        var args = {};
+        args.confirm = true;
+        args.dialogtype = "full";
+        args.method = "post";
+        self.save_query.bind(args)(event);
+    };
     self.save_query_clicked = function(event){
         var args = {};
-        if (saved_query.id === null || saved_query.user !== USER) {
+        if (saved_query.id === null) {
             args.confirm = true;
+            args.dialogtype = "full";
             args.method = "post";
         } else {
             args.confirm = true;
+            args.dialogtype = "confirm-only";
             args.method = "patch";
         }
-
         self.save_query.bind(args)(event);
     };
-
+    self.change_name_clicked = function(event){
+        console.log(USER);
+        if(saved_query.user === USER){
+            return self.save_query.bind({
+                confirm: true,
+                method: saved_query.id ? "patch" : "post",
+                dialogtype: "full"
+            })(event);
+        }
+    };
     self.change_articlesets_clicked = function(event){
         event.preventDefault();
+
+        $("#change-articlesets-select").change(function(){
+            var noneSelected = $(this).find('option:selected').length === 0;
+            $("#change-articlesets-confirm").toggleClass('disabled', noneSelected);
+        });
+
         $("#change-articlesets-query-dialog").modal();
+
     };
 
     self.change_articlesets_confirmed_clicked = function(){
@@ -734,14 +756,10 @@ define([
         modal.find(".btn-primary").addClass("disabled").off("click");
     };
 
-    self.render_complete = function(body){
-        var articlelist = $("#articlelist-table");
-        if(articlelist.length === 0){
-            return;
-        }
 
         $("#articlelist-add-to-set").click(self.on_add_to_set);
         $("#articlelist-use-in-query").click(self.on_use_in_query_clicked);
+
     };
     self.init_poll = function(uuid){
         var poll = Poll(uuid, {download: self.download_result()});
@@ -836,8 +854,9 @@ define([
                 event.stopPropagation();
                 callback(event);
             });
-        })
+        });
     };
+
 
     self.init = function(){
         $("#codebooks").change(self.codebook_changed);
@@ -847,8 +866,9 @@ define([
 
         $("#delete-query").click(self.delete_query);
         $("#confirm-overwrite-dialog, #save-query-dialog").find(".save").click(self.save_query.bind({confirm: false}));
-        $("h4.name").click(self.save_query.bind({confirm: true, method: "patch"}));
+        $("h4.name").click(self.change_name_clicked);
         $("#save-query").click(self.save_query_clicked);
+        $("#save-query-as").click(self.save_query_as_clicked);
         $("#change-articlesets").click(self.change_articlesets_clicked);
         $("#change-articlesets-confirm").click(self.change_articlesets_confirmed_clicked);
 

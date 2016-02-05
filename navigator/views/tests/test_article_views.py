@@ -1,9 +1,9 @@
 from django.core.urlresolvers import reverse
 from django.test import Client
-from amcat.models import ArticleSet, Sentence, Article
+from amcat.models import ArticleSet, Sentence, Article, Role
 from amcat.tools import amcattest, sbd
 import navigator.forms
-from navigator.views.article_views import ArticleSplitView, handle_split, get_articles
+from navigator.views.article_views import ArticleSplitView, handle_split, get_articles, ArticleDetailsView
 
 
 class TestSplitArticles(amcattest.AmCATTestCase):
@@ -198,3 +198,65 @@ class TestArticleViews(amcattest.AmCATTestCase):
         # Check if text on splitted articles contains expected
         self.assertTrue("Einde" not in a.text)
         self.assertTrue("Einde" in b.text)
+        
+    @amcattest.use_elastic
+    def test_permissions(self):
+        # articles should be visible if any of the sets it is in has the correct permissions
+
+        role_metareader = Role.objects.get(label="metareader", projectlevel=True)
+        role_reader = Role.objects.get(label="reader", projectlevel=True)
+
+        user = amcattest.create_test_user(username="fred", password="secret")
+
+        p1 = amcattest.create_test_project(name="p1")
+        p2 = amcattest.create_test_project(name="p2", owner=user)
+        
+        s1  = amcattest.create_test_set(project=p1)
+        a1 = amcattest.create_test_article(project=p1, articleset=s1, text="Dit is de tekst", headline="hoofdlijn")
+
+        client = Client()
+        client.login(username="fred", password="secret")
+                
+        url = reverse("navigator:" + ArticleDetailsView.get_view_name(), args=[p1.id, s1.id, a1.id])
+
+
+        
+        def test(url, can_view=True, can_read_article=True):
+            response = client.get(url)
+            self.assertEqual(response.status_code, 200 if can_view else 403)
+            if can_view:
+                self.assertEqual(response.context['can_view_text'], can_read_article)
+            return response
+            
+        # fred can read it if p1 is reader
+        p1.guest_role = role_reader
+        p1.save()
+        response = test(url)
+        self.assertIn("Dit is de tekst", response.content)
+
+        # but not if guest role is metareader 
+        p1.guest_role = role_metareader
+        p1.save()
+        response = test(url, can_read_article=False)
+        self.assertNotIn("Dit is de tekst", response.content)
+        self.assertIn("hoofdlijn", response.content)
+
+        # and an error if there is no guest role at all
+        
+        p1.guest_role = None
+        p1.save()
+        test(url, can_view=False)
+        
+        # Unless the article set is added to project 2 (where Fred is owner)
+        p2.articlesets.add(s1)
+        test(url)
+        
+        # Also if project 1 has metareader as guest role
+        p1.guest_role = role_metareader
+        p1.save()
+        test(url)
+
+        #TODO: Test that you can only link a set on which you have read rights (i.e. on all articles? or on the project the set is currently in?)
+        #TODO: Test API permissions
+        
+        

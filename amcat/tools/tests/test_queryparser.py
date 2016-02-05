@@ -39,6 +39,13 @@ class TestQueryParser(amcattest.AmCATTestCase):
 
         # disallow AND in lucene notation
         self.assertRaises(QueryParseError, q, '"a (b AND c)"~5')
+        
+        # disallow matchall wildcards anywhere but at the beginning
+        self.assertRaises(QueryParseError, q, '"a * b"~5')
+        self.assertRaises(QueryParseError, q, 'a AND *')
+        
+        self.assertEqual(q('* NOT a'), 'NOT[_all::* _all::a]')
+        self.assertEqual(q('*'), '_all::*')
 
     def test_dsl(self):
         q = parse

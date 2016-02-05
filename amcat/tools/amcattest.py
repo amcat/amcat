@@ -58,7 +58,7 @@ def _get_next_id():
 
 def skip_slow_tests():
     """Should we skip the slow tests, e.g. Solr, Alpino etc"""
-    return os.environ.get('DJANGO_SKIP_SLOW_TESTS') in ("1","Y", "ON")
+    return os.environ.get('AMCAT_SKIP_SLOW_TESTS') in ("1","Y", "ON")
 
 def create_test_query(**kargs):
     from amcat.models import Query
@@ -160,7 +160,7 @@ def create_test_medium(**kargs):
     if "name" not in kargs: kargs["name"] = "Medium_%i" % kargs["id"]
     return Medium.objects.create(**kargs)
 
-def create_test_article(create=True, articleset=None, **kargs):
+def create_test_article(create=True, articleset=None, deduplicate=True, **kargs):
     """Create a test article"""
     from amcat.models.article import Article
 
@@ -175,7 +175,7 @@ def create_test_article(create=True, articleset=None, **kargs):
 
     a = Article(**kargs)
     if create:
-        Article.create_articles([a], articleset)
+        Article.create_articles([a], articleset, deduplicate=deduplicate)
     return a
 
 def create_test_sentence(**kargs):
@@ -325,7 +325,7 @@ class AmCATLiveServerTestCase(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super(AmCATLiveServerTestCase, cls).setUpClass()
-        cls.browser = Browser(driver_name=os.environ.get("DJANGO_WEBDRIVER", "firefox"))
+        cls.browser = Browser(driver_name=os.environ.get("AMCAT_WEBDRIVER", "firefox"))
 
     def setUp(self):
         self.browser.visit(self.live_server_url)

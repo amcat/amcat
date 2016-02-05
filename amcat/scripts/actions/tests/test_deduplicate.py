@@ -36,7 +36,7 @@ class TestDedup(amcattest.AmCATTestCase):
     def test_dedup(self):
         s = amcattest.create_test_set()
         m1, m2 = [amcattest.create_test_medium() for _x in range(2)]
-        adict = dict(text="text", headline="headline", articleset=s)
+        adict = dict(text="text", headline="headline", articleset=s, deduplicate=False)
         arts = [
             amcattest.create_test_article(medium=m1, pagenr=1, **adict),
             amcattest.create_test_article(medium=m1, pagenr=2, **adict),

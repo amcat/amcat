@@ -6,10 +6,10 @@ Master: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=master)](h
 *Note:* the following instructions are for the unstable development version. 
 To install stable releases, please see the readme file for those releases:
 
-## [Installation instructions for 3.4 (stable)](https://github.com/amcat/amcat/blob/release-3.4/README.md)
+### [Installation instructions for 3.4 (stable)](https://github.com/amcat/amcat/blob/release-3.4/README.md)
 
 
-## Installation and Configuration
+## Installation and Configuration for development version
 
 ### Prerequisites
 
@@ -89,16 +89,14 @@ pip install git+https://github.com/amcat/amcat.git
 
 ### Installing AmCAT (clone)
 
-Alternatively, clone the project from github and pip install the requirements. If you plan to make changes to 
-AmCAT, this is probably the best thing to do. 
+Clone the project from github and pip install the requirements. 
 
 ```sh
-git clone https://github.com/amcat/amcat.git
+git clone -b release-3.4 https://github.com/amcat/amcat.git
 pip install -r amcat/requirements.txt
 ```
 
-If you install amcat via cloning, be sure to add the new directory to the pythonpath. 
-Also, add AMCAT_ES_LEGACY hash to the environment.
+Be sure to add the new directory to the pythonpath and add AMCAT_ES_LEGACY hash to the environment.
 If you add these lines to amcat-env/bin/activate they will be automatically set when you activate.
 
 ```sh
