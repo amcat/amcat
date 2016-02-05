@@ -200,7 +200,6 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.admin',
     'django.contrib.staticfiles',
-    'djcelery',
     'rest_framework',
     'rest_framework.authtoken',
     'accounts',
