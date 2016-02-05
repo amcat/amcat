@@ -44,6 +44,8 @@ TIMEDELTAS = [
     ("year", datetime.timedelta(365)),
 ]
 
+MAX_DATE_GROUPS = 500
+
 @order_fields(("offset", "size"))
 class SummaryActionForm(QueryActionForm):
     size = IntegerField(initial=40)
