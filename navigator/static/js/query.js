@@ -692,7 +692,7 @@ define([
 
         var data = $.extend({}, form_data);
         data.article_ids = ids.join("\n");
-        data.articlesets = SETS.join(",");
+        data.articlesets = SETS;
         data.jobs = JOBS;
         data.project = PROJECT;
         data.articleset = set_id;
