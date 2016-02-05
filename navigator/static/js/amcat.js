@@ -89,6 +89,45 @@ define(["jquery", "bootstrap"], function() {
 
     };
 
+    amcat.utils = {};
+    /**
+     * Internally builds a hidden form that is immediately submitted as a `POST` request.
+     * data is sent as input fields in the form.
+     * @param url {string} the url
+     * @param data {object} A key:value object with data that should be sent.
+     * @param target {string} The form's target attribute
+     */
+    amcat.utils.navigate_with_post_data = function(url, data, target){
+        "use strict";
+        var form = $('<form>');
+        form.attr({
+            'action': url,
+            'target': target || "",
+            'method': "POST"
+        });
+
+        data["csrfmiddlewaretoken"] = csrf_middleware_token;
+        for(var key in data){
+            var value = data[key];
+            if(!(value instanceof Array)){
+                value = [value.toString()];
+            }
+            value.forEach(function(val){
+                var input = $("<input>");
+                input.appendTo(form);
+                input.attr({
+                    "type": "hidden",
+                    "name": key,
+                    "value": val
+                });
+            });
+        }
+
+        //the form has to be present in the document in order to be submitted properly.
+        form.css("display", "none");
+        form.appendTo(document.body);
+        form.submit();
+    };
 
 
     return amcat;
