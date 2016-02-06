@@ -58,7 +58,7 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
         else:
             result = method_func(url)
 
-        status_code, results = result.status_code, result.content
+        status_code, results = result.status_code, result.content.decode("utf-8")
 
         if method == "delete":
             # DELETE methods may not return a body

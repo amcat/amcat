@@ -90,15 +90,15 @@ class ApiTestCase(TestCase):
     def get_options(self, resource):
         self._login()
         request = self.client.options(resource.get_url() + "?format=json")
-        return json.loads(request.content)
+        return json.loads(request.content.decode("utf-8"))
 
     def get(self, resource, **options):
         result = self._request(resource, format='json', **options)
-        return json.loads(result.content)
+        return json.loads(result.content.decode("utf-8"))
 
     def post(self, resource, body, check_status=201, **options):
         result = self._request(resource, method='post', format='json', request_args=[body], check_status=check_status, **options)
-        return json.loads(result.content)
+        return json.loads(result.content.decode("utf-8"))
 
     def get_object(self, resource, pk, **options):
         result = self.get(resource, pk=pk, **options)
