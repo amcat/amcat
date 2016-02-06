@@ -120,7 +120,7 @@ class TableRenderer(BaseRenderer):
         # each item designates the name of the column that the item will
         # fall into.
         data = self.flatten_data(data)
-        #import json; print json.dumps(data, indent=2)
+        #import json; print(json.dumps(data, indent=2))
         # Get the set of all unique headers, and sort them.
         headers = OrderedDict()
         for item in data:

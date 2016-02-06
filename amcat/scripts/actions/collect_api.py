@@ -129,4 +129,4 @@ HANDLERS = {'application/json': JsonHandler, 'text/csv; charset=utf-8' : CSVHand
                             
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
-    print cli.run_cli()
+    print(cli.run_cli())

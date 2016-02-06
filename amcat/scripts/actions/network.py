@@ -78,7 +78,6 @@ class Network(Script):
         edges = []
         possible_header = True
         for line in r:
-            print `line`
             if not line: continue
             su, obj = [x.strip() for x in line[:2]]
             if su == "subject" and obj == "object" and possible_header:

@@ -586,16 +586,16 @@ def executepipe(cmd, listener=None, listenOut=False, outonly=False, **kargs):
     errr = _Reader(p.stderr, "err", listener)
     outr.start()
     errr.start()
-    #print "Yielding input pipe"
+    #print("Yielding input pipe")
     yield p.stdin
-    #print "Closing input pipe"
+    #print("Closing input pipe")
     p.stdin.close()
 
-    #print "Joining outr"
+    #print("Joining outr")
     outr.join()
-    #print "Joining errr"
+    #print("Joining errr")
     errr.join()
-    #print "Returning..."
+    #print("Returning...")
     if outonly:
         e = errr.out.strip()
         if e: raise Exception("Error on executing %r:\n%s" % (cmd, e))

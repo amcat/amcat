@@ -36,7 +36,7 @@ from rest_framework.exceptions import ValidationError
 re_uuid = re.compile("[0-F]{8}-[0-F]{4}-[0-F]{4}-[0-F]{4}-[0-F]{12}", re.I)
 
 def is_uuid(val):
-    return isinstance(val, (str, unicode)) and re_uuid.match(val)
+    return isinstance(val, str) and re_uuid.match(val)
     
 
 class ArticleListUploadSerializer(serializers.ListSerializer):
@@ -50,7 +50,7 @@ class ArticleListUploadSerializer(serializers.ListSerializer):
         parent_uuids = {a['parent']: a for a in data if is_uuid(a.get('parent'))}
 
         to_lookup = set(parent_uuids) - set(internal_uuids)
-        existing = {unicode(uuid): id for (uuid, id) in
+        existing = {str(uuid): id for (uuid, id) in
                     Article.objects.filter(uuid__in = to_lookup).values_list("uuid", "id")}
 
         result = []
@@ -73,7 +73,6 @@ class ArticleListUploadSerializer(serializers.ListSerializer):
         
         
     def create(self, validated_data):
-        #print validated_data
         def _process_children(article_dicts, parent=None):
             for adict in article_dicts:
                 children = adict.pop("children")

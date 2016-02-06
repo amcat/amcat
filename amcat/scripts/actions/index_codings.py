@@ -46,7 +46,7 @@ class IndexCodings(Script):
             
             for coding in ca.codings.all():
                 values = {}
-                print coding, coding.sentence
+                print((coding, coding.sentence))
                 for cv in coding.values.all():
                     fieldtype = cv.field.fieldtype.name
                     if fieldtype == "Codebook":
@@ -72,7 +72,7 @@ class IndexCodings(Script):
                               if not c['job'] == job.id]
             src['codings'].append(coding_json)
             es.es.index(index=es.index, doc_type=es.doc_type, id=ca.article_id, body=src)
-            #print json.dumps(src, indent=2)
+            #print(json.dumps(src, indent=2))
 
 
 if __name__ == '__main__':

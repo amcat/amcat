@@ -90,13 +90,13 @@ class FixCodes(Script):
             
             problems |= fix_field(job, field)
 
-        print
+        print("")
         if problems:
-            print "The following codes could not be fixed:"
+            print("The following codes could not be fixed:")
             for problem in problems:
-                print problem
+                print(problem)
         else:
-            print "All problems could be fixed"
+            print("All problems could be fixed")
             
     
 if __name__ == '__main__':

@@ -336,5 +336,3 @@ if __name__ == '__main__':
     g.getNode("b", create=False).label = "boer"
 
     print(g.getImage(format="png"))
-
-    # print dot2img(dot)

@@ -54,7 +54,7 @@ class Table(object):
 
     Supports read access using getRows/getColumns/getValue and
     using index access to and iteration over the 'Named' rows
-    e.g. print row[1].colA; for row in table: print(row.colB)
+    e.g. print(row[1].colA); for row in table:(print(row.colB))
 
     This is primarily meant for subclassing, but a base implementation
     works by giving columns and rows as sequences and a function that

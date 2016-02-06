@@ -46,5 +46,5 @@ class RefreshIndex(Script):
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     result = cli.run_cli()
-    #print result.output()
+    #print(result.output())
 

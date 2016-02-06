@@ -64,7 +64,6 @@ class ClauseView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, FormVi
         for clause in clauses:
             for place in ['source', 'subject', 'predicate']:
                 clause[place] = saf.resolve(clause[place])
-        print clauses
         # make tree
         from saf import visualize
         tree = visualize.get_png_bytes(saf)
