@@ -238,7 +238,7 @@ def get_metadata(metadata, element):
 
     it = _get_metadata(metadata, element)
     try:
-        it.next()
+        next(it)
     except StopIteration:
         return False
     list(it)

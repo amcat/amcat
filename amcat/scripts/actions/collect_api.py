@@ -80,9 +80,10 @@ class CSVHandler(object):
         self.headerpos = None
         self.output = output
         self.w = csv.writer(output)
+
     def add(self, response):
-        r = csv.reader(StringIO(response.content))
-        header = r.next()
+        csvf = csv.reader(StringIO(response.content))
+        header = next(iter(csvf))
         remap_fields = None
         if self.header:
             if self.header != header:
@@ -97,7 +98,7 @@ class CSVHandler(object):
             self.w.writerow(header)
             self.headerpos = self.output.tell()
 
-        for row in r:
+        for row in csvf:
             if remap_fields:
                 row = [(None if i is None else row[i]) for i in remap_fields]
             self.w.writerow(row)

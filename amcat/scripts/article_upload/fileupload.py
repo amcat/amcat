@@ -143,7 +143,7 @@ def namedtuples_from_reader(reader, encoding=None):
     returns a sequence of namedtuples from a (csv-like) reader which should yield the header followed by value rows
     """
     
-    header = reader.next()
+    header = next(iter(reader))
     class Row(collections.namedtuple("Row", header, rename=True)):
         column_names=header
         def __getitem__(self, key):

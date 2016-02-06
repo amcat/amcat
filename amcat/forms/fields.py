@@ -110,7 +110,7 @@ class CSVField(forms.FileField):
         # Check if csv file is valid
         try:
             cfile = csv.reader(data, delimiter=str(self.delimiter))
-            columns = [c.lower() for c in cfile.next()]
+            columns = [c.lower() for c in next(iter(cfile))]
         except Exception as e:
             log.exception(e)
             raise ValidationError(self.error_messages['notcsv'])

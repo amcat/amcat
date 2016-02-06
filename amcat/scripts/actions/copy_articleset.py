@@ -172,7 +172,7 @@ class CopyArticleSetScript(Script):
     def _get_index_details(self):
         sql = ("SELECT name, provenance FROM articlesets"
                " WHERE articleset_id = {self.source_set_id}".format(**locals()))
-        name, provenance = self._do_source_query(sql).next()
+        name, provenance = next(iter(self._do_source_query(sql)))
         return name, provenance
 
     def _copy_articles(self, aids):

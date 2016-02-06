@@ -37,9 +37,6 @@ import navigator.forms
 class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DetailView):
     model = Article
 
-
-
-
     def has_permission(self, perm):
         if perm >= authorisation.ROLE_PROJECT_WRITER:
             return False
@@ -306,6 +303,6 @@ class ArticleSplitView(ProjectFormView):
         ctx = super(ArticleSplitView, self).get_context_data(**kwargs)
         sentences = sbd.get_or_create_sentences(self.article).only("sentence", "parnr")
         ctx["sentences"] = _get_sentences(sentences)
-        ctx["sentences"].next() # skip headline
+        next(ctx["sentences"]) # skip headline
         return ctx
 
