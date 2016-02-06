@@ -379,9 +379,8 @@ class Datatable(object):
             {{ dt|safe }}
 
         """
-        filters = filters.items()
-        filters = self.filters + filters
-        return self.copy(filters=filters)
+        new_filters = list(chain(self.filters, filters.items()))
+        return self.copy(filters=new_filters)
 
     def add_arguments(self, **args):
         """
