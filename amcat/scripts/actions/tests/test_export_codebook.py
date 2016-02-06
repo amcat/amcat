@@ -20,6 +20,7 @@ from amcat.models import Language
 from amcat.scripts.actions.export_codebook import ExportCodebook
 from amcat.tools import amcattest
 from amcat.tools.amcattest import AmCATTestCase
+from amcat.tools.toolkit import head
 
 
 class TestExportCodebook(AmCATTestCase):
@@ -48,36 +49,36 @@ class TestExportCodebook(AmCATTestCase):
         codes = self.export()
 
         # Depth of tree is 3, so we need exactly three columns
-        self.assertTrue(hasattr(codes.values()[0], "code1"))
-        self.assertTrue(hasattr(codes.values()[0], "code2"))
-        self.assertTrue(hasattr(codes.values()[0], "code3"))
-        self.assertFalse(hasattr(codes.values()[0], "code4"))
+        self.assertTrue(hasattr(head(codes.values()), "code1"))
+        self.assertTrue(hasattr(head(codes.values()), "code2"))
+        self.assertTrue(hasattr(head(codes.values()), "code3"))
+        self.assertFalse(hasattr(head(codes.values()), "code4"))
 
         # Check other properties
-        self.assertTrue(hasattr(codes.values()[0], "uuid"))
-        self.assertTrue(hasattr(codes.values()[0], "code_id"))
-        self.assertFalse(hasattr(codes.values()[0], "parent"))
+        self.assertTrue(hasattr(head(codes.values()), "uuid"))
+        self.assertTrue(hasattr(head(codes.values()), "code_id"))
+        self.assertFalse(hasattr(head(codes.values()), "parent"))
 
         # 2 roots
-        self.assertEqual(2, len(filter(bool, [c.code1 for c in codes.values()])))
+        self.assertEqual(2, len(list(filter(bool, [c.code1 for c in codes.values()]))))
 
         # 3 'sub'roots
-        self.assertEqual(3, len(filter(bool, [c.code2 for c in codes.values()])))
+        self.assertEqual(3, len(list(filter(bool, [c.code2 for c in codes.values()]))))
 
         # 2 'subsub'roots
-        self.assertEqual(2, len(filter(bool, [c.code3 for c in codes.values()])))
+        self.assertEqual(2, len(list(filter(bool, [c.code3 for c in codes.values()]))))
 
     def test_parent(self):
         """Test parent format."""
         codes = self.export(structure="parent")
-        self.assertTrue(hasattr(codes.values()[0], "parent_id"))
+        self.assertTrue(hasattr(head(codes.values()), "parent_id"))
 
     def test_language(self):
         """Test if exporter renders correct labels"""
         codes = self.export(language=self.de)
 
         # Exporting structure format, thus no parent column
-        self.assertFalse(hasattr(codes.values()[0], "parent_id"))
+        self.assertFalse(hasattr(head(codes.values()), "parent_id"))
 
         # Should export default label, e.g. "A"
         de_code = codes[self.codes_list[0].id]
@@ -90,18 +91,18 @@ class TestExportCodebook(AmCATTestCase):
     def test_labelcols(self):
         """Test whether extra labels are created """
         codes = self.export(labelcols=True)
-        self.assertTrue(hasattr(codes.values()[0], "labelnl"))
-        self.assertTrue(hasattr(codes.values()[0], "labelde"))
-        self.assertFalse(hasattr(codes.values()[0], "label?"))
+        self.assertTrue(hasattr(head(codes.values()), "labelnl"))
+        self.assertTrue(hasattr(head(codes.values()), "labelde"))
+        self.assertFalse(hasattr(head(codes.values()), "label?"))
 
-        nl_labels = filter(bool, [c.labelnl for c in codes.values()])
+        nl_labels = list(filter(bool, [c.labelnl for c in codes.values()]))
         self.assertEqual(1, len(nl_labels))
         self.assertEqual("Een", nl_labels[0])
 
-        de_labels = filter(bool, [c.labelde for c in codes.values()])
+        de_labels = list(filter(bool, [c.labelde for c in codes.values()]))
         self.assertEqual(1, len(de_labels))
         self.assertEqual("Ein", de_labels[0])
 
         # Exporting structure format, thus no parent column
-        self.assertFalse(hasattr(codes.values()[0], "parent"))
+        self.assertFalse(hasattr(head(codes.values()), "parent"))
 

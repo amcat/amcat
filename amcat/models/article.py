@@ -343,7 +343,6 @@ class Article(AmcatModel):
             a.id = inserted.id
         return to_insert
 
-        
     def get_tree(self, include_parents=True, fields=("id",)):
         """
         Returns a deterministic (sorted by id) tree of articles, based on their parent
@@ -377,8 +376,3 @@ def _check_index(articles):
         log.info("Adding {} articles to index".format(len(missing)))
         es.add_articles(missing)
     es.flush() 
-            
-
-
-    
-    
