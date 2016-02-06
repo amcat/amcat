@@ -29,7 +29,7 @@ from navigator.views.articleset_views import ArticleSetDetailsView
 from amcat.models import Article, ArticleSet, Sentence
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectFormView, ProjectActionRedirectView
 from amcat.tools import sbd
-from amcat.models import authorisation
+from amcat.models import authorisation, Project
 from navigator.views.project_views import ProjectDetailsView
 import navigator.forms
 
@@ -37,10 +37,20 @@ import navigator.forms
 class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DetailView):
     model = Article
 
-    def can_view_text(self):
-        """Checks if the user has the right to edit this project"""
-        return self.request.user.userprofile.has_role(authorisation.ROLE_PROJECT_READER, self.object.project)
 
+
+
+    def has_permission(self, perm):
+        if perm >= authorisation.ROLE_PROJECT_WRITER:
+            return False
+        # permission to view/read an article can be granted through any of its sets (!)
+        asets = ArticleSet.objects.filter(articles=self.get_object()).only("project")
+        projects = {aset.project for aset in asets}
+        projects |= set(Project.objects.filter(articlesets__contains=asets))
+        
+        return any(self.request.user.userprofile.has_role(perm, p)
+                   for p in projects)
+    
     def highlight(self):
         if not self.last_query:
             return None

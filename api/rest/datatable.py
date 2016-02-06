@@ -122,7 +122,7 @@ class Datatable(object):
 
     def __init__(self, resource, rowlink=None, rowlink_open_in="same", options=None, hidden=None, url=None,
                  ordering=None, format="json", filters=None, checkboxes=False, allow_html_export=False,
-                 extra_args=None, url_kwargs=()):
+                 allow_export_via_post=False, extra_args=None, url_kwargs=()):
         """
         Default ordering is "id" if possible.
 
@@ -152,6 +152,7 @@ class Datatable(object):
         self.ordering = ordering
         self.checkboxes = checkboxes
         self.allow_html_export = allow_html_export
+        self.allow_export_via_post = allow_export_via_post
 
         self.format = format
         self.hidden = set(hidden) if isinstance(hidden, collections.Iterable) else set()
@@ -265,6 +266,7 @@ class Datatable(object):
             'rowlink': self.rowlink,
             'rowlink_open_in': self.rowlink_open_in,
             'url': self.url,
+            'allow_export_via_post': self.allow_export_via_post,
             'options': json.dumps(options),
             'checkboxes': self.checkboxes
         }))

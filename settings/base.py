@@ -32,8 +32,8 @@ try:
 except ImportError:
     import configparser
 
-if os.environ.get('DJANGO_DEBUG', None) is not None:
-    DEBUG = (os.environ['DJANGO_DEBUG'] in ("1", "Y", "ON"))
+if os.environ.get('AMCAT_DEBUG', None) is not None:
+    DEBUG = (os.environ['AMCAT_DEBUG'] in ("1", "Y", "ON"))
 else:
     DEBUG = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
                  or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
@@ -52,7 +52,7 @@ DATABASE_OPTIONS = {
     "init_command": "set transaction isolation level read uncommitted"
 }
 
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,.amcat.nl,.vu.nl").split(",")
+ALLOWED_HOSTS = os.environ.get("AMCAT_ALLOWED_HOSTS", "localhost,.amcat.nl,.vu.nl").split(",")
 
 ACCESS_CONTROL_ORIGINS = []
 ACCESS_CONTROL_HEADERS = []
@@ -67,12 +67,12 @@ if DEBUG:
     ]
 
 DATABASES = dict(default=dict(
-    ENGINE=os.environ.get("DJANGO_DB_ENGINE", 'django.db.backends.postgresql_psycopg2'),
-    NAME=os.environ.get("DJANGO_DB_NAME", 'amcat'),
-    USER=os.environ.get("DJANGO_DB_USER", ''),
-    PASSWORD=os.environ.get("DJANGO_DB_PASSWORD", ''),
-    HOST=os.environ.get("DJANGO_DB_HOST", ''),
-    PORT=os.environ.get("DJANGO_DB_PORT", ''),
+    ENGINE=os.environ.get("AMCAT_DB_ENGINE", 'django.db.backends.postgresql_psycopg2'),
+    NAME=os.environ.get("AMCAT_DB_NAME", 'amcat'),
+    USER=os.environ.get("AMCAT_DB_USER", ''),
+    PASSWORD=os.environ.get("AMCAT_DB_PASSWORD", ''),
+    HOST=os.environ.get("AMCAT_DB_HOST", ''),
+    PORT=os.environ.get("AMCAT_DB_PORT", ''),
 ))
 
 CACHES = {
@@ -291,11 +291,11 @@ REST_FRAMEWORK = {
 
 if not DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = os.environ.get("DJANGO_EMAIL_HOST", '')
-    EMAIL_PORT = os.environ.get("DJANGO_EMAIL_PORT", 587)
-    EMAIL_HOST_USER = os.environ.get("DJANGO_EMAIL_USER", '')
-    EMAIL_HOST_PASSWORD = os.environ.get("DJANGO_EMAIL_PASSWORD", '')
-    EMAIL_USE_TLS = os.environ.get("DJANGO_EMAIL_TLS", 'Y') in ("1", "Y", "ON")
+    EMAIL_HOST = os.environ.get("AMCAT_EMAIL_HOST", '')
+    EMAIL_PORT = os.environ.get("AMCAT_EMAIL_PORT", 587)
+    EMAIL_HOST_USER = os.environ.get("AMCAT_EMAIL_USER", '')
+    EMAIL_HOST_PASSWORD = os.environ.get("AMCAT_EMAIL_PASSWORD", '')
+    EMAIL_USE_TLS = os.environ.get("AMCAT_EMAIL_TLS", 'Y') in ("1", "Y", "ON")
 
 else:
     ALLOWED_HOSTS.append("*")

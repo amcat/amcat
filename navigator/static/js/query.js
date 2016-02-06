@@ -370,7 +370,7 @@ define([
         }
 
         var method = saved_query.method.toUpperCase();
-        
+        var dialogtype = typeof(this.dialogtype) === "undefined" ? "FULL" : this.dialogtype.toUpperCase();
         if (!dialog_visible){
             name_btn.val(saved_query.name);
         }
@@ -379,7 +379,7 @@ define([
         
 
         if (!dialog_visible && this.confirm === true) {
-            if(method === "PATCH"){
+            if(dialogtype === "CONFIRM-ONLY"){
                 confirm_dialog.modal();
                 return $('.save', confirm_dialog)[0].focus();
             }
@@ -400,7 +400,7 @@ define([
 
         var url;
         if (method === "PATCH"){
-            url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: saved_query.id})
+            url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: saved_query.id});
         } else {
             url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: ''})
         }
@@ -442,11 +442,10 @@ define([
     };
 
     self.init_delete_query_button = function(){
-        var dq = $("#delete-query");
-        dq.addClass("disabled");
-
+        var deleteSaveBtns = $("#delete-query, #save-query");
+        deleteSaveBtns.addClass("disabled");
         if (saved_query.user === USER){
-            dq.removeClass("disabled");
+            deleteSaveBtns.removeClass("disabled");
         }
     };
 
@@ -501,23 +500,46 @@ define([
 
         $("#delete-query").addClass("disabled");
     };
-
+    self.save_query_as_clicked = function(event){
+        var args = {};
+        args.confirm = true;
+        args.dialogtype = "full";
+        args.method = "post";
+        self.save_query.bind(args)(event);
+    };
     self.save_query_clicked = function(event){
         var args = {};
-        if (saved_query.id === null || saved_query.user !== USER) {
+        if (saved_query.id === null) {
             args.confirm = true;
+            args.dialogtype = "full";
             args.method = "post";
         } else {
             args.confirm = true;
+            args.dialogtype = "confirm-only";
             args.method = "patch";
         }
-
         self.save_query.bind(args)(event);
     };
-
+    self.change_name_clicked = function(event){
+        console.log(USER);
+        if(saved_query.user === USER){
+            return self.save_query.bind({
+                confirm: true,
+                method: saved_query.id ? "patch" : "post",
+                dialogtype: "full"
+            })(event);
+        }
+    };
     self.change_articlesets_clicked = function(event){
         event.preventDefault();
+
+        $("#change-articlesets-select").change(function(){
+            var noneSelected = $(this).find('option:selected').length === 0;
+            $("#change-articlesets-confirm").toggleClass('disabled', noneSelected);
+        });
+
         $("#change-articlesets-query-dialog").modal();
+
     };
 
     self.change_articlesets_confirmed_clicked = function(){
@@ -670,7 +692,7 @@ define([
 
         var data = $.extend({}, form_data);
         data.article_ids = ids.join("\n");
-        data.articlesets = SETS.join(",");
+        data.articlesets = SETS;
         data.jobs = JOBS;
         data.project = PROJECT;
         data.articleset = set_id;
@@ -734,14 +756,72 @@ define([
         modal.find(".btn-primary").addClass("disabled").off("click");
     };
 
+
+    self.onclick_save_image_link = function(link, image, format){
+        var w = image.width;
+        var h = image.height;
+        var canvas = $('<canvas>').attr('width', w).attr('height', h)[0];
+        var render = canvas.getContext('2d');
+        render.drawImage(image, 0, 0);
+        var uri = canvas.toDataURL(format.mime);
+        link.attr('href', uri)
+            .attr('download', $("#query-name").text() + '-graph' + format.extension);
+    };
+
+    self.get_image_save_buttons= function(image){
+        var formats = [
+            {mime: 'image/png', extension: '.png'},
+            {mime: 'image/jpeg', extension: '.jpg'}
+        ];
+        var dropdown = $('<div>').addClass('dropdown');
+        dropdown.append(
+            $('<button>')
+                .addClass('btn btn-default btn-xs dropdown-toggle')
+                .css('vertical-align', 'top')
+                .html('Save <span class="caret"></span>')
+                .attr('data-toggle', 'dropdown')
+        );
+        var list = $('<ul>').addClass('dropdown-menu');
+        var svgLink = $('<a>')
+            .attr('href', image.attr('src'))
+            .attr('download', $("#query-name").text() + '-graph.svg')
+            .text('Save as: image/svg');
+        list.append($('<li>').html(svgLink));
+
+        formats.forEach(function(format){
+            var li = $('<li>').append(
+                $("<a>")
+                    .click(function(event){
+                    self.onclick_save_image_link($(this), image[0], format);
+                })
+                    .text('Save as: ' + format.mime)
+                    .attr('href', '#')
+            );
+            list.append(li);
+        });
+
+        dropdown.append(list);
+        dropdown.css({
+            'display': 'inline',
+            'vertical-align': 'top',
+            'margin-left': 20
+        });
+        return dropdown;
+    };
+
     self.render_complete = function(body){
         var articlelist = $("#articlelist-table");
-        if(articlelist.length === 0){
-            return;
+        if(articlelist.length > 0){
+            $("#articlelist-add-to-set").click(self.on_add_to_set);
+            $("#articlelist-use-in-query").click(self.on_use_in_query_clicked);
         }
 
-        $("#articlelist-add-to-set").click(self.on_add_to_set);
-        $("#articlelist-use-in-query").click(self.on_use_in_query_clicked);
+
+        var images = body.find("img.save-image");
+        images.each(function(i, image){
+            image = $(image);
+            image.after(self.get_image_save_buttons(image));
+        });
     };
     self.init_poll = function(uuid){
         var poll = Poll(uuid, {download: self.download_result()});
@@ -836,8 +916,9 @@ define([
                 event.stopPropagation();
                 callback(event);
             });
-        })
+        });
     };
+
 
     self.init = function(){
         $("#codebooks").change(self.codebook_changed);
@@ -847,8 +928,9 @@ define([
 
         $("#delete-query").click(self.delete_query);
         $("#confirm-overwrite-dialog, #save-query-dialog").find(".save").click(self.save_query.bind({confirm: false}));
-        $("h4.name").click(self.save_query.bind({confirm: true, method: "patch"}));
+        $("h4.name").click(self.change_name_clicked);
         $("#save-query").click(self.save_query_clicked);
+        $("#save-query-as").click(self.save_query_as_clicked);
         $("#change-articlesets").click(self.change_articlesets_clicked);
         $("#change-articlesets-confirm").click(self.change_articlesets_confirmed_clicked);
 

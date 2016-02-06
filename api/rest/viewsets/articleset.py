@@ -45,7 +45,10 @@ class ArticleSetSerializer(AmCATProjectModelSerializer):
 
     @cached
     def get_nn(self):
-        set_ids = [s.id for s in self.instance]
+        try:
+            set_ids = [s.id for s in self.instance]
+        except TypeError:
+            set_ids = [self.instance.id]
         category = ArticlesetCategory(ArticleSet.objects.filter(id__in=set_ids))
         return dict(aggregate(filters={'sets': set_ids}, categories=[category], objects=False))
 

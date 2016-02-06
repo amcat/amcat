@@ -22,7 +22,7 @@
  * calls. It can figure out most of the needed information by just an api-
  * url.
  */
-
+window.amcat = require("amcat/amcat");
 window.amcat = (window.amcat === undefined) ? {} : window.amcat;
 amcat.datatables = {};
 
@@ -33,6 +33,8 @@ _TARGET_ERR = "You can't use number to target columns in columndefs, as " +
 _SORTCOL = "iSortCol_";
 _SORTDIR = "sSortDir_";
 _DPROP = "mDataProp_";
+
+
 
 function export_clicked(){
     var table = this.table.DataTable();
@@ -46,15 +48,20 @@ function export_clicked(){
     var url = this.table.parents(".amcat-table-wrapper").data("url");
     url += "&format=" + this.format.val();
     url += "&page_size=" + this.page_size.val();
-
-    if(pks.length){
-        url += "&pk=" + pks.join("&pk=");
-    }
-
     var order = table.order()[0];
     var order_str = $('th', this.table).eq(order[0]).text();
     var order_dir = order[1] === "desc" ? '-' : '';
     url += "&order_by=" + order_dir + order_str;
+
+    if(this.table.parents(".amcat-table-wrapper").data("allow_export_via_post")){
+        amcat.utils.navigate_with_post_data(url, {
+            pk: pks
+        });
+        return;
+    }
+    if(pks.length){
+        url += "&pk=" + pks.join("&pk=");
+    }
 
     window.location = url;
     this.modal.modal("hide");
@@ -257,8 +264,8 @@ amcat.datatables.truncate_row = function(row, limit){
         txt = $(cell).text();
 	// HACK: treat kwic 'left' context differently, better would be to specify this as an option/class somehow
 
-	th = $('table.datatable').find('th').eq($(cell).index());
-	header = $(th).attr('aria-label');
+	var th = $('table.datatable').find('th').eq($(cell).index());
+	var header = $(th).text();
 
 	if (header == 'left') {
 	    if (txt.length > limit) {
@@ -819,13 +826,13 @@ amcat.datatables.fetched_initial_success = function (data, textStatus, jqXHR) {
     // If the API didn't return a column as valid, remove it from column list
     var cols = [], that = this;
 
-    // ~O(n^3); long hair don't care.
-    $.map(api_columns, function(api_col){
-        $.map(that.datatables_options.aoColumns, function(col){
-            if (col.mData === api_col.mData && $.inArray(col, cols) === -1){
-                cols.push(col);
-            }
-        });
+    var api_column_has_mData = {};
+    api_columns.forEach(function(col){
+        api_column_has_mData[col.mData] = true;
+    });
+
+    cols = this.datatables_options.aoColumns.filter(function(x){
+        return api_column_has_mData[x.mData];
     });
 
     this.datatables_options.aoColumns = cols;

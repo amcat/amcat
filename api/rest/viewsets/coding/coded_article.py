@@ -19,14 +19,14 @@
 from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
-from amcat.models import Sentence, CodedArticle, Article, Medium
+from amcat.models import Sentence, CodedArticle, Article, Medium, ROLE_PROJECT_READER
 from amcat.tools.caching import cached
 from amcat.tools import sbd
 from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.coding.codingjob import CodingJobViewSetMixin
-from api.rest.viewsets.project import ProjectViewSetMixin
+from api.rest.viewsets.project import ProjectViewSetMixin, ProjectPermission
 from api.rest.viewsets.sentence import SentenceSerializer, SentenceViewSetMixin
 
 
@@ -120,9 +120,15 @@ class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
 class CodedArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                                   CodedArticleViewSetMixin, SentenceViewSetMixin,
                                   DatatablesMixin, ReadOnlyModelViewSet):
+    permission_classes = (ProjectPermission,)
+    permission_map = {'GET': ROLE_PROJECT_READER}
     serializer_class = SentenceSerializer
     queryset = Sentence.objects.all()
     model = Sentence
+
+    def check_permissions(self, request):
+        if request.method != 'GET' or request.user != self.codingjob.coder:
+            super(CodedArticleSentenceViewSet, self).check_permissions(request)
 
     def filter_queryset(self, queryset):
         qs = super(CodedArticleSentenceViewSet, self).filter_queryset(queryset)

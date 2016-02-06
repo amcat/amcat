@@ -177,8 +177,10 @@ class TestArticle(amcattest.AmCATTestCase):
         self.assertEqual(set(s1.get_article_ids()), {a1.id})
         self.assertEqual(_q(sets=s1.id), {a1.id})
 
-        # a dupe cannot have a non-identical uuid
-        self.assertRaises(ValueError, amcattest.create_test_article, uuid=uuid.uuid4(), **art)
+        # a dupe with a non-identical uuid should lose its id
+        a4 = amcattest.create_test_article(uuid=uuid.uuid4(), **art)
+        self.assertTrue(a4.duplicate)
+        self.assertEqual(a4.uuid, a1.uuid)
         
         # if an explicit uuid is set, it should be a perfect duplicate
         art['uuid'] = a1.uuid

@@ -170,14 +170,18 @@ class BZK(UploadScript):
         #item: a list of html tags
         article = Article()
         article.text = self._parse_text(item)
+        headline_found = False
+        dateline_found = False
         for tag in item:
-            if tag.tag == "h2":
+            if tag.tag == "h2" and not headline_found:
                 if tag.text:
                     article.headline = tag.text
                 else:
                     article.headline = tag.cssselect("span")[0].text_content()
-            elif tag.tag == "i" or (tag.tag == "p" and tag.cssselect("i")):
+                headline_found = True
+            elif tag.tag == "i" or (tag.tag == "p" and tag.cssselect("i")) and not dateline_found:
                 article = self.parse_dateline(tag.text_content(), article)
+                dateline_found = True
         if not article.headline:
             raise Exception("Article has no headline")
         return article

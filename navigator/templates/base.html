@@ -64,6 +64,7 @@
 
           <ul class="nav navbar-nav navbar-right">
 	    {% if status != 503 %}
+{% if user.is_authenticated %}
 <li {% if main_active == 'Projects' %}class="active"{% endif %}><a href="{% url 'navigator:projects' %}">Projects</a></li>
 <li {% if main_active == 'Coding' %}class="active"{% endif %}><a href="{% url 'navigator:codingjobs' %}">Annotator</a></li>
 <li class="dropdown{% if main_active == 'Current User' %} active{% endif %}">
@@ -79,7 +80,7 @@
     <li><a href="{% url 'accounts-logout' %}">Log out</a></li>
   </ul>
 </li>
-
+{% endif %}
 <li><a target="_blank" href="http://wiki.amcat.nl/{% block help_context %}{% endblock %}">
 <span class="alert alert-success"><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> Help</a></span>
 

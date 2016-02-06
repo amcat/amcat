@@ -17,6 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from functools import partial
+from itertools import chain
 from operator import getitem, attrgetter
 from collections import OrderedDict
 from django.core.exceptions import ValidationError
@@ -84,7 +85,9 @@ class QueryActionView(APIView):
     @cached
     def get_articlesets(self):
         # Articlesets are given by GET parameter `sets` and separated by commas
-        articleset_ids = map(int, filter(str.isdigit, self.request.GET.get("sets", "").split(",")))
+        # TODO: GET['sets'] and POST['articlesets'] are redundant, possibly there's a better solution
+        articleset_ids = chain(self.request.GET.get("sets", "").split(","), self.request.POST.getlist('articlesets'))
+        articleset_ids = map(int, filter(str.isdigit, articleset_ids))
         articlesets = self.project.all_articlesets().filter(id__in=articleset_ids)
         return articlesets.only("id", "name")
 
@@ -93,7 +96,8 @@ class QueryActionView(APIView):
         # Codingjobs are given by GET parameter `jobs` and separated by commas. If *no* jobs are
         # given, we also return no jobs, in contrast to get_articlesets which yields all articlesets
         # belonging to the current project.
-        codingjob_ids = map(int, filter(str.isdigit, self.request.GET.get("jobs", "").split(",")))
+        codingjob_ids = chain(self.request.GET.get("jobs", "").split(","), self.request.POST.getlist('codingjobs'))
+        codingjob_ids = map(int, filter(str.isdigit, codingjob_ids))
         codingjobs = self.project.codingjob_set.filter(id__in=codingjob_ids).only("id", "name")
         return codingjobs if codingjob_ids else CodingJob.objects.none()
 
@@ -108,7 +112,7 @@ class QueryActionView(APIView):
         return self.get_query_action().get_form()
 
     def get_view_name(self):
-        from urls import get_action_name
+        from .urls import get_action_name
         return get_action_name(self).title()
 
     def get_view_description(self, html=False):

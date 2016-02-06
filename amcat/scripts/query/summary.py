@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+
 import json
+import datetime
 
 from django.forms import IntegerField, BooleanField
 from django.http import QueryDict
@@ -34,6 +36,15 @@ import re
 
 TEMPLATE = get_template('query/summary/summary.html')
 
+TIMEDELTAS = [
+    ("day", datetime.timedelta(1)),
+    ("week", datetime.timedelta(7)),
+    ("month", datetime.timedelta(30)),
+    ("quarter", datetime.timedelta(120)),
+    ("year", datetime.timedelta(365)),
+]
+
+MAX_DATE_GROUPS = 500
 
 @order_fields(("offset", "size"))
 class SummaryActionForm(QueryActionForm):
@@ -77,8 +88,18 @@ class SummaryAction(QueryAction):
 
             if show_aggregation:
                 self.monitor.update(69, "Aggregating..".format(**locals()))
-                date_aggr = selection.get_nested_aggregate([IntervalCategory("day")])
-                medium_aggr = selection.get_nested_aggregate([MediumCategory(), IntervalCategory("day")])
+                
+                statistics = selection.get_statistics()
+                try:
+                    delta_start_end = statistics.end_date - statistics.start_date
+                    interval = next(interval for (interval, delta) in TIMEDELTAS
+                                    if MAX_DATE_GROUPS * delta > delta_start_end)
+                except (StopIteration, TypeError):
+                    interval = "day"
+
+                date_aggr = selection.get_nested_aggregate([IntervalCategory(interval)])
+                medium_aggr = selection.get_nested_aggregate([MediumCategory()])
+            
             self.monitor.update(79, "Rendering results..".format(**locals()))
 
         return TEMPLATE.render(Context(dict(locals(), **{

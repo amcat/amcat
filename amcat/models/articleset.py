@@ -212,19 +212,37 @@ class ArticleSet(AmcatModel):
         "Delete the articleset and all articles from index and db"
         # which articles are only in this set?
         # check per N articles
-        for aids in toolkit.splitlist(self.articles.values_list("pk", flat=True)):
+        
+        log.warn("Getting all articles")
+
+        aids = list(self.articles.values_list("pk", flat=True))
+        todelete = set(aids)
+        log.warn("Finding orphans in {} articles".format(len(aids)))
+        for aids in toolkit.splitlist(aids, itemsperbatch=1000):
             x = set(ArticleSetArticle.objects.filter(article_id__in=aids).exclude(articleset=self)
                     .values_list("article_id", flat=True))
-            todelete = set(aids) - x
-            Article.objects.filter(pk__in=todelete).delete()
-            amcates.ES().remove_from_set(self.id, aids)
+            todelete -= x
+        log.warn("Removing {} orphans from DB".format(len(todelete)))
+        #Article.objects.filter(pk__in=todelete).delete()
+        for i, aids in enumerate(toolkit.splitlist(todelete, itemsperbatch=10000)):
+            if i > 1:
+                log.warn("... batch {i} (x10k)".format(**locals()))
+            #Article.objects.filter(pk__in=aids)._raw_delete(Article.objects.db)
+            Article.objects.filter(pk__in=aids).only("pk").delete()
+
+        log.warn("Getting set membership from elastic")
+        esaids = list(self.get_article_ids_from_elastic())
+        if esaids:
+            log.warn("Removing set membership from elastic ({} articles)".format(len(esaids)))
+            amcates.ES().remove_from_set(self.id, esaids)
 
         if purge_orphans:
             amcates.ES().flush()
             amcates.ES().purge_orphans()
 
+        log.warn("Deleting set (and articlesetarticle references)")
         super(ArticleSet, self).delete() # cascade deletes all article references
-
+        log.warn("Done!")
 
 # Legacy
 ArticleSetArticle = ArticleSet.articles.through

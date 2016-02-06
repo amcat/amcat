@@ -60,10 +60,6 @@ class QuerySerializer(AmCATModelSerializer):
         model = Query
 
 
-class QueryPermission(permissions.BasePermission):
-    def has_object_permission(self, request, view, obj):
-        return request.user.is_superuser or obj.user_id == request.user.id
-
 
 class QueryViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     model = Query
@@ -72,7 +68,7 @@ class QueryViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     queryset = QuerySerializer.Meta.model.objects.all()
     search_fields = ordering_fields = ("id", "name", "user__username")
     http_method_names = ("get", "options", "post", "put", "patch", "delete")
-    permission_classes = (QueryPermission, ProjectPermission)
+    permission_classes = (ProjectPermission,)
     permission_map = {
         "PUT": ROLE_PROJECT_WRITER,
         "PATCH": ROLE_PROJECT_WRITER,

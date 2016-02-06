@@ -235,7 +235,7 @@ class Article(AmcatModel):
                 yield aid
 
     @classmethod
-    def create_articles(cls, articles, articleset=None, articlesets=None,
+    def create_articles(cls, articles, articleset=None, articlesets=None, deduplicate=True,
                         monitor=ProgressMonitor()):
         """
         Add the given articles to the database, the index, and the given set
@@ -247,10 +247,10 @@ class Article(AmcatModel):
         @param articles: a collection of objects with the necessary properties (.headline etc)
         @param articleset(s): articleset object(s), specify either or none
         """
-        cls._create_articles_per_layer(articles)
+        _check_index(articles)
+        cls._create_articles_per_layer(articles, deduplicate=deduplicate)
         if articlesets is None:
             articlesets = [articleset] if articleset else []
-
         es = amcates.ES()
         dupes, new = [], []
         for a in articles:
@@ -270,7 +270,7 @@ class Article(AmcatModel):
                 aset.add_articles(dupes, add_to_index=True)
             
     @classmethod
-    def _create_articles_per_layer(cls, articles):
+    def _create_articles_per_layer(cls, articles, deduplicate=True):
         """Call _do_create_articles for each layer of the .parent tree"""
         while articles:
             to_save, todo = [], []
@@ -287,11 +287,11 @@ class Article(AmcatModel):
                     todo.append(a)
             if not to_save:
                 raise ValueError("Parent cycle")
-            cls._do_create_articles(to_save)
+            cls._do_create_articles(to_save, deduplicate=deduplicate)
             articles = todo
     
     @classmethod
-    def _do_create_articles(cls, articles):
+    def _do_create_articles(cls, articles, deduplicate=True):
         """Check duplicates and save the articles to db.
         Does *not* save to elastic or add to articlesets
         Assumes that if .parent is given, it has an id
@@ -299,7 +299,7 @@ class Article(AmcatModel):
         modifies all articles in place with .hash and either .duplicate or .id and .uuid
         """
         es = amcates.ES()
-        dupe_values = {'uuid': {}, 'hash': {}}
+        dupe_values = {'uuid': {}, 'hash': {}} if deduplicate else {}
         # Iterate over articles, remove duplicates within addendum and build dupe values dictionary 
         for a in articles:
             if a.id:
@@ -326,8 +326,11 @@ class Article(AmcatModel):
                     a =values[getattr(r, attr)]
                     if a.hash != r.hash: 
                         raise ValueError("Cannot modify existing articles: {a.hash} != {r.hash}".format(**locals()))
-                    if a.uuid and str(a.uuid) != str(r.uuid): # not part of hash
-                        raise ValueError("Cannot modify existing articles: {a.uuid} != {r.uuid}".format(**locals()))
+                    if a.uuid and not r.uuid: # old article without uuid -> update old article! (but not very efficient)
+                        Article.objects.filter(pk=r.id).update(uuid=a.uuid)
+                    elif a.uuid and str(a.uuid) != str(r.uuid): # not part of hash
+                        #TODO: we keep old uuid, maybe client should get a warning of some sort?
+                        a.uuid = r.uuid 
                     a.duplicate = r
                     a.id = r.id
                 
@@ -362,3 +365,20 @@ class Article(AmcatModel):
         return ArticleTree(self, [c.get_tree(include_parents=False) for c in children
                                   if c.id != self.id])
 
+def _check_index(articles):
+    # since dupe checking is done using ES, things go wrong if articles are missing in ES.
+    # the ones with uuid we can refresh, the others will just be added as dupe
+    es = amcates.ES()
+    uuids = {a.uuid for a in articles if a.uuid}
+    aids = list(Article.objects.filter(uuid__in=uuids).values_list("pk", flat=True))
+    in_index = set(es.query_ids(filters={"ids":aids}))
+    missing = set(aids) - in_index
+    if missing:
+        log.info("Adding {} articles to index".format(len(missing)))
+        es.add_articles(missing)
+    es.flush() 
+            
+
+
+    
+    

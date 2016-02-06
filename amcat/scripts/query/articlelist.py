@@ -46,7 +46,7 @@ API_KEYWORD_MAP = {
 class ArticleListActionForm(QueryActionForm):
     columns = forms.MultipleChoiceField(
         choices=(
-            ("Calculated", (("hits", "hits"), ("kwic", "kwic"))),
+            ("Calculated", (("hits", "# hits per keyword"), ("kwic", "keyword in context"))),
             ("Properties", [(f, f) for f in COLUMNS])
         ),
         initial=("id", "date", "mediumid", "medium", "headline")
@@ -84,7 +84,8 @@ class ArticleListAction(QueryAction):
         data["ids"] = data.get("ids", selection.get_filters().get("ids", []))
         url = urllib.urlencode(data, doseq=True)
         rowlink = ARTICLE_ROWLINK.format(reverse("navigator:project-details", args=[self.project.id]), "{id}")
-        table = Datatable(SearchResource, url="/api/v4/search", rowlink=rowlink, rowlink_open_in="new", checkboxes=True)
+        table = Datatable(SearchResource, url="/api/v4/search", rowlink=rowlink, rowlink_open_in="new", checkboxes=True,
+                          allow_export_via_post=True)
         table = table.add_arguments(minimal="1")
         table = table.add_arguments(project=str(self.project.id))
 
