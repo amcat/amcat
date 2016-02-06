@@ -18,7 +18,7 @@
 ###########################################################################
 
 
-from itertools import ifilterfalse
+from itertools import filterfalse
 import datetime
 import json
 import logging
@@ -284,7 +284,7 @@ class SelectionForm(forms.Form):
         try:
             article_ids = map(int, article_ids)
         except ValueError:
-            offender = repr(next(ifilterfalse(str.isnumeric, article_ids)))
+            offender = repr(next(filterfalse(str.isnumeric, article_ids)))
             raise ValidationError("{offender} is not an integer".format(**locals()))
 
         # Check if they can be chosen
