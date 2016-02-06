@@ -188,7 +188,7 @@ class Datatable(object):
         It is now implemented as the hash of `self.url` prepended with the character
         'd'. This prevents names from becoming too long.
         """
-        return "d" + hashlib.sha256(self.url).hexdigest()
+        return "d" + hashlib.sha256(self.url.encode("utf-8")).hexdigest()
 
     def get_default_ordering(self):
         return ("-id",) if "id" in self.get_fields() else ()
