@@ -28,9 +28,10 @@ GitPython==1.0.1
 psycopg2
 requests
 splinter
-python-memcached
 django-celery
 amqplib
 pygments
 lxml
 django-extensions
+pylibmc
+django-pylibmc
