@@ -69,7 +69,7 @@ for modelname in MODELS:
 
 def all_resources():
     for r in globals().values():
-        if (isinstance(r, (type, types.ClassType))
+        if (isinstance(r, type)
             and issubclass(r, AmCATResource)
             and r != AmCATResource):
             yield r

@@ -21,16 +21,16 @@
 An association represents a table of conditional probabilities for a set
 of SearchQuery objects.
 """
-
 import datetime
-import dot
 
 from collections import namedtuple, defaultdict
 from functools import partial
 from itertools import product
+
 from amcat.tools import amcates
 from amcat.tools.caching import cached
 
+from . import dot
 
 ArticleScore = namedtuple("ArticleScore", ["id", "query", "interval", "score"])
 ArticleAssociation = namedtuple("ArticleAssociation", ["interval", "probability", "of", "given"])

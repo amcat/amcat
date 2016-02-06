@@ -18,7 +18,7 @@
 ###########################################################################
 from functools import partial
 from inspect import isclass
-from itertools import map, chain
+from itertools import chain
 from django.core.management.base import BaseCommand
 from amcat.models import Plugin, PluginType
 from amcat.contrib import plugins

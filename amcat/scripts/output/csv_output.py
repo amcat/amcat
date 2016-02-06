@@ -18,18 +18,13 @@
 ###########################################################################
 
 import csv
+import io
 
 from amcat.tools.table import tableoutput
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
-
-
 def table_to_csv(table_obj, delimiter=","):
     """Convert a table3 object to a csv file (string)"""
-    buff = StringIO()
+    buff = io.StringIO()
 
     tableoutput.table2csv(table_obj, csvwriter=csv.writer(
         buff, dialect='excel', delimiter=delimiter),

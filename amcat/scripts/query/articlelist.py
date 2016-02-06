@@ -20,6 +20,8 @@
 
 """
 import urllib
+from urllib.parse import urlencode
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
@@ -82,7 +84,7 @@ class ArticleListAction(QueryAction):
         data = {API_KEYWORD_MAP.get(k, k): v for k,v in self.data.iterlists()}
         data["q"] = ["{}#{}".format(q.label, q.query) for q in selection.get_queries()]
         data["ids"] = data.get("ids", selection.get_filters().get("ids", []))
-        url = urllib.urlencode(data, doseq=True)
+        url = urlencode(data, doseq=True)
         rowlink = ARTICLE_ROWLINK.format(reverse("navigator:project-details", args=[self.project.id]), "{id}")
         table = Datatable(SearchResource, url="/api/v4/search", rowlink=rowlink, rowlink_open_in="new", checkboxes=True,
                           allow_export_via_post=True)

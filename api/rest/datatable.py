@@ -23,7 +23,7 @@ import logging
 import types
 import collections
 import inspect
-from urllib import urlencode
+from urllib.parse import urlencode
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models.query import QuerySet

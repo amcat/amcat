@@ -17,8 +17,9 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import tempfile, os
-from urllib import urlencode
 import base64
+from urllib.parse import urlencode
+
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from django.utils.datastructures import MultiValueDict
@@ -124,7 +125,7 @@ def get_temporary_file_dict(fo):
         for chunk in fo.chunks():
             dest.write(chunk)
 
-    os.chmod(dest.name, 0644)
+    os.chmod(dest.name, 0o644)
     return {
         "filename": fo.name,
         "path": dest.name,
