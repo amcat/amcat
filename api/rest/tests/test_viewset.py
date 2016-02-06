@@ -15,7 +15,7 @@ class TestSearchViewSetMixin(amcattest.AmCATTestCase):
 
     def _get_json(self, url):
         c = Client()
-        return json.loads(c.get(url).content)
+        return json.loads(c.get(url).content.decode('utf-8'))
 
     def test_basic(self):
         # No search parameter

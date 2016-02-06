@@ -46,7 +46,7 @@ class TestArticleUploadView(APITestCase):
                                     content_type="application/json", data=json.dumps(data))
         self.assertEqual(response.status_code, expected_status,
                          "Status code {response.status_code}: {response.content}".format(**locals()))
-        return json.loads(response.content)
+        return json.loads(response.content.decode('utf-8'))
             
 
     @amcattest.use_elastic

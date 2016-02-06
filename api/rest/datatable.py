@@ -23,6 +23,7 @@ import logging
 import types
 import collections
 import inspect
+from itertools import chain
 from urllib.parse import urlencode
 
 from django.core.exceptions import ImproperlyConfigured
@@ -386,7 +387,7 @@ class Datatable(object):
         """
         Add additional 'GET' arguments, e.g. cols or search queries 
         """
-        extra_args = self.extra_args + args.items()
+        extra_args = list(chain(self.extra_args, args.items()))
         return self.copy(extra_args=extra_args)
 
     def set_format(self, format):
