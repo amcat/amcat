@@ -43,7 +43,8 @@ log = logging.getLogger(__name__)
 
 import re
 
-WORD_RE = re.compile('[{L}{N}]+')  # {L} --> All letters
+WORD_RE_STRING = re.compile('[{L}{N}]+')  # {L} --> All letters
+WORD_RE_BYTES = re.compile(b'[{L}{N}]+')  # {L} --> All letters
 # {N} --> All numbers
 
 
@@ -52,7 +53,8 @@ def word_len(txt):
 
     @type txt: str"""
     if not txt: return 0  # Safe handling of txt=None
-    return len(re.sub(WORD_RE, ' ', txt).split())
+    word_re = WORD_RE_STRING if isinstance(txt, str) else WORD_RE_BYTES
+    return len(re.sub(word_re, ' ', txt).split())
 
 
 def unescape_em(txt):
