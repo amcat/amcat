@@ -177,7 +177,7 @@ def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecol
 
     if writecolnames:
         c = ([""] + cols) if writerownames else cols
-        csvwriter.writerow(map(writecolnames, c))
+        csvwriter.writerow(list(map(writecolnames, c)))
     rows = table.getRows()
     log.debug("Starting export")
 
