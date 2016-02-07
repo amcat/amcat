@@ -44,7 +44,6 @@ class TaskResultResource(AmCATResource):
 @api_view(http_method_names=("GET",))
 def single_task_result(request, task_id, uuid=False):
     task = Task.objects.get(**{ "uuid" if uuid else "id" : task_id})
-
     try:
         return copy(task.get_handler().get_response())
     except TaskPending:

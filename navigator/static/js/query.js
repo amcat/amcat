@@ -830,7 +830,12 @@ define([
             progress_bar.css("width", "100%");
             message_element.text("Fetching results..")
         }).fail(function(data){
-            self.show_error("Server replied with " + data.status + " error: " + data.responseText);
+	    if (data.error === undefined) {
+		self.show_error("Server replied with " + data.status + " error: " + data.responseText);
+	    } else {
+		self.show_error("<b>"+data.error.exc_type+":</b><br/><pre>"+data.error.exc_message+"</pre>", false, "600px");
+	    }
+
             $("#loading-dialog").modal("hide");
             progress_bar.css("width", "0%");
         }).result(function(data, textStatus, jqXHR){
@@ -879,8 +884,9 @@ define([
 
     };
 
-    self.show_error = function(msg, hide){
-        new PNotify({type: "error", hide: (hide === undefined) ? false : hide, text: msg});
+    self.show_error = function(msg, hide, width){
+	if (width === undefined) width = "300px"; 
+        new PNotify({type: "error", hide: (hide === undefined) ? false : hide, text: msg, width: width});
     };
 
 

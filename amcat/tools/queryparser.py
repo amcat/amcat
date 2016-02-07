@@ -29,7 +29,7 @@ import itertools
 import collections
 
 from django.core.exceptions import ValidationError
-from pyparsing import ParserElement
+from pyparsing import ParserElement, ParseException
 
 from amcat.tools.toolkit import stripAccents
 
@@ -356,22 +356,24 @@ def simplify(term):
         term.terms = new_terms
     return term
 
-
-class QueryParseError(ValidationError):
+# validationerror changes the message into a list (probably per field?), so raise a valueerror here
+class QueryParseError(ValueError):
     pass
 
-
-def parse_to_terms(s, simplify_terms=True, strip_accents=True, default_fieldname=None):
+def parse_to_terms(s, simplify_terms=True, strip_accents=True, default_fieldname=None, context=""):
     if strip_accents:
         s = stripAccents(s)
     if " *" in s.strip():
-        raise QueryParseError("Can only use wildcard (*) as suffix or at beginning of query")
-        
+        raise QueryParseError("Error in query '{context}': Can only use wildcard (*) as suffix or at beginning of query".format(**locals()))
     try:
         terms = get_grammar(default_fieldname).parseString(s, parseAll=True)[0]
-    except Exception, e:
-        raise QueryParseError("{e.__class__.__name__}: {e}".format(**locals()))
-
+    except ParseException as e:
+        msg = "Error in query '{context}': {e}\n{s}".format(**locals())
+        if hasattr(e, "loc"):
+            msg += "\n{space}^".format(space=" "*e.loc)
+        raise QueryParseError(msg) 
+    except Exception as e:
+        raise QueryParseError("Error parsing query '{context}': {e.__class__.__name__}: {e}\n{s}".format(**locals()))
     if simplify_terms:
         terms = simplify(terms)
     return terms
