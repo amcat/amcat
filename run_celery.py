@@ -12,8 +12,12 @@ import threading
 
 import pyinotify
 
+if len(sys.argv) > 2:
+    CELERY_BIN = sys.argv[2]
+else:
+    CELERY_BIN = "celery"
 
-CELERY_CMD = tuple("celery -A amcat.amcatcelery worker -l info -Q amcat".split())
+CELERY_CMD = tuple("{} -A amcat.amcatcelery worker -l info -Q amcat".format(CELERY_BIN).split())
 
 CHANGE_EVENTS = pyinotify.IN_DELETE | \
                 pyinotify.IN_CREATE | \
