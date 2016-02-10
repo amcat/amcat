@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Runs a celery worker, and reloads on a file change. Run as ./run_celery [directory]. If
 directory is not given, default to cwd."""
 import os
@@ -10,45 +10,42 @@ import multiprocessing
 import subprocess
 import threading
 
-import inotify.adapters
+import pyinotify
 
 
 CELERY_CMD = tuple("celery -A amcat.amcatcelery worker -l info -Q amcat".split())
-CHANGE_EVENTS = ("IN_MODIFY", "IN_ATTRIB", "IN_DELETE")
-WATCH_EXTENSIONS = (".py",)
 
-def watch_tree(stop, path, event):
-    """
-    @type stop: multiprocessing.Event
-    @type event: multiprocessing.Event
-    """
-    path = os.path.abspath(path)
+CHANGE_EVENTS = pyinotify.IN_DELETE | \
+                pyinotify.IN_CREATE | \
+                pyinotify.IN_MODIFY | \
+                pyinotify.IN_CLOSE_WRITE
 
-    for e in inotify.adapters.InotifyTree(path).event_gen():
-        if stop.is_set():
-            break
+class EventHandler(pyinotify.ProcessEvent):
+    def __init__(self, trigger, **kargs):
+        super().__init__(**kargs)
+        self.trigger = trigger
 
-        if e is not None:
-            _, attrs, path, filename = e
+    def process_default(self, event):
+        if event.path.startswith("."):
+            return
 
-            if filename is None:
-                continue
+        if event.name.startswith("."):
+            return
 
-            if any(filename.endswith(ename) for ename in WATCH_EXTENSIONS):
-                continue
+        if not event.name.endswith(".py"):
+            return
 
-            if any(ename in attrs for ename in CHANGE_EVENTS):
-                event.set()
-
+        self.trigger.set()
 
 class Watcher(threading.Thread):
     def __init__(self, path):
         super(Watcher, self).__init__()
         self.celery = subprocess.Popen(CELERY_CMD)
-        self.stop_event_wtree = multiprocessing.Event()
+        self.wm = pyinotify.WatchManager()
         self.event_triggered_wtree = multiprocessing.Event()
-        self.wtree = multiprocessing.Process(target=watch_tree, args=(self.stop_event_wtree, path, self.event_triggered_wtree))
-        self.wtree.start()
+        self.notifier = pyinotify.ThreadedNotifier(self.wm, EventHandler(self.event_triggered_wtree))
+        self.notifier.start()
+        self.wm.add_watch(path, CHANGE_EVENTS, rec=True)
         self.running = True
 
     def run(self):
@@ -60,10 +57,10 @@ class Watcher(threading.Thread):
 
     def join(self, timeout=None):
         self.running = False
-        self.stop_event_wtree.set()
         self.celery.terminate()
-        self.wtree.join()
+        self.notifier.stop()
         self.celery.wait()
+        self.notifier.join()
         super(Watcher, self).join(timeout=timeout)
 
     def restart_celery(self):
