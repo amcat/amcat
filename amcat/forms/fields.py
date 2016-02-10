@@ -44,10 +44,8 @@ class JSONField(models.TextField):
             kwargs.update(dict(default='{}'))
         super(JSONField, self).__init__(*args, **kwargs)
 
-    def to_python(self, value):
-        if isinstance(value, str):
-            return json.loads(value)
-        return value
+    def from_db_value(self, value, *args, **kwargs):
+        return json.loads(value)
 
     def get_prep_value(self, value):
         return json.dumps(value)
