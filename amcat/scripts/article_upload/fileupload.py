@@ -156,7 +156,7 @@ def namedtuples_from_reader(reader, encoding=None):
         
     for values in reader:
         if encoding is not None:
-            values = [x.decode(encoding) for x in values]
+            values = [x.decode(encoding) if isinstance(x, bytes) else x for x in values]
         if len(values) < len(header):
             values += [None] * (len(header) - len(values))
         yield Row(*values)

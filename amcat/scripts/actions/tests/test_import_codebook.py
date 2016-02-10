@@ -20,7 +20,7 @@ def _run_test(bytes, **options):
         f.write(bytes)
         f.flush()
 
-        return ImportCodebook(dict(file=File(open(f.name)), **options)).run()
+        return ImportCodebook(dict(file=File(open(f.name, encoding="utf-8")), **options)).run()
 
 
 def _csv_bytes(rows, encoding="utf-8", **kargs):
