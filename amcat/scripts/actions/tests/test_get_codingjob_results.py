@@ -25,12 +25,13 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
 
         jobs = list(jobs)
 
-        data = dict(codingjobs=[job.id for job in jobs],
-                    export_format=[export_format],
-                    export_level=[str(export_level)],
-                    include_uncoded_articles="1" if include_uncoded_articles else "",
-                    include_uncoded_sentences="1" if include_uncoded_sentences else ""
-        )
+        data = {
+            "codingjobs": [job.id for job in jobs],
+            "export_format": [export_format],
+            "export_level": [str(export_level)],
+            "include_uncoded_articles": "1" if include_uncoded_articles else "",
+            "include_uncoded_sentences": "1" if include_uncoded_sentences else ""
+        }
 
         for field, opts in options.items():
             prefix = _get_field_prefix(field)

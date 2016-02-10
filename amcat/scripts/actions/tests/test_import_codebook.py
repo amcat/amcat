@@ -1,4 +1,5 @@
 import csv
+import io
 
 from amcat.tools import amcattest
 from amcat.scripts.actions.import_codebook import ImportCodebook
@@ -23,16 +24,11 @@ def _run_test(bytes, **options):
 
 
 def _csv_bytes(rows, encoding="utf-8", **kargs):
-    def encode(x):
-        if x is None or isinstance(x, str): return x
-        return str(x).encode(encoding)
-
-
-    out = StringIO()
+    out = io.StringIO()
     w = csv.writer(out, **kargs)
     for row in rows:
-        w.writerow(map(encode, row))
-    return out.getvalue()
+        w.writerow(row)
+    return out.getvalue().encode('utf-8')
 
 
 class TestImportCodebook(amcattest.AmCATTestCase):

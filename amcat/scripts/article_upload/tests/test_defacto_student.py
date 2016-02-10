@@ -9,9 +9,9 @@ class TestUploadText(amcattest.AmCATTestCase):
     def setUp(self):
         self.test_dir = os.path.join(os.path.dirname(__file__), 'test_files', 'defacto')
         self.test1 = os.path.join(self.test_dir, 'DeFacto-Campus - Ausdruck1.htm')
-        self.test1_html = get_html(open(self.test1).read())
+        self.test1_html = get_html(open(self.test1, "rb").read())
         self.test2 = os.path.join(self.test_dir, 'DeFacto-Campus - Ausdruck2.htm')
-        self.test2_html = get_html(open(self.test2).read())
+        self.test2_html = get_html(open(self.test2, "rb").read())
 
     def test_split(self):
         elems = split_html(self.test1_html)

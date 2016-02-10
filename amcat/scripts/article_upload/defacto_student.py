@@ -23,10 +23,11 @@ Plugin for uploading De Facto files (student edition) in HTML format
 To use this plugin, choose to  'print' the articles and save the source
 of the popup window as HTML.
 """
-
+import io
 import re
 
 from lxml import etree
+from six import BytesIO
 
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.models.article import Article
@@ -91,7 +92,7 @@ def parse_meta(text):
 
 def get_html(html_bytes):
     parser = etree.HTMLParser()
-    return etree.parse(StringIO(html_bytes), parser)
+    return etree.parse(io.BytesIO(html_bytes), parser)
 
 def split_html(html):
     return html.xpath("//div[@class='eintrag']")
@@ -122,7 +123,7 @@ def stringify_children(node):
     from lxml.etree import tostring
     from itertools import chain
     parts = ([node.text] +
-            list(chain(*([c.text, tostring(c), c.tail] for c in node.getchildren()))) +
+            list(chain(*([c.text, tostring(c, encoding="utf-8").decode('utf-8'), c.tail] for c in node.getchildren()))) +
             [node.tail])
     # filter removes possible Nones in texts and tails
     return ''.join(filter(None, parts))
