@@ -207,7 +207,7 @@ class Datatable(object):
             fields = list(self.resource.get_field_names())
         else:
             # ViewSet
-            fields = self.resource.get_serializer_class()().fields.keys()
+            fields = list(self.resource.get_serializer_class()().fields.keys())
 
         if hasattr(self.resource, 'extra_fields'):
             fields += self.resource.extra_fields(self.extra_args)
