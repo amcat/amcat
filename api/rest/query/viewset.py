@@ -41,8 +41,8 @@ def wrap_query_action(qaction):
 class QueryActionMetadata(SimpleMetadata):
     def determine_metadata(self, request, view):
         form = view.get_form()
-        field_names = form.fields.keys()
-        fields = map(partial(getitem, form), field_names)
+        field_names = list(form.fields.keys())
+        fields = list(map(partial(getitem, form), field_names))
 
         return {
             "help_texts": OrderedDict(zip(field_names, [f.help_text.strip() or None for f in fields])),
