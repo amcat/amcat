@@ -41,3 +41,5 @@ splinter
 django-celery
 GitPython==1.0.1
 amqplib
+KafNafParserPy
+git+https://github.com/amcat/nlpipe.git#egg=nlpipe
