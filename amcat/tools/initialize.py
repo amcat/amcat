@@ -36,7 +36,7 @@ from amcat.models.authorisation import Role
 
 import amcat.models
 from amcat.tools import db_upgrader, amcates
-from amcat.tools import amcatxtas
+
 INITIAL_DATA_MODULE = amcat.models
 INITIAL_DATA_FILE = "_initial_data.json"
 
@@ -63,7 +63,6 @@ def initialize(sender, **kwargs):
     Command().run_from_argv(["manage", "loaddata", datafile])
     create_admin()
     amcates.ES().check_index()
-    amcatxtas.check_mappings()
 
 def set_signals():
     """
