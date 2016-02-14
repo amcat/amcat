@@ -55,8 +55,13 @@ class NLPipeLemmataSerializer(serializers.Serializer):
     class Meta:
         class list_serializer_class(serializers.ListSerializer):
             def to_representation(self, data):
+
+                only_cached = self.context['request'].GET.get('only_cached', 'N')
+                only_cached = only_cached[0].lower() in ['1', 'y']
                 aids = [a.pk for a in data]
-                self.child._cache = {m.id: m for m in get_results(aids, self.child.module)}
+                self.child._cache = get_results(aids, self.child.module, only_cached=only_cached)
+                if only_cached:
+                    data = [a for a in data if a.pk in self.child._cache]
                 result = serializers.ListSerializer.to_representation(self, data)
                 # flatten list of lists
                 result = itertools.chain(*result)
