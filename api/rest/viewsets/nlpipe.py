@@ -114,3 +114,29 @@ class NLPipeLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatabl
         return context
 
 
+ModuleCount = namedtuple("ModuleCount", ["module", "n"])
+
+class PreprocessViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin,
+                        ListModelMixin, GenericViewSet):
+    model_key = "preproces"
+    model = None
+    base_name = "preprocess"
+
+    class serializer_class(serializers.Serializer):
+        module = serializers.CharField()
+        n = serializers.IntegerField()
+    
+    def filter_queryset(self, queryset):
+        return queryset
+    
+    def get_queryset(self):
+        ids = list(self.articleset.get_article_ids_from_elastic())
+        result = [ModuleCount("Total #articles", len(ids))]
+        from nlpipe.document import count_cached
+        for module, n in count_cached(ids):
+            result.append(ModuleCount(module, n))
+        
+        return result
+
+    def get_filter_fields(self):
+        return []
