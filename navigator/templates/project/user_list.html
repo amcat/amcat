@@ -5,11 +5,16 @@
 {% block actions %}
 {% if is_admin %}
  <h2>Add, remove, or modify users:</h2>
- <form action="{% url "navigator:user-add" project.id %}" method="POST">
+ <form action="{% url "navigator:user-add" project.id %}" id="users-form" method="POST">
      {% csrf_token %}
   {{ add_user }}
   <input class="btn btn-primary" type="submit" value="Modify User(s)" />
  </form>
+ <script>
+ require(["jquery", "bootstrap-multiselect"], function($){
+     $('#users-form').find('.multiselect').multiselect({"enableFiltering": true});
+ });
+ </script>
 {% endif %}
 {% endblock %}
 
