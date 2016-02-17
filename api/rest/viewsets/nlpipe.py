@@ -64,7 +64,7 @@ class NLPipeLemmataSerializer(serializers.Serializer):
         class list_serializer_class(serializers.ListSerializer):
             def to_representation(self, aids):
                 # nlpipe / elastic has string ids
-                aids = (unicode(aid) for aid in aids)
+                aids = [unicode(aid) for aid in aids]
                 self.child._cache = get_results(aids, self.child.module)
                 result = serializers.ListSerializer.to_representation(self, aids)
                 # flatten list of lists
