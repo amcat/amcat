@@ -569,8 +569,8 @@ define([
 
         var url = self.get_window_url(JOBS, SETS, window.location.hash.slice(1));
         history.replaceState({}, document.title, url);
-
         $("#id_articlesets")
+            .trigger('before_update')
             .multiselect('deselectAll', false)
             .multiselect('select', SETS)
             .multiselect('rebuild')

@@ -92,9 +92,21 @@
                     <div class="col-md-9">
                         <select multiple="multiple" id="id_articlesets" name="articlesets">
                             {% for aset in all_articlesets %}
-                                <option value="{{ aset.id }}">{{ aset.name }}</option>
+                                <option value="{{ aset.id }}"
+                                    {% if aset.id in articleset_ids %}
+                                        selected
+                                    {% endif %}
+                                >{{ aset.name }}</option>
                             {% endfor %}
                         </select>
+                        <button id="id_articlesets_placeholder" class="btn btn-default" style="width: 100%; text-overflow:ellipsis; overflow: hidden;" disabled>
+                            {% if articlesets|length > 5 %}
+                            {{ articlesets|length }} selected
+                            {% else %}
+                            {{ articlesets_names|join:', ' }}
+                            {% endif %}
+                        </button>
+
                         <div style="text-align: center;">
                             <small><a id="change-articlesets" href="#">change articlesets?</a></small>
                         </div>
@@ -113,17 +125,24 @@
 
                     <script>
                         require(["jquery", "query/multiselect-defaults", "bootstrap-multiselect"], function($, MULTISELECT_DEFAULTS){
-                            $("#id_mediums,#id_articlesets,#id_codingjobs").multiselect(
+                            // load articleset multiselect lazily
+                            $('#id_articlesets').hide().one('before_update', function(){
+                                $('#id_articlesets_placeholder').remove();
+                                $(this).multiselect($.extend({}, MULTISELECT_DEFAULTS, {
+                                    nonSelectedText: 'All selected',
+                                    buttonWidth: "100%"
+                                }));
+                            });
+
+
+                            $("#id_mediums,#id_codingjobs").multiselect(
                                     $.extend({}, MULTISELECT_DEFAULTS, {
                                         nonSelectedText: 'All selected',
                                         buttonWidth: "100%"
                                     })
                             );
 
-                            $("#id_articlesets")
-                                    .multiselect("deselectAll")
-                                    .multiselect("select", {{ articleset_ids_json }})
-                                    .multiselect("disable");
+
 
                             {% if all_codingjobs %}
                                 $("#id_codingjobs")
