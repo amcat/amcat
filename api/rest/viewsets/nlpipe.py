@@ -45,7 +45,6 @@ from api.rest.viewsets.article import ArticleViewSetMixin
 from api.rest.mixins import DatatablesMixin
 
 from nlpipe.pipeline import get_results
-from nlpipe.celery import app
 from nlpipe import backend
 
 from KafNafParserPy import KafNafParser
@@ -134,8 +133,7 @@ class PreprocessViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesM
     def get_queryset(self):
         ids = list(self.articleset.get_article_ids_from_elastic())        
         result = [ModuleCount("Total #articles", len(ids))]
-        from nlpipe.document import count_cached
-        for module, n in count_cached(ids):
+        for module, n in backend.count_cached(ids):
             result.append(ModuleCount(module, n))
         
         return result
