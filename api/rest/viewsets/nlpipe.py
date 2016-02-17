@@ -46,45 +46,45 @@ from api.rest.mixins import DatatablesMixin
 
 from nlpipe.pipeline import get_results
 from nlpipe.celery import app
+from nlpipe import backend
 
 from KafNafParserPy import KafNafParser
 from io import BytesIO
+
+def _get_module(request):
+    module = request.GET.get('module')
+    if not module:
+        raise Exception("Please specify the NLP module to use "
+                        "with a module= GET parameter")
+    from nlpipe import tasks
+    return getattr(tasks, module)
 
 class NLPipeLemmataSerializer(serializers.Serializer):
 
     class Meta:
         class list_serializer_class(serializers.ListSerializer):
-            def to_representation(self, data):
-
-                only_cached = self.context['request'].GET.get('only_cached', 'N')
-                only_cached = only_cached[0].lower() in ['1', 'y']
-                aids = [a.pk for a in data]
-                self.child._cache = get_results(aids, self.child.module, only_cached=only_cached)
-                if only_cached:
-                    data = [a for a in data if a.pk in self.child._cache]
-                result = serializers.ListSerializer.to_representation(self, data)
+            def to_representation(self, aids):
+                # nlpipe / elastic has string ids
+                aids = (unicode(aid) for aid in aids)
+                self.child._cache = get_results(aids, self.child.module)
+                result = serializers.ListSerializer.to_representation(self, aids)
                 # flatten list of lists
                 result = itertools.chain(*result)
                 return result
 
     @property
     def module(self):
-        module = self.context['request'].GET.get('module')
-        if not module:
-            raise Exception("Please specify the NLP module to use "
-                            "with a module= GET parameter")
-        from nlpipe import tasks
-        return getattr(tasks, module)
+        return _get_module(self.context['request'])
     
-    def to_representation(self, article):
-        naf = self._cache[article.pk].input
+    def to_representation(self, aid):
+        naf = self._cache[aid].text
         naf = KafNafParser(BytesIO(naf.encode("utf-8")))
         tokendict = {token.get_id(): token for token in naf.get_tokens()}
 
         for term in naf.get_terms():
             tokens = [tokendict[id] for id in term.get_span().get_span_ids()]
             for token in tokens:
-                yield {"aid": article.pk,
+                yield {"aid": aid,
                        "token_id": token.get_id(),
                        "offset": token.get_offset(),
                        "sentence": token.get_sent(),
@@ -103,10 +103,12 @@ class NLPipeLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatabl
     serializer_class = NLPipeLemmataSerializer
 
     def filter_queryset(self, queryset):
-        queryset = super(NLPipeLemmataViewSet, self).filter_queryset(queryset)
-        # only(.) would be better on serializer, but meh
-        queryset = queryset.filter(articlesets_set=self.articleset).only("pk")
-        return queryset
+        ids = list(self.articleset.get_article_ids_from_elastic())
+        only_cached = self.request.GET.get('only_cached', 'N')
+        if only_cached[0].lower() in ['1', 'y', 't']:
+            module = _get_module(self.request)
+            ids = list(backend.get_cached_document_ids(ids, module.doc_type))
+        return ids
     
     def get_renderer_context(self):
         context = super(NLPipeLemmataViewSet, self).get_renderer_context()
@@ -130,7 +132,7 @@ class PreprocessViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesM
         return queryset
     
     def get_queryset(self):
-        ids = list(self.articleset.get_article_ids_from_elastic())
+        ids = list(self.articleset.get_article_ids_from_elastic())        
         result = [ModuleCount("Total #articles", len(ids))]
         from nlpipe.document import count_cached
         for module, n in count_cached(ids):
