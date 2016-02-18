@@ -106,9 +106,9 @@ def get_clustermap_table(queries):
     queries = {k: set(v) for (k,v) in queries.iteritems()}
     header = sorted(queries.keys(), key=lambda q: str(q))
     rows = []
-    allids = list(chain(*queries.values()))
+    allids = set(chain.from_iterable(queries.itervalues()))
     for c in combinations(header):
-        ids = set(allids) # copy
+        ids = allids.copy()
         row = []
         for q in header:
             row.append(int(q in c))
