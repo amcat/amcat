@@ -72,29 +72,6 @@ def combinations(iterable):
         yield (head,) + result
         yield result
 
-def combinations_as_sets(iterable):
-    return (frozenset(x) for x in combinations(iterable))
-
-def get_intersections(queries):
-    """Based on a mapping {query: ids} determine a mapping {[query] -> [ids]}. This
-    is different from a clustermap; this function merely determines intersections: an
-    article id can exist in multiple sets.
-
-    @param queries.keys(): [SearchQuery]
-    @param queries.values(): [int]
-    @returns: mapping of cluster (frozenset of queries) to a set of article ids
-    """
-    queries = {q: set(ids) for q, ids in queries.items()}
-    all_article_ids = set(chain.from_iterable(queries.values()))
-    clusters = ((cluster, all_article_ids.copy()) for cluster in combinations_as_sets(queries.keys()))
-    clusters_dict = {}
-    for cluster, cluster_ids in clusters:
-        for query in cluster:
-            cluster_ids &= queries[query]
-        clusters_dict[cluster] = cluster_ids
-    return clusters_dict
-
-
 def get_clusters(queries):
     """Based on a mapping {query: ids} determine a mapping {[query] -> [ids]}, thus
     determining the cluster it belongs to.
@@ -123,10 +100,27 @@ def _get_clustermap_table_rows(headers, isects):
 
 
 def get_clustermap_table(queries):
-    intersections = get_intersections(queries)
-    headers = sorted(queries.keys(), key=lambda q: str(q))
-    rows = _get_clustermap_table_rows(headers, intersections)
-    return headers + ["Total"], rows
+    """
+    Given a mapping of query to ids, return a table with the #hits for each boolean combination
+    """
+    queries = {k: set(v) for (k,v) in queries.iteritems()}
+    header = sorted(queries.keys(), key=lambda q: str(q))
+    rows = []
+    allids = set(chain.from_iterable(queries.itervalues()))
+    for c in combinations(header):
+        ids = allids.copy()
+        row = []
+        for q in header:
+            row.append(int(q in c))
+            if q in c:
+                ids &= queries[q]
+            else:
+                ids -= queries[q]
+        n = len(ids)
+        if n:
+            rows.append(tuple(row + [n]))
+
+    return header + ["Total"], rows
 
 
 def _get_cluster_query(all_queries, cluster_queries):

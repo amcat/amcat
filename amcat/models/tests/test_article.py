@@ -177,18 +177,19 @@ class TestArticle(amcattest.AmCATTestCase):
         self.assertEqual(set(s1.get_article_ids()), {a1.id})
         self.assertEqual(_q(sets=s1.id), {a1.id})
 
-        # a dupe with a non-identical uuid should lose its id
-        a4 = amcattest.create_test_article(uuid=uuid.uuid4(), **art)
-        self.assertTrue(a4.duplicate)
-        self.assertEqual(a4.uuid, a1.uuid)
+        # a dupe with a non-identical uuid is not a dupe
+        uu = uuid.uuid4()
+        a4 = amcattest.create_test_article(uuid=uu, **art)
+        self.assertFalse(a4.duplicate)
+        self.assertEqual(a4.uuid, uu)
         
-        # if an explicit uuid is set, it should be a perfect duplicate
+        # if an existing uuid is set, it should be a perfect duplicate
         art['uuid'] = a1.uuid
-        amcattest.create_test_article(**art) # okay
+        a5 = amcattest.create_test_article(**art) # okay
         amcates.ES().flush()
-        self.assertEqual(_q(mediumid=art['medium']), {a1.id}) # still a dupe
+        self.assertEqual(_q(mediumid=art['medium']), {a1.id, a4.id}) # a5 is a dupe
+        
         art['headline']="not the same"
-
         self.assertRaises(ValueError, amcattest.create_test_article, **art) # not okay
 
     def test_unicode_word_len(self):

@@ -19,8 +19,7 @@
 from __future__ import unicode_literals
 
 from amcat.tools.amcattest import AmCATTestCase
-from amcat.tools.clustermap import get_clusters, get_cluster_queries, get_clustermap_table, \
-    get_intersections
+from amcat.tools.clustermap import get_clusters, get_cluster_queries, get_clustermap_table
 from amcat.tools.keywordsearch import SearchQuery
 
 
@@ -43,26 +42,6 @@ class TestClusterMap(AmCATTestCase):
         self.assertEqual(clusters[frozenset({'b'})], {4})
         self.assertEqual(clusters[frozenset({'a'})], {2, 3})
 
-    def test_get_intersections(self):
-        queries = {"a": [1, 2, 3], "b": [1, 4], "c": [1]}
-        isects = dict(get_intersections(queries))
-
-        self.assertIn(frozenset({'a', 'b', 'c'}), isects)
-        self.assertIn(frozenset({'a', 'b'}), isects)
-        self.assertIn(frozenset({'a', 'c'}), isects)
-        self.assertIn(frozenset({'b', 'c'}), isects)
-        self.assertIn(frozenset({'a'}), isects)
-        self.assertIn(frozenset({'b'}), isects)
-        self.assertIn(frozenset({'c'}), isects)
-
-        self.assertEqual(isects[frozenset({'a', 'b', 'c'})], {1})
-        self.assertEqual(isects[frozenset({'a', 'b'})], {1})
-        self.assertEqual(isects[frozenset({'a', 'c'})], {1})
-        self.assertEqual(isects[frozenset({'b', 'c'})], {1})
-        self.assertEqual(isects[frozenset({'a'})], {1, 2, 3})
-        self.assertEqual(isects[frozenset({'b'})], {1, 4})
-        self.assertEqual(isects[frozenset({'c'})], {1})
-
 
     def test_get_clustermap_table(self):
         queries = {"a": [1, 2, 3], "b": [1, 4], "c": [1]}
@@ -70,13 +49,9 @@ class TestClusterMap(AmCATTestCase):
 
         self.assertEqual(['a', 'b', 'c', 'Total'], headers)
         self.assertEqual(sorted(rows), [
-            (0, 0, 1, 1),
-            (0, 1, 0, 2),
-            (0, 1, 1, 1),
-            (1, 0, 0, 3),
-            (1, 0, 1, 1),
-            (1, 1, 0, 1),
-            (1, 1, 1, 1),
+            (0, 1, 0, 1), # article 4
+            (1, 0, 0, 2), # articles 2 and 3
+            (1, 1, 1, 1), # article 1
         ])
 
 
@@ -103,9 +78,3 @@ class TestClusterMap(AmCATTestCase):
 
         for qs in good_queries:
             self.assertTrue(any(q in queries for q in qs))
-
-
-    def test_get_table(self):
-        queries = {"a": [1, 2, 3], "b": [1, 4], "c": [1]}
-        clusters = dict(get_clusters(queries))
-        # WvA: is this supposed to test something?

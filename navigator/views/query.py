@@ -120,6 +120,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
             all_articlesets = all_articlesets.filter(codingjob_set__id__isnull=True)
 
         articlesets = self.project.all_articlesets().filter(id__in=articleset_ids).only("id", "name")
+        articlesets_names = (aset.name for aset in articlesets)
         articleset_ids_json = json.dumps(list(articleset_ids))
         codebooks = self.project.get_codebooks().order_by("name").only("id", "name")
 
