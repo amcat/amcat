@@ -25,6 +25,7 @@ articles database table.
 
 import logging
 
+import collections
 from django.db import models
 from django.template import Context
 from django.template.defaultfilters import escape as escape_filter
@@ -298,10 +299,11 @@ class Article(AmcatModel):
         Does *not* save to elastic or add to articlesets
         Assumes that if .parent is given, it has an id
         (because parent is part of hash)
-        modifies all articles in place with .hash and either .duplicate or .id and .uuid
+        modifies all articles in place with .hash, .id, .uuid, and .duplicate (None or Article)
         """
         es = amcates.ES()
-        dupe_values = {'uuid': {}, 'hash': {}} if deduplicate else {}
+        dupe_values = {'uuid': {}, 'hash': {}}  # {"uuid" : {<uuid> : article}
+        internal_dupes = collections.defaultdict(list) # {article : articles}
         # Iterate over articles, remove duplicates within addendum and build dupe values dictionary 
         for a in articles:
             if a.id:
@@ -311,31 +313,45 @@ class Article(AmcatModel):
             a.es_dict = amcates.get_article_dict(a)
             a.hash = a.es_dict['hash']
             a.duplicate = None # innocent until proven guilty
-            for attr in dupe_values:
-                val = getattr(a, attr)
-                if val:
-                    val = str(val)
-                    if val in dupe_values[attr]:
-                        a.duplicate = dupe_values[attr][val] # within-set duplicate
-                    else:
-                        dupe_values[attr][val] = a
-        # for each duplicate indicator, query es and get existing articles
-        for attr in dupe_values:
-            values = dupe_values[attr]
-            if values:
-                results = es.query_all(filters={attr: list(values.keys())}, fields=["hash", "uuid"], score=False)
-                for r in results:
-                    a =values[getattr(r, attr)]
-                    if a.hash != r.hash: 
-                        raise ValueError("Cannot modify existing articles: {a.hash} != {r.hash}".format(**locals()))
-                    if a.uuid and not r.uuid: # old article without uuid -> update old article! (but not very efficient)
-                        Article.objects.filter(pk=r.id).update(uuid=a.uuid)
-                    elif a.uuid and str(a.uuid) != str(r.uuid): # not part of hash
-                        #TODO: we keep old uuid, maybe client should get a warning of some sort?
-                        a.uuid = r.uuid 
-                    a.duplicate = r
-                    a.id = r.id
+            if not deduplicate:
+                continue
                 
+            dupevals = {"hash": a.hash}
+            if getattr(a, 'uuid'):
+                dupevals['uuid'] = str(a.uuid)
+            for attr, val in dupevals.items():
+                if val in dupe_values[attr]:
+                    dupe = dupe_values[attr][val] # within-set duplicate
+                    a.duplicate = dupe
+                    internal_dupes[dupe].append(a)
+                else:
+                    dupe_values[attr][val] = a
+
+        def _set_dupe(dupe, orig):
+            dupe.duplicate = orig
+            dupe.id = orig.id
+            dupe.uuid = orig.uuid
+            for dupe2 in internal_dupes[dupe]:
+                _set_dupe(dupe2, orig)
+                    
+        if dupe_values['hash']:
+            results = es.query_all(filters={'hash': list(dupe_values['hash'].keys())},
+                                   fields=["hash", "uuid"], score=False)
+            for orig in results:
+                dupe = dupe_values['hash'][orig.hash]
+                if getattr(dupe, 'uuid') and dupe.uuid != orig.uuid:
+                    # not a dupe!
+                    continue
+                _set_dupe(dupe, orig)
+        if dupe_values['uuid']:
+            results = es.query_all(filters={'uuid': list(dupe_values['uuid'].keys())},
+                                   fields=["hash", "uuid"], score=False)
+            for orig in results:
+                dupe = dupe_values['uuid'][orig.uuid]
+                if dupe.hash != orig.hash:
+                    raise ValueError("Cannot modify existing articles: {orig.hash} != {dupe.hash}".format(**locals()))
+                _set_dupe(dupe, orig)
+
         # now we can save the articles and set id
         to_insert = [a for a in articles if not a.duplicate]
         result = bulk_insert_returning_ids(to_insert)

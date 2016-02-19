@@ -30,14 +30,20 @@
 
                 <script>
                     require(["jquery", "bootstrap-multiselect"], function($){
-                        $("#change-articlesets-select").multiselect({
-                            enableFiltering: true,
-                            enableCaseInsensitiveFiltering: true,
-                            maxHeight:500,
-                            buttonWidth: '300px',
-                            numberDisplayed: 5
+                        $('#change-articlesets-query-dialog').one('shown.bs.modal', function(){
+                            var placeholder = $("<button>").html("&hellip;").addClass("btn btn-default");
+                            $("#change-articlesets-select").hide().before(placeholder);
+                            setTimeout(function(){
+                                $("#change-articlesets-select").multiselect({
+                                    enableFiltering: true,
+                                    enableCaseInsensitiveFiltering: true,
+                                    maxHeight: 500,
+                                    buttonWidth: '300px',
+                                    numberDisplayed: 5
+                                });
+                                placeholder.remove();
+                            }, 0);
                         });
-
                         $("#deselect-all-articlesets").click(function(){
                             $("#change-articlesets-select")
                                     .multiselect('deselectAll', false)
