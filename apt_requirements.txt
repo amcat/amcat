@@ -8,3 +8,4 @@ lib32z1-dev
 git
 curl
 python-pdfminer
+graphviz

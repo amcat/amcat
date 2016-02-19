@@ -1,5 +1,4 @@
 
-        
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework import parsers
@@ -46,13 +45,20 @@ class ObtainAuthToken(APIView):
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            token, created = Token.objects.get_or_create(user=serializer.user)
-            if not created:
-                token.created =datetime.datetime.now()
-                token.save()
-            return Response({'token': token.key})
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        if not request.user.is_anonymous():
+            user = request.user
+        elif serializer.is_valid():
+            user = serializer.user
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+        token, created = Token.objects.get_or_create(user=user)
+        if not created:
+            token.created = datetime.datetime.now()
+            token.save()
+        return Response({'token': token.key})
 
 
 obtain_auth_token = ObtainAuthToken.as_view()

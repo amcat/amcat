@@ -34,6 +34,7 @@ from amcat.tools.aggregate_es import aggregate, TermCategory
 from amcat.tools.amcates import ES
 from amcat.tools.caching import cached
 from amcat.tools.toolkit import stripAccents
+from amcat.tools import queryparser
 
 REFERENCE_RE = re.compile(r"<(?P<reference>.*?)(?P<recursive>\+?)>")
 
@@ -157,7 +158,14 @@ class SelectionSearch:
 
     @cached
     def get_count(self):
-        return self.es.count(self.get_query(), self.get_filters())
+        try:
+            return self.es.count(self.get_query(), self.get_filters())
+        except queryparser.QueryParseError:
+            # try queries one by one
+            for i, q in enumerate(self.get_queries()):
+                queryparser.parse_to_terms(q.query, context=(q.declared_label or i+1))
+            # if error wasn't raised yet, re-raise original
+            raise
 
     @cached
     def get_statistics(self):

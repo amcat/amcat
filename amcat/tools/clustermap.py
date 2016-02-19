@@ -60,11 +60,23 @@ ADUNA_MEMORY = "1000m"
 # Template for interactive clustermap
 HTML_TEMPLATE = get_template("query/clustermap/clustermap.html")
 
-
 ### CLUSTER LOGIC ###
-def get_product(queries):
-    return set(map(frozenset, product(*repeat(tuple(queries), len(queries)))))
+def combinations(iterable):
+    """
+    Returns a generator yielding all combinations of all lengths of `iterable` as tuples.
+    Care should be taken, as there are 2^n of these combinations.
+    """
+    all = tuple(iterable)
+    if len(all) == 0:
+        yield ()
+        return
+    head, tail = all[0], all[1:]
+    for result in combinations(tail):
+        yield (head,) + result
+        yield result
 
+def combinations_as_sets(iterable):
+    return (frozenset(x) for x in combinations(iterable))
 
 def get_intersections(queries):
     """Based on a mapping {query: ids} determine a mapping {[query] -> [ids]}. This
@@ -77,13 +89,13 @@ def get_intersections(queries):
     """
     queries = {q: set(ids) for q, ids in queries.items()}
     all_article_ids = set(chain.from_iterable(queries.values()))
-    clusters = {cluster: all_article_ids.copy() for cluster in get_product(queries.keys())}
-
-    for cluster, cluster_ids in clusters.items():
+    clusters = ((cluster, all_article_ids.copy()) for cluster in combinations_as_sets(queries.keys()))
+    clusters_dict = {}
+    for cluster, cluster_ids in clusters:
         for query in cluster:
             cluster_ids &= queries[query]
-
-    return clusters
+        clusters_dict[cluster] = cluster_ids
+    return clusters_dict
 
 
 def get_clusters(queries):
@@ -109,7 +121,7 @@ def get_clusters(queries):
 
 
 def _get_clustermap_table_rows(headers, isects):
-    for cluster in get_product(headers):
+    for cluster in combinations_as_sets(headers):
         yield tuple(int(bool(h in cluster)) for h in headers) + (len(isects[cluster]),)
 
 
