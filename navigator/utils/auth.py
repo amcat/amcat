@@ -49,14 +49,17 @@ def get_request():
     th = threading.current_thread()
     return th.request if hasattr(th, 'request') else None
 
-def create_user(username, first_name, last_name, email, affiliation, language, role):
+def create_user(username, first_name, last_name, email, affiliation, language, role, password=None):
     """
     This function creates an user with the given properties. Moreover: it
     generates a passwords and emails it to the new user.
 
     Raises: smtplib.SMTPException, django.db.utils.DatabaseError
     """
-    password = toolkit.random_alphanum(7)
+    email_password = (password is None)
+    if password is None:
+        password = toolkit.random_alphanum(7)
+        
     log.info("Creating new user: {username}".format(**locals()))
 
     u = _create_user(
@@ -297,7 +300,7 @@ class RequireLoginMiddleware(object):
         Check if login is required for this url. Excluded are the login- and
         logout url, plus all (static) media.
         """
-        return not any([url.startswith(u) for u in self.no_login])
+        return (settings.REQUIRE_LOGON) and not any([url.startswith(u) for u in self.no_login])
 
     def process_view(self, request, view_func, view_args, view_kwargs):
         if not request.user.is_authenticated() and self._login_required(request.path):

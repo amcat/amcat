@@ -7,23 +7,23 @@
 <table>
 <tr>
 <th>Username</th><td>{{username}}</td></tr>
-<th>Password</th><td>{{password}}</td></tr>
+{% if email_password %}<th>Password</th><td>{{password}}</td></tr>{% endif %}
 </tr>
 </table>
 
 <!--<p>You can access the server <a href="http://amcat-dev.labs.vu.nl/">here</a>. -->
-Please
-change your password as soon as possible.</p>
+{% if email_password %}
+<p>Please change your password as soon as possible.</p>
+{% endif %}
 
-<p><b>Caution: AmCAT3 is currently in alpha-testing stage.</b> Please make
+<p><b>Caution: AmCAT3 is free academic software.</b> Please make
   sure that you do not rely solely on AmCAT for storing your data or
   for meeting critical deadlines. Please report any bugs or other
   issues on
-  our <a href="http://code.google.com/p/amcat/issues/entry">issue tracker</a>.</p>
+  our <a href="http://github.com/amcat/amcat">issue tracker</a>.</p>
 
-<p>We are working on creating user documentation for AmCAT3. The
-  current (very early) draft of this documentation is
-  available <a href="http://amcat.vu.nl/plain/manual.pdf">here</a>. This
+<p>We are working on creating <a href="http://wiki.amcat.nl">user documentation for AmCAT3 as a wiki</a>.
+  This
   will be updated as we work on the documentation. Consider subscribing to
   our <a href="http://groups.google.com/group/amcat-user">user mailing
   list</a>. This list will be used for announcements from us on new
@@ -31,12 +31,10 @@ change your password as soon as possible.</p>
   questions.</p>
 
 <p>AmCAT is open source and all contributions are welcome! The full source code can be downloaded from
-  our <a href="http://code.google.com/p/amcat/">google projects
-  page</a>. This page also contains a developer wiki with installation
-  instructions. Feel free to ask any
-  development related questions on our <a href="http://groups.google.com/group/amcat-dev">developer mailing
-  list</a>.
-    <p>Good luck and kind regards,<br/>
+  our <a href="http://github.com/amcat/amcat/">github
+    page</a>.
+</p>
+      <p>Good luck and kind regards,<br/>
     The AmCAT team</p>
   </body>
  

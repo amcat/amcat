@@ -61,7 +61,7 @@ def save(request, project_id, codingjob_id, coded_article_id):
 
     if coded_article.codingjob.coder_id != request.user.id:
         # the user is not the assigned coder. Is s/he project admin?
-        if not request.user.userprofile.has_role(ROLE_PROJECT_ADMIN, coded_article.codingjob.project):
+        if not  coded_article.codingjob.project.has_role(request.user, ROLE_PROJECT_ADMIN):
             raise PermissionDenied("Only {request.user} or project admins can edit this codingjob.".format(**locals()))
 
     try:

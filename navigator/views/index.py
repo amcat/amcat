@@ -22,6 +22,8 @@ import re
 from django.shortcuts import render
 from amcat.models import ArticleSet, RecentProject, Project, Article
 from amcat.models.authorisation import ROLE_PROJECT_READER
+from django.views.generic.base import RedirectView
+from django import http
 
 from django.shortcuts import redirect
 
@@ -41,9 +43,10 @@ def index(request):
     featured_sets = [(aset, aset.project.get_role_id(user=request.user) >= ROLE_PROJECT_READER)
                      for aset in ArticleSet.objects.filter(featured=True)]
 
-    recent_projects = list(it.islice(((rp, rp.project.get_role_id(user=request.user) >= ROLE_PROJECT_READER)
-                     for rp in RecentProject.get_recent_projects(request.user.userprofile)), MAX_RECENT_PROJECTS))
-
+    if not request.user.is_anonymous():
+        recent_projects = list(it.islice(((rp, rp.project.get_role_id(user=request.user) >= ROLE_PROJECT_READER)
+                                          for rp in RecentProject.get_recent_projects(request.user.userprofile)), MAX_RECENT_PROJECTS))
+        
     return render(request, 'index.html', locals())
 
 def to_object(request):
@@ -121,3 +124,12 @@ def to_object(request):
     return render(request, 'to_object.html', locals())
     
     
+class IndexRedirect(RedirectView):
+    permanent = False
+    
+    def get(self, request, *args, **kwargs):
+        if request.user.is_anonymous():
+            url = "accounts/login"
+        else:
+            url = "navigator"
+        return http.HttpResponseRedirect(url)

@@ -67,7 +67,7 @@ class Task(AmcatModel):
     arguments = JSONField()
 
     project = models.ForeignKey(Project, null=True)
-    user = models.ForeignKey(User, null=False)
+    user = models.ForeignKey(User, null=True)
     issued_at = models.DateTimeField(auto_now_add=True)
 
     # A Task is persistent if it important to keep it around (example: saved queries)
@@ -150,6 +150,9 @@ class TaskHandler(object):
         if not isinstance(target_class, str):
             target_class = classtools.get_qualified_name(target_class)
 
+        if user.is_anonymous():
+            user = None
+            
         task = Task.objects.create(
             handler_class_name=classtools.get_qualified_name(cls),
             class_name=target_class, user=user, project=project,

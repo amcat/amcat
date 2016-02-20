@@ -31,12 +31,14 @@ from navigator.views.task import TaskDetailsView, TaskListView, clean_ready, cle
 from navigator.views.user_views import *  # noqa
 from navigator.views.codingjob_views import *  # noqa
 from navigator.views.codingschema_views import *  # noqa
-
+from navigator.views.index import IndexRedirect
 
 UUID_RE = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
 
 urlpatterns = patterns(
     '',
+    ('^$', IndexRedirect.as_view()),
+
      url(r'^$', 'navigator.views.index.index', name="index"),
 
      # Users

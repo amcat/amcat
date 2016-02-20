@@ -45,7 +45,7 @@ class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         projects = {aset.project for aset in asets}
         projects |= set(Project.objects.filter(articlesets__id__in=asets.values_list("id", flat=True)))
         
-        return any(self.request.user.userprofile.has_role(perm, p)
+        return any(p.has_role(self.request.user, perm)
                    for p in projects)
     
     def highlight(self):
@@ -113,7 +113,7 @@ class ArticleRemoveFromSetView(ProjectActionRedirectView):
         remove_set = int(self.request.GET["remove_set"])
         # user needs to have writer+ on the project of the articleset
         project = ArticleSet.objects.get(pk=remove_set).project
-        if not self.request.user.userprofile.has_role(authorisation.ROLE_PROJECT_WRITER, project):
+        if not project.has_role(authorisation.ROLE_PROJECT_WRITER, self.request.user):
             raise PermissionDenied("User {self.request.user} has insufficient rights on project {project}".format(**locals()))
 
 

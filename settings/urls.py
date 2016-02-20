@@ -25,12 +25,11 @@ from django.conf.urls import include, patterns, url
 from django.contrib import admin
 from django.views.generic import RedirectView
 
-log = logging.getLogger(__name__)
-
 admin.autodiscover()
 
 urlpatterns = patterns(
     '',
+    ('^$', IndexRedirect.as_view()),
     (r'^admin/', include(admin.site.urls)),
     (r'^accounts/', include('accounts.urls')),
     (r'^', include('navigator.urls', namespace="navigator")),

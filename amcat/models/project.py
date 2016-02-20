@@ -33,7 +33,8 @@ from amcat.models.coding.codingschema import CodingSchema
 from amcat.models.article import Article
 from amcat.models.articleset import ArticleSetArticle, ArticleSet
 
-ROLEID_PROJECT_READER = 11
+from amcat.models.authorisation import Role, ADMIN_ROLE, ROLE_PROJECT_READER
+
 LITTER_PROJECT_ID = 1
 
 LAST_VISITED_FIELD_NAME = "last_visited_at"
@@ -68,7 +69,7 @@ class Project(AmcatModel):
                                     related_name='inserted_project',
                                     editable=False, null=True)
 
-    guest_role = models.ForeignKey("amcat.Role", default=ROLEID_PROJECT_READER, null=True)
+    guest_role = models.ForeignKey("amcat.Role", default=ROLE_PROJECT_READER, null=True)
 
     active = models.BooleanField(default=True)
 
@@ -148,6 +149,30 @@ class Project(AmcatModel):
 
         super(Project, self).save(*args, **kargs)
 
+
+
+    def has_role(self, user, role):
+        """
+        Returns whether the user has the given role on this project
+        If user is site-admin, always return True
+        @param role: a role instance, ID, or label
+        @param user: a user object
+        """
+        if not user.is_anonymous and user.role_id >= ADMIN_ROLE:
+            return True
+
+        if isinstance(role, (str, unicode)):
+            role = Role.objects.get(label=role).id
+        if isinstance(role, Role):
+            role = role.id
+
+        actual_role_id = self.get_role_id(user=user)
+
+        log.info("{user.id}:{user.username} has role {actual_role_id} on project {self}, >=? {role}"
+                 .format(**locals()))
+
+        return actual_role_id >= role
+        
     def get_role_id(self, user=None):
         """
         Return the role id that this user has, by his own right or as guest
@@ -156,7 +181,7 @@ class Project(AmcatModel):
         project_role = None
         guest_role = self.guest_role_id
 
-        if user:
+        if user and not user.is_anonymous():
             try:
                 project_role = self.projectrole_set.get(user=user).role_id
             except ProjectRole.DoesNotExist:
