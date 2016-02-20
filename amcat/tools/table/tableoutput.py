@@ -82,8 +82,13 @@ def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True,
 
     def cell(row, col, fmt):
         val = table.getValue(row, col)
-        if type(val) == str: val = val.decode('latin-1')
-        if not useunicode and type(val) == str: val = val.encode('ascii', 'replace')
+
+        if type(val) == bytes:
+            val = val.decode('latin-1')
+
+        if not useunicode and type(val) == str:
+            val = val.encode('ascii', 'replace')
+
         try:
             val = fmt % (val,) if (val is not None) else ""
             return val

@@ -182,12 +182,14 @@ def query_list_to_table(queries, maxqlen=120, output=False, normalise_numbers=Tr
             query = re.sub(r"\d+", "#", query)
         #print(query)
         time[query].append(float(q["time"]))
-    t =  ObjectTable(rows = time.items())
-    t.addColumn(lambda kv : len(kv[1]), "N")
-    t.addColumn(lambda kv : kv[0][:maxqlen], "Query")
-    cum = t.addColumn(lambda kv: "%1.4f" % sum(kv[1]), "Cum.")
+    t = ObjectTable(rows=time.items())
+    t.addColumn(lambda kv: len(kv[1]), "N")
+    t.addColumn(lambda kv: kv[0][:maxqlen], "Query")
+    t.addColumn(lambda kv: "%1.4f" % sum(kv[1]), "Cum.")
     t.addColumn(lambda kv: "%1.4f" % (sum(kv[1]) / len(kv[1])), "Avg.")
-    t = SortedTable(t, sort=cum)
+
+    t = SortedTable(t, key=lambda row: row[2])
+
     if output:
         if "stream" not in outputoptions and output is not True:
             if output in (print, "print"):
