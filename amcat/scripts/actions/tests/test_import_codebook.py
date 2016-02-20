@@ -20,7 +20,7 @@ def _run_test(bytes, **options):
         f.write(bytes)
         f.flush()
 
-        return ImportCodebook(dict(file=File(open(f.name, encoding="utf-8")), **options)).run()
+        return ImportCodebook(dict(file=File(open(f.name, "rb")), **options)).run()
 
 
 def _csv_bytes(rows, encoding="utf-8", **kargs):
@@ -28,7 +28,7 @@ def _csv_bytes(rows, encoding="utf-8", **kargs):
     w = csv.writer(out, **kargs)
     for row in rows:
         w.writerow(row)
-    return out.getvalue().encode('utf-8')
+    return out.getvalue().encode(encoding)
 
 
 class TestImportCodebook(amcattest.AmCATTestCase):
