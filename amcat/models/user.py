@@ -108,29 +108,6 @@ class UserProfile(AmcatModel):
     def get_recent_projects(self):
         return RecentProject.get_recent_projects(self)
 
-    def has_role(self, role, onproject=None):
-        """
-        Returns whether the user has the given role. If project is given, check for a project-specific role
-        If user is site-admin, always return True
-        @param role: a role instance, ID, or label
-        """
-        if self.role_id >= ADMIN_ROLE:
-            return True
-
-        if isinstance(role, Role):
-            role = role.id
-        elif isinstance(role, (str, unicode)):
-            role = Role.objects.get(label=role).id
-
-        if onproject:
-            actual_role_id = onproject.get_role_id(user=self.user)
-        else:
-            actual_role_id = self.role_id
-
-        log.info("{self.user.id}:{self.user.username} has role {actual_role_id} on project {onproject}, >=? {role}"
-                 .format(**locals()))
-
-        return actual_role_id >= role
 
 
     def haspriv(self, privilege, onproject=None):

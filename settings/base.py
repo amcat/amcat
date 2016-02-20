@@ -47,6 +47,9 @@ TEMPLATE_DEBUG = DEBUG
 APPNAME = 'navigator'
 APPNAME_VERBOSE = 'AmCAT Navigator'
 AMCAT_VERSION = __version__
+
+REQUIRE_LOGON = os.environ.get('AMCAT_REQUIRE_LOGON', 'Y').lower() in ("1", "y", "t")
+REGISTER_REQUIRE_VALIDATION = os.environ.get('AMCAT_REGISTER_REQUIRE_VALIDATION', 'Y').lower() in ("1", "y", "t")
 ROOT = path.abspath(path.join(path.dirname(path.abspath(__file__)), '..'))
 
 DATABASE_OPTIONS = {

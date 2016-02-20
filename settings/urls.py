@@ -31,12 +31,13 @@ import os; from os.path import isdir
 import logging; log = logging.getLogger(__name__)
 
 from navigator.utils.error_handlers import handler404, handler500, handler403, handler503
+from navigator.views.index import IndexRedirect
 
 admin.autodiscover() 
 
 urlpatterns = patterns(
     '',
-    ('^$', RedirectView.as_view(url='navigator')),
+    ('^$', IndexRedirect.as_view()),
     (r'^admin/', include(admin.site.urls)),
     (r'^accounts/', include('accounts.urls')),
     (r'^navigator/', include('navigator.urls', namespace="navigator")),

@@ -14,34 +14,53 @@
 <div class="container">
 <div class="row">
 <div class="col-md-8">
-<h1>AmCAT</h1>
-<p>The Amsterdam Content Analysis Toolkit (AmCAT) is an open source infrastructure that makes it easy to do large-scale automatic and manual content analysis (text analysis) for the social sciences and humanities.</p>
+  <h2>AmCAT</h2>
+  <p>The Amsterdam Content Analysis Toolkit (AmCAT) is an open source infrastructure that makes it easy to do large-scale automatic and manual content analysis (text analysis) for the social sciences and humanities. <a href="#info">Scroll down</a> for more information</p>
+  {% if allow_anonymous %}
+  <p>This server does not require you to login. Feel free to <a href="{% url "navigator:projects" %}"> browse the existing projects</a>, or create a <a href="{% url "accounts-register" %}">free account</a> (just one simple step!) to add your own data{% if featured_sets%}, or try one of the featured data sets below:{% else %}.{% endif %}</p>
+  {% endif %}
+
 </div>
 <div class="col-md-4 login_buttons well">
- <form method="POST" action = "">
- {% csrf_token %}
- <div class="form-group"><input {% if username %}value="{{username}}"{% endif %} name="username" type="text" class="form-control" placeholder="Username" /></div>
-  <div class="form-group"><input name="password" type="password" class="form-control" placeholder="Password" /></div>
-  <button type="submit" class="btn btn-block btn-primary">Sign in</button>
- </form>
-    <small>
-           <a href="{% url "accounts-recover" %}">Forgot your username or password?</a>
-    </small>
+  <form method="POST" action = "">
+    {% csrf_token %}
+    <div class="form-group"><input {% if username %}value="{{username}}"{% endif %} name="username" type="text" class="form-control" placeholder="Username" /></div>
+    <div class="form-group"><input name="password" type="password" class="form-control" placeholder="Password" /></div>
+    <button type="submit" class="btn btn-block btn-primary">Sign in</button>
+  </form>
+  <small>
+    <a href="{% url "accounts-recover" %}">Forgot your username or password?</a>
+  </small>
 
-<hr/>
-<form method="POST" class="">
+  <hr/>
+  <form method="POST" class="">
     <a href="{% url "accounts-register" %}" class="btn btn-block btn-success">Create a new Account</a>
- </form>
+  </form>
 </p>
 
 
 </div>
 </div>
-</div>
+
 </div>
 
+{% if allow_anonymous and featured_sets%}
+  
+	<ul class='list-group'>
+	  {% for a, canread in featured_sets %}
+	  <li class="list-group-item"><a href="{% url 'navigator:articleset-details' a.project_id a.id %}"><strong>{{a}}</strong> in project {{a.project_id}}: {{a.project}}</a>
+	    {% if not canread %}
+	    <abbr class="text-warning" title="The project containing this articleset does not give full read access to the articles (probably because of copyright restrictions), so you might not be able to read the full text of all articles">(restricted access)</small>
+            {% endif %}
+          {% endfor %}
+</ul>
+    </div>
+  {% endif %}
+</div>
+  
+
 <div class="container">
-<p>AmCAT was originally developed by <a href="http://vanatteveldt.com">Wouter van Atteveldt</a> and is currently maintained by him together with Martijn Bastiaan and Christian Stuart. This server is hosted by the <a href="http://vu.nl">VU University Amsterdam</a> and can be used free of charge for small scale projects. AmCAT is completely open source, and you are welcome to <a href="https://github.com/amcat/amcat/blob/master/README.md">to set up your own server</a>. Help improve AmCAT by contributing to the <a href="http://wiki.amcat.nl">documentation</a>, <a href="http://github.com/amcat/amcat/issues">reporting issues</a>, and <a href="http://github.com/amcat/amcat">contribute to the development</a>!
+<p><a name="info">AmCAT</a> was originally developed by <a href="http://vanatteveldt.com">Wouter van Atteveldt</a> and is currently maintained by him together with Martijn Bastiaan and Christian Stuart. This server is hosted by the <a href="http://vu.nl">VU University Amsterdam</a> and can be used free of charge for small scale projects. AmCAT is completely open source, and you are welcome to <a href="https://github.com/amcat/amcat/blob/master/README.md">to set up your own server</a>. Help improve AmCAT by contributing to the <a href="http://wiki.amcat.nl">documentation</a>, <a href="http://github.com/amcat/amcat/issues">reporting issues</a>, and <a href="http://github.com/amcat/amcat">contribute to the development</a>!
 </div>
 
 <hr />

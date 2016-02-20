@@ -56,7 +56,8 @@ class QueryActionHandler(TaskHandler):
     @classmethod
     def serialise_arguments(cls, arguments):
         arguments = super(QueryActionHandler, cls).serialise_arguments(arguments)
-        arguments['user'] = arguments['user'].id
+        user = arguments['user']
+        arguments['user'] = None if user.is_anonymous() else user.id
         arguments['project'] = arguments['project'].id
         arguments['articlesets'] = [aset.id for aset in arguments['articlesets']]
         arguments['codingjobs'] = [cj.id for cj in arguments.get('codingjobs', [])]
@@ -69,7 +70,7 @@ class QueryActionHandler(TaskHandler):
     @classmethod
     def deserialise_arguments(cls, arguments):
         arguments = super(QueryActionHandler, cls).deserialise_arguments(arguments)
-        arguments['user'] = User.objects.get(id=arguments['user'])
+        arguments['user'] = None if arguments['user'] is None else User.objects.get(id=arguments['user'])
         arguments['project'] = Project.objects.get(id=arguments['project'])
         arguments['articlesets'] = ArticleSet.objects.filter(id__in=arguments['articlesets'])
         arguments['codingjobs'] = CodingJob.objects.filter(id__in=arguments.get('codingjobs', []))

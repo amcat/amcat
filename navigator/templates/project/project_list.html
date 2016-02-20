@@ -26,11 +26,11 @@
 
 
 <ul class="nav nav-tabs nav-justified" style="margin-bottom: 1em">
-  <li {% if what == 'favourites' %}class="active"{% endif %}><a href='{% url "navigator:projects" "favourites"%}'>
+  <li class="{% if what == 'favourites' %}active{% endif %} {% if not user.is_authenticated %}disabled{%endif%}"><a href='{% url "navigator:projects" "favourites"%}'>
     <i class="glyphicon glyphicon-star"></i>Active Projects
   </a></li>
-  <li {% if what == 'own' %}class="active"{% endif %}><a  href='{% url "navigator:projects" "own"%}'>My Archived Projects</a></li>
-  <li {% if what == 'all' %}class="active"{% endif %}><a  href='{% url "navigator:projects" "all"%}'>All Projects</a></li>
+  <li class="{% if what == 'own' %}active{% endif %} {% if not user.is_authenticated %}disabled{%endif%}"><a  href='{% url "navigator:projects" "own"%}'>My Archived Projects</a></li>
+  <li class="{% if what == 'all' %}active{% endif %}"><a  href='{% url "navigator:projects" "all"%}'>All Projects</a></li>
 </ul>
 
 <div id="project-table">
