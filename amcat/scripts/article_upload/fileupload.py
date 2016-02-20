@@ -216,20 +216,18 @@ class ZipFileUploadForm(FileUploadForm):
         """
         with TemporaryFolder(*args, **kargs) as tempdir:
             with zipfile.ZipFile(zip_file) as zf:
-                files = []
                 for name in zf.namelist():
                     if name.endswith("/"): continue # skip folders
-                    # using zipfile.extract(name, tempdir) gives an error if name contains non-ascii characters
-                    # this may be related to http://bugs.python.org/issue17656, but we are using 2.7.3
-                    # strange enough, the issue does not occur in 'runserver' mode, but file handling might be different?
-                    fn = os.path.basename(name.encode("ascii", "ignore"))
+                    fn = os.path.basename(name)
                     # use mkstemp instead of temporary folder because we don't want it to be deleted
                     # it will be deleted on __exit__ anyway since the whole tempdir will be deleted
                     _handle, fn = tempfile.mkstemp(suffix="_"+fn, dir=tempdir)
-                    f = open(fn, 'w')
+                    f = open(fn, 'wb')
                     shutil.copyfileobj(zf.open(name), f)
                     f.close()
-                    with open(fn) as fh:
+
+                    name = os.path.join(tempdir, fn)
+                    with open(name, "rb") as fh:
                         yield File(fh, name=name)
 
 
