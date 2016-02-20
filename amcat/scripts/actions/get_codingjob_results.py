@@ -484,12 +484,18 @@ class GetCodingJobResults(Script):
                 now=datetime.datetime.now(), ext=format.label
             )
 
+            if isinstance(result, str):
+                # Results need to be encoded before passing it to b64encode. However, not all
+                # formats return strings. For example, xlsx already produces bytes.
+                result = result.encode("utf-8")
+
+
             result = {
                 "type": "download",
                 "encoding": "base64",
                 "content_type": format.mimetype,
                 "filename": filename,
-                "data": base64.b64encode(result.encode('utf-8'))
+                "data": base64.b64encode(result)
             }
 
         self.progress_monitor.update(5, "Results file ready")
