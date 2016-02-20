@@ -126,8 +126,8 @@ class SplitArticleForm(forms.Form):
 class UserForm(forms.ModelForm):
     affiliation = forms.ModelChoiceField(queryset=Affiliation.objects.all())
     role = forms.ModelChoiceField(queryset=Role.objects.all())
-    language = forms.ModelChoiceField(queryset=Language.objects.all())
-    theme = forms.ChoiceField(choices=[(t,t) for t in THEMES])
+    language = forms.ModelChoiceField(queryset=Language.objects.all(), initial="en")
+    #theme = forms.ChoiceField(choices=[(t,t) for t in THEMES])
 
     def __init__(self, request, editing=True, *args, **kwargs):
         super(UserForm, self).__init__(*args, **kwargs)
@@ -165,7 +165,7 @@ class UserForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ("affiliation", "role", "language", "theme")
+        fields = ("affiliation", "role", "language")
 
 class UserDetailsForm(UserForm):
     def __init__(self, request, *args, **kwargs):
@@ -180,6 +180,26 @@ class AddUserForm(UserForm):
         model = User
         fields = ('username', 'first_name', 'last_name', 'email')
 
+class AddUserFormWithPassword(UserForm):
+    def __init__(self, request, *args, **kwargs):
+        super(AddUserFormWithPassword, self).__init__(request, False, *args, **kwargs)
+    password = forms.CharField(label="Password",
+                               widget=forms.PasswordInput)
+    password2 = forms.CharField(label="Repeat password",
+                               widget=forms.PasswordInput)
+    def clean_password(self):
+        pwd1 = self.data['password']
+        pwd2 = self.data['password2']
+        if pwd1 != pwd2:
+            raise forms.ValidationError("Passwords do not match")
+        return pwd1
+        
+        
+    class Meta:
+        model = User
+        fields = ('username', 'first_name', 'last_name', 'email', 'password', 'password2')
+
+        
 class AddMultipleUsersForm(AddUserForm):
     csv = fields.CSVField(label="CSV", columns={
         'username' : fields.UserField(),

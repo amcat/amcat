@@ -5,9 +5,10 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth import signals
 from django.contrib.auth.views import password_reset, password_reset_confirm
+from django.http import HttpResponseRedirect
 
 from accounts.forms import UserPasswordResetForm
-from navigator.forms import AddUserForm
+from navigator.forms import AddUserForm, AddUserFormWithPassword
 from navigator.utils.auth import create_user
 
 from amcat.models.user import Affiliation
@@ -15,14 +16,23 @@ from amcat.models.authorisation import Role
 from amcat.models import AmCAT
 
 from amcat.tools.usage import log_request_usage
+import settings
+
+from amcat.models import ArticleSet, RecentProject
+from amcat.models.authorisation import ROLE_PROJECT_READER
 
 def _login(request, error, username, announcement):
     """
     Render shortcut
     """
-    return render(request, "accounts/login.html",
-        dict(error=error, username=username, announcement=announcement)
-    )
+    allow_anonymous = not settings.REQUIRE_LOGON
+
+    if allow_anonymous:
+        
+        featured_sets = [(aset, aset.project.get_role_id(user=request.user) >= ROLE_PROJECT_READER)
+                         for aset in ArticleSet.objects.filter(featured=True)]
+    
+    return render(request, "accounts/login.html", locals())
 
 def _redirect_login(request):
     """
@@ -80,7 +90,8 @@ def register(request):
     """
     Let the user fill in a registration form or process such a form.
     """
-    form = AddUserForm(request, data=request.POST or None)
+    form_class = AddUserForm if settings.REGISTER_REQUIRE_VALIDATION else AddUserFormWithPassword
+    form = form_class(request, data=request.POST or None)
 
     del form.fields['role']
     del form.fields['affiliation']
@@ -94,11 +105,16 @@ def register(request):
             form.cleaned_data['email'],
             Affiliation.objects.all()[0],
             form.cleaned_data['language'],
-            Role.objects.get(id=1)
+            Role.objects.get(id=1),
+            password=form.cleaned_data.get('password'),
         )
 
-        form = AddUserForm(request)
         log_request_usage(request, "account" ,"register")
+        if not settings.REGISTER_REQUIRE_VALIDATION:
+            new_user = authenticate(username=user.username,
+                                    password=form.cleaned_data['password'])
+            auth_login(request, new_user)
+            return HttpResponseRedirect("/navigator/")
         
     return render(request, "accounts/register.html", locals())
 

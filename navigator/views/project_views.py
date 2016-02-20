@@ -59,7 +59,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super(ProjectListView, self).get_context_data(**kwargs)
-        context["what"] = self.kwargs.get('what', 'favourites')
+        context["what"] = self.what
         context["favaction"] = "unsetfav" if context['what'] == 'favourites' else "setfav"
         context["main_active"] = 'Projects'
         return context
@@ -67,18 +67,25 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
     def get_breadcrumbs(self):
         return [("Projects", "#")]
 
+    @property
+    def what(self):
+        if self.request.user.is_anonymous():
+            return 'all'
+        else:
+            return self.kwargs.get('what', 'favourites')
+    
     def filter_table(self, table):
         table = table.rowlink_reverse('navigator:articleset-list', args=['{id}'])
-        what = self.kwargs.get('what', 'favourites')
-        if what == 'all':
+
+        if self.what == 'all':
             return table
 
         # ugly solution - get project ids that are favourite and use that to filter, otherwise would have to add many to many to api?
         # (or use api request.user to add only current user's favourite status). But good enough for now...
         table = table.hide('favourite', 'active')
         favids = self.request.user.userprofile.favourite_projects.all()
-        favids = favids.values_list("id", flat=True)
-        if what == 'favourites':
+        favids = favids
+        if self.what == 'favourites':
             ids = favids
         else:
             ids = Project.objects.filter(projectrole__user=self.request.user).exclude(pk__in=favids)
