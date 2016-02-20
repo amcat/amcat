@@ -86,16 +86,6 @@ class UploadScript(script.Script):
         super(UploadScript, self).__init__(*args, **kargs)
         self.project = self.options['project']
         self.errors = []
-        for k, v in self.options.items():
-            if type(v) == bytes:
-                self.options[k] = v.decode('utf-8')
-
-        # avoid django problem/bug with repr(File(open(uncode-string)))
-        # https://code.djangoproject.com/ticket/8156
-        o2 = {k:v for k,v in self.options.items() if k != 'file'}
-        log.debug(u"Articleset: {self.articlesets!r}, options: {o2}"
-                  .format(**locals()))
-
 
     @property
     def articlesets(self):

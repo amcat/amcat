@@ -120,13 +120,13 @@ def _run_test_csv(header, rows, **options):
     from tempfile import NamedTemporaryFile
     from django.core.files import File
 
-    with NamedTemporaryFile(suffix=".txt") as f:
+    with NamedTemporaryFile(suffix=".txt", mode="w", encoding="utf-8") as f:
         w = csv.writer(f)
         for row in [header] + list(rows):
-            w.writerow([field and field.encode('utf-8') for field in row])
+            w.writerow([field and field for field in row])
         f.flush()
 
-        set = CSV(dict(file=File(open(f.name)), encoding=0, project=project.id,
+        set = CSV(dict(file=File(open(f.name, "rb")), encoding=0, project=project.id,
                        medium_name=options.pop("medium_name", 'testmedium'),
                        articlesets=[articleset.id], **options)).run()
 

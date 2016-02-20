@@ -82,9 +82,8 @@ class FileUploadForm(RawFileUploadForm):
         return 'latin-1', bytes.decode('latin-1')
 
     def decode_file(self, f):
-        bytes = f.read()
-        enc, text = self.decode(bytes)
-        return DecodedFile(f.name, f, bytes, enc, text)
+        enc, text = self.decode(f.read())
+        return open(f.name, "r", encoding=enc)
 
     def get_uploaded_text(self):
         """Returns a DecodedFile object representing the file"""
@@ -170,27 +169,26 @@ class CSVUploadForm(FileUploadForm):
         return self.get_reader(reader_class=namedtuple_csv_reader)
     
     def get_reader(self, reader_class=namedtuple_csv_reader):
-        f = self.files['file']
+        file = self.decode_file(self.files['file'])
         
-        if f.name.endswith(".xlsx"):
+        if file.name.endswith(".xlsx"):
             if reader_class != namedtuple_csv_reader:
-                raise Exception("Cannot handle xlsx files with non-default reader, sorry!")
-            return namedtuple_xlsx_reader(f)
-            
-        d = self.cleaned_data['dialect']
-        if not d: d = "autodetect"
+                raise ValueError("Cannot handle xlsx files with non-default reader, sorry!")
+            return namedtuple_xlsx_reader(file)
+
+        d = self.cleaned_data['dialect'] or "autodetect"
+
         if d == 'autodetect':
-            dialect = csv.Sniffer().sniff(f.readline())
-            f.seek(0)
+            dialect = csv.Sniffer().sniff(file.readline())
+            file.seek(0)
             if dialect.delimiter not in "\t,;":
                 dialect = csv.get_dialect('excel')
         else:
             dialect = csv.get_dialect(d)
 
-        enc = self.cleaned_data['encoding']
-        encoding = {'encoding' : ENCODINGS[int(enc)]} if enc and reader_class == namedtuple_csv_reader else {}
-        return reader_class(f, dialect=dialect, **encoding)
-    
+        return reader_class(file, dialect=dialect)
+
+
 class ZipFileUploadForm(FileUploadForm):
     file = forms.FileField(help_text="You can also upload a zip file containing the desired files. Uploading very large files can take a long time. If you encounter timeout problems, consider uploading smaller files")
         

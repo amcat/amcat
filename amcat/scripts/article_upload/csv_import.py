@@ -83,7 +83,7 @@ class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
 
     def __init__(self, *args, **kargs):
         super(CSVForm, self).__init__(*args, **kargs)
-        for fieldname, required in reversed(zip(FIELDS, REQUIRED)):
+        for fieldname, required in reversed(list(zip(FIELDS, REQUIRED))):
             label = fieldname + " field"
             if fieldname in HELP_TEXTS:
                 help_text = HELP_TEXTS[fieldname]
