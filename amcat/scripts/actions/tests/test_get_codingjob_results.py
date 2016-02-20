@@ -2,7 +2,7 @@ import base64
 import csv
 import json
 import unittest
-from io import BytesIO, StringIO
+from io import StringIO
 
 from amcat.models import Language, CodingSchemaField, CodingJob
 from amcat.scripts.actions.get_codingjob_results import _get_field_prefix, CodingJobResultsForm, \
@@ -177,7 +177,7 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         script = self._get_results_script([cjob], fields, export_level=CODING_LEVEL_BOTH)
 
         with self.checkMaxQueries(9):
-            list(csv.reader(BytesIO(script.run())))
+            list(csv.reader(StringIO(script.run())))
 
     def test_include_uncoded_articles(self):
         aschema, acodebook, astrf, aintf, acodef, _, _ = amcattest.create_test_schema_with_fields(isarticleschema=True)
@@ -240,12 +240,12 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
 
         script = self._get_results_script([job], {strf: {}, intf: {}})
         with self.checkMaxQueries(9):
-            list(csv.reader(BytesIO(script.run())))
+            list(csv.reader(StringIO(script.run())))
 
         script = self._get_results_script([job], {strf: {}, intf: {}, codef: dict(ids=True)})
         with self.checkMaxQueries(9):
-            list(csv.reader(BytesIO(script.run())))
+            list(csv.reader(StringIO(script.run())))
 
         script = self._get_results_script([job], {strf: {}, intf: {}, codef: dict(labels=True)})
         with self.checkMaxQueries(9):
-            list(csv.reader(BytesIO(script.run())))
+            list(csv.reader(StringIO(script.run())))
