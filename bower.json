@@ -24,6 +24,7 @@
   },
   "resolutions": {
     "jquery": ">= 1.9.1",
-    "bootstrap": ">= 2.3.2"
+    "bootstrap": ">= 2.3.2",
+    "highcharts": "~4.2.3"
   }
 }
