@@ -489,7 +489,7 @@ class GetCodingJobResults(Script):
                 "encoding": "base64",
                 "content_type": format.mimetype,
                 "filename": filename,
-                "data": base64.b64encode(result)
+                "data": base64.b64encode(result.encode('utf-8'))
             }
 
         self.progress_monitor.update(5, "Results file ready")

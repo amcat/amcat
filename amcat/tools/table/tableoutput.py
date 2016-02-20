@@ -3,10 +3,7 @@ import sys
 import csv
 import logging
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 log = logging.getLogger(__name__)
 
@@ -14,7 +11,6 @@ log = logging.getLogger(__name__)
 def getTable(table, colnames=None):
     if isinstance(table, (list, tuple)):
         from amcat.tools.table import table3
-
         table = table3.ListTable(table, colnames)
     return table
 
@@ -124,42 +120,10 @@ def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True,
         return stream.getvalue()
 
 
-# ########################## table2html #######################################
-
-def yieldtablerows(table):
-    for row in table.getRows():
-        yield [table.getValue(row, col) for col in table.getColumns()]
-
-
-def table2html(table, colnames=None, printRowNames=True, border=True):
-    table = getTable(table, colnames)
-    if table.rowNamesRequired:
-        printRowNames = True
-    result = "\n<table border='1'>" if border else "\n<table>"
-    result += "\n  <thead><tr>"
-    if printRowNames: result += "\n    <th></th>"
-    result += "%s\n  </tr></thead><tbody>" % "".join("\n    <th>%s</th>" % (col,) for col in table.getColumns())
-    for row in table.getRows():
-        result += "\n  <tr>"
-        if printRowNames: result += "\n    <th>%s</th>" % (row,)
-
-        result += "".join("\n    <td>%s</td>" % table.getValue(row, col) for col in table.getColumns())
-        result += "</tr>"
-    result += "\n</tbody></table>"
-    return result
-
-
 ####################### table2csv ###################################
 
-def getstr(val):
-    if val is None: return ""
-    if type(val) == str: return val
-    if type(val) == str: return val.encode('utf-8')
-    return str(val)
-
-
 def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecolnames=True, writerownames=False,
-              tabseparated=False, encoding='utf-8'):
+              tabseparated=False):
     table = getTable(table, colnames)
 
     writerownames = table.rowNamesRequired or writerownames
@@ -169,21 +133,16 @@ def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecol
         csvwriter = csv.writer(outfile, dialect=dialect)
 
     cols = list(table.getColumns())
-    if writecolnames:
-        writecolnames = lambda col: str(col).encode(encoding)
-
-    if writerownames:
-        writerownames = str
 
     if writecolnames:
-        c = ([""] + cols) if writerownames else cols
-        csvwriter.writerow(list(map(writecolnames, c)))
-    rows = table.getRows()
+        _columns = ([""] + cols) if writerownames else cols
+        csvwriter.writerow([str(c) for c in _columns])
+
     log.debug("Starting export")
 
-    for row in rows:
-        values = [writerownames(row)] if writerownames else []
-        values += map(getstr, (table.getValue(row, col) for col in cols))
+    for row in table.getRows():
+        values = [str(row)] if writerownames else []
+        values += [str(table.getValue(row, col)) or "" for col in cols]
         csvwriter.writerow(values)
 
 

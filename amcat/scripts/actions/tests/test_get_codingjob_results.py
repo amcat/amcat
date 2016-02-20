@@ -1,6 +1,9 @@
+import base64
 import csv
 import json
 import unittest
+from io import BytesIO, StringIO
+
 from amcat.models import Language, CodingSchemaField, CodingJob
 from amcat.scripts.actions.get_codingjob_results import _get_field_prefix, CodingJobResultsForm, \
     GetCodingJobResults, _get_rows, CODING_LEVEL_BOTH, log
@@ -8,10 +11,6 @@ from amcat.tools import amcattest
 from amcat.tools.amcattest import create_test_coding
 from amcat.tools.sbd import get_or_create_sentences
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
 
 class TestGetCodingJobResults(amcattest.AmCATTestCase):
     def _get_results_script(self, jobs, options, include_uncoded_articles=False,
@@ -117,8 +116,8 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
     def test_unicode(self):
         """Test whether the export can handle unicode in column names and cell values"""
         schema = amcattest.create_test_schema(isarticleschema=True)
-        s1 = u'S1 \xc4\u0193 \u02a2 \u038e\u040e'
-        s2 = u'S2 \u053e\u06a8 \u090c  \u0b8f\u0c8a'
+        s1 = 'S1 \xc4\u0193 \u02a2 \u038e\u040e'
+        s2 = 'S2 \u053e\u06a8 \u090c  \u0b8f\u0c8a'
         f = CodingSchemaField.objects.create(codingschema=schema, fieldnr=1, label=s1,
                                              fieldtype_id=1, codebook=None)
 
@@ -129,10 +128,9 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
 
         # test csv
         s = self._get_results_script([job], {f: {}}, export_format='csv')
-        import base64
 
-        data = base64.b64decode(s.run()['data'])
-        table = [[cell.decode('utf-8') for cell in row] for row in csv.reader(StringIO(data))]
+        data = base64.b64decode(s.run()['data']).decode('utf-8')
+        table = [[cell for cell in row] for row in csv.reader(StringIO(data))]
         self.assertEqual(table, [[s1], [s2]])
 
         # test json
@@ -179,7 +177,7 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         script = self._get_results_script([cjob], fields, export_level=CODING_LEVEL_BOTH)
 
         with self.checkMaxQueries(9):
-            list(csv.reader(StringIO(script.run())))
+            list(csv.reader(BytesIO(script.run())))
 
     def test_include_uncoded_articles(self):
         aschema, acodebook, astrf, aintf, acodef, _, _ = amcattest.create_test_schema_with_fields(isarticleschema=True)
@@ -242,12 +240,12 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
 
         script = self._get_results_script([job], {strf: {}, intf: {}})
         with self.checkMaxQueries(9):
-            list(csv.reader(StringIO(script.run())))
+            list(csv.reader(BytesIO(script.run())))
 
         script = self._get_results_script([job], {strf: {}, intf: {}, codef: dict(ids=True)})
         with self.checkMaxQueries(9):
-            list(csv.reader(StringIO(script.run())))
+            list(csv.reader(BytesIO(script.run())))
 
         script = self._get_results_script([job], {strf: {}, intf: {}, codef: dict(labels=True)})
         with self.checkMaxQueries(9):
-            list(csv.reader(StringIO(script.run())))
+            list(csv.reader(BytesIO(script.run())))

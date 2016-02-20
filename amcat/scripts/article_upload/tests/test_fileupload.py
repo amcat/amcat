@@ -11,7 +11,7 @@ class TestFileUpload(amcattest.AmCATTestCase):
             f.write(bytes)
             f.flush()
             s = CSVUploadForm(dict(encoding=encoding, dialect=dialect),
-                              dict(file=File(open(f.name))))
+                              dict(file=File(open(f.name, "rb"))))
             if not s.is_valid():
                 self.assertTrue(False, s.errors)
 
@@ -21,16 +21,16 @@ class TestFileUpload(amcattest.AmCATTestCase):
         return [dict(r.items()) for r in rows]
 
     def test_csv(self):
-        self.assertEqual(self._get_entries("a,b\n1,2", dialect="excel"),
+        self.assertEqual(self._get_entries(b"a,b\n1,2", dialect="excel"),
                          [dict(a='1',b='2')])
 
-        self.assertEqual(self._get_entries("a;b\n1;2", dialect="excel-semicolon"),
+        self.assertEqual(self._get_entries(b"a;b\n1;2", dialect="excel-semicolon"),
                          [dict(a='1',b='2')])
 
         # does autodetect work?
-        self.assertEqual(self._get_entries("a,b\n1,2"),
+        self.assertEqual(self._get_entries(b"a,b\n1,2"),
                          [dict(a='1',b='2')])
-        self.assertEqual(self._get_entries("a;b\n1;2"),
+        self.assertEqual(self._get_entries(b"a;b\n1;2"),
                          [dict(a='1',b='2')])
 
     def test_csv_reader(self):
