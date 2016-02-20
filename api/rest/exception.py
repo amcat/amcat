@@ -42,3 +42,5 @@ def exception_handler(exc, context):
         return Response(data, status=status_code, headers=headers)
     except:
         logging.exception("Error on rendering exception")
+        
+    return views.exception_handler(exc, context)
