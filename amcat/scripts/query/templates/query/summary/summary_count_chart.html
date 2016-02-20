@@ -1,15 +1,13 @@
 <script type="text/javascript">
     $(function(){
         var form_data;
-        var add_zeroes;
-        require(["query/utils/serialize", "query/utils/tools"], function(serialize, tools){
+        require(["query/utils/serialize"], function(serialize){
             var form = $("#query-form");
             var jobs = form.data("jobs");
             var sets = form.data("sets");
             form_data = serialize(form, jobs, sets);
             console.log(form_data);
             form_data["interval"] = "{{ interval }}";
-            add_zeroes = tools.aggregationDefaultNullToZero.bind(undefined, form_data);
 
 
 
@@ -27,11 +25,11 @@
             series: [{
                 type: 'area',
                 name: 'Articles',
-                data: add_zeroes([
+                data: [
                     {% for date, count in date_aggr %}
                         [Date.UTC({{ date.year }}, {{ date.month }} -1, {{ date.day }}), {{ count }}],
                     {% endfor %}
-                ])
+                ]
             }],
             plotOptions: {
                 series: {
