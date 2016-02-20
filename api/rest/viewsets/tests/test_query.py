@@ -150,14 +150,6 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
         status_code, results = self.json(self.get_url(), data=data, method="post")
         self.assertEqual(400, status_code)
 
-    def test_put_unauthorised(self):
-        """PUT with an object which 'does not exist' for current user (but does in DB)
-        should result in a not found."""
-        self.client.login(username=self.member.username, password="test")
-        data = {"name": "test", "parameters": "[1,2,null]"}
-        status_code, results =self.json(self.get_url(self.query.id), data=data, method="put")
-        self.assertEqual(403, status_code)
-
     def test_put_empty(self):
         self.client.login(username=self.owner.username, password="test")
         status_code, results = self.json(self.get_url(self.query.id), data={}, method="put")
@@ -177,11 +169,6 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
         self.assertEqual(Query.objects.get(id=self.query.id).parameters, [1, 2])
         self.assertEqual(200, status_code)
 
-    def test_patch_unauthorised(self):
-        self.client.login(username=self.member.username, password="test")
-        status_code, results = self.json(self.get_url(self.query.id), data={}, method="patch")
-        self.assertEqual(403, status_code)
-
     def test_patch_empty(self):
         self.client.login(username=self.owner.username, password="test")
         status_code, results = self.json(self.get_url(self.query.id), data={}, method="patch")
@@ -200,14 +187,6 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
 
         self.assertEqual(200, status_code)
         self.assertEqual(results["name"], "b")
-
-    def test_delete_unauthorised(self):
-        self.client.login(username=self.member.username, password="test")
-
-        # Deleting another member's PUBLIC query should result in
-        status_code, results = self.json(self.get_url(self.query.id), method="delete")
-        self.assertEqual(403, status_code)
-        self.assertTrue(Query.objects.filter(id=self.query.id).exists())
 
     def test_delete(self):
         self.client.login(username=self.owner.username, password="test")
