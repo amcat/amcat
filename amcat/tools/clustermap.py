@@ -97,19 +97,14 @@ def get_clusters(queries):
     return clusters
 
 
-def _get_clustermap_table_rows(headers, isects):
-    for cluster in combinations_as_sets(headers):
-        yield tuple(int(bool(h in cluster)) for h in headers) + (len(isects[cluster]),)
-
-
 def get_clustermap_table(queries):
     """
     Given a mapping of query to ids, return a table with the #hits for each boolean combination
     """
-    queries = {k: set(v) for (k,v) in queries.iteritems()}
+    queries = {k: set(v) for (k,v) in queries.items()}
     header = sorted(queries.keys(), key=lambda q: str(q))
     rows = []
-    allids = set(chain.from_iterable(queries.itervalues()))
+    allids = set(chain.from_iterable(queries.values()))
     for c in combinations(header):
         ids = allids.copy()
         row = []
