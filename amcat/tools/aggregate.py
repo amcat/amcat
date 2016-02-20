@@ -19,6 +19,7 @@
 
 import logging
 import itertools
+from datetime import datetime,timedelta
 from amcat.models import ArticleSet, Medium
 
 log = logging.getLogger(__name__)
@@ -92,5 +93,55 @@ def get_articlesets(aggregation, group_by, only=("name",), select_related=()):
     """Given an aggregation, replace all articleset ids with Articleset objects"""
     return get_objects(aggregation, group_by, only, ArticleSet, "sets", select_related)
 
+def _iter_dates( start, stop, interval):
+    date = start
+    if interval == 'day':
+        while date < stop:
+            yield date
+            date = date + timedelta(1)
+    elif interval == 'week':
+        while date < stop:
+            yield date
+            date = date + timedelta(7)
+    elif interval == 'month':
+        day = date.day
+        while date < stop:
+            yield date.replace(day=day)
+            date = date.replace(day=2) + timedelta(31)
+    elif interval == 'quarter':
+        day = date.day
+        while date < stop:
+            yield date.replace(day=day)
+            date = date.replace(day=2) + timedelta(31 * 3)
+    elif interval == 'year':
+        day = date.day
+        month = date.month
+        while date < stop:
+            yield date.replace(day=day,  month=month)
+            date = date.replace(day=2, month=1) + timedelta(366)
+
+def fill_zeroes(aggregation, interval):
+    if len(aggregation) < 2:
+        return aggregation
+
+    aggregation = list(aggregation)
+    aggregation.sort(key=lambda aggr: aggr.date)
+    dates = set(aggr.date for aggr in aggregation)
+    if hasattr(aggregation[0], "buckets"):
+        bucket_names = set(bucket[0] for aggr in aggregation for bucket in aggr.buckets )
+    else:
+        bucket_names = None
+
+    tuple_class = aggregation[0].__class__
+
+    min_date = aggregation[0][0]
+    max_date = aggregation[-1][0]
+
+    for date in _iter_dates(min_date, max_date, interval):
+        if date not in dates:
+            aggregation.append(tuple_class(date, [(name, 0) for name in bucket_names] if bucket_names else 0))
+
+    aggregation.sort(key=lambda aggr: aggr.date)
+    return aggregation
 
 # Unittests: amcat.tools.tests.aggregate

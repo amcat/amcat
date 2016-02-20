@@ -26,6 +26,7 @@ from django.template.defaultfilters import escape as escape_filter
 
 from amcat.forms.forms import order_fields
 from amcat.scripts.query import QueryAction, QueryActionForm
+from amcat.tools.aggregate import fill_zeroes
 from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.toolkit import Timer
 
@@ -91,6 +92,7 @@ class SummaryAction(QueryAction):
                 except (StopIteration, TypeError):
                     interval = "day"
                 date_aggr = selection.get_aggregate(x_axis="date", y_axis="total", interval=interval)
+                date_aggr = fill_zeroes(date_aggr, interval)
                 medium_aggr = selection.get_aggregate(x_axis="medium", y_axis="total", interval=interval)
             
             self.monitor.update(79, "Rendering results..".format(**locals()))

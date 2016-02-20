@@ -17,19 +17,17 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import json
-from datetime import datetime
-from time import mktime
 from csv import DictWriter
 from cStringIO import StringIO
 
 from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.db.models import Q
-from django.forms import ChoiceField, CharField, Select
+from django.forms import ChoiceField, CharField, Select, BooleanField
 
 from api.rest.tablerenderer import CSVRenderer
 from amcat.models import Medium, ArticleSet, CodingSchema, CodingSchemaField
 from amcat.scripts.query import QueryAction, QueryActionForm, QueryActionHandler
-from amcat.tools.aggregate import get_relative
+from amcat.tools.aggregate import get_relative, fill_zeroes
 from amcat.tools.aggregate_orm import ORMAggregate
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
 
@@ -46,7 +44,7 @@ INTERVALS = tuple((c, c.title()) for c in ("day", "week", "month", "quarter", "y
 class AggregationEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime):
-            return int(mktime(obj.timetuple())) * 1000
+            return obj.isoformat()
         if isinstance(obj, Medium) or isinstance(obj, ArticleSet):
             return {"id": obj.id, "label": obj.name}
         if isinstance(obj, SearchQuery):
@@ -84,6 +82,8 @@ class AggregationActionForm(QueryActionForm):
     # This field is ignored server-side, but processed by javascript. It causes the renderer
     # to make another call
     y_axis_2 = ChoiceField(label="2nd Y-axis (columns)", choices=Y_AXES, required=False)
+
+    list_zeroes = BooleanField(label="List empty dates as 0.", initial=True,  required=False)
 
     def __init__(self, *args, **kwargs):
         super(AggregationActionForm, self).__init__(*args, **kwargs)
@@ -176,7 +176,9 @@ class AggregationAction(QueryAction):
         else:
             aggregation = selection.get_aggregate(x_axis, y_axis, interval)
 
-        #
+        if x_axis == "date" and 'list_zeroes' in form.cleaned_data and form.cleaned_data['list_zeroes']:
+            aggregation = fill_zeroes(aggregation, interval)
+
         self.monitor.update(20, "Calculating relative values..".format(**locals()))
         column = form.cleaned_data['relative_to']
 
