@@ -129,6 +129,8 @@ class UserProfile(AmcatModel):
         log.info("{self.user.id}:{self.user.username} has role {actual_role_id} on project {onproject}, >=? {role}"
                  .format(**locals()))
 
+        if actual_role_id is None:
+            return False
         return actual_role_id >= role
 
 

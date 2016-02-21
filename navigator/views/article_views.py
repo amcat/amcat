@@ -43,7 +43,7 @@ class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         # permission to view/read an article can be granted through any of its sets (!)
         asets = ArticleSet.objects.filter(articles=self.get_object()).only("project")
         projects = {aset.project for aset in asets}
-        projects |= set(Project.objects.filter(articlesets__contains=asets))
+        projects |= set(Project.objects.filter(articlesets__id__in=asets.values_list("id", flat=True)))
         
         return any(self.request.user.userprofile.has_role(perm, p)
                    for p in projects)
