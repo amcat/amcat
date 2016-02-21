@@ -22,6 +22,7 @@ CELERY_CMD = tuple("{} -A amcat.amcatcelery worker -l info -Q amcat".format(CELE
 CHANGE_EVENTS = pyinotify.IN_DELETE | \
                 pyinotify.IN_CREATE | \
                 pyinotify.IN_MODIFY | \
+                pyinotify.IN_ATTRIB | \
                 pyinotify.IN_CLOSE_WRITE
 
 class EventHandler(pyinotify.ProcessEvent):
