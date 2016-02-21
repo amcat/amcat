@@ -96,8 +96,6 @@ class QueryActionHandler(TaskHandler):
         try:
             return query_action.run(query_action.get_form())
         except Exception as e:
-            traceback.print_exc(e, sys.stderr)
-            sys.stderr.flush()
             raise
 
     def _get_content_type(self):
