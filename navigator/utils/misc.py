@@ -32,17 +32,23 @@ log = logging.getLogger(__name__)
 def gen_random(n=8):
     return ''.join(random.choice(string.ascii_uppercase) for x in range(n))
 
-class UUIDLogMiddleware(object):
-    def process_request(self, request):
-        request.uuid = gen_random(10)
-        ppid, pid = os.getppid(), os.getpid()
-        url = "?".join((request.META["PATH_INFO"], request.META["QUERY_STRING"]))
-        log.info("Start of request {request.uuid} ({ppid}, {pid}): {url}".format(**locals()), extra={"request":request})
 
-    def process_response(self, request, response):
-        if hasattr(request, "uuid"):
-            log.info("End of request {}".format(request.uuid))
-        return response
+ALLOWED_HTTP_METHODS = ['GET', 'HEAD', 'PUT', 'POST', 'DELETE', 'OPTIONS', 'PATCH']
+HTTP_HEADER = "HTTP_X_HTTP_METHOD_OVERRIDE"
+
+class MethodOverrideMiddleware(object):
+    # https://pypi.python.org/pypi/django-method-override/0.1.0
+    def process_view(self, request, callback, callback_args, callback_kwargs):
+        if request.method != 'POST':
+            return
+        method = self._get_method_override(request)
+        if method in ALLOWED_HTTP_METHODS:
+            setattr(request, method, request.POST.copy())
+            request.method = method
+
+    def _get_method_override(self, request):
+        method = request.META.get(HTTP_HEADER)
+        return method and method.upper()
 
 def session_pop(session, key, default=None):
     """

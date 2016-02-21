@@ -153,6 +153,7 @@ TEMPLATE_LOADERS = (
 
 MIDDLEWARE_CLASSES = [
     'django.middleware.csrf.CsrfViewMiddleware',
+    'navigator.utils.misc.MethodOverrideMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -162,9 +163,7 @@ MIDDLEWARE_CLASSES = [
     'navigator.utils.auth.SetRequestContextMiddleware',
     'navigator.utils.auth.NginxRequestMethodFixMiddleware',
     'navigator.utils.auth.HTTPAccessControl',
-    #'navigator.utils.misc.UUIDLogMiddleware',
     #'debug_toolbar.middleware.DebugToolbarMiddleware',
-    'method_override.middleware.MethodOverrideMiddleware'
 ]
 
 STATICFILES_FINDERS = (
@@ -207,7 +206,6 @@ INSTALLED_APPS = [
     'navigator',
     'api',
     'amcat',
-    'method_override',
     "django_extensions",
     'djcelery'
 ]
