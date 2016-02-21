@@ -17,8 +17,9 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import tempfile, os
-from urllib import urlencode
 import base64
+from urllib.parse import urlencode
+
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from django.utils.datastructures import MultiValueDict
@@ -58,7 +59,7 @@ class ScriptHandler(TaskHandler):
         kwargs = self.task.arguments.copy() # don't modify self.task.arguments['data']
         if 'data' in kwargs:
             d = QueryDict('').copy()
-            for k, v in kwargs['data'].iteritems():
+            for k, v in kwargs['data'].items():
                 if isinstance(v, list):
                     d.setlist(k, v)
                 else:
@@ -124,7 +125,7 @@ def get_temporary_file_dict(fo):
         for chunk in fo.chunks():
             dest.write(chunk)
 
-    os.chmod(dest.name, 0644)
+    os.chmod(dest.name, 0o644)
     return {
         "filename": fo.name,
         "path": dest.name,
@@ -141,7 +142,7 @@ class ScriptMixin(FormMixin):
         return self.get_script().options_form
 
     def get_initial(self):
-        initial = {k.replace("_id", ""): v for (k, v) in self.kwargs.iteritems()}
+        initial = {k.replace("_id", ""): v for (k, v) in self.kwargs.items()}
         initial.update(super(ScriptMixin, self).get_initial())
         return initial
 

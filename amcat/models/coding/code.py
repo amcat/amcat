@@ -25,7 +25,6 @@ Codes can have multiple labels in different languages, and they can
 be included in different Codebooks.
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 import logging
 
 log = logging.getLogger(__name__)

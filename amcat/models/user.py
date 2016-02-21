@@ -19,7 +19,6 @@
 
 """ORM Module representing users"""
 
-from __future__ import print_function, absolute_import
 
 import logging
 import random
@@ -119,7 +118,7 @@ class UserProfile(AmcatModel):
 
         if isinstance(role, Role):
             role = role.id
-        elif isinstance(role, (str, unicode)):
+        elif isinstance(role, str):
             role = Role.objects.get(label=role).id
 
         if onproject:
@@ -130,6 +129,8 @@ class UserProfile(AmcatModel):
         log.info("{self.user.id}:{self.user.username} has role {actual_role_id} on project {onproject}, >=? {role}"
                  .format(**locals()))
 
+        if actual_role_id is None:
+            return False
         return actual_role_id >= role
 
 
@@ -223,7 +224,7 @@ def create_user_profile(sender, instance, created, **kwargs):
 post_save.connect(create_user_profile, sender=User, dispatch_uid="create_user_profile")
 
 
-def _random_password(length=8, chars=string.letters + string.digits):
+def _random_password(length=8, chars=string.ascii_letters + string.digits):
     #http://code.activestate.com/recipes/59873/
     return ''.join([random.choice(chars) for i in range(length)])
 

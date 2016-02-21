@@ -17,7 +17,6 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 """
 Module containing classes and utility functions related to AmCAT authorisation
@@ -65,7 +64,7 @@ def check(user, privilege, project=None):
 
     @return: None (raises exception if denied)
     """
-    if isinstance(privilege, basestring):
+    if isinstance(privilege, str):
         privilege = Privilege.objects.get(label=privilege, role__projectlevel=bool(project))
 
     if not user.is_superuser:
@@ -97,8 +96,8 @@ class ProjectRole(AmcatModel):
     user = models.ForeignKey(User, db_index=True)
     role = models.ForeignKey(Role)
 
-    def __unicode__(self):
-        return u"%s, %s" % (self.project, self.role)
+    def __str__(self):
+        return "%s, %s" % (self.project, self.role)
 
     class Meta():
         db_table = 'projects_users_roles'

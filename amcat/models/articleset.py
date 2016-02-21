@@ -23,7 +23,6 @@ either created manually or as a result of importing articles or assigning
 codingjobs.
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 import itertools
 import json
 import logging

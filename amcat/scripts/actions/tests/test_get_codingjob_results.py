@@ -1,7 +1,9 @@
-from cStringIO import StringIO
+import base64
 import csv
 import json
 import unittest
+from io import StringIO
+
 from amcat.models import Language, CodingSchemaField, CodingJob
 from amcat.scripts.actions.get_codingjob_results import _get_field_prefix, CodingJobResultsForm, \
     GetCodingJobResults, _get_rows, CODING_LEVEL_BOTH, log
@@ -22,12 +24,13 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
 
         jobs = list(jobs)
 
-        data = dict(codingjobs=[job.id for job in jobs],
-                    export_format=[export_format],
-                    export_level=[str(export_level)],
-                    include_uncoded_articles="1" if include_uncoded_articles else "",
-                    include_uncoded_sentences="1" if include_uncoded_sentences else ""
-        )
+        data = {
+            "codingjobs": [job.id for job in jobs],
+            "export_format": [export_format],
+            "export_level": [str(export_level)],
+            "include_uncoded_articles": "1" if include_uncoded_articles else "",
+            "include_uncoded_sentences": "1" if include_uncoded_sentences else ""
+        }
 
         for field, opts in options.items():
             prefix = _get_field_prefix(field)
@@ -113,8 +116,8 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
     def test_unicode(self):
         """Test whether the export can handle unicode in column names and cell values"""
         schema = amcattest.create_test_schema(isarticleschema=True)
-        s1 = u'S1 \xc4\u0193 \u02a2 \u038e\u040e'
-        s2 = u'S2 \u053e\u06a8 \u090c  \u0b8f\u0c8a'
+        s1 = 'S1 \xc4\u0193 \u02a2 \u038e\u040e'
+        s2 = 'S2 \u053e\u06a8 \u090c  \u0b8f\u0c8a'
         f = CodingSchemaField.objects.create(codingschema=schema, fieldnr=1, label=s1,
                                              fieldtype_id=1, codebook=None)
 
@@ -125,10 +128,9 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
 
         # test csv
         s = self._get_results_script([job], {f: {}}, export_format='csv')
-        import base64
 
-        data = base64.b64decode(s.run()['data'])
-        table = [[cell.decode('utf-8') for cell in row] for row in csv.reader(StringIO(data))]
+        data = base64.b64decode(s.run()['data']).decode('utf-8')
+        table = [[cell for cell in row] for row in csv.reader(StringIO(data))]
         self.assertEqual(table, [[s1], [s2]])
 
         # test json

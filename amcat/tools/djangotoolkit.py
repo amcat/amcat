@@ -21,25 +21,25 @@
 Useful functions for dealing with django (models)x
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
-
 import collections
 import json
 import re
 import time
-import urllib
-import django
 from contextlib import contextmanager
 from datetime import datetime
+from urllib.parse import urlencode
 
+import django
 from django.conf import settings
 from django.db import connections
 from django.db import models, connection
 from django.db.models import sql
 from django.db.models.fields.related import ForeignKey, OneToOneField, ManyToManyField
+from django.dispatch import Signal
 from django.http import QueryDict
 
 from amcat.tools.table.table3 import ObjectTable, SortedTable
+
 
 def parse_date(date):
     """Parse date according to DATE_INPUT_FORMATS in settings"""
@@ -58,14 +58,14 @@ def to_querydict(d, mutable=False):
     # TODO: this stinks
     def encode(s):
         if isinstance(s, list):
-            return map(encode, s)
-        elif isinstance(s, unicode):
+            return list(map(encode, s))
+        elif isinstance(s, str):
             return s.encode("utf-8")
         else:
             return s
             
-    d = {k : encode(v) for (k,v) in d.iteritems()}
-    return QueryDict(urllib.urlencode(d, True), mutable=mutable)
+    d = {k: encode(v) for (k,v) in d.items()}
+    return QueryDict(urlencode(d, True), mutable=mutable)
 
 def from_querydict(d):
     """Convert a QueryDict to a normal dictionary with lists as values."""
@@ -182,12 +182,14 @@ def query_list_to_table(queries, maxqlen=120, output=False, normalise_numbers=Tr
             query = re.sub(r"\d+", "#", query)
         #print(query)
         time[query].append(float(q["time"]))
-    t =  ObjectTable(rows = time.items())
-    t.addColumn(lambda (k, v) : len(v), "N")
-    t.addColumn(lambda (k, v) : k[:maxqlen], "Query")
-    cum = t.addColumn(lambda (k, v):  "%1.4f" % sum(v), "Cum.")
-    t.addColumn(lambda (k, v):  "%1.4f" % (sum(v) / len(v)), "Avg.")
-    t = SortedTable(t, sort=cum)
+    t = ObjectTable(rows=time.items())
+    t.addColumn(lambda kv: len(kv[1]), "N")
+    t.addColumn(lambda kv: kv[0][:maxqlen], "Query")
+    t.addColumn(lambda kv: "%1.4f" % sum(kv[1]), "Cum.")
+    t.addColumn(lambda kv: "%1.4f" % (sum(kv[1]) / len(kv[1])), "Avg.")
+
+    t = SortedTable(t, key=lambda row: row[2])
+
     if output:
         if "stream" not in outputoptions and output is not True:
             if output in (print, "print"):
@@ -221,8 +223,6 @@ def get_ids(objects):
             obj = obj.pk
         yield obj
 
-from django.dispatch import Signal
-from types import NoneType
 
 def receiver(signal, sender=None, **kwargs):
     """
@@ -239,7 +239,7 @@ def receiver(signal, sender=None, **kwargs):
             signals = [signal]
         else:
             signals = signal
-        if isinstance(sender, (NoneType, type)):
+        if sender is None or isinstance(sender, type):
             senders = [sender]
         else:
             senders = sender
@@ -262,7 +262,7 @@ class JsonField(models.Field):
             return json.dumps(value)
         return None
     def to_python(self, value):
-        if isinstance(value, (str, unicode)):
+        if isinstance(value, str):
             return json.loads(value)
         return value
 

@@ -22,7 +22,6 @@ Auxilliary classes to aid making comparable classes based on any identity (L{Ide
 or specifically on an integral id with an associated label (L{IDLabel})
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 import logging;
 
 log = logging.getLogger(__name__)
@@ -76,25 +75,13 @@ class IDLabel(Identity):
         return "%s %s" % (type(self).__name__, self.idlabel())
 
     def idlabel(self):
-        return u"%s: %s" % (self.id, unicode(self))
+        return "%s: %s" % (self.id, str(self))
+
+    def __bytes__(self):
+        return bytes(self.label)
 
     def __str__(self):
-        try:
-            if type(self.label) == unicode:
-                return self.label.encode('ascii', 'replace')
-            else:
-                return str(self.label)
-        except AttributeError:
-            return repr(self)
-
-    def __unicode__(self):
-        try:
-            if type(self.label) == unicode:
-                return self.label
-            else:
-                return str(self.label).decode('latin-1')
-        except AttributeError:
-            return unicode(repr(self))
+        return str(self.label)
 
     def __repr__(self):
         return "%s(%s)" % (type(self).__name__, self.id)

@@ -23,7 +23,6 @@ collections of codes that can be used as a source of objects to be coded,
 or to derive automatically generated search terms from.
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 import logging
 import itertools
@@ -306,7 +305,7 @@ class Codebook(AmcatModel):
 
         return (
             (codes[cid] if cid in codes else None, codes[pid] if pid in codes else None)
-            for cid, pid in hierarchy.iteritems()
+            for cid, pid in hierarchy.items()
         )
 
     def _get_aggregation_mapping(self):
@@ -499,7 +498,7 @@ class Codebook(AmcatModel):
         # Keep ordering by using order of hierarchy
         roots |= parents - children - {None, }
         hierarchy = OrderedDict(hierarchy)
-        codes = hierarchy.keys() + hierarchy.values()
+        codes = chain(hierarchy.keys(), hierarchy.values())
         codes = {code: i for i, code in enumerate(codes)}
         return sorted(roots, key=codes.get)
 
@@ -518,7 +517,7 @@ class Codebook(AmcatModel):
         hierarchy = self._get_hierarchy_ids()
 
         def _get_parent(code):
-            for child, parent in hierarchy.iteritems():
+            for child, parent in hierarchy.items():
                 if child == code:
                     return parent
             raise ValueError("Code {code!r} not in hierarchy!")
@@ -593,7 +592,7 @@ class CodebookCode(AmcatModel):
             if self.validto and co.validfrom and self.validto <= co.validfrom: continue
             raise ValueError("Codebook code {!r} overlaps with {!r}".format(self, co))
 
-    def __unicode__(self):
+    def __str__(self):
         return "{0.code}:{0.parent} ({0.codebook}, {0.validfrom}-{0.validto})".format(self)
 
     class Meta():

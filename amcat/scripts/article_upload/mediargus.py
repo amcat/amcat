@@ -25,7 +25,6 @@ Plugin for uploading mediargus text files
 
 
 
-from __future__ import unicode_literals, absolute_import
 
 from amcat.scripts.article_upload.upload import UploadScript
 

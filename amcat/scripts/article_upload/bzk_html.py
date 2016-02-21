@@ -21,7 +21,6 @@
 Plugin for uploading html files of a certain markup, provided by BZK
 """
 
-from __future__ import unicode_literals, absolute_import
 import re
 import logging
 
@@ -40,7 +39,7 @@ from amcat.scripts.article_upload.bzk_aliases import BZK_ALIASES as MEDIUM_ALIAS
 
 class BZK(UploadScript):
     def _scrape_unit(self, _file):
-        if isinstance(_file, unicode):
+        if isinstance(_file, str):
             # command line
             etree = html.fromstring(_file)
         else:

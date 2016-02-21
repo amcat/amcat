@@ -28,15 +28,15 @@ the test class subclasses AmCATTestCase, and run testing as normal.
 functions create_test_* create test objects for use in unit tests
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 import datetime
 import logging
 import os
 import unittest
+from collections import OrderedDict
 from contextlib import contextmanager
 from functools import wraps
-from urlparse import urljoin
+from urllib.parse import urljoin
 from uuid import uuid4
 
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
@@ -164,7 +164,7 @@ def create_test_article(create=True, articleset=None, deduplicate=True, **kargs)
     """Create a test article"""
     from amcat.models.article import Article
 
-    if "date" in kargs and isinstance(kargs["date"], basestring):
+    if "date" in kargs and isinstance(kargs["date"], str):
         kargs["date"] = read_date(kargs["date"])
 
     if "project" not in kargs: kargs["project"] = create_test_project()
@@ -269,10 +269,18 @@ def  create_test_codebook_with_codes():
      B1
     @return: A pair of the codebook and the {label : code} dict
     """
-    parents = {"A1a":"A1", "A1b":"A1", "A1":"A", "A2":"A", "B1":"B", "A":None, "B":None}
-    codes = {l : create_test_code(label=l) for l in parents}
+    parents = OrderedDict((
+        ("A1a", "A1"),
+        ("A1b", "A1"),
+        ("A1", "A"),
+        ("A2", "A"),
+        ("B1", "B"),
+        ("A", None),
+        ("B", None)
+    ))
+    codes = {l: create_test_code(label=l) for l in parents}
     codebook = create_test_codebook()
-    for code, parent in parents.items():
+    for code, parent in reversed(list(parents.items())):
         codebook.add_code(codes[code], codes.get(parent))
     return codebook, codes
 

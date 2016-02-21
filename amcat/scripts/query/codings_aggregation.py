@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from __future__ import unicode_literals
 
 import json
 import re
@@ -25,7 +24,7 @@ from itertools import chain
 from django.core.exceptions import ValidationError
 from django.forms import ChoiceField, BooleanField, ModelChoiceField
 
-from aggregation import AggregationEncoder, aggregation_to_matrix, aggregation_to_csv
+from .aggregation import AggregationEncoder, aggregation_to_matrix, aggregation_to_csv
 from amcat.models import CodedArticle
 from amcat.models import CodingSchemaField, Code, CodingValue, Coding
 from amcat.models import Medium, ArticleSet, CodingJob

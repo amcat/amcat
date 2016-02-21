@@ -141,7 +141,7 @@ class RuleSetView(View, TemplateResponseMixin, SingleObjectMixin):
             cb.codebookcodes.all().delete()
             lexlang = self.object.lexicon_language
             lang = Language.objects.get(pk=(0 if lexlang.id == 1 else 1))
-            for lexclass, lemmata in lexicon.iteritems():
+            for lexclass, lemmata in lexicon.items():
                 c = Code.create(lexclass, lang)
                 c.add_label(lexlang, ", ".join(lemmata))
                 cb.add_code(c)

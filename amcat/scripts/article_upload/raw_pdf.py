@@ -21,7 +21,6 @@
 Plugin for uploading any pdf file as raw text
 """
 
-from __future__ import unicode_literals, absolute_import
 
 from django import forms
 from datetime import date

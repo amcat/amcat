@@ -30,7 +30,7 @@ class TestCodedArticle(amcattest.AmCATTestCase):
         self.assertIsNone(ca.comments)
 
         for offset in range(4563, 20000, 1000):
-            s = "".join(unichr(offset + c) for c in range(12, 1000, 100))
+            s = "".join(chr(offset + c) for c in range(12, 1000, 100))
             ca.comments = s
             ca.save()
             ca = CodedArticle.objects.get(pk=ca.id)

@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 
 BZK_ALIASES = {
     'DUIC': 'DUIC', 'Nos.nl ': 'NOS', 'Dichtbij.nl  ': 'Dichtbij.nl',

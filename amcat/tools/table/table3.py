@@ -29,7 +29,6 @@ Interface Table:
 see tableoutput.py for useful methods for rendering tables in different ways
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 from collections import namedtuple
 import types
@@ -55,7 +54,7 @@ class Table(object):
 
     Supports read access using getRows/getColumns/getValue and
     using index access to and iteration over the 'Named' rows
-    e.g. print row[1].colA; for row in table: print(row.colB)
+    e.g. print(row[1].colA); for row in table:(print(row.colB))
 
     This is primarily meant for subclassing, but a base implementation
     works by giving columns and rows as sequences and a function that
@@ -127,7 +126,7 @@ class Table(object):
 
     def getColumnByLabel(self, label):
         """Return the column that matches the given label, or None"""
-        stringify = unicode if type(label) == unicode else str
+        stringify = str if type(label) == str else str
         for c in self.getColumns():
             if stringify(c) == label: return c
 
@@ -219,18 +218,21 @@ class ObjectTable(Table):
         a cell is created. The returned data will be used to fill it. If
         if is a string, use it as an attribute getter 
         
-        @type label: str or unicode
+        @type label: str
         @param label: String for user-friendly column-identification.
         If not provided, the __name__ attribute of `col` will be used.
         
         @type return: NoneType 
         """
         if hasattr(col, '__call__'):  # function
-            if label is None: label = col.__name__
-            if label == '<lambda>': label = ''
+            if label is None:
+                label = col.__name__
+
+            if label == '<lambda>':
+                label = ''
 
             col = ObjectColumn(label, col, **kargs)
-        elif type(col) in (str, unicode):
+        elif isinstance(col, str):
             col = AttributeColumn(col, label, **kargs)
         if index is not None:
             self.columns.insert(index, col)
@@ -267,11 +269,11 @@ class ObjectColumn(object):
             log.error("Exception on getting column %r on row %r" % (self.label, row))
             raise
 
-    def __str__(self):
+    def __bytes__(self):
         return self.label.encode('utf-8')
 
-    def __unicode__(self):
-        return unicode(self.label)
+    def __str__(self):
+        return str(self.label)
 
 
 class AttributeColumn(ObjectColumn):
@@ -424,33 +426,15 @@ class WrappedTable(Table):
 
 
 class SortedTable(WrappedTable):
-    """
-    Encapsulated another table object and "jit"-sorts rows as needed
-    sort can be a columns, a (column, bool) pair, or a list of columns or pairs
-    addsortindicator only works if columns are IDLabels
-    """
-
-    def __init__(self, table, sort):
+    """Wrapped table where getRows() returns an ordered table, according to a user
+    specified key function."""
+    def __init__(self, table, key, reverse=False):
         super(SortedTable, self).__init__(table)
-        self.sort = []
-        if not toolkit.is_sequence(sort, exclude_strings=True) or (
-                        len(sort) == 2 and type(sort[1]) == bool):
-            sort = [sort]
-        for col in sort:
-            if toolkit.is_sequence(col):
-                self.sort.append((col[0], col[1]))
-            else:
-                self.sort.append((col, True))
-
-    def cmp(self, a, b):
-        """Compare rows a and b for use in sorting"""
-        for col, asc in self.sort:
-            ab = [self.getValue(x, col) for x in (a, b)]
-            return cmp(*ab) * (1 if asc else -1)
-        return 0
+        self.key = key
+        self.reverse = reverse
 
     def getRows(self):
-        return sorted(self.table.getRows(), cmp=self.cmp)
+        return sorted(self.table.getRows(), key=self.key, reverse=self.reverse)
 
 
 class MergedTable(Table):
@@ -502,7 +486,7 @@ class ColumnViewTable(WrappedTable):
         @param columns: the columns or column labels to include
         @param uselabel (default): if True, allow matching on labels
         """
-        super(ColumnViewTable, self).__init__(table, columns=set(columns))
+        super(ColumnViewTable, self).__init__(table, columns=columns)
         self.uselabel = uselabel
 
     def getColumns(self):
@@ -510,18 +494,5 @@ class ColumnViewTable(WrappedTable):
             if col in self.columns or (
                             self.uselabel and isinstance(col, idlabel.IDLabel) and col.label in self.columns):
                 yield col
-
-
-class PostProcessTable(WrappedTable):
-    """A postprocess table is a tablewrapper that 'postprocesses'
-    the underlying table cell values with the given cellfunc"""
-
-    def __init__(self, table, valuefunc=None):
-        super(PostProcessTable, self).__init__(table)
-        self.valuefunc = valuefunc
-
-    def getValue(self, row, col):
-        v = self.table.getValue(row, col)
-        return self.valuefunc(self, v, row, col)
 
 

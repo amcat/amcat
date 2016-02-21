@@ -6,9 +6,9 @@ from amcat.models import CodingSchema, Codebook, Project, Code, Language, Coding
 
 
 def copy_codebook(source_cb, target_project):
-    print "Moving {source_cb} to {target_project}".format(**locals())
+    print("Moving {source_cb} to {target_project}".format(**locals()))
     target_cb = Codebook.objects.create(project=target_project, name=source_cb.name)
-    print "Created codebook", target_cb
+    print("Created codebook", target_cb)
 
     codes = {}  # uuid -> new code
     # create codes
@@ -21,7 +21,7 @@ def copy_codebook(source_cb, target_project):
             target_code = Code.objects.get(uuid=uuid)
         except Code.DoesNotExist:
             target_code = Code.objects.create(uuid=uuid)
-            print "Created code ", uuid
+            print("Created code ", uuid)
             for label in code.code.labels.all():
                 l = Language.objects.get(label=label.language.label)
                 target_code.add_label(Language.objects.get(label=label.language.label), label.label)
@@ -39,14 +39,14 @@ def copy_codebook(source_cb, target_project):
 
 
 def copy_codingschema(source_schema, target_project):
-    print "Moving {source_schema} to {target_project}".format(**locals())
+    print("Moving {source_schema} to {target_project}".format(**locals()))
 
     attrs = {k: getattr(source_schema, k)
              for k in ["name", "description", "isnet", "isarticleschema", "quasisentences"]}
 
     target_schema = CodingSchema.objects.create(project=target_project, **attrs)
 
-    print "Created schema", target_schema.id
+    print("Created schema", target_schema.id)
 
     # create fields
     codebooks = {}  # old id : new codebook
@@ -56,7 +56,7 @@ def copy_codingschema(source_schema, target_project):
             if field.codebook_id == -5001:
                 continue
             cb = copy_codebook(field.codebook, target_project)
-            print "Copied codebook ", field.codebook_id, ":", field.codebook.name, " to ", cb.id
+            print("Copied codebook ", field.codebook_id, ":", field.codebook.name, " to ", cb.id)
             codebooks[field.codebook_id] = cb
 
         attrs = {k: getattr(field, k)

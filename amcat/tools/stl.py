@@ -17,9 +17,8 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-import re, struct
-from amcat.tools import toolkit
-
+import re
+import struct
 import logging
 log= logging.getLogger(__name__)
  
@@ -75,7 +74,7 @@ def STLtoText(txt):
                'EN': GSI[309:341], 
                'ECD': GSI[341:373], 
                'UDA': GSI[448:1024]}
-    except Exception, e:
+    except Exception as e:
         raise Exception("Error on parsing header: %r\n%s"% (GSI, e))
 
     for i in range(0, GSI['TNB']):

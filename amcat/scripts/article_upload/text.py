@@ -22,10 +22,8 @@
 Plugin for uploading plain text files
 """
 
-from __future__ import unicode_literals
 
 import logging
-import StringIO
 
 log = logging.getLogger(__name__)
 import os.path, tempfile, subprocess
@@ -42,6 +40,10 @@ from django.core.exceptions import ValidationError
 
 from PyPDF2 import PdfFileReader
 
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 class TextForm(UploadScript.options_form, fileupload.ZipFileUploadForm):
     file = forms.FileField(
@@ -90,12 +92,12 @@ def _convert_doc(file):
 
 
 def _convert_pdf(file):
-    _file = StringIO.StringIO()
+    _file = StringIO()
     _file.write(file.bytes)
     pdf = PdfFileReader(_file)
     text = ""
     n = pdf.getNumPages()
-    for i in xrange(0,n):
+    for i in range(0,n):
         page = pdf.getPage(i)
         text += page.extractText()
     return text
@@ -165,7 +167,7 @@ class Text(UploadScript):
             if convertors:
                 text = _convert_multiple(file, convertors)
             else:
-                text = file.text
+                text = "\n".join(file.readlines())
         else:
             text = self.options['text']
 

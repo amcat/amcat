@@ -1,3 +1,3 @@
-import table3
-import table2spss
-import tableoutput
+from . import table3
+from . import table2spss
+from . import tableoutput

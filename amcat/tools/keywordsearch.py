@@ -22,8 +22,6 @@ Utility module for keyword searches. This module is full of misnomers, maybe
 move it to 'queryparser'?
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
-
 import logging
 import re
 from itertools import chain
@@ -88,10 +86,6 @@ def to_nested(aggr):
 
 
 class SelectionSearch:
-    """
-
-    """
-
     def __init__(self, form):
         """
         Form *must* be valid before passing.
@@ -126,7 +120,7 @@ class SelectionSearch:
     @cached
     def get_query(self):
         """
-        @rtype: unicode
+        @rtype: str
         """
         return ' OR '.join('(%s)' % q.query for q in self.get_queries()) or None
 
@@ -145,13 +139,13 @@ class SelectionSearch:
         if codebook:
             codebook.cache_labels()
 
-        queries = map(unicode.strip, self.data.query.split("\n"))
+        queries = map(str.strip, self.data.query.split("\n"))
         #filter empty lines
         queries = filter(lambda x: x, queries)
         queries = map(SearchQuery.from_string, queries)
 
         resolved = resolve_queries(
-            queries, codebook=codebook,
+            list(queries), codebook=codebook,
             label_language=label_lan,
             replacement_language=replacement_lan
         )
@@ -292,7 +286,7 @@ def get_date_filters(start_date, end_date, on_date, datetype):
     @type start_date: datetime.date
     @type end_date: datetime.date
     @type on_date: datetime.date
-    @type datetype: unicode, str
+    @type datetype: str
     """
     if datetype == 'on':
         yield ('start_date', on_date.isoformat())
@@ -313,7 +307,7 @@ def get_date_filters(start_date, end_date, on_date, datetype):
 
 def _clean(s):
     if s is None: return
-    s = unicode(s)
+    s = str(s)
     s = stripAccents(s)
     s = re.sub("[<>+*]", " ", s)
     s = re.sub("\s+", " ", s)

@@ -25,7 +25,7 @@ class FieldColumn(ObjectColumn):
         try:
             val = self.getValue(row)
             return val
-        except AttributeError, e:
+        except AttributeError as e:
             log.debug("AttributeError on getting %s.%s: %s" % (row, self.field, e))
             raise
 

@@ -94,7 +94,7 @@ class ImportCodebook(Script):
         if "parent" in data:
             parents = zip(data["code"], data["parent"])
         else:
-            cols = get_indented_columns(data)
+            cols = list(get_indented_columns(data))
             parents = list(get_parents_from_columns(cols))
         uuids = data["uuid"] if "uuid" in data else [None] * len(parents)
 
@@ -191,5 +191,4 @@ if __name__ == '__main__':
     from amcat.scripts.tools import cli
 
     result = cli.run_cli()
-    #print result.output()
 

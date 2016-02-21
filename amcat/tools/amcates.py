@@ -17,18 +17,14 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 import datetime
-import json
 import logging
 import os
 import re
-
 from collections import namedtuple
 from hashlib import sha224 as hash_class
 from json import dumps as serialize
-from types import NoneType
 
 from django.conf import settings
 from elasticsearch import Elasticsearch, ImproperlyConfigured, NotFoundError
@@ -37,8 +33,8 @@ from elasticsearch.helpers import scan, bulk
 from amcat.tools import queryparser, toolkit
 from amcat.tools.caching import cached
 from amcat.tools.djangotoolkit import get_model_field
-from amcat.tools.toolkit import multidict, splitlist
 from amcat.tools.progress import ProgressMonitor
+from amcat.tools.toolkit import multidict, splitlist
 
 log = logging.getLogger(__name__)
 
@@ -87,7 +83,7 @@ _clean_re = re.compile('[\x00-\x08\x0B\x0C\x0E-\x1F]')
 
 def _clean(s):
     """Remove non-printalbe characters
-    @type s: unicode | str | NoneType"""
+    @type s: str | NoneType"""
     if s is not None:
         return _clean_re.sub(' ', s)
 
@@ -107,7 +103,7 @@ def get_article_dict(article, sets=None):
     # Previous versions of get_article_dict() accepted strings as dates,
     # which current versions do not accept. Thus, explicitely assert type.
     date = article_dict["date"]
-    assert isinstance(date, (NoneType, datetime.date, datetime.datetime))
+    assert isinstance(date, (datetime.date, datetime.datetime)) or date is None
 
     # We need to convert it to datetime.datetime to get an uniform isoformat() representation.
     if not isinstance(date, datetime.datetime) and isinstance(date, datetime.date):
@@ -120,25 +116,36 @@ def get_article_dict(article, sets=None):
     article_dict['hash'] = _get_hash(article_dict)
     return article_dict
 
-
 def _get_legacy_hash(article_dict):
     c = hash_class()
     for k in LEGACY_HASH_FIELDS:
         v = article_dict[k]
         if isinstance(v, int):
             c.update(str(v))
-        elif isinstance(v, unicode):
+        elif isinstance(v, str):
             c.update(v.encode('utf-8'))
         elif v is not None:
             c.update(v)
     return c.hexdigest()
 
+def _encode_field(object, encoding="utf-8"):
+    if isinstance(object, datetime.datetime):
+        return object.isoformat().encode(encoding)
+    return str(object).encode(encoding)
+
+def _escape_bytes(b):
+    return b.replace(b"\\", b"\\\\").replace(b",", b"\\,")
 
 def _get_hash(article):
     if settings.ES_USE_LEGACY_HASH_FUNCTION:
         return _get_legacy_hash(article)
-    article_dict = [(fn, article[fn]) for fn in HASH_FIELDS]
-    return hash_class(json.dumps(article_dict)).hexdigest()
+
+    c = hash_class()
+    for fn in HASH_FIELDS:
+        c.update(_escape_bytes(_encode_field(fn)))
+        c.update(_escape_bytes(_encode_field(article[fn])))
+        c.update(b",")
+    return c.hexdigest()
 
 
 HIGHLIGHT_OPTIONS = {
@@ -211,7 +218,7 @@ class Result(object):
         """@param hit: elasticsearch hit dict"""
         field_dict = {f: None for f in fields}
         if 'fields' in row:
-            for (k, v) in row['fields'].iteritems():
+            for (k, v) in row['fields'].items():
                 if k != "sets":
                     # elastic 1.0 always returns arrays, we only want
                     # sets in a list, the rest should be 'scalarized'
@@ -298,8 +305,8 @@ class ES(object):
             self.es.indices.delete(self.index)
         except NotFoundError:
             pass
-        except Exception, e:
-            if 'IndexMissingException' in unicode(error_msg):
+        except Exception as e:
+            if 'IndexMissingException' in str(error_msg):
                 return
             raise
 
@@ -664,7 +671,7 @@ class ES(object):
         @type mediums: bool
         @param mediums: return Medium objects, instead of ids
         """
-        if isinstance(group_by, basestring):
+        if isinstance(group_by, str):
             log.warning("Passing strings to aggregate_query(group_by) is deprecated.")
             group_by = [group_by]
 
@@ -824,16 +831,18 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
     """
 
     def _list(x, number=True):
-        if isinstance(x, (str, unicode, int)):
+        if isinstance(x, (str, int)):
             return [int(x) if number else x]
         elif hasattr(x, 'pk'):
             return [x.pk]
-        return x
+        elif isinstance(x, (set, tuple, list)):
+            return x
+        return list(x)
 
     def parse_date(d):
         if isinstance(d, list) and len(d) == 1:
             d = d[0]
-        if isinstance(d, (str, unicode)):
+        if isinstance(d, str):
             d = toolkit.readDate(d)
         return d.isoformat()
 

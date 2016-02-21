@@ -53,7 +53,7 @@ class AmCATMetadata(SimpleMetadata):
     def get_metadata_fields(self, view):
         serializer = view.get_serializer()
 
-        for name, field in serializer.fields.iteritems():
+        for name, field in serializer.fields.items():
             field_name = None
             if hasattr(serializer, "get_metadata_field_name"):
                 field_name = serializer.get_metadata_field_name(field)
@@ -89,7 +89,7 @@ class AmCATMetadata(SimpleMetadata):
 
             metadata['models'] = {
                 name: grfm(_get_model_by_field(model, name)).get_url()
-                for (name, field) in serializer.get_fields().iteritems()
+                for (name, field) in serializer.get_fields().items()
                 if hasattr(field, 'queryset')
             }
 

@@ -30,7 +30,7 @@ class TestTableRenderer(amcattest.AmCATTestCase):
         self.assertEqual(set(header), set(mapping))
         found = [tuple(row[mapping[h]] for h in header)
                  for row in t.to_list(tuple_name=None)]
-        #import json; print json.dumps(found, indent=2)
+        #import json; print(json.dumps(found, indent=2))
         self.assertEqual(data, found)
     
     def test_tablize(self):

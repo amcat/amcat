@@ -55,7 +55,7 @@ def get_classes_from_module(module, superclass=None):
     m = import_attribute(module)
     for name in dir(m):
         obj = getattr(m, name)
-        if not isinstance(obj, (type, types.ClassType)): continue
+        if not isinstance(obj, (type, type)): continue
         if superclass is not None and not issubclass(obj, superclass): continue
         if obj.__module__ == module:
             yield obj

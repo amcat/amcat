@@ -78,8 +78,11 @@ class ProjectPermission(permissions.BasePermission):
             return required_role_id
 
         actual_role_id = view.project.get_role_id(user=user)
-        if actual_role_id < required_role_id:
+        if actual_role_id is None or actual_role_id < required_role_id:
             log.warn("User {user} has role {actual_role_id} < {required_role_id}".format(**locals()))
+
+        if actual_role_id is None:
+            return False
         return actual_role_id >= required_role_id
 
 

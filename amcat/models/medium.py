@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from __future__ import unicode_literals, print_function, absolute_import
 
 from django.db import models
 from django.db.models import query
@@ -105,7 +104,7 @@ class Medium(AmcatModel):
     def get_or_create(cls, medium_name):
         """
         Finds a medium object or creates a new one if not found
-        @type medium name: unicode
+        @type medium name: str
         @return: a Medium object (or None if medium_name was None)
         """
         if medium_name is None: return None

@@ -1,4 +1,3 @@
-from __future__ import print_function
 import logging
 
 log = logging.getLogger(__name__)

@@ -21,7 +21,6 @@
 Plugin for uploading csv files
 """
 
-from __future__ import unicode_literals, absolute_import
 
 import datetime
 import json
@@ -84,7 +83,7 @@ class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
 
     def __init__(self, *args, **kargs):
         super(CSVForm, self).__init__(*args, **kargs)
-        for fieldname, required in reversed(zip(FIELDS, REQUIRED)):
+        for fieldname, required in reversed(list(zip(FIELDS, REQUIRED))):
             label = fieldname + " field"
             if fieldname in HELP_TEXTS:
                 help_text = HELP_TEXTS[fieldname]
@@ -216,7 +215,7 @@ class CSV(UploadScript):
 
     def postprocess(self, articles):
         if self.parent_field:
-            for doc_id, parent_id in self.parents.iteritems():
+            for doc_id, parent_id in self.parents.items():
                 doc = self.articles[doc_id]
                 doc.parent = self.articles[parent_id]
                 if not doc.addressee and self.options['addressee_from_parent']:

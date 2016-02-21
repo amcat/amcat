@@ -18,7 +18,7 @@ class TestMethodOverride(TestCase):
         url = "/api/v4/user?format=json&pk={self.u1.id}"
         users = self.c.get(url.format(**locals()))
 
-        users = json.loads(users.content)["results"]
+        users = json.loads(users.content.decode("utf-8"))["results"]
         self.assertEqual(1, len(users))
         self.assertEqual(self.u1.id, users[0]["id"])
 
@@ -30,7 +30,7 @@ class TestMethodOverride(TestCase):
         params = {"pk": self.u1.id, "format": "json"}
         users = self.c.post("/api/v4/user", params, **headers)
 
-        users = json.loads(users.content)["results"]
+        users = json.loads(users.content.decode("utf-8"))["results"]
         self.assertEqual(1, len(users))
         self.assertEqual(self.u1.id, users[0]["id"])
 

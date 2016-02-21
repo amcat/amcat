@@ -22,52 +22,46 @@ Model module containing the Article class representing documents in the
 articles database table.
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
-from copy import copy
-from itertools import chain, count
-from operator import attrgetter
+
 import logging
+
 import collections
-import uuid
-
-from django.template.loader import get_template
+from django.db import models
 from django.template import Context
-from django.db import models, transaction
-from django.db.utils import IntegrityError, DatabaseError
-from django.core.exceptions import ValidationError
 from django.template.defaultfilters import escape as escape_filter
-from amcat.tools.djangotoolkit import bulk_insert_returning_ids
+from django.template.loader import get_template
 
-from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
-from amcat.tools import amcates
 from amcat.models.authorisation import Role
 from amcat.models.medium import Medium
+from amcat.tools import amcates
+from amcat.tools.djangotoolkit import bulk_insert_returning_ids
+from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
+from amcat.tools.progress import ProgressMonitor
 from amcat.tools.toolkit import splitlist
 from amcat.tools.tree import Tree
-from amcat.tools.progress import ProgressMonitor
-
-from amcat.tools.amcates import Result
 
 log = logging.getLogger(__name__)
 
 import re
 
-WORD_RE = re.compile('[{L}{N}]+')  # {L} --> All (unicode) letters
+WORD_RE_STRING = re.compile('[{L}{N}]+')  # {L} --> All letters
+WORD_RE_BYTES = re.compile(b'[{L}{N}]+')  # {L} --> All letters
 # {N} --> All numbers
 
 
 def word_len(txt):
     """Count words in `txt`
 
-    @type txt: str or unicode"""
+    @type txt: str"""
     if not txt: return 0  # Safe handling of txt=None
-    return len(re.sub(WORD_RE, ' ', txt).split())
+    word_re = WORD_RE_STRING if isinstance(txt, str) else WORD_RE_BYTES
+    return len(re.sub(word_re, ' ', txt).split())
 
 
 def unescape_em(txt):
     """
     @param txt: text to be unescaped
-    @type txt: unicode
+    @type txt: str
     """
     return (txt
             .replace("&lt;em&gt;", "<em>")
@@ -154,7 +148,7 @@ class Article(AmcatModel):
         call save() after calling this method.
 
         @param query: elastic query used for highlighting
-        @type query: unicode
+        @type query: str
 
         @param escape: escape html entities in result
         @type escape: bool
@@ -267,7 +261,7 @@ class Article(AmcatModel):
                 dupes.append(a)
             else:
                 a.es_dict.update(dict(sets=[aset.id for aset in articlesets],
-                                      uuid=unicode(a.uuid), id=a.id))
+                                      uuid=str(a.uuid), id=a.id))
                 new.append(a)
 
         if new:
@@ -324,7 +318,7 @@ class Article(AmcatModel):
                 
             dupevals = {"hash": a.hash}
             if getattr(a, 'uuid'):
-                dupevals['uuid'] = unicode(a.uuid)
+                dupevals['uuid'] = str(a.uuid)
             for attr, val in dupevals.items():
                 if val in dupe_values[attr]:
                     dupe = dupe_values[attr][val] # within-set duplicate
@@ -341,7 +335,7 @@ class Article(AmcatModel):
                 _set_dupe(dupe2, orig)
                     
         if dupe_values['hash']:
-            results = es.query_all(filters={'hash': dupe_values['hash'].keys()},
+            results = es.query_all(filters={'hash': list(dupe_values['hash'].keys())},
                                    fields=["hash", "uuid"], score=False)
             for orig in results:
                 dupe = dupe_values['hash'][orig.hash]
@@ -350,14 +344,14 @@ class Article(AmcatModel):
                     continue
                 _set_dupe(dupe, orig)
         if dupe_values['uuid']:
-            results = es.query_all(filters={'uuid': dupe_values['uuid'].keys()},
+            results = es.query_all(filters={'uuid': list(dupe_values['uuid'].keys())},
                                    fields=["hash", "uuid"], score=False)
             for orig in results:
                 dupe = dupe_values['uuid'][orig.uuid]
                 if dupe.hash != orig.hash:
                     raise ValueError("Cannot modify existing articles: {orig.hash} != {dupe.hash}".format(**locals()))
                 _set_dupe(dupe, orig)
-                
+
         # now we can save the articles and set id
         to_insert = [a for a in articles if not a.duplicate]
         result = bulk_insert_returning_ids(to_insert)
@@ -367,7 +361,6 @@ class Article(AmcatModel):
             a.id = inserted.id
         return to_insert
 
-        
     def get_tree(self, include_parents=True, fields=("id",)):
         """
         Returns a deterministic (sorted by id) tree of articles, based on their parent
@@ -401,8 +394,3 @@ def _check_index(articles):
         log.info("Adding {} articles to index".format(len(missing)))
         es.add_articles(missing)
     es.flush() 
-            
-
-
-    
-    

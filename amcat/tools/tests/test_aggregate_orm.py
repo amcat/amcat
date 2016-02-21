@@ -45,11 +45,11 @@ class TestAggregateORM(TransactionTestCase):
         self.a2.text = "aap. noot."
         self.a3.text = "aap. noot. mies."
 
-        self.a1.date = datetime.datetime(2015, 01, 01)
-        self.a2.date = datetime.datetime(2015, 01, 01)
-        self.a3.date = datetime.datetime(2015, 02, 01)
-        self.a4.date = datetime.datetime(2016, 01, 01)
-        self.a5.date = datetime.datetime(2016, 01, 01)
+        self.a1.date = datetime.datetime(2015, 0o1, 0o1)
+        self.a2.date = datetime.datetime(2015, 0o1, 0o1)
+        self.a3.date = datetime.datetime(2015, 0o2, 0o1)
+        self.a4.date = datetime.datetime(2016, 0o1, 0o1)
+        self.a5.date = datetime.datetime(2016, 0o1, 0o1)
         self.a1.save()
         self.a2.save()
         self.a3.save()
@@ -119,9 +119,9 @@ class TestAggregateORM(TransactionTestCase):
         aggr = self._get_aggr(flat=True)
         result = set(aggr.get_aggregate([IntervalCategory("day")], [CountArticlesValue()]))
         self.assertEqual(result, {
-            (datetime.datetime(2015, 01, 01), 2),
-            (datetime.datetime(2015, 02, 01), 1),
-            (datetime.datetime(2016, 01, 01), 1),
+            (datetime.datetime(2015, 0o1, 0o1), 2),
+            (datetime.datetime(2015, 0o2, 0o1), 1),
+            (datetime.datetime(2016, 0o1, 0o1), 1),
         })
 
     def test_mixed_article_sentence_aggregation(self):

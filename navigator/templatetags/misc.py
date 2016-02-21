@@ -18,7 +18,7 @@ def get_item(dictionary, key):
 @register.filter
 def join_list(l, sep):
     "Join l by sep if it is a list"
-    if not isinstance(l, (str, unicode)):
+    if not isinstance(l, str):
         try:
             return sep.join(l)
         except TypeError:

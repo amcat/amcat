@@ -86,16 +86,6 @@ class UploadScript(script.Script):
         super(UploadScript, self).__init__(*args, **kargs)
         self.project = self.options['project']
         self.errors = []
-        for k, v in self.options.items():
-            if type(v) == str:
-                self.options[k] = v.decode('utf-8')
-
-        # avoid django problem/bug with repr(File(open(uncode-string)))
-        # https://code.djangoproject.com/ticket/8156
-        o2 = {k:v for k,v in self.options.iteritems() if k != 'file'}
-        log.debug(u"Articleset: {self.articlesets!r}, options: {o2}"
-                  .format(**locals()))
-
 
     @property
     def articlesets(self):
@@ -136,7 +126,7 @@ class UploadScript(script.Script):
     def get_provenance(self, file, articles):
         n = len(articles)
         filename = file and file.name
-        timestamp = unicode(datetime.datetime.now())[:16]
+        timestamp = str(datetime.datetime.now())[:16]
         return ("[{timestamp}] Uploaded {n} articles from file {filename!r} "
                 "using {self.__class__.__name__}".format(**locals()))
 
@@ -158,7 +148,7 @@ class UploadScript(script.Script):
         files = list(self._get_files())
         nfiles = len(files)        
         for i, f in enumerate(files):
-            filename = getattr(f, 'name', unicode(f))
+            filename = getattr(f, 'name', str(f))
             monitor.update(20/nfiles, "Parsing file {i}/{nfiles}: {filename}".format(**locals()))
             articles += list(self.parse_file(f))
             

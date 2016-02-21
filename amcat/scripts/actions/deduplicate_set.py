@@ -72,12 +72,12 @@ class DeduplicateSet(Script):
                 logging.info("Collecting hashes, n={i}, |hashes|={n}".format(n=len(hashes), **locals()))
             hashes[h].add(id)
 
-        hashes = {hash: ids for (hash, ids) in hashes.iteritems() if len(ids)>1}
+        hashes = {hash: ids for (hash, ids) in hashes.items() if len(ids)>1}
         logging.info("Duplicates founds for {} articles".format(len(hashes)))
 
         to_remove = set()
         logging.info("Iterating over hashes")
-        for i, (hash, ids) in enumerate(hashes.iteritems()):
+        for i, (hash, ids) in enumerate(hashes.items()):
             if dry_run:
                 logging.info("Duplicates: {ids}".format(**locals()))
             to_remove |= set(sorted(ids)[1:])

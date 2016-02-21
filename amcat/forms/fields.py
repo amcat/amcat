@@ -44,10 +44,8 @@ class JSONField(models.TextField):
             kwargs.update(dict(default='{}'))
         super(JSONField, self).__init__(*args, **kwargs)
 
-    def to_python(self, value):
-        if isinstance(value, basestring):
-            return json.loads(value)
-        return value
+    def from_db_value(self, value, *args, **kwargs):
+        return json.loads(value)
 
     def get_prep_value(self, value):
         return json.dumps(value)
@@ -110,7 +108,7 @@ class CSVField(forms.FileField):
         # Check if csv file is valid
         try:
             cfile = csv.reader(data, delimiter=str(self.delimiter))
-            columns = [c.lower() for c in cfile.next()]
+            columns = [c.lower() for c in next(iter(cfile))]
         except Exception as e:
             log.exception(e)
             raise ValidationError(self.error_messages['notcsv'])

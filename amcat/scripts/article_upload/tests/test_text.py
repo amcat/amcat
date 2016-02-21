@@ -1,5 +1,10 @@
 import os.path
 import unittest
+import zipfile
+from tempfile import NamedTemporaryFile
+
+from django.core.files import File
+
 from amcat.models import Article, ArticleSet
 from amcat.scripts.article_upload.text import Text
 from amcat.tools import amcattest
@@ -49,10 +54,6 @@ class TestUploadText(amcattest.AmCATTestCase):
 
     @amcattest.use_elastic
     def test_zip(self):
-        from tempfile import NamedTemporaryFile
-        from django.core.files import File
-        import zipfile
-
         base = dict(project=amcattest.create_test_project().id,
                     articlesets=[amcattest.create_test_set().id],
                     medium=amcattest.create_test_medium().id)

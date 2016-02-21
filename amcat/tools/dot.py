@@ -16,10 +16,10 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-
 import collections
 import re
-import toolkit
+
+from . import toolkit
 
 # TODO: replace with pygraphviz. Less code, more good!
 
@@ -77,8 +77,8 @@ class Graph(object):
             return self.addNode(nodeid, **kargs)
 
     def addEdge(self, subj, obj, graph=None, **kargs):
-        if type(subj) <> Node: subj = self.getNode(subj)
-        if type(obj) <> Node: obj = self.getNode(obj)
+        if type(subj) != Node: subj = self.getNode(subj)
+        if type(obj) != Node: obj = self.getNode(obj)
         edge = Edge(subj, obj, **kargs)
         if (subj, obj) not in self.edges: self.edges[subj, obj] = []
         self.edges[subj, obj].append(edge)
@@ -107,13 +107,13 @@ class Graph(object):
         return "%s G {%s\n%s\n}" % (graphtype, header, "\n".join(e for e in entries if e))
 
     def getEdgesFrom(self, node):
-        for (subj, obj), edges in self.edges.iteritems():
+        for (subj, obj), edges in self.edges.items():
             if subj == node:
                 for edge in edges:
                     yield edge
 
     def getEdgesTo(self, node):
-        for (subj, obj), edges in self.edges.iteritems():
+        for (subj, obj), edges in self.edges.items():
             if obj == node:
                 for edge in edges:
                     yield edge
@@ -141,7 +141,7 @@ class Graph(object):
                 w = float(edge.weight)
                 if max is None or w > max: max = w
                 if min is None or w < min: min = w
-        if max <> min:
+        if max != min:
             self.theme.scale = (wmax - wmin) / (max - min)
             self.theme.base = wmin - (min * self.theme.scale)
 
@@ -312,7 +312,7 @@ from subprocess import Popen, PIPE
 
 def dot2img(dot, format="jpg", layout="dot"):
     cmd = 'dot -T%s -K%s' % (format, layout)
-    if type(dot) == unicode:
+    if type(dot) == str:
         dot = dot.encode("utf-8")
     p = Popen(cmd, shell=True, stdout=PIPE, stdin=PIPE)
     img, err = p.communicate(dot)
@@ -335,6 +335,4 @@ if __name__ == '__main__':
     g.addEdge(n, "b")
     g.getNode("b", create=False).label = "boer"
 
-    print g.getImage(format="png")
-
-    # print dot2img(dot)
+    print(g.getImage(format="png"))

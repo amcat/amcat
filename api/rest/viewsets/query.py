@@ -38,12 +38,12 @@ class ParametersField(Field):
         super(ParametersField, self).__init__(*args, **kwargs)
 
     def to_representation(self, value):
-        if isinstance(value, basestring):
+        if isinstance(value, str):
             return value
         return json.dumps(value)
 
     def to_internal_value(self, data):
-        if isinstance(data, basestring):
+        if isinstance(data, str):
             try:
                 return json.loads(data)
             except ValueError:

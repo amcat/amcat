@@ -23,7 +23,8 @@ import logging
 import types
 import collections
 import inspect
-from urllib import urlencode
+from itertools import chain
+from urllib.parse import urlencode
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models.query import QuerySet
@@ -187,7 +188,7 @@ class Datatable(object):
         It is now implemented as the hash of `self.url` prepended with the character
         'd'. This prevents names from becoming too long.
         """
-        return "d" + hashlib.sha256(self.url).hexdigest()
+        return "d" + hashlib.sha256(self.url.encode("utf-8")).hexdigest()
 
     def get_default_ordering(self):
         return ("-id",) if "id" in self.get_fields() else ()
@@ -206,7 +207,7 @@ class Datatable(object):
             fields = list(self.resource.get_field_names())
         else:
             # ViewSet
-            fields = self.resource.get_serializer_class()().fields.keys()
+            fields = list(self.resource.get_serializer_class()().fields.keys())
 
         if hasattr(self.resource, 'extra_fields'):
             fields += self.resource.extra_fields(self.extra_args)
@@ -304,7 +305,7 @@ class Datatable(object):
         ID_REPLACE_NUMBER = 9999999999
         replace = lambda arg: (ID_REPLACE_NUMBER if arg == '{id}' else arg)
         if args: args = [replace(arg) for arg in args]
-        if kwargs: kwargs = {k: replace(v) for k, v in kwargs.iteritems()}
+        if kwargs: kwargs = {k: replace(v) for k, v in kwargs.items()}
 
         url = reverse(viewname, urlconf=urlconf, args=args, kwargs=kwargs, current_app=current_app)
         url = url.replace(str(ID_REPLACE_NUMBER), '{id}')
@@ -364,9 +365,6 @@ class Datatable(object):
         if isinstance(value, Model):
             return self._filter(selector + '__%s' % value._meta.pk.attname, value.pk, check_can_filter=check_can_filter)
 
-        if isinstance(value, unicode):
-            value = value.encode('utf-8')
-
         return urlencode({selector: value})
 
     def filter(self, **filters):
@@ -381,15 +379,14 @@ class Datatable(object):
             {{ dt|safe }}
 
         """
-        filters = filters.items()
-        filters = self.filters + filters
-        return self.copy(filters=filters)
+        new_filters = list(chain(self.filters, filters.items()))
+        return self.copy(filters=new_filters)
 
     def add_arguments(self, **args):
         """
         Add additional 'GET' arguments, e.g. cols or search queries 
         """
-        extra_args = self.extra_args + args.items()
+        extra_args = list(chain(self.extra_args, args.items()))
         return self.copy(extra_args=extra_args)
 
     def set_format(self, format):
@@ -403,7 +400,7 @@ class Datatable(object):
         url += "".join(['&%s' % self._filter(sel, val, check_can_filter=False) for (sel, val) in self.extra_args])
         return url
 
-    def __unicode__(self):
+    def __str__(self):
         links = {}
         for fmt in ["api", "csv", "json", "xlsx", "spss", "xhtml"]:
             t = self.set_format(fmt)

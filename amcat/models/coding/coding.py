@@ -24,7 +24,6 @@ A coding is a hook for the coding values on a specific article linked
 to a specific codingjob set.
 """
 
-from __future__ import print_function
 from django.db import transaction
 
 from amcat.tools.toolkit import deprecated
@@ -176,7 +175,7 @@ class CodingValue(AmcatModel):
         if field is None:
             field = next(f for f in self.coding.schema.fields.all() if f.id == self.field_id)
         stype = field.serialiser.deserialised_type
-        if stype == unicode: return self.strval
+        if stype == str: return self.strval
         return self.intval
 
     @property

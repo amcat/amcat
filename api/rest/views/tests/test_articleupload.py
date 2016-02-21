@@ -46,7 +46,7 @@ class TestArticleUploadView(APITestCase):
                                     content_type="application/json", data=json.dumps(data))
         self.assertEqual(response.status_code, expected_status,
                          "Status code {response.status_code}: {response.content}".format(**locals()))
-        return json.loads(response.content)
+        return json.loads(response.content.decode('utf-8'))
             
 
     @amcattest.use_elastic
@@ -63,7 +63,6 @@ class TestArticleUploadView(APITestCase):
 
         arts = [Article.objects.get(pk=a["id"]) for a in result]
 
-        print a
         self.assertEqual(arts[0].headline, a1['headline'])
         self.assertEqual(arts[3].headline, a4['headline'])
 
@@ -92,7 +91,7 @@ class TestArticleUploadView(APITestCase):
         self.assertEqual(article, new_article.parent)
 
         # test posting article and child with uuid
-        p = test_article_dict(uuid=unicode(uuid4()))
+        p = test_article_dict(uuid=str(uuid4()))
         c = test_article_dict(parent=p['uuid'])
         result = self._post([p,c])
         pa, ca = [Article.objects.get(pk=a["id"]) for a in result]

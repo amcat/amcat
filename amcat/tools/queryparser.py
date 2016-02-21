@@ -24,7 +24,6 @@ Decided to roll my own parser since elastic does not support complex phrases
 Also paves the way for more customization, i.e. allowing Lexis style queries
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 import itertools
 import collections
 
@@ -62,7 +61,7 @@ class FieldTerm(object):
         return self.field or "_all"
 
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return str(self).encode('utf-8')
 
 
 class BaseTerm(FieldTerm):
@@ -75,11 +74,8 @@ class BaseTerm(FieldTerm):
 
 
 class Term(BaseTerm):
-    def __unicode__(self):
-        return "{self.qfield}::{self.text}".format(**locals())
-
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return "{self.qfield}::{self.text}".format(**locals())
 
     def get_dsl(self):
         if self.text == "*":
@@ -102,11 +98,8 @@ class Term(BaseTerm):
 
 
 class Quote(BaseTerm):
-    def __unicode__(self):
-        return u'{self.qfield}::QUOTE[{self.text}]'.format(**locals())
-
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return '{self.qfield}::QUOTE[{self.text}]'.format(**locals())
 
     def get_dsl(self):
         return {"match_phrase": {self.qfield: self.text}}
@@ -118,12 +111,9 @@ class Boolean(object):
         self.terms = terms
         self.implicit = implicit
 
-    def __unicode__(self):
-        terms = " ".join(unicode(t) for t in self.terms)
-        return '{self.operator}[{terms}]'.format(**locals())
-
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        terms = " ".join(str(t) for t in self.terms)
+        return '{self.operator}[{terms}]'.format(**locals())
 
     def _get_not_dsl(self, func="get_dsl"):
         if len(self.terms) == 1:
@@ -157,7 +147,7 @@ class Boolean(object):
                     simple_terms[t.qfield].append(c(t.text))
                 else:
                     clauses.append(t.get_filter_dsl())
-            for field, terms in simple_terms.iteritems():
+            for field, terms in simple_terms.items():
                 clauses.append({"terms": {field: terms}})
 
             return {"bool": {"should": clauses}}
@@ -203,13 +193,10 @@ class Span(Boolean, FieldTerm):
         self.slop = slop
         self.in_order = in_order
 
-    def __unicode__(self):
-        terms = " ".join(unicode(t) for t in self.terms)
-        terms = terms.replace("_all::", "")
-        return u'{self.qfield}::PROX/{self.slop}[{terms}]'.format(**locals())
-
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        terms = " ".join(str(t) for t in self.terms)
+        terms = terms.replace("_all::", "")
+        return '{self.qfield}::PROX/{self.slop}[{terms}]'.format(**locals())
 
     def get_dsl(self):
         # we cannot directly use disjunctions in a span query, but we can put the disjunction outside the span
@@ -320,8 +307,8 @@ def _get_grammar(default_fieldname):
 
     COLON = Literal(":").suppress()
     TILDE = Literal("~").suppress()
-    LETTERS = u''.join(unichr(c) for c in xrange(65536)
-                       if not unichr(c).isspace() and unichr(c) not in '":()~')
+    LETTERS = ''.join(chr(c) for c in range(65536)
+                       if not chr(c).isspace() and chr(c) not in '":()~')
 
     # terms
     term = Word(LETTERS)

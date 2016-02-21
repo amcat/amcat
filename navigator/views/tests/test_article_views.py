@@ -232,14 +232,14 @@ class TestArticleViews(amcattest.AmCATTestCase):
         p1.guest_role = role_reader
         p1.save()
         response = test(url)
-        self.assertIn("Dit is de tekst", response.content)
+        self.assertIn(b"Dit is de tekst", response.content)
 
         # but not if guest role is metareader 
         p1.guest_role = role_metareader
         p1.save()
         response = test(url, can_read_article=False)
-        self.assertNotIn("Dit is de tekst", response.content)
-        self.assertIn("hoofdlijn", response.content)
+        self.assertNotIn(b"Dit is de tekst", response.content)
+        self.assertIn(b"hoofdlijn", response.content)
 
         # and an error if there is no guest role at all
         

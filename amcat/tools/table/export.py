@@ -19,7 +19,7 @@
 
 # exportfunction(table, outfile
 
-from cStringIO import StringIO
+
 import csv
 import zipfile
 import io
@@ -30,6 +30,11 @@ from openpyxl import Workbook
 from openpyxl.writer.dump_worksheet import ExcelDumpWriter
 import re
 import datetime
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 # Used in _get_value()
 INT_RE = re.compile('^[0-9]+$')
@@ -82,7 +87,7 @@ class CSV(TableExporter):
     def to_stream(self, table, stream, encoding):
         def encode(val):
             if val is None: return val
-            return unicode(val).encode(encoding)
+            return str(val).encode(encoding)
 
         csvwriter = csv.writer(stream, dialect=self.dialect)
 
@@ -100,7 +105,7 @@ class CSV_semicolon(CSV):
 
 
 def _convert_value(value):
-    if not isinstance(value, basestring):
+    if not isinstance(value, str):
         return value
 
     if INT_RE.match(value) is not None:
@@ -119,7 +124,7 @@ def _convert_value(value):
 def _get_values(table, row):
     # TODO: Remove hacks by accessing type info?
     if table.rowNamesRequired:
-        yield unicode(row)
+        yield str(row)
 
     for column in table.getColumns():
         yield _convert_value(table.getValue(row, column))
@@ -133,9 +138,9 @@ class XLSX(TableExporter):
         ws = wb.create_sheet()
 
         # Determine columns. We may need an extra (first) column which 'names' the row
-        columns = list(map(unicode, list(table.getColumns())))
+        columns = list(map(str, list(table.getColumns())))
         if table.rowNamesRequired:
-            columns.insert(0, u"")
+            columns.insert(0, "")
         ws.append(columns)
 
         # Write rows to worksheet

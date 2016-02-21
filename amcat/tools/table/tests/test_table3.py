@@ -1,7 +1,7 @@
 from amcat.tools import amcattest
 from amcat.tools.table import tableoutput
 from amcat.tools.table.table3 import Table, ListTable, ObjectTable, ObjectColumn, \
-    SortedTable, ColumnViewTable, PostProcessTable
+    SortedTable, ColumnViewTable
 
 
 class TestTable(amcattest.AmCATTestCase):
@@ -18,13 +18,15 @@ class TestTable(amcattest.AmCATTestCase):
                             [74321, 8, 9],
                             [4, 5, "asdf"],
                       ])
-        result = tableoutput.table2ascii(t)
-        correct = u'''
-a1    | a2 | a3
-------+----+-----
-1     | 2  | 3
-74321 | 8  | 9
-4     | 5  | asdf'''
+        result = tableoutput.table2unicode(t)
+        correct = '''
+ ╔═══════╤════╤══════╗
+ ║ a1    │ a2 │ a3   ║
+ ╟───────┼────┼──────╢
+ ║ 1     │ 2  │ 3    ║
+ ║ 74321 │ 8  │ 9    ║
+ ║ 4     │ 5  │ asdf ║
+ ╚═══════╧════╧══════╝'''
         self.assertEquals(_striplines(result), _striplines(correct.strip()))
 
     def test_object_table(self):
@@ -52,20 +54,18 @@ L -1   K -1 K         L
 UKKKKKKHKKKKHKKKKKKKKKX'''
         self.assertEquals(_striplines(result), _striplines(correct.strip()))
 
-    def test_sort_preprocess(self):
-        """Do the wrapped tables work?"""
+    def test_sort(self):
+        """Do wrapped tables work?"""
         t = ListTable(colnames=["a1", "a2", "a3"],
                       data=[[1, 2, 3], [7, 8, 9], [4, 5, -4]])
 
-        s = SortedTable(t, t.getColumns()[1])
+        s = SortedTable(t, key=lambda row: row[1])
         self.assertEqual([list(row) for row in s], [[1, 2, 3], [4, 5, -4], [7, 8, 9]])
         v = ColumnViewTable(s, ["a1", "a3"])
         self.assertEqual([list(row) for row in v], [[1, 3], [4, -4], [7, 9]])
 
-        p = PostProcessTable(t, valuefunc=lambda t, x, r, c: x * x)
-        self.assertEqual([list(row) for row in p], [[1, 4, 9], [49, 64, 81], [16, 25, 16]])
-        s = SortedTable(p, t.getColumns()[2])
-        self.assertEqual([list(row) for row in s], [[1, 4, 9], [16, 25, 16], [49, 64, 81]])
+        s = SortedTable(t, key=lambda row: row[2])
+        self.assertEqual([list(row) for row in s], [[4, 5, -4], [1, 2, 3], [7, 8, 9]])
 
 
 def _striplines(x):

@@ -32,31 +32,29 @@ this organisation!
  - decorators
  - sequence functions
  - mapping functions
- - string/unicode functions
+ - string functions
  - date(time) functions
  - process handling and external processes
  - type checking
  - misc functions
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
-from functools import partial
+
+import base64
+import collections
+import datetime
+import itertools
+import logging
+import random
+import re
+import string
+import subprocess
+import threading
 import time
 import warnings
-import random
-import types
-import datetime
-import re
-import collections
-import threading
-import subprocess
-import base64
-import logging
-import string
-from django.core.serializers.json import DjangoJSONEncoder
-
 from collections import OrderedDict, Callable
-import itertools
+
+import six
 
 log = logging.getLogger(__name__)
 
@@ -143,9 +141,9 @@ def join(seq, sep="\t", fmt="%s", none=''):
     """
 
     def joinformat(elem, fmt, none):
-        """fmt%elem with handling for none, unicode"""
+        """fmt%elem with handling for none, str"""
         if elem is None: return none
-        if type(elem) == unicode:
+        if type(elem) == str:
             elem = elem.encode('latin-1', 'replace')
         return fmt % elem
 
@@ -161,7 +159,7 @@ def totuple(v):
     """Function to convert `value` to a tuple."""
     if v is None:
         return ()
-    elif type(v) in (str, unicode, int, long):
+    elif type(v) in (str, int):
         return v,
     return v
 
@@ -177,7 +175,7 @@ def idlist(idcolumn):
     @param idcolumn: value to convert to a tuple"""
     if not idcolumn: return ()
 
-    if type(idcolumn) in (str, unicode):
+    if isinstance(idcolumn, str):
         return (idcolumn,)
 
     raise TypeError("%s-like objects not supported" % repr(type(idcolumn)))
@@ -187,7 +185,7 @@ def grouper(iterable, n, fillvalue=None):
     """Collect data into fixed-length chunks or blocks."""
     if n < 1:
         raise ValueError("Size of {} invalid for grouper() / splitlist().".format(n))
-    return itertools.izip_longest(fillvalue=fillvalue, *([iter(iterable)] * n))
+    return itertools.zip_longest(fillvalue=fillvalue, *([iter(iterable)] * n))
 
 
 def splitlist(iterable, itemsperbatch=100):
@@ -252,7 +250,7 @@ class DefaultOrderedDict(OrderedDict):
             args = tuple()
         else:
             args = self.default_factory,
-        return type(self), args, None, None, self.items()
+        return type(self), args, None, None, list(self.items())
 
     def copy(self):
         return self.__copy__()
@@ -263,7 +261,7 @@ class DefaultOrderedDict(OrderedDict):
     def __deepcopy__(self, memo):
         import copy
         return type(self)(self.default_factory,
-                          copy.deepcopy(self.items()))
+                          copy.deepcopy(list(self.items())))
 
     def __repr__(self, **kwargs):
         return 'OrderedDefaultDict(%s, %s)' % (self.default_factory,
@@ -274,41 +272,41 @@ class DefaultOrderedDict(OrderedDict):
 ##                   String/Unicode functions                            ##
 ###########################################################################
 
-ACCENTS_MAP = {u'a': u'\xe0\xe1\xe2\xe3\xe4\xe5',
-               u'c': u'\xe7',
-               u'e': u'\xe9\xe8\xea\xeb',
-               u'i': u'\xec\xed\xee\xef',
-               u'n': u'\xf1',
-               u'o': u'\xf3\xf2\xf4\xf6\xf8',
-               u'u': u'\xf9\xfa\xfb\xfc',
-               u'y': u'\xfd\xff',
+ACCENTS_MAP = {'a': '\xe0\xe1\xe2\xe3\xe4\xe5',
+               'c': '\xe7',
+               'e': '\xe9\xe8\xea\xeb',
+               'i': '\xec\xed\xee\xef',
+               'n': '\xf1',
+               'o': '\xf3\xf2\xf4\xf6\xf8',
+               'u': '\xf9\xfa\xfb\xfc',
+               'y': '\xfd\xff',
 
-               u'A': u'\xc0\xc1\xc2\xc3\xc4\xc5',
-               u'C': u'\xc7',
-               u'E': u'\xc8\xc9\xca\xcb',
-               u'I': u'\xcc\xcd\xce\xcf',
-               u'N': u'\xd1',
-               u'O': u'\xd2\xd3\xd4\xd5\xd6\xd8',
-               u'U': u'\xd9\xda\xdb\xdc',
-               u'Y': u'\xdd\xdf',
+               'A': '\xc0\xc1\xc2\xc3\xc4\xc5',
+               'C': '\xc7',
+               'E': '\xc8\xc9\xca\xcb',
+               'I': '\xcc\xcd\xce\xcf',
+               'N': '\xd1',
+               'O': '\xd2\xd3\xd4\xd5\xd6\xd8',
+               'U': '\xd9\xda\xdb\xdc',
+               'Y': '\xdd\xdf',
 
-               u's': u'\u0161\u015f',
-               u'ss': u'\xdf',
-               u'ae': u'\xe6',
-               u'AE': u'\xc6',
+               's': '\u0161\u015f',
+               'ss': '\xdf',
+               'ae': '\xe6',
+               'AE': '\xc6',
 
 
-               u'?': u'\xbf',
-               u"'": u'\x91\x92\x82\u2018\u2019\u201a\u201b\xab\xbb\xb0',
-               u'"': u'\x93\x94\x84\u201c\u201d\u201e\u201f\xa8',
-               u'-': u'\x96\x97\u2010\u2011\u2012\u2013\u2014\u2015',
-               u'|': u'\xa6',
-               u'...': u'\x85\u2026\u2025',
-               u'.': u'\u2024',
-               u' ': u'\x0c\xa0',
-               u'\n': u'\r',
-               u"2": u'\xb2',
-               u"3": u'\xb3',
+               '?': '\xbf',
+               "'": '\x91\x92\x82\u2018\u2019\u201a\u201b\xab\xbb\xb0',
+               '"': '\x93\x94\x84\u201c\u201d\u201e\u201f\xa8',
+               '-': '\x96\x97\u2010\u2011\u2012\u2013\u2014\u2015',
+               '|': '\xa6',
+               '...': '\x85\u2026\u2025',
+               '.': '\u2024',
+               ' ': '\x0c\xa0',
+               '\n': '\r',
+               "2": '\xb2',
+               "3": '\xb3',
                #u"(c)" : u'\xa9',
 }
 """Map of unaccented : accented pairs.
@@ -321,15 +319,15 @@ if appropriate (e.g. german sz, ellipsis)"""
 def stripAccents(s, usemap=ACCENTS_MAP, latin1=False):
     """Replace accented characters in s by their unaccepted equivalents
 
-    @param s: the string to strip accents from. If it is not a unicode object
-      it is first converted using L{unicode}C{(.., 'latin-1')}
+    @param s: the string to strip accents from. If it is not a str object
+      it is first converted using L{str}C{(.., 'latin-1')}
     @param usemap: an optional translation map to use
-    @return: a unicode string containing the translated input
+    @return: a str string containing the translated input
     """
     #TODO: This is probably not very efficient! Creating a reverse map and
     #Iterating the input while building the output would be better...
     if not s: return s
-    if type(s) != unicode: s = unicode(s, "latin-1")
+    if type(s) != str: s = str(s, "latin-1")
     for key, val in usemap.items():
         for trg in val:
             if latin1 and val.encode('latin-1', 'replace').decode('latin-1') == val:
@@ -340,7 +338,7 @@ def stripAccents(s, usemap=ACCENTS_MAP, latin1=False):
 
 
 def random_alphanum(size=10):
-    return ''.join([random.choice(string.letters + string.digits) for i in range(size)])
+    return ''.join([random.choice(string.ascii_letters + string.digits) for i in range(size)])
 
 
 ###########################################################################
@@ -354,7 +352,7 @@ MONTHNAMES = (('jan', 'janv', 'ener', 'gennaio'),
               ('may', 'mai', 'mei', 'mayo', 'maggio', 'm\xe4rz'),
               ('jun', 'juin', 'giugno'),
               ('jul', 'juil', 'luglio'),
-              ('aug', 'aout', 'agos', u'ao\xfbt'),
+              ('aug', 'aout', 'agos', 'ao\xfbt'),
               ('sep', 'setem', 'settembre'),
               ('oct', 'okt', 'out', 'ottobre'),
               ('nov'),
@@ -497,7 +495,7 @@ def read_date(string, lax=False, rejectPre1970=False, american=False):
 
         if not time: time = (0, 0, 0)
         return datetime.datetime(*(date + time))
-    except Exception, e:
+    except Exception as e:
         import traceback
 
         trace = traceback.format_exc()
@@ -509,48 +507,6 @@ def read_date(string, lax=False, rejectPre1970=False, american=False):
 
 
 readDate = read_date
-
-
-def writeDate(datetime, lenient=False):
-    """Convenience method for writeDateTime(time=False)"""
-    return writeDateTime(datetime, lenient=lenient, time=False)
-
-
-def _writePrior1900(dt, year, seconds, time):
-    """strftime doesn't work for dates prior to 1900. When found in
-    writeDateTime this function is called to 'manually' write
-    the date."""
-    date = ''
-    if year: date += "%s-" % dt.year
-    date += "%0.2i-%0.2i" % (dt.month, dt.day)
-    if time: date += " %0.2i:%0.2i" % (dt.hour, dt.minute)
-
-    if seconds:
-        return date + ':%0.2i' % dt.second
-    return date
-
-
-def writeDateTime(datetimeObj, lenient=False, year=True, seconds=True, time=True):
-    """Return the datetime (stlib or mx) as ISOFormat string.
-
-    @param datetimeObj: the datetime (mx.DateTime or stlib datetime) to convert
-    @param lenient: if True, return None if datetime is None and silently
-      return strings unmodified rather than raise an Exception
-    @param year: if True, include the year of the date
-    @param seconds: if True, include the seconds in the time part
-    @param time: if False, print only the date part"""
-    #Note: use strftime for mx and datetime compatability
-    if lenient and ((datetimeObj is None)
-                    or type(datetimeObj) in types.StringTypes):
-        return datetimeObj
-
-    if datetimeObj.year < 1900:
-        return _writePrior1900(datetimeObj, year, seconds, time)
-
-    format = "%Y-%m-%d" if year else "%m-%d"
-    if time:
-        format += " %H:%M:%S" if seconds else " %H:%M"
-    return datetimeObj.strftime(format)
 
 
 def to_datetime(date):
@@ -630,16 +586,16 @@ def executepipe(cmd, listener=None, listenOut=False, outonly=False, **kargs):
     errr = _Reader(p.stderr, "err", listener)
     outr.start()
     errr.start()
-    #print "Yielding input pipe"
+    #print("Yielding input pipe")
     yield p.stdin
-    #print "Closing input pipe"
+    #print("Closing input pipe")
     p.stdin.close()
 
-    #print "Joining outr"
+    #print("Joining outr")
     outr.join()
-    #print "Joining errr"
+    #print("Joining errr")
     errr.join()
-    #print "Returning..."
+    #print("Returning...")
     if outonly:
         e = errr.out.strip()
         if e: raise Exception("Error on executing %r:\n%s" % (cmd, e))
@@ -653,7 +609,7 @@ def executepipe(cmd, listener=None, listenOut=False, outonly=False, **kargs):
 
 def is_sequence(obj, exclude_strings=False):
     """Check whether obj is a sequence, possibly excluding strings"""
-    if exclude_strings and isinstance(obj, basestring):
+    if exclude_strings and isinstance(obj, six.string_types):
         return False
     return hasattr(obj, "__getslice__")
 

@@ -30,11 +30,11 @@ class AmcatModel(models.Model):
         abstract=True
         app_label = "model"
 
-    def __unicode__(self):
+    def __str__(self):
         try:
-            return unicode(getattr(self, self.__label__))
+            return str(getattr(self, self.__label__))
         except AttributeError:
-            return unicode(self.id)
+            return str(self.id)
 
     @classmethod
     def get_or_create(cls, **attributes):

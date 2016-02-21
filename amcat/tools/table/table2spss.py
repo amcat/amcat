@@ -1,8 +1,8 @@
 #from amcat.models.coding import codingjob
-import tempfile
 
 from amcat.tools import toolkit, idlabel
 
+import tempfile
 import sys
 import re
 import datetime
@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 def clean(s, maxchars=None):
     if type(s) == str: s = s.decode('latin-1')
-    if type(s) == unicode:
+    if type(s) == str:
         s = s.encode('ascii', 'replace')
     else:
         s = str(s)
@@ -31,7 +31,7 @@ def getSPSSFormat(type):
     if type == float:
         return " (F8.3)"
 
-    if type in (unicode, str):
+    if type == str:
         return " (A255)"
 
     if type == datetime.datetime:
@@ -47,7 +47,7 @@ def getVarName(col, seen):
     fn = re.sub('^_+', '', fn)
     fn = fn[:16]
     if fn in seen:
-        for i in xrange(400):
+        for i in range(400):
             if "%s_%i" % (fn, i) not in seen:
                 fn = "%s_%i" % (fn, i)
                 break
@@ -81,7 +81,7 @@ def table2spss(t, writer=sys.stdout, saveas=None):
             typ = vartypes[col]
             val = t.getValue(row, col)
             oval = val
-            if val and (typ in (str, unicode)):
+            if val and (typ == str):
                 val = '"%s"' % clean(val)
             if val and typ == datetime.datetime:
                 val = val.strftime("%d/%m/%Y")
@@ -91,7 +91,7 @@ def table2spss(t, writer=sys.stdout, saveas=None):
     writer.write("END DATA.\n")
 
     log.debug("Writing var labels")
-    varlabels = " / ".join("%s '%s'" % (varnames[c], clean(unicode(c), 55)) for c in cols)
+    varlabels = " / ".join("%s '%s'" % (varnames[c], clean(str(c), 55)) for c in cols)
     writer.write("VARIABLE LABELS %s.\n" % varlabels)
 
     log.debug("Writing value labels")
@@ -99,7 +99,7 @@ def table2spss(t, writer=sys.stdout, saveas=None):
         vl = valuelabels[c]
         if vl:
             writer.write("VALUE LABELS %s\n" % varnames[c])
-            for id, lbl in sorted(vl.iteritems()):
+            for id, lbl in sorted(vl.items()):
                 writer.write("  %i  '%s'\n" % (id, clean(lbl, 250)))
             writer.write(".\n")
     if saveas:
@@ -125,12 +125,12 @@ def table2sav(t, filename=None):
     log.debug("Creating SPSS syntax")
     log.debug("Executing PSPP")
     pspp = toolkit.executepipe("pspp -b")
-    writer = pspp.next()
+    writer = next(pspp)
     writer = EchoWriter(writer)
     log.debug("Creating SPS script and sending to PSPP")
     table2spss(t, writer=writer, saveas=filename)
     log.debug("Closing PSPP")
-    out, err = pspp.next()
+    out, err = next(pspp)
     log.debug("PSPPP err: %s" % err)
     log.debug("PSPPP out: %s" % out)
     err = err.replace('pspp: error creating "pspp.jnl": Permission denied', '')

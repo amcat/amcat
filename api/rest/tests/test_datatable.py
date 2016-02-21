@@ -97,9 +97,9 @@ class TestDatatable(amcattest.AmCATTestCase):
 
     def test_order_by(self):
         d = Datatable(ProjectResource).order_by("name")
-        self.assertTrue("name" in unicode(d))
-        self.assertTrue('["name", "asc"]' in unicode(d))
-        self.assertTrue('["name", "desc"]' in unicode(d.order_by("-name")))
+        self.assertTrue("name" in str(d))
+        self.assertTrue('["name", "asc"]' in str(d))
+        self.assertTrue('["name", "desc"]' in str(d.order_by("-name")))
 
         with self.assertRaises(ValueError):
             d.order_by("bla")
@@ -110,8 +110,8 @@ class TestDatatable(amcattest.AmCATTestCase):
     def test_search(self):
         # Resources are not searchable (yet?)
         d = Datatable(ProjectResource)
-        self.assertIn('"searching": false', unicode(d))
+        self.assertIn('"searching": false', str(d))
 
         # Articleset viewsets are searchable
         d = Datatable(ArticleSetViewSet, url_kwargs={"project": 1})
-        self.assertIn('"searching": true', unicode(d))
+        self.assertIn('"searching": true', str(d))

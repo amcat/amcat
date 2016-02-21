@@ -1,4 +1,3 @@
-from __future__ import print_function, unicode_literals
 
 import datetime
 import os.path
@@ -14,8 +13,8 @@ class TestLexisNexis(amcattest.AmCATTestCase):
 
         self.dir = os.path.join(os.path.dirname(__file__), 'test_files', 'lexisnexis')
 
-        self.test_text = open(os.path.join(self.dir, 'test.txt')).read().decode('utf-8')
-        self.test_text2 = open(os.path.join(self.dir, 'test2.txt')).read().decode('utf-8')
+        self.test_text = open(os.path.join(self.dir, 'test.txt'), encoding="utf-8").read()
+        self.test_text2 = open(os.path.join(self.dir, 'test2.txt'), encoding="utf-8").read()
 
         self.test_body_sols = json.load(open(os.path.join(self.dir, 'test_body_sols.json')))
         self.test_header_sols = json.load(open(os.path.join(self.dir, 'test_header_sols.json')))
@@ -143,16 +142,16 @@ class TestLexisNexis(amcattest.AmCATTestCase):
 
         articleset = amcattest.create_test_set()
         ln = LexisNexis(project=amcattest.create_test_project().id,
-                        file=File(open(os.path.join(self.dir, 'test.txt'))),
+                        file=File(open(os.path.join(self.dir, 'test.txt'), "rb")),
                         articlesets=[articleset.id])
 
         arts = list(ArticleSet.objects.get(id=ln.run()[0]).articles.all())
         self.assertEqual(len(arts), len(self.test_body_sols))
-        self.assertIn("LexisNexis query: u'(((Japan OR Fukushima)", ln.articlesets[0].provenance)
+        self.assertIn("LexisNexis query: '(((Japan OR Fukushima)", ln.articlesets[0].provenance)
 
         articleset = amcattest.create_test_set()
         ln = LexisNexis(project=amcattest.create_test_project().id,
-                        file=File(open(os.path.join(self.dir, 'test2.txt'))),
+                        file=File(open(os.path.join(self.dir, 'test2.txt'), "rb")),
                         articlesets=[articleset.id])
 
         arts = ln.run()

@@ -19,7 +19,6 @@
 
 """ORM Module representing projects"""
 
-from __future__ import unicode_literals, print_function, absolute_import
 import itertools
 from datetime import datetime
 

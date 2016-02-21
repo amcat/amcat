@@ -82,9 +82,9 @@ class FileUploadForm(RawFileUploadForm):
         return 'latin-1', bytes.decode('latin-1')
 
     def decode_file(self, f):
-        bytes = f.read()
-        enc, text = self.decode(bytes)
-        return DecodedFile(f.name, f, bytes, enc, text)
+        enc, text = self.decode(f.read())
+        name = f.file.name if isinstance(f, File) else f.name
+        return File(open(name, "r", encoding=enc), name=f.name)
 
     def get_uploaded_text(self):
         """Returns a DecodedFile object representing the file"""
@@ -143,7 +143,7 @@ def namedtuples_from_reader(reader, encoding=None):
     returns a sequence of namedtuples from a (csv-like) reader which should yield the header followed by value rows
     """
     
-    header = reader.next()
+    header = next(iter(reader))
     class Row(collections.namedtuple("Row", header, rename=True)):
         column_names=header
         def __getitem__(self, key):
@@ -156,7 +156,7 @@ def namedtuples_from_reader(reader, encoding=None):
         
     for values in reader:
         if encoding is not None:
-            values = [x.decode(encoding) for x in values]
+            values = [x.decode(encoding) if isinstance(x, bytes) else x for x in values]
         if len(values) < len(header):
             values += [None] * (len(header) - len(values))
         yield Row(*values)
@@ -170,27 +170,26 @@ class CSVUploadForm(FileUploadForm):
         return self.get_reader(reader_class=namedtuple_csv_reader)
     
     def get_reader(self, reader_class=namedtuple_csv_reader):
-        f = self.files['file']
+        file = self.decode_file(self.files['file'])
         
-        if f.name.endswith(".xlsx"):
+        if file.name.endswith(".xlsx"):
             if reader_class != namedtuple_csv_reader:
-                raise Exception("Cannot handle xlsx files with non-default reader, sorry!")
-            return namedtuple_xlsx_reader(f)
-            
-        d = self.cleaned_data['dialect']
-        if not d: d = "autodetect"
+                raise ValueError("Cannot handle xlsx files with non-default reader, sorry!")
+            return namedtuple_xlsx_reader(file)
+
+        d = self.cleaned_data['dialect'] or "autodetect"
+
         if d == 'autodetect':
-            dialect = csv.Sniffer().sniff(f.readline())
-            f.seek(0)
+            dialect = csv.Sniffer().sniff(file.readline())
+            file.seek(0)
             if dialect.delimiter not in "\t,;":
                 dialect = csv.get_dialect('excel')
         else:
             dialect = csv.get_dialect(d)
 
-        enc = self.cleaned_data['encoding']
-        encoding = {'encoding' : ENCODINGS[int(enc)]} if enc and reader_class == namedtuple_csv_reader else {}
-        return reader_class(f, dialect=dialect, **encoding)
-    
+        return reader_class(file, dialect=dialect)
+
+
 class ZipFileUploadForm(FileUploadForm):
     file = forms.FileField(help_text="You can also upload a zip file containing the desired files. Uploading very large files can take a long time. If you encounter timeout problems, consider uploading smaller files")
         
@@ -218,20 +217,17 @@ class ZipFileUploadForm(FileUploadForm):
         """
         with TemporaryFolder(*args, **kargs) as tempdir:
             with zipfile.ZipFile(zip_file) as zf:
-                files = []
                 for name in zf.namelist():
                     if name.endswith("/"): continue # skip folders
-                    # using zipfile.extract(name, tempdir) gives an error if name contains non-ascii characters
-                    # this may be related to http://bugs.python.org/issue17656, but we are using 2.7.3
-                    # strange enough, the issue does not occur in 'runserver' mode, but file handling might be different?
-                    fn = os.path.basename(name.encode("ascii", "ignore"))
+                    fn = os.path.basename(name)
                     # use mkstemp instead of temporary folder because we don't want it to be deleted
                     # it will be deleted on __exit__ anyway since the whole tempdir will be deleted
                     _handle, fn = tempfile.mkstemp(suffix="_"+fn, dir=tempdir)
-                    f = open(fn, 'w')
+                    f = open(fn, 'wb')
                     shutil.copyfileobj(zf.open(name), f)
                     f.close()
-                    with open(fn) as fh:
+
+                    with open(os.path.join(tempdir, fn), "rb") as fh:
                         yield File(fh, name=name)
 
 

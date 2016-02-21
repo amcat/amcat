@@ -1,4 +1,3 @@
-from __future__ import unicode_literals, print_function
 
 from datetime import datetime
 from os import path
@@ -18,7 +17,7 @@ class FactiviaTest(amcattest.AmCATTestCase):
             'articlesets': [amcattest.create_test_set().id],
             'file': SimpleUploadedFile.from_dict({
                 "filename": filename,
-                "content": open(test_file).read(),
+                "content": open(test_file, "rb").read(),
                 "content_type": "text/html"
             })
         })

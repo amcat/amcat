@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from __future__ import unicode_literals
 from functools import partial
+from itertools import chain
 from operator import getitem, attrgetter
 from collections import OrderedDict
 from django.core.exceptions import ValidationError
@@ -41,8 +41,8 @@ def wrap_query_action(qaction):
 class QueryActionMetadata(SimpleMetadata):
     def determine_metadata(self, request, view):
         form = view.get_form()
-        field_names = form.fields.keys()
-        fields = map(partial(getitem, form), field_names)
+        field_names = list(form.fields.keys())
+        fields = list(map(partial(getitem, form), field_names))
 
         return {
             "help_texts": OrderedDict(zip(field_names, [f.help_text.strip() or None for f in fields])),
@@ -86,8 +86,8 @@ class QueryActionView(APIView):
     def get_articlesets(self):
         # Articlesets are given by GET parameter `sets` and separated by commas
         # TODO: GET['sets'] and POST['articlesets'] are redundant, possibly there's a better solution
-        articleset_ids = map(int, filter(unicode.isdigit,
-                        self.request.GET.get("sets", "").split(",") + self.request.POST.getlist('articlesets')))
+        articleset_ids = chain(self.request.GET.get("sets", "").split(","), self.request.POST.getlist('articlesets'))
+        articleset_ids = map(int, filter(str.isdigit, articleset_ids))
         articlesets = self.project.all_articlesets().filter(id__in=articleset_ids)
         return articlesets.only("id", "name")
 
@@ -96,8 +96,8 @@ class QueryActionView(APIView):
         # Codingjobs are given by GET parameter `jobs` and separated by commas. If *no* jobs are
         # given, we also return no jobs, in contrast to get_articlesets which yields all articlesets
         # belonging to the current project.
-        codingjob_ids = map(int, filter(unicode.isdigit,
-                        self.request.GET.get("jobs", "").split(",") + self.request.POST.getlist('codingjobs')))
+        codingjob_ids = chain(self.request.GET.get("jobs", "").split(","), self.request.POST.getlist('codingjobs'))
+        codingjob_ids = map(int, filter(str.isdigit, codingjob_ids))
         codingjobs = self.project.codingjob_set.filter(id__in=codingjob_ids).only("id", "name")
         return codingjobs if codingjob_ids else CodingJob.objects.none()
 
@@ -112,7 +112,7 @@ class QueryActionView(APIView):
         return self.get_query_action().get_form()
 
     def get_view_name(self):
-        from urls import get_action_name
+        from .urls import get_action_name
         return get_action_name(self).title()
 
     def get_view_description(self, html=False):

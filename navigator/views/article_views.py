@@ -37,16 +37,13 @@ import navigator.forms
 class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DetailView):
     model = Article
 
-
-
-
     def has_permission(self, perm):
         if perm >= authorisation.ROLE_PROJECT_WRITER:
             return False
         # permission to view/read an article can be granted through any of its sets (!)
         asets = ArticleSet.objects.filter(articles=self.get_object()).only("project")
         projects = {aset.project for aset in asets}
-        projects |= set(Project.objects.filter(articlesets__contains=asets))
+        projects |= set(Project.objects.filter(articlesets__id__in=asets.values_list("id", flat=True)))
         
         return any(self.request.user.userprofile.has_role(perm, p)
                    for p in projects)
@@ -268,7 +265,7 @@ def parse_sentence_name(name):
 
     try:
         return int(name.split("-")[1])
-    except IndexError, ValueError:
+    except (IndexError, ValueError):
         pass
 
 def get_sentence_ids(post):
@@ -306,6 +303,6 @@ class ArticleSplitView(ProjectFormView):
         ctx = super(ArticleSplitView, self).get_context_data(**kwargs)
         sentences = sbd.get_or_create_sentences(self.article).only("sentence", "parnr")
         ctx["sentences"] = _get_sentences(sentences)
-        ctx["sentences"].next() # skip headline
+        next(ctx["sentences"]) # skip headline
         return ctx
 

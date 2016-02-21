@@ -100,7 +100,7 @@ def order_fields(fields=(), classes=()):
             for cls in classes + (self.__class__,):
                 # Sort according to creation_counter
                 key_order += [field[0] for field in sorted(
-                    cls.base_fields.iteritems(), key=(
+                    cls.base_fields.items(), key=(
                         lambda f: f[1].creation_counter
                     )
                 )]

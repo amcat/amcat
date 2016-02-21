@@ -18,7 +18,6 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from __future__ import unicode_literals, print_function, absolute_import
 import datetime
 import logging
 
@@ -341,7 +340,7 @@ class MetaColumn(table3.ObjectColumn):
     def getCell(self, row):
         obj = getattr(row, self.field.object)
         if obj is not None:
-            return unicode(getattr(obj, self.field.attr))
+            return str(getattr(obj, self.field.attr))
 
 
 class MappingMetaColumn(MetaColumn):
@@ -461,7 +460,7 @@ class GetCodingJobResults(Script):
         for schemafield in self.bound_form.schemafields:
             prefix = _get_field_prefix(schemafield)
             if self.options[prefix + "_included"]:
-                options = {k[len(prefix) + 1:]: v for (k, v) in self.options.iteritems() if k.startswith(prefix)}
+                options = {k[len(prefix) + 1:]: v for (k, v) in self.options.items() if k.startswith(prefix)}
 
                 for label, function in schemafield.serialiser.get_export_columns(**options):
                     table.addColumn(CodingColumn(schemafield, label, function))
@@ -484,6 +483,12 @@ class GetCodingJobResults(Script):
                 jobs=",".join(str(j) for j in codingjobs),
                 now=datetime.datetime.now(), ext=format.label
             )
+
+            if isinstance(result, str):
+                # Results need to be encoded before passing it to b64encode. However, not all
+                # formats return strings. For example, xlsx already produces bytes.
+                result = result.encode("utf-8")
+
 
             result = {
                 "type": "download",

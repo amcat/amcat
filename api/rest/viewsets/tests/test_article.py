@@ -28,13 +28,13 @@ class TestArticleViewSet(APITestCase):
 
 
     def get(self, url):
-        return json.loads(Client().get(url + "?format=json").content)
+        return json.loads(Client().get(url + "?format=json").content.decode('utf-8'))
 
     def post(self, url, data, as_user):
         c = Client()
         c.login(username=as_user.username, password="test")
         res = c.post(url + "?format=json", data)
-        return res.status_code, json.loads(res.content)
+        return res.status_code, json.loads(res.content.decode('utf-8'))
 
     @amcattest.use_elastic
     def test_post(self):

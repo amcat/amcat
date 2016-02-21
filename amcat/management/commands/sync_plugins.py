@@ -18,7 +18,7 @@
 ###########################################################################
 from functools import partial
 from inspect import isclass
-from itertools import imap, chain
+from itertools import chain
 from django.core.management.base import BaseCommand
 from amcat.models import Plugin, PluginType
 from amcat.contrib import plugins
@@ -62,7 +62,7 @@ def _get_plugins(module_path, plugin_module):
 
 def get_plugins(module_paths, plugin_module=PLUGIN_MODULE):
     """Return all classes which represent a plugin. Search modules `directories`."""
-    return chain.from_iterable(imap(partial(_get_plugins, plugin_module=plugin_module), module_paths))
+    return chain.from_iterable(map(partial(_get_plugins, plugin_module=plugin_module), module_paths))
 
 def get_qualified_name(cls):
     return cls.__module__ + "." + cls.__name__

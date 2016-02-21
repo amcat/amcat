@@ -1,8 +1,13 @@
 import csv
-from cStringIO import StringIO
+import io
 
 from amcat.tools import amcattest
 from amcat.scripts.actions.import_codebook import ImportCodebook
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 def _run_test(bytes, **options):
     if 'project' not in options: options['project'] = amcattest.create_test_project().id
@@ -15,20 +20,15 @@ def _run_test(bytes, **options):
         f.write(bytes)
         f.flush()
 
-        return ImportCodebook(dict(file=File(open(f.name)), **options)).run()
+        return ImportCodebook(dict(file=File(open(f.name, "rb")), **options)).run()
 
 
 def _csv_bytes(rows, encoding="utf-8", **kargs):
-    def encode(x):
-        if x is None or isinstance(x, str): return x
-        return unicode(x).encode(encoding)
-
-
-    out = StringIO()
+    out = io.StringIO()
     w = csv.writer(out, **kargs)
     for row in rows:
-        w.writerow(map(encode, row))
-    return out.getvalue()
+        w.writerow(row)
+    return out.getvalue().encode(encoding)
 
 
 class TestImportCodebook(amcattest.AmCATTestCase):

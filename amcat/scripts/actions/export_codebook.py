@@ -18,7 +18,6 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from __future__ import unicode_literals
 
 import logging
 
@@ -115,13 +114,13 @@ class ExportCodebook(Script):
         
 def _get_tree(codebook):
     parents = {cc.code : cc.parent for cc in codebook.codebookcodes}
-    for root in (code for (code, parent) in parents.iteritems() if parent is None):
+    for root in (code for (code, parent) in parents.items() if parent is None):
         for row in _get_tree_rows(parents, 0, root):
             yield row
 
 
 def _get_tree_rows(parents, indent, parent):
     yield TreeRow(indent, parent)
-    for child in (c for (c, p) in parents.iteritems() if p == parent):
+    for child in (c for (c, p) in parents.items() if p == parent):
         for row in _get_tree_rows(parents, indent+1, child):
             yield row

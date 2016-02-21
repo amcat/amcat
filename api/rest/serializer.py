@@ -33,7 +33,7 @@ class AmCATModelSerializer(serializers.ModelSerializer):
         fields = super(AmCATModelSerializer, self).get_fields()
 
         return collections.OrderedDict(
-            [(name, field) for (name, field) in fields.iteritems()
+            [(name, field) for (name, field) in fields.items()
               if not isinstance(field, ManyRelatedField)]
         )
 
@@ -55,7 +55,7 @@ class AmCATProjectModelSerializer(AmCATModelSerializer):
 
     def to_internal_value(self, data):
         if 'project' not in data:
-            data = dict(data.iteritems())
+            data = dict(data.items())
             data['project'] = self.project_id
         value = super(AmCATProjectModelSerializer, self).to_internal_value(data)
         return value

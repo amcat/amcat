@@ -22,7 +22,6 @@ This module contains logic concerning tasks, which are Celery jobs created
 by a Script object.
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
 
 import datetime
 
@@ -107,7 +106,7 @@ class Task(AmcatModel):
 
         @type terminate: boolean
         @param terminate: kill currently running task (Celery documentation advises againt using this)
-        @type signal: basestring
+        @type signal: str
         @param signal: signal to send to running process (used in combination with terminate). Default: SIGKILL"""
         return self.get_async_result().revoke(**kwargs)
 
@@ -148,7 +147,7 @@ class TaskHandler(object):
         Create a new task object and start it using this class as handler
         @return: an handler object instantiated with the created task
         """
-        if not isinstance(target_class, (str, unicode)):
+        if not isinstance(target_class, str):
             target_class = classtools.get_qualified_name(target_class)
 
         task = Task.objects.create(

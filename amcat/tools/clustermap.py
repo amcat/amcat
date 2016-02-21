@@ -25,21 +25,24 @@ visualisation software such as:
     http://www.aduna-software.com/technology/clustermap
 """
 
-from __future__ import unicode_literals, print_function
-from StringIO import StringIO
+
+import sh
+import os
+
 from collections import defaultdict
 from functools import partial
-from itertools import chain, product, permutations, repeat
-
-import os
+from itertools import chain, product, repeat
 from tempfile import NamedTemporaryFile
-import datetime
-from django.template import Context
-from lxml import html
-import sh
-from django.conf import settings
-from django.template.loader import get_template
 
+from django.conf import settings
+from django.template import Context
+from django.template.loader import get_template
+from lxml import html
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 # XML template given to Aduna binary
 XML_TEMPLATE = get_template("query/clustermap/cluster.xml")
@@ -88,25 +91,20 @@ def get_clusters(queries):
             article_clusters[aid].add(query)
 
     clusters = defaultdict(set)
-    for aid, queries in article_clusters.iteritems():
+    for aid, queries in article_clusters.items():
         clusters[frozenset(queries)].add(aid)
 
     return clusters
-
-
-def _get_clustermap_table_rows(headers, isects):
-    for cluster in combinations_as_sets(headers):
-        yield tuple(int(bool(h in cluster)) for h in headers) + (len(isects[cluster]),)
 
 
 def get_clustermap_table(queries):
     """
     Given a mapping of query to ids, return a table with the #hits for each boolean combination
     """
-    queries = {k: set(v) for (k,v) in queries.iteritems()}
+    queries = {k: set(v) for (k,v) in queries.items()}
     header = sorted(queries.keys(), key=lambda q: str(q))
     rows = []
-    allids = set(chain.from_iterable(queries.itervalues()))
+    allids = set(chain.from_iterable(queries.values()))
     for c in combinations(header):
         ids = allids.copy()
         row = []

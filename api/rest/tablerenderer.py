@@ -21,6 +21,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+import csv
+
 from collections import OrderedDict
 from functools import partial
 
@@ -28,8 +30,11 @@ from rest_framework.renderers import *
 from amcat.tools.table import table3
 import logging
 
-from cStringIO import StringIO
-import csv
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 class TableRenderer(BaseRenderer):
     """
@@ -67,7 +72,7 @@ class TableRenderer(BaseRenderer):
             raise ValueError("fast_tablize needs a list of (nested) dicts!")            
         
         def _get_keys(item, prefix=()):
-            for key, val in item.iteritems():
+            for key, val in item.items():
                 if isinstance(val, list):
                     raise ValueError("fast_tablize needs a list of (nested) dicts (not nested lists)!")            
                 if isinstance(val, dict):
@@ -92,7 +97,7 @@ class TableRenderer(BaseRenderer):
                     keys[name] = (key, {_type})
                     
         table = table3.ObjectTable(rows=data)
-        for col, (key, types) in keys.iteritems():
+        for col, (key, types) in keys.items():
             fieldtype = list(types)[0] if len(types) == 1 else None
             fieldtype = {bool:str, type(None):str}.get(fieldtype, fieldtype)
             table.addColumn(label=col, col=partial(_get_val, key=key), fieldtype=fieldtype)
@@ -115,11 +120,11 @@ class TableRenderer(BaseRenderer):
         # each item designates the name of the column that the item will
         # fall into.
         data = self.flatten_data(data)
-        #import json; print json.dumps(data, indent=2)
+        #import json; print(json.dumps(data, indent=2))
         # Get the set of all unique headers, and sort them.
         headers = OrderedDict()
         for item in data:
-            for k, v in item.iteritems():
+            for k, v in item.items():
                 if k not in headers:
                     headers[k] = set()
                 headers[k].add(type(v))
@@ -170,7 +175,7 @@ class TableRenderer(BaseRenderer):
 
         """
         nested_item = {}
-        for header, val in flat_item.iteritems():
+        for header, val in flat_item.items():
             nested_header = self.level_sep.join([prefix, header]) if header else prefix
             nested_item[nested_header] = val
         return nested_item
@@ -186,7 +191,7 @@ class TableRenderer(BaseRenderer):
 
     def flatten_dict(self, d):
         flat_dict = OrderedDict()
-        for key, item in d.iteritems():
+        for key, item in d.items():
             key = str(key)
             flat_item = self.flatten_item(item)
             nested_item = self.nest_flat_item(flat_item, key)
@@ -228,7 +233,7 @@ class CSVRenderer(TableRenderer):
             extra = keys - set(header)
             if extra:
                 header += list(extra)
-            row = [(unicode(d[h]).encode("utf-8") if h in d else "") for h in header]
+            row = [(str(d[h]).encode("utf-8") if h in d else "") for h in header]
             w.writerow(row)
         out_h = StringIO()
         csv.writer(out_h).writerow(header)

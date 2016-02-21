@@ -17,7 +17,6 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from __future__ import unicode_literals, print_function, absolute_import
 import copy
 import re
 import itertools
@@ -65,9 +64,21 @@ class LazyES(object):
             self._count = self.es.count(self.query, filters=self.filters)
         return self._count
 
-    def __getslice__(self, i, j):
-        query_kargs = {}
+    def __getitem__(self, item):
+        if not isinstance(item, slice):
+            return next(iter(self[item:item+1]))
 
+        step = item.step
+        start = item.start or 0
+        stop = item.stop
+
+        if step is not None:
+            raise ValueError("Slices with custom stepsizes not yet implemented.")
+
+        if start <= stop < 0:
+            raise ValueError("Negative indexing not yet implemented.")
+
+        query_kargs = {}
         if self.query and ("lead" in self.fields or "headline" in self.fields):
             query_kargs["highlight"] = True
         elif "lead" in self.fields:
@@ -79,12 +90,13 @@ class LazyES(object):
             query=self.query,
             filters=self.filters,
             fields=fields,
-            size=j - i,
+            size=stop - start,
             sort=["id"],
-            from_=i,
+            from_=start,
             score=False,
             **query_kargs
         )
+
         if self.hits:
             def add_hits_column(r):
                 r.hits = {q.label : 0 for q in self.queries}
@@ -96,6 +108,7 @@ class LazyES(object):
             for q in self.queries:
                 for hit in self.es.query_all(q.query, filters=filters, fields=[]):
                     result_dict[hit.id].hits[q.label] = hit.score
+
         return result
 
 

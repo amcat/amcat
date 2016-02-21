@@ -4,7 +4,7 @@ from amcat.tools.queryparser import parse_to_terms, QueryParseError, parse
 
 class TestQueryParser(amcattest.AmCATTestCase):
     def test_parse(self):
-        q = lambda s: unicode(parse_to_terms(s))
+        q = lambda s: str(parse_to_terms(s))
 
         self.assertEqual(q('a'), '_all::a')
         self.assertEqual(q('a b'), 'OR[_all::a _all::b]')
@@ -67,15 +67,15 @@ class TestQueryParser(amcattest.AmCATTestCase):
             {"span_term": {"_all": "b"}},
         ], "slop": "10", "in_order": False}})
 
-        expected = {u'bool': {u'should': [
-            {u'span_near': {u'in_order': False, u'clauses': [
-                {u'span_term': {u'_all': u'a'}},
-                {u'span_term': {u'_all': u'b'}}
-            ], u'slop': u'10'}},
-            {u'span_near': {u'in_order': False, u'clauses': [
-                {u'span_term': {u'_all': u'a'}},
-                {u'span_term': {u'_all': u'c'}}
-            ], u'slop': u'10'}}
+        expected = {'bool': {'should': [
+            {'span_near': {'in_order': False, 'clauses': [
+                {'span_term': {'_all': 'a'}},
+                {'span_term': {'_all': 'b'}}
+            ], 'slop': '10'}},
+            {'span_near': {'in_order': False, 'clauses': [
+                {'span_term': {'_all': 'a'}},
+                {'span_term': {'_all': 'c'}}
+            ], 'slop': '10'}}
         ]}}
 
         self.assertEqual(q('a W/10 (b c)'), expected)

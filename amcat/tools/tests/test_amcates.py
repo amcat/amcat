@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from __future__ import unicode_literals
 
 import datetime
 from unittest import skip
@@ -325,7 +324,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
     @amcattest.use_elastic
     def test_tokenizer(self):
-        text = u"Rutte's Fu\xdf.d66,  50plus, 50+, el ni\xf1o, kanji (\u6f22\u5b57) en Noord-Korea"
+        text = "Rutte's Fu\xdf.d66,  50plus, 50+, el ni\xf1o, kanji (\u6f22\u5b57) en Noord-Korea"
         a = amcattest.create_test_article(headline="test", text=text)
         s1 = amcattest.create_test_set(articles=[a])
         ES().add_articles([a.id])
@@ -344,10 +343,10 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
         # test ni\~no -> nino
         self.assertEqual(set(ES().query_ids("nino", filters=dict(sets=s1.id))), {a.id})
-        self.assertEqual(set(ES().query_ids(u"ni\xf1o", filters=dict(sets=s1.id))), {a.id})
+        self.assertEqual(set(ES().query_ids("ni\xf1o", filters=dict(sets=s1.id))), {a.id})
 
         # test real kanji
-        self.assertEqual(set(ES().query_ids(u"\u6f22\u5b57", filters=dict(sets=s1.id))), {a.id})
+        self.assertEqual(set(ES().query_ids("\u6f22\u5b57", filters=dict(sets=s1.id))), {a.id})
 
     @amcattest.use_elastic
     def test_byline(self):
