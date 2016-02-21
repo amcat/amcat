@@ -39,7 +39,7 @@ class TestExportCodebook(AmCATTestCase):
         codebook = codebook or self.codebook
         language = language or self.default
 
-        return {c.code_id : c for c in ExportCodebook(
+        return {c.code_id: c for c in ExportCodebook(
             codebook=codebook.id, language=language.id,
             structure=structure, labelcols=labelcols
         ).run().to_list()}
@@ -82,7 +82,7 @@ class TestExportCodebook(AmCATTestCase):
 
         # Should export default label, e.g. "A"
         de_code = codes[self.codes_list[0].id]
-        self.assertIn("A", (de_code.code1, de_code.code2, de_code.code3))
+        self.assertIn("A", map(str, self.codes_list))
         # should not put 'languaged' labels in codeX columns
         self.assertNotIn("Ein", (de_code.code1, de_code.code2, de_code.code3))
         nl_code = codes[self.codes_list[1].id]
