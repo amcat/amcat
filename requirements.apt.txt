@@ -1,0 +1,37 @@
+# Packaged in 16.04
+python3-amqp
+python3-configargparse
+python3-celery
+python3-chardet
+python3-colorlog
+python3-cssselect
+python3-django
+python3-django-jsonfield
+python3-djangorestframework
+python3-elasticsearch
+python3-html2text
+python3-jdcal
+python3-kombu
+python3-openpyxl
+python3-pyparsing
+python3-pypdf2
+python3-dateutil
+python3-unidecode
+python3-urllib3
+python3-levenshtein
+python3-git
+python3-psycopg2
+python3-requests
+python3-django-celery
+python3-amqplib
+python3-pygments
+python3-lxml
+python3-django-extensions
+python3-pylibmc
+python3-django-filters
+
+# Not packaged in 16.04
+django-method-override==0.1.0
+pdfminer3k==1.3.0
+django-markdown-deux==1.0.5
+splinter
