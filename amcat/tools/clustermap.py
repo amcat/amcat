@@ -25,13 +25,11 @@ visualisation software such as:
     http://www.aduna-software.com/technology/clustermap
 """
 
-
-import sh
 import os
+import subprocess
 
 from collections import defaultdict
-from functools import partial
-from itertools import chain, product, repeat
+from itertools import chain
 from tempfile import NamedTemporaryFile
 
 from django.conf import settings
@@ -141,10 +139,8 @@ class AdunaException(Exception):
 
 
 def aduna(xml_path, img_path):
-    stdout, stderr = StringIO(), StringIO()
-    _aduna = partial(sh.java, "-classpath", CLASS_PATH, "-Xms%s" % ADUNA_MEMORY, "Cluster")
-    _aduna(xml_path, img_path, _err=stderr, _out=stdout).wait()
-    stdout, stderr = stdout.getvalue().strip(), stderr.getvalue().strip()
+    args = ["java", "-classpath", CLASS_PATH, "-Xms%s" % ADUNA_MEMORY, "Cluster", xml_path, img_path]
+    stdout, stderr = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
 
     if not stdout:
         raise AdunaException("Aduna clustermap proces generated error: %s" % stderr)
