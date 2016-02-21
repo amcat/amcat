@@ -23,7 +23,6 @@ import csv
 import json
 from datetime import datetime
 from itertools import chain, repeat
-from time import mktime
 
 from django.core.exceptions import ValidationError
 from django.forms import ChoiceField
@@ -115,7 +114,7 @@ def aggregation_to_csv(aggregation, categories, values):
 class AggregationEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime):
-            return int(mktime(obj.timetuple())) * 1000
+            return obj.isoformat()
         if isinstance(obj, (Medium, ArticleSet, CodingJob)):
             return {"id": obj.id, "label": obj.name}
         if isinstance(obj, SearchQuery):
