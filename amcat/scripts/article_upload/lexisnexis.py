@@ -529,7 +529,7 @@ class LexisNexis(UploadScript):
     name = 'Lexis Nexis'
 
     def split_file(self, file):
-        text = "\n".join(file.readlines())
+        text = "".join(file.readlines())
         header, body = split_header(text)
         self.ln_query = get_query(parse_header(header))
         fragments = list(split_body(body))
