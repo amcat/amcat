@@ -32,10 +32,7 @@ from amcat.tools import toolkit
 from amcat.models.article import Article
 from amcat.models.medium import Medium
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 log = logging.getLogger(__name__)
 
@@ -276,7 +273,7 @@ def parse_article(art):
 
 
     @toolkit.to_list
-    def _get_header(lines):
+    def _get_header(lines) -> dict:
         """Consume and return all lines that are indented (ie the list is changed in place)"""
         while _in_header(lines):
             line = lines.pop(0)
@@ -314,7 +311,7 @@ def parse_article(art):
                 for x in (headline, byline))
 
     @toolkit.wrapped(dict)
-    def _get_meta(lines):
+    def _get_meta(lines) -> dict:
         """
         Return meta key-value pairs. Stop if body start criterion is found
         (eg two blank lines or non-meta line)
@@ -424,6 +421,7 @@ def parse_article(art):
                 meta['issue'] = issuematch.group(0)
 
         elif [x.strip() for x in header] in (["India Today"], ["Business Today"]):
+            print(meta)
             date = meta.pop("load-date")
             source = header[0]
         else:
@@ -531,8 +529,8 @@ class LexisNexis(UploadScript):
     name = 'Lexis Nexis'
 
     def split_file(self, file):
-
-        header, body = split_header(file.text)
+        text = "\n".join(file.readlines())
+        header, body = split_header(text)
         self.ln_query = get_query(parse_header(header))
         fragments = list(split_body(body))
         return fragments

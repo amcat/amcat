@@ -167,7 +167,7 @@ class Text(UploadScript):
             if convertors:
                 text = _convert_multiple(file, convertors)
             else:
-                text = file.text
+                text = "\n".join(file.readlines())
         else:
             text = self.options['text']
 

@@ -83,7 +83,8 @@ class FileUploadForm(RawFileUploadForm):
 
     def decode_file(self, f):
         enc, text = self.decode(f.read())
-        return open(f.name, "r", encoding=enc)
+        name = f.file.name if isinstance(f, File) else f.name
+        return File(open(name, "r", encoding=enc), name=f.name)
 
     def get_uploaded_text(self):
         """Returns a DecodedFile object representing the file"""
@@ -226,8 +227,7 @@ class ZipFileUploadForm(FileUploadForm):
                     shutil.copyfileobj(zf.open(name), f)
                     f.close()
 
-                    name = os.path.join(tempdir, fn)
-                    with open(name, "rb") as fh:
+                    with open(os.path.join(tempdir, fn), "rb") as fh:
                         yield File(fh, name=name)
 
 
