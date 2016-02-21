@@ -93,14 +93,8 @@ def bulk_insert_returning_ids(new_objects, fields=None):
         model = new_objects[0].__class__
         query = sql.InsertQuery(model)
         query.insert_values(model._meta.fields[1:], new_objects)
-
-        if django.VERSION[:3] < (1, 9, 0):
-            pk = "{pk.db_column} AS {pk.name}".format(pk=model._meta.pk)
-        else:
-            pk = model._meta.pk.db_column
-
         raw_sql, params = query.sql_with_params()[0]
-        fields = ", ".join([pk] + (fields if fields else []))
+        fields = ", ".join([model._meta.pk.db_column] + (fields if fields else []))
         new_objects = list(model.objects.raw("{raw_sql} RETURNING {fields}".format(**locals()), params))
     else:
         # Do naive O(n) approach
