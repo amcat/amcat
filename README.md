@@ -16,26 +16,26 @@ To install stable releases, please see the readme file for those releases:
 Most of the (python) prerequisites for AmCAT are automatically installed using pip (see below). To install the non-python requirements, you can use the following (on Ubuntu 15.10 or 16.04):
 
 ```sh
-sudo apt-get install antiword unrtf rabbitmq-server python-pip postgresql postgresql-contrib python-virtualenv git postgresql-server-dev-9.4 python-dev libxml2-dev libxslt-dev graphviz
+sudo apt-get install antiword unrtf rabbitmq-server python3-pip postgresql postgresql-contrib python3-venv git postgresql-server-dev-9.4 python3-dev libxml2-dev libxslt-dev graphviz
 ```
 
 If you want to compile lxml and psycopg2 yourself (through pip), you need to install:
 
 ```sh
-sudo apt-get build-dep python-psycopg2 python-lxml
+sudo apt-get build-dep python3-psycopg2 python3-lxml
 ```
 
 You can avoid compiling libraries by installing some dependencies through apt:
 
 ```sh
-sudo apt-get install python-lxml python-amqplib python-psycopg2 python-requests python-pygments
+sudo apt-get install python3-lxml python3-amqplib python3-psycopg2 python3-requests python3-pygments
 ```
 
 It is probably best to install AmCAT in a virtual environment. Run the following commands to setup and activate a virtual environment for AmCAT: (on ubuntu)
 
 ```sh
-virtualenv amcat-env
-source amcat-env/bin/activate
+pyvenv env
+source env/bin/activate
 ```
 
 If you use a virtual environment, every time you start working with AmCAT you need to repeat the `source` line to load the environment. If you don't use a virtual environment, you will need to run most pip command below using `sudo`. 
