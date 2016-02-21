@@ -18,13 +18,15 @@ class TestTable(amcattest.AmCATTestCase):
                             [74321, 8, 9],
                             [4, 5, "asdf"],
                       ])
-        result = tableoutput.table2ascii(t)
-        correct = u'''
-a1    | a2 | a3
-------+----+-----
-1     | 2  | 3
-74321 | 8  | 9
-4     | 5  | asdf'''
+        result = tableoutput.table2unicode(t)
+        correct = '''
+ ╔═══════╤════╤══════╗
+ ║ a1    │ a2 │ a3   ║
+ ╟───────┼────┼──────╢
+ ║ 1     │ 2  │ 3    ║
+ ║ 74321 │ 8  │ 9    ║
+ ║ 4     │ 5  │ asdf ║
+ ╚═══════╧════╧══════╝'''
         self.assertEquals(_striplines(result), _striplines(correct.strip()))
 
     def test_object_table(self):

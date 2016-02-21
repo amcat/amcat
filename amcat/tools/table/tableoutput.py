@@ -8,27 +8,16 @@ from io import StringIO
 log = logging.getLogger(__name__)
 
 
-def getTable(table, colnames=None):
-    if isinstance(table, (list, tuple)):
-        from amcat.tools.table import table3
-        table = table3.ListTable(table, colnames)
-    return table
-
-
 # ###################### table2ascii / unicode ##########################
 
-CONNECTORS = {  # (unicode, box) : (sep2t, sep2b, sep, line)
-                (True, False): (None, None, " \u2500\u253c ", " \u2502 "),
-                (True, True): ("\u2554\u2550\u2564\u2557", "\u255a\u2550\u2567\u255d", "\u255f\u2500\u253c\u2562",
+CONNECTORS = {  # box : (sep2t, sep2b, sep, line)
+                False: (None, None, " \u2500\u253c ", " \u2502 "),
+                True: ("\u2554\u2550\u2564\u2557", "\u255a\u2550\u2567\u255d", "\u255f\u2500\u253c\u2562",
                                "\u2551\u2502\u2551"),
-                (False, True): ("+=++", "+=++", "+-++", "|||"),
-                (False, False): (None, None, " -+ ", " | "),
 }
 SORTINDICATORS = {
-    (True, True): "\u25b2",
-    (True, False): "\u25bc",
-    (False, True): "^",
-    (False, False): "v",
+    True: "\u25b2",
+    False: "\u25bc",
 }
 
 
@@ -47,59 +36,42 @@ def line(values, collengths, con="|||"):
             + " " + r + "\n")
 
 
-def table2ascii(table, colnames=None, formats=None, useunicode=False, box=False):
-    return table2unicode(table, colnames, formats, useunicode, box)
-
-
-def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True, rownames=False, stream=None,
-                  encoding=None):
-    def write(s):
-        if encoding: s = s.encode(encoding)
-        stream.write(s)
-
-    returnstring = (not stream)
-    if returnstring:
+def table2unicode(table, box=True, rownames=False, stream=None):
+    return_string = not stream
+    if not stream:
         stream = StringIO()
-    table = getTable(table, colnames)
-    con_sep2t, con_sep2b, con_sep, con_line = CONNECTORS[useunicode, box]
-    cols, rows = table.getColumns(), table.getRows()
-    if type(cols) not in (list, tuple): cols = list(cols)
-    if formats is None: formats = ["%s"] * len(cols)
+
+    con_sep2t, con_sep2b, con_sep, con_line = CONNECTORS[box]
+
+    cols = list(table.getColumns())
+    rows = list(table.getRows())
+
     headers = cols
-    sortcols = None
+
     try:
         sortcols = dict(table.sort)
     except AttributeError:
         pass
-    if sortcols:
+    else:
         headers = []
         for col in cols:
-            # if isinstance(col, idlabel.IDLabel) and
             if col in sortcols:
-                headers.append("%s %s" % (str(col), SORTINDICATORS[useunicode, sortcols[col]]))
+                headers.append("%s %s" % (str(col), SORTINDICATORS[sortcols[col]]))
             else:
                 headers.append(str(col))
 
-    def cell(row, col, fmt):
-        val = table.getValue(row, col)
-
-        if type(val) == bytes:
-            val = val.decode('latin-1')
-
-        if not useunicode and type(val) == str:
-            val = val.encode('ascii', 'replace')
-
-        try:
-            val = fmt % (val,) if (val is not None) else ""
-            return val
-        except Exception as e:
-            return str(e)
+    def cell(row, col):
+        value = table.getValue(row, col)
+        return str(value) if value is not None else ""
 
     def formatheader(h):
-        if not h: return h
-        if type(h) in (list, tuple, set): return ",".join(map(str, h))
-        return str(h)
+        if not h:
+            return h
 
+        if isinstance(h, (list, tuple, set)):
+            return ",".join(map(str, h))
+
+        return str(h)
 
     data = []
     collengths = [len(str(hdr)) for hdr in headers]
@@ -108,28 +80,28 @@ def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True,
         if rownames:
             data[-1].append(formatheader(row))
         for i, col in enumerate(cols):
-            value = cell(row, col, formats[i])
+            value = cell(row, col)
             collengths[i] = max(collengths[i], len(value))
             data[-1].append(value)
 
     if rownames:
         collengths.insert(0, 15)
         headers.insert(0, "")
-    write(sep(collengths, con_sep2t))
-    write(line(map(formatheader, headers), collengths, con_line))
-    write(sep(collengths, con_sep))
+    stream.write(sep(collengths, con_sep2t))
+    stream.write(line(map(formatheader, headers), collengths, con_line))
+    stream.write(sep(collengths, con_sep))
     for r in data:
-        write(line(r, collengths, con_line))
-    write(sep(collengths, con_sep2b))
-    if returnstring:
+        stream.write(line(r, collengths, con_line))
+    stream.write(sep(collengths, con_sep2b))
+
+    if return_string:
         return stream.getvalue()
 
 
 ####################### table2csv ###################################
 
-def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecolnames=True, writerownames=False,
+def table2csv(table, csvwriter=None, outfile=sys.stdout, writecolnames=True, writerownames=False,
               tabseparated=False):
-    table = getTable(table, colnames)
 
     writerownames = table.rowNamesRequired or writerownames
 
