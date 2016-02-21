@@ -54,8 +54,6 @@ import time
 import warnings
 from collections import OrderedDict, Callable
 
-import six
-
 log = logging.getLogger(__name__)
 
 ###########################################################################
@@ -602,16 +600,6 @@ def executepipe(cmd, listener=None, listenOut=False, outonly=False, **kargs):
         yield outr.out
     yield outr.out, errr.out
 
-
-###########################################################################
-##                          Type Checking                                ##
-###########################################################################
-
-def is_sequence(obj, exclude_strings=False):
-    """Check whether obj is a sequence, possibly excluding strings"""
-    if exclude_strings and isinstance(obj, six.string_types):
-        return False
-    return hasattr(obj, "__getslice__")
 
 ###########################################################################
 ##                         Misc. functions                               ##

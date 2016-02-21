@@ -23,7 +23,6 @@ from django.core.paginator import Paginator, Page, InvalidPage
 from rest_framework import pagination
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
-import six
 from api.rest import count
 
 
@@ -74,7 +73,7 @@ class AmCATPageNumberPagination(pagination.PageNumberPagination):
             self.page = paginator.page(page_number)
         except InvalidPage as exc:
             msg = self.invalid_page_message.format(
-                page_number=page_number, message=six.text_type(exc)
+                page_number=page_number, message=str(exc)
             )
             raise NotFound(msg)
 

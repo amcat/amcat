@@ -27,9 +27,10 @@ import os
 
 from django.template import Context, Template
 from openpyxl import Workbook
-from openpyxl.writer.dump_worksheet import ExcelDumpWriter
 import re
 import datetime
+
+from openpyxl.writer.excel import ExcelWriter
 
 try:
     from StringIO import StringIO
@@ -146,7 +147,7 @@ class XLSX(TableExporter):
         # Write rows to worksheet
         for row in table.getRows():
             ws.append(tuple(_get_values(table, row)))
-        writer = ExcelDumpWriter(wb)
+        writer = ExcelWriter(wb)
 
         # Need to do a little bit more work here, since the openpyxl library only
         # supports writing to a filename, while we need a buffer here..

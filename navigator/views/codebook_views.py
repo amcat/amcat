@@ -22,13 +22,8 @@ import json
 from django import forms
 from django.http import HttpResponse
 from django.views.generic.list import ListView
-
-try:
-    from json_field.forms import JSONFormField
-except ImportError:
-    # Django 1.9
-    from django.contrib.postgres.forms import JSONField as JSONFormField
-
+from django_extensions.db.fields.json import JSONField
+from jsonfield.forms import JSONFormField
 
 from amcat.forms import widgets
 from amcat.models import Codebook
