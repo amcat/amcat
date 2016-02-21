@@ -282,7 +282,7 @@ class SelectionForm(forms.Form):
 
         # Parse all article ids as integer
         try:
-            article_ids = map(int, article_ids)
+            article_ids = list(map(int, article_ids))
         except ValueError:
             offender = repr(next(filterfalse(str.isnumeric, article_ids)))
             raise ValidationError("{offender} is not an integer".format(**locals()))

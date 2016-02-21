@@ -19,11 +19,9 @@
 
 
 import datetime
-import json
 import logging
 import os
 import re
-
 from collections import namedtuple
 from hashlib import sha224 as hash_class
 from json import dumps as serialize
@@ -35,8 +33,8 @@ from elasticsearch.helpers import scan, bulk
 from amcat.tools import queryparser, toolkit
 from amcat.tools.caching import cached
 from amcat.tools.djangotoolkit import get_model_field
-from amcat.tools.toolkit import multidict, splitlist
 from amcat.tools.progress import ProgressMonitor
+from amcat.tools.toolkit import multidict, splitlist
 
 log = logging.getLogger(__name__)
 
@@ -837,7 +835,9 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
             return [int(x) if number else x]
         elif hasattr(x, 'pk'):
             return [x.pk]
-        return x
+        elif isinstance(x, (set, tuple, list)):
+            return x
+        return list(x)
 
     def parse_date(d):
         if isinstance(d, list) and len(d) == 1:

@@ -86,10 +86,6 @@ def to_nested(aggr):
 
 
 class SelectionSearch:
-    """
-
-    """
-
     def __init__(self, form):
         """
         Form *must* be valid before passing.
@@ -149,7 +145,7 @@ class SelectionSearch:
         queries = map(SearchQuery.from_string, queries)
 
         resolved = resolve_queries(
-            queries, codebook=codebook,
+            list(queries), codebook=codebook,
             label_language=label_lan,
             replacement_language=replacement_lan
         )
