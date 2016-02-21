@@ -29,9 +29,10 @@ python3-lxml
 python3-django-extensions
 python3-pylibmc
 python3-django-filters
+python3-markdown
+python3-pyinotify
 
 # Not packaged in 16.04
 django-method-override==0.1.0
 pdfminer3k==1.3.0
-django-markdown-deux==1.0.5
 splinter

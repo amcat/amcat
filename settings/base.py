@@ -208,7 +208,6 @@ INSTALLED_APPS = [
     'api',
     'amcat',
     'method_override',
-    'markdown_deux',
     "django_extensions",
     'djcelery'
 ]
