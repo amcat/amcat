@@ -1,4 +1,4 @@
-
+import io
 import sys
 import csv
 import logging
@@ -122,4 +122,4 @@ def table2csv(table, csvwriter=None, outfile=sys.stdout, writecolnames=True, wri
         values += [str(table.getValue(row, col)) or "" for col in cols]
         csvwriter.writerow(values)
 
-
+    return outfile

@@ -17,9 +17,11 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-
+import csv
 import datetime
 import logging
+
+from io import StringIO
 
 from django import forms
 from django.forms import ModelChoiceField, BooleanField
@@ -31,7 +33,7 @@ from amcat.models import CodingJob, CodingSchemaField, CodingSchema, Project, Co
 from amcat.models import Article, Sentence
 from amcat.scripts.script import Script
 from amcat.tools.table import table3
-from amcat.scripts.output.csv_output import table_to_csv
+from amcat.tools.table.tableoutput import table2csv
 from amcat.tools.progress import NullMonitor
 
 
@@ -63,8 +65,13 @@ CODING_LEVELS = [
 
 ExportFormat = collections.namedtuple('ExportFormat', ["label", "function", "mimetype"])
 
+def _table_to_csv(table):
+    buffer = StringIO()
+    writer = csv.writer(buffer, delimiter=",")
+    return table2csv(table, writer, buffer).getvalue()
+
 EXPORT_FORMATS = (
-    ExportFormat(label="csv", function=table_to_csv, mimetype="text/csv"),
+    ExportFormat(label="csv", function=_table_to_csv, mimetype="text/csv"),
     ExportFormat(label="xlsx", function=lambda t: t.export(format='xlsx'), mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
     ExportFormat(label="json", function=lambda t: json.dumps(list(t.to_list())), mimetype=None),
 )
