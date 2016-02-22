@@ -28,12 +28,12 @@ from datetime import datetime
 from itertools import chain, repeat
 
 from django.core.exceptions import ValidationError
-from django.forms import ChoiceField
+from django.forms import ChoiceField, BooleanField
 
 from amcat.models import Medium, ArticleSet, CodingSchemaField, Code, CodingJob
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools import aggregate_es
-from amcat.tools.aggregate_es.categories import ELASTIC_TIME_UNITS
+from amcat.tools.aggregate_es.categories import ELASTIC_TIME_UNITS, IntervalCategory
 from amcat.tools.aggregate_orm import CountArticlesValue
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery, to_sortable_tuple
 
@@ -136,6 +136,7 @@ class AggregationActionForm(QueryActionForm):
     value1 = ChoiceField(label="First value", initial="count(articles)", choices=[("count(articles)", "Article count")])
     value2 = ChoiceField(label="Second value", required=False, initial="", choices=())
 
+    fill_zeroes = BooleanField(label="Show empty dates as 0 (if interval selected)", required=False, initial=True)
     #relative_to = CharField(widget=Select, required=False)
 
     def __init__(self, *args, **kwargs):
@@ -195,6 +196,9 @@ class AggregationAction(QueryAction):
         secondary= form.cleaned_data["secondary"]
         categories = list(filter(None, [primary, secondary]))
         aggregation = list(selection.get_aggregate(categories, flat=False))
+
+        if form.cleaned_data.get("fill_zeroes") and type(primary) is IntervalCategory:
+            aggregation = list(aggregate_es.fill_zeroes(aggregation, primary, secondary))
 
         # Matrices are very annoying to construct in javascript due to missing hashtables. If
         # the user requests a table, we thus first convert it to a different format which should

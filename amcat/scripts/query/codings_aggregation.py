@@ -32,7 +32,7 @@ from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
 from amcat.scripts.forms.selection import get_all_schemafields
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.scripts.query.aggregation import AGGREGATION_FIELDS
-from amcat.tools import aggregate_orm
+from amcat.tools import aggregate_orm, aggregate_es
 from amcat.tools.aggregate_orm import ORMAggregate
 from amcat.tools.aggregate_orm.categories import POSTGRES_DATE_TRUNC_VALUES
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
@@ -77,6 +77,7 @@ class CodingAggregationActionForm(QueryActionForm):
     primary_use_codebook = BooleanField(initial=False, required=False, label="Group codings using codebook")
     primary_group_mediums = ModelChoiceField(queryset=Medium.objects.all(), label="Group mediums using", required=False)
     primary = ChoiceField(choices=AGGREGATION_FIELDS, label="Aggregate on (primary)")
+    primary_fill_zeroes = BooleanField(initial=True, required=False, label="Show empty dates as 0 (if interval selected)")
 
     secondary_use_codebook = BooleanField(initial=False, required=False, label="Group codings using codebook")
     secondary_group_mediums = ModelChoiceField(queryset=Medium.objects.all(), label="Group mediums using", required=False)
@@ -265,6 +266,8 @@ class CodingAggregationAction(QueryAction):
         aggregation = orm_aggregate.get_aggregate(categories, values)
         aggregation = sorted(aggregation, key=to_sortable_tuple)
 
+        if form.cleaned_data.get("primary_fill_zeroes") and hasattr(primary, 'interval'):
+            aggregation = list(aggregate_es.fill_zeroes(aggregation, primary, secondary))
         # Matrices are very annoying to construct in javascript due to missing hashtables. If
         # the user requests a table, we thus first convert it to a different format which should
         # be easier to render.

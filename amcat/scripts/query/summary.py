@@ -28,7 +28,7 @@ from django.template.defaultfilters import escape as escape_filter
 
 from amcat.forms.forms import order_fields
 from amcat.scripts.query import QueryAction, QueryActionForm
-from amcat.tools.aggregate_es import IntervalCategory, MediumCategory
+from amcat.tools.aggregate_es import IntervalCategory, MediumCategory, fill_zeroes
 from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.toolkit import Timer
 
@@ -98,6 +98,7 @@ class SummaryAction(QueryAction):
                     interval = "day"
 
                 date_aggr = selection.get_nested_aggregate([IntervalCategory(interval)])
+                date_aggr = fill_zeroes((((date,),(value,)) for date,value in date_aggr), IntervalCategory(interval))
                 medium_aggr = selection.get_nested_aggregate([MediumCategory()])
             
             self.monitor.update(79, "Rendering results..".format(**locals()))
