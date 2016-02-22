@@ -17,6 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import json
+from datetime import datetime
 from csv import DictWriter
 from cStringIO import StringIO
 
