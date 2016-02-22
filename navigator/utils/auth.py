@@ -213,7 +213,7 @@ class check(object):
         """
         self.cls = cls
         self.action = action
-        self.args = toolkit.totuple(args)
+        self.args = (args,) if isinstance(args, str) else tuple(args or ())
         self.args_map = dict() if not args_map else dict(args_map)
 
     def _allows_none(self, func):

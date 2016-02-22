@@ -22,7 +22,6 @@
 Toolkit of useful methods for AmCAT
 
 Policy:
- - Should not depend on any module outside to 2.7+ standard library
  - Each public function should be documented!
  - It should pass pychecker without warnings
  - We should try to make good test cases in test/test_toolkit.py
@@ -35,7 +34,6 @@ this organisation!
  - string functions
  - date(time) functions
  - process handling and external processes
- - type checking
  - misc functions
 """
 
@@ -52,7 +50,6 @@ import subprocess
 import threading
 import time
 import warnings
-from collections import OrderedDict, Callable
 
 log = logging.getLogger(__name__)
 
@@ -125,59 +122,9 @@ def to_list(func):
 ###########################################################################
 ##                     Sequence functions                                ##
 ###########################################################################
-
-
-def join(seq, sep="\t", fmt="%s", none=''):
-    """Join a list of arbitrary objects into a string
-
-    Augments the builtin ''.join() by not requiring string arguments
-    Note: in most cases csv.writer makes more sense.
-    @param seq: The sequence to join
-    @param sep: The separator to use
-    @param fmt: The format to apply to each element of seq
-    @param none: A string to use for None values
-    """
-
-    def joinformat(elem, fmt, none):
-        """fmt%elem with handling for none, str"""
-        if elem is None: return none
-        if type(elem) == str:
-            elem = elem.encode('latin-1', 'replace')
-        return fmt % elem
-
-    return sep.join([joinformat(x, fmt, none) for x in seq])
-
-
 def head(seq):
     """Return the first element in seq"""
     return next(iter(seq))
-
-
-def totuple(v):
-    """Function to convert `value` to a tuple."""
-    if v is None:
-        return ()
-    elif type(v) in (str, int):
-        return v,
-    return v
-
-
-def idlist(idcolumn):
-    """Function to convert a idcolumn value to a list.
-
-    An __idcolumn__ may be a str or tuple. This function
-    removes the necessity to check as it always returns
-    the latter.
-
-    @type idcolumn: tuple, str or None
-    @param idcolumn: value to convert to a tuple"""
-    if not idcolumn: return ()
-
-    if isinstance(idcolumn, str):
-        return (idcolumn,)
-
-    raise TypeError("%s-like objects not supported" % repr(type(idcolumn)))
-
 
 def grouper(iterable, n, fillvalue=None):
     """Collect data into fixed-length chunks or blocks."""
@@ -222,52 +169,8 @@ class multidict(collections.defaultdict):
         self[key].append(value)
 
 
-class DefaultOrderedDict(OrderedDict):
-    """http://stackoverflow.com/a/6190500/478503"""
-    def __init__(self, default_factory=None, *a, **kw):
-        if (default_factory is not None and
-            not isinstance(default_factory, Callable)):
-            raise TypeError('First argument must be callable')
-        OrderedDict.__init__(self, *a, **kw)
-        self.default_factory = default_factory
-
-    def __getitem__(self, key):
-        try:
-            return OrderedDict.__getitem__(self, key)
-        except KeyError:
-            return self.__missing__(key)
-
-    def __missing__(self, key):
-        if self.default_factory is None:
-            raise KeyError(key)
-        self[key] = value = self.default_factory()
-        return value
-
-    def __reduce__(self):
-        if self.default_factory is None:
-            args = tuple()
-        else:
-            args = self.default_factory,
-        return type(self), args, None, None, list(self.items())
-
-    def copy(self):
-        return self.__copy__()
-
-    def __copy__(self):
-        return type(self)(self.default_factory, self)
-
-    def __deepcopy__(self, memo):
-        import copy
-        return type(self)(self.default_factory,
-                          copy.deepcopy(list(self.items())))
-
-    def __repr__(self, **kwargs):
-        return 'OrderedDefaultDict(%s, %s)' % (self.default_factory,
-                                        OrderedDict.__repr__(self))
-
-
 ###########################################################################
-##                   String/Unicode functions                            ##
+##                         String functions                              ##
 ###########################################################################
 
 ACCENTS_MAP = {'a': '\xe0\xe1\xe2\xe3\xe4\xe5',
@@ -286,7 +189,7 @@ ACCENTS_MAP = {'a': '\xe0\xe1\xe2\xe3\xe4\xe5',
                'N': '\xd1',
                'O': '\xd2\xd3\xd4\xd5\xd6\xd8',
                'U': '\xd9\xda\xdb\xdc',
-               'Y': '\xdd\xdf',
+               'Y': '\xdd',
 
                's': '\u0161\u015f',
                'ss': '\xdf',
@@ -307,6 +210,14 @@ ACCENTS_MAP = {'a': '\xe0\xe1\xe2\xe3\xe4\xe5',
                "3": '\xb3',
                #u"(c)" : u'\xa9',
 }
+
+REV_ACCENTS_MAP = {}
+for to, from_characters in ACCENTS_MAP.items():
+    for from_character in from_characters:
+        if from_character in REV_ACCENTS_MAP:
+            raise ValueError("Character {} occured twice on right-hand side".format(from_character))
+        REV_ACCENTS_MAP[from_character] = to
+
 """Map of unaccented : accented pairs.
 
 The values (accented) are strings where each character is an accented
@@ -314,25 +225,13 @@ version of the corresponding key (unaccented). The key can be of length>1
 if appropriate (e.g. german sz, ellipsis)"""
 
 
-def stripAccents(s, usemap=ACCENTS_MAP, latin1=False):
+def strip_accents(s):
     """Replace accented characters in s by their unaccepted equivalents
 
-    @param s: the string to strip accents from. If it is not a str object
-      it is first converted using L{str}C{(.., 'latin-1')}
-    @param usemap: an optional translation map to use
+    @param s: the string to strip accents from.
     @return: a str string containing the translated input
     """
-    #TODO: This is probably not very efficient! Creating a reverse map and
-    #Iterating the input while building the output would be better...
-    if not s: return s
-    if type(s) != str: s = str(s, "latin-1")
-    for key, val in usemap.items():
-        for trg in val:
-            if latin1 and val.encode('latin-1', 'replace').decode('latin-1') == val:
-                continue
-
-            s = s.replace(trg, key)
-    return s
+    return "".join(REV_ACCENTS_MAP.get(c, c) for c in s)
 
 
 def random_alphanum(size=10):

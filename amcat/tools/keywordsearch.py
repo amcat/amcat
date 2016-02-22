@@ -33,7 +33,7 @@ from amcat.models import Label, Medium, ArticleSet, CodingJob, Code
 from amcat.tools.aggregate_es import aggregate, TermCategory
 from amcat.tools.amcates import ES
 from amcat.tools.caching import cached
-from amcat.tools.toolkit import stripAccents
+from amcat.tools.toolkit import strip_accents
 from amcat.tools import queryparser
 
 REFERENCE_RE = re.compile(r"<(?P<reference>.*?)(?P<recursive>\+?)>")
@@ -213,7 +213,7 @@ class SearchQuery(object):
     """
 
     def __init__(self, query, label=None):
-        self.query = stripAccents(query)
+        self.query = strip_accents(query)
         self.declared_label = _clean(label)
         self.label = self.declared_label or _clean(self.query)
 
@@ -308,7 +308,7 @@ def get_date_filters(start_date, end_date, on_date, datetype):
 def _clean(s):
     if s is None: return
     s = str(s)
-    s = stripAccents(s)
+    s = strip_accents(s)
     s = re.sub("[<>+*]", " ", s)
     s = re.sub("\s+", " ", s)
     return s.strip()

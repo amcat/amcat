@@ -38,6 +38,10 @@ class TestToolkit(amcattest.AmCATTestCase):
         ):
             self.assertEqual(dict(toolkit.multidict(input)), output)
 
+    def test_strip_accents(self):
+        test_string = "\xdf abc \xe7\xe3"
+        self.assertEqual(toolkit.strip_accents(test_string), "ss abc ca")
+
     def test_readdate(self):
         for s, date, american, lax in (
             ("22 maart 1980" , datetime.datetime(1980, 3, 22,0,0,0), False, True),

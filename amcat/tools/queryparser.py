@@ -24,14 +24,11 @@ Decided to roll my own parser since elastic does not support complex phrases
 Also paves the way for more customization, i.e. allowing Lexis style queries
 """
 
-import itertools
 import collections
+import itertools
 
-from django.core.exceptions import ValidationError
+from amcat.tools.toolkit import strip_accents
 from pyparsing import ParserElement, ParseException
-
-from amcat.tools.toolkit import stripAccents
-
 
 ParserElement.enablePackrat()
 
@@ -347,9 +344,8 @@ def simplify(term):
 class QueryParseError(ValueError):
     pass
 
-def parse_to_terms(s, simplify_terms=True, strip_accents=True, default_fieldname=None, context=""):
-    if strip_accents:
-        s = stripAccents(s)
+def parse_to_terms(s, simplify_terms=True, default_fieldname=None, context=""):
+    s = strip_accents(s)
     if " *" in s.strip():
         raise QueryParseError("Error in query '{context}': Can only use wildcard (*) as suffix or at beginning of query".format(**locals()))
     try:
