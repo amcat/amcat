@@ -20,6 +20,13 @@ version = version.split("=")[-1].strip().strip("'").strip('"')
 # Package anything you can find, except for tests
 packages = setuptools.find_packages(here, exclude=["*.tests"])
 
+description = """
+System for document management and analysis. The purpose of AmCAT is to
+make it easier to conduct manual or automatic analyses of texts for (social)
+scientific purposes. AmCAT can improve the use and standard of content
+analysis in the social sciences and stimulate sharing data and analyses.
+"""
+
 def main():
     setuptools.setup(
         name="amcat",
@@ -28,12 +35,7 @@ def main():
         license='GNU Affero GPL',
         author='AmCAT Developers',
         author_email='amcat-dev@googlegroups.com',
-        description=('System for document management and analysis. '
-                     'The purpose of AmCAT is to make it easier to conduct '
-                     'manual or automatic analyses of texts for (social) '
-                     'scientific purposes. AmCAT can improve the use and standard'
-                     'of content analysis in the social sciences and stimulate '
-                     'sharing data and analyses.'),
+        description=(" ".join(description.split("\n"))).strip(),
         install_requires=requirements,
         setup_requires = [
             "setuptools_git >= 0.3",
