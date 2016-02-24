@@ -90,6 +90,8 @@ class ImportCodebook(Script):
     def _run(self, file, project, codebook_name, codebook, **kargs):
         data = csv_as_columns(self.bound_form.get_reader())
 
+        if not data:
+            raise ValueError("Couldn't read CSV data")
         # build code, parent pairs
         if "parent" in data:
             parents = zip(data["code"], data["parent"])

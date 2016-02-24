@@ -22,17 +22,18 @@
  * calls. It can figure out most of the needed information by just an api-
  * url.
  */
+"use strict";
 window.amcat = require("amcat/amcat");
 window.amcat = (window.amcat === undefined) ? {} : window.amcat;
 amcat.datatables = {};
 
-_TARGET_ERR = "You can't use number to target columns in columndefs, as " +
+var _TARGET_ERR = "You can't use number to target columns in columndefs, as " +
                 "create_rest_table creates the table for you. Please use " +
                 "strings which refer to mData.";
 
-_SORTCOL = "iSortCol_";
-_SORTDIR = "sSortDir_";
-_DPROP = "mDataProp_";
+var _SORTCOL = "iSortCol_";
+var _SORTDIR = "sSortDir_";
+var _DPROP = "mDataProp_";
 
 
 
@@ -45,14 +46,16 @@ function export_clicked(){
         pks = $.map(table.rows(".active").data(), function(o){ return o.id; });
     }
 
-    var url = this.table.parents(".amcat-table-wrapper").data("url");
-    url += "&format=" + this.format.val();
-    url += "&page_size=" + this.page_size.val();
     var order = table.order()[0];
     var order_str = $('th', this.table).eq(order[0]).text();
     var order_dir = order[1] === "desc" ? '-' : '';
-    url += "&order_by=" + order_dir + order_str;
+    var params = {
+        order_by: order_dir + order_str,
+        format: this.format.val(),
+        page_size: this.page_size.val()
+    };
 
+    var url = this.table.parents(".amcat-table-wrapper").data("url") + "?" + $.param(params);
     if(this.table.parents(".amcat-table-wrapper").data("allow_export_via_post")){
         amcat.utils.navigate_with_post_data(url, {
             pk: pks
@@ -108,7 +111,7 @@ function _set_action_buttons(table){
 }
 
 // Default options passed to datatables.
-_AMCAT_DEFAULT_OPTS = {
+var _AMCAT_DEFAULT_OPTS = {
     //sScrollY: "300px",
     fnRowCallback : function(nRow){
         amcat.datatables.truncate_row(nRow);
@@ -143,7 +146,7 @@ _AMCAT_DEFAULT_OPTS = {
             "fnClick": open_export_dialog
         }]
     },
-    "lengthMenu": [[100, 300, 1000, 10000000], [100, 300, 1000, "All"]],
+    "lengthMenu": [[10, 100, 300, 1000, 10000000], [10, 100, 300, 1000, "All"]],
 };
 
 $.fn.dataTableExt.sErrMode = 'throw';
@@ -684,19 +687,16 @@ amcat.datatables.gen_aoColumnDefs = function (metadata) {
     var res = [];
     var fields = [];
 
-    for (var fieldname in metadata.fields) {
+    metadata.field_list.forEach(function(fieldname) {
         fields.push(fieldname);
-    }
-
-    fields.sort();
+    });
     var id = fields.indexOf("id");
 
-    if (id !== -1){
-        var tmp = fields[0];
-        fields.splice(i, 1);
-        fields.splice(0, 0, "id");
-        fields[i] = tmp;
+    //push 'id' to front if it exists
+    if(id > 0){
+        fields.splice(0, 0, fields.splice(id, 1))
     }
+
 
     for (var i in fields){
         res.push({

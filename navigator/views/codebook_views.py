@@ -120,6 +120,20 @@ class CodebookImportView(ProjectScriptView):
         initial["codebook"] = self.kwargs.get("codebookid")
         return initial
 
+    def post(self, request, *args, **kwargs):
+        try:
+            return super(CodebookImportView, self).post(request, *args, **kwargs)
+
+        except UnicodeDecodeError:
+            form = self.get_form(ImportCodebook.options_form)
+            form.errors["encoding"] = ["Could not decode the file using UTF-8"]
+            return self.form_invalid(form)
+
+        except (ValueError, IndexError):
+            form = self.get_form(ImportCodebook.options_form)
+            form.errors["file"] = ["Couldn't parse the file as CSV using the given dialect"]
+            form.errors["dialect"] = form.errors["file"]
+            return self.form_invalid(form)
 
 class CodebookAddView(ProjectActionRedirectView):
     """
