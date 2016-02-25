@@ -40,6 +40,23 @@ SPSS_SERIALIZERS = {
     datetime.datetime: lambda d: d.strftime("%d-%b-%Y-%H:%M:%S").upper()
 }
 
+PSPP_VERSION_RE = re.compile(b"pspp \(GNU PSPP\) (\d+)\.(\d+).(\d+)")
+PSPPVersion = collections.namedtuple("PSPPVersion", ["major", "minor", "micro"])
+
+def get_pspp_version() -> PSPPVersion:
+    try:
+        process = subprocess.Popen(["pspp", "--version"], stdout=subprocess.PIPE)
+    except FileNotFoundError:
+        raise FileNotFoundError("Could not execute pspp. Is it installed?")
+
+    stdout, _ = process.communicate()
+    for line in stdout.splitlines():
+        match = PSPP_VERSION_RE.match(line)
+        if match:
+            return PSPPVersion(*map(int, match.groups()))
+
+    raise PSPPError("Could not find version of installed pspp.")
+
 
 def clean(s, max_length=255):
     s = s.encode('ascii', 'replace').decode("ascii")
@@ -120,6 +137,11 @@ class PSPPError(Exception):
 
 def table2sav(t):
     _, filename = tempfile.mkstemp(suffix=".save", prefix="table-")
+
+    log.debug("Check if we've got the right version of PSPP installed")
+    version = get_pspp_version()
+    if version < PSPPVersion(0, 8, 5):
+        raise PSPPVersion("Expected pspp>=8.5.0, but found {}".format(version))
 
     log.debug("Starting PSPP")
     pspp = subprocess.Popen(

@@ -18,6 +18,7 @@
 ###########################################################################
 import datetime
 
+from amcat.tools.table.table2spss import get_pspp_version, PSPPVersion
 from django.test import TransactionTestCase
 
 from amcat.models import Coding, create_coded_articles
@@ -305,3 +306,6 @@ class TestAggregateORM(TransactionTestCase):
     def test_no_codings(self):
         aggr = aggregate_orm.ORMAggregate(Coding.objects.none(), threaded=False)
         self.assertEqual(set(aggr.get_aggregate(values=[CountArticlesValue()])), set())
+
+    def test_get_pspp_version(self):
+        self.assertGreaterEqual(PSPPVersion(8, 5, 0), get_pspp_version())
