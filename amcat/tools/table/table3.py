@@ -76,14 +76,15 @@ class Table(object):
         if rows is None:
             rows = []
 
-        if columnTypes is None:
-            columnTypes = {}
-
         self.columns = columns
         self.rows = rows
         self.cellfunc = cellfunc
         self.rowNamesRequired = rowNamesRequired
-        self.columnTypes = columnTypes
+
+        if isinstance(columnTypes, (list, tuple)):
+            self.columnTypes = dict(zip(self.getColumns(), columnTypes))
+        elif columnTypes is None:
+            self.columnTypes = {}
 
     # Basic table interface
     def getValue(self, row, column):
@@ -322,9 +323,9 @@ class ListTable(Table):
        if the data is not subscriptable
     """
 
-    def __init__(self, data=None, colnames=None):
-        super(ListTable, self).__init__(rows=data or [])
+    def __init__(self, data=None, colnames=None, **kwargs):
         self.colnames = colnames
+        super(ListTable, self).__init__(rows=data or [], **kwargs)
 
     def getColumns(self):
         if not (self.colnames or self.rows): return []
