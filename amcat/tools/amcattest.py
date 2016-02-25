@@ -366,12 +366,11 @@ def use_elastic(func):
     """
     @wraps(func)
     def inner(*args, **kargs):
-        from amcat.tools.amcates import ES, delete_test_indices
+        from amcat.tools.amcates import ES
 
         es = ES()
         if not es.es.ping():
             raise unittest.SkipTest("ES not enabled")
-        delete_test_indices()
         es.delete_index()
         ES().check_index()
         return func(*args, **kargs)
