@@ -36,7 +36,6 @@ var _SORTDIR = "sSortDir_";
 var _DPROP = "mDataProp_";
 
 
-
 function export_clicked(){
     var table = this.table.DataTable();
     var pks = [];
@@ -54,8 +53,9 @@ function export_clicked(){
         format: this.format.val(),
         page_size: this.page_size.val()
     };
-
-    var url = this.table.parents(".amcat-table-wrapper").data("url") + "?" + $.param(params);
+    var has_params = this.table.parents(".amcat-table-wrapper").data("url").indexOf('?');
+    var separator = has_params >= 0 ? "&" : "?";
+    var url = this.table.parents(".amcat-table-wrapper").data("url") + separator + $.param(params);
     if(this.table.parents(".amcat-table-wrapper").data("allow_export_via_post")){
         amcat.utils.navigate_with_post_data(url, {
             pk: pks
@@ -173,7 +173,7 @@ amcat.datatables.create_rest_table = function (cont, rest_url, optional_args) {
     var state = $.extend({
         cont: $(cont).get(0),
         rest_url: rest_url,
-        name: rest_url,
+        name: undefined,
         datatables_options: {
             aaSorting: []
         },
@@ -686,10 +686,18 @@ amcat.datatables.fnServerData = function(sSource, aoData, fnCallback){
 amcat.datatables.gen_aoColumnDefs = function (metadata) {
     var res = [];
     var fields = [];
+    var field_list = metadata.field_list;
+    if(field_list === undefined){
+        for(var key in metadata.fields){
+            fields.push(key);
+        }
+    }
+    else{
+        metadata.field_list.forEach(function(fieldname){
+            fields.push(fieldname);
+        });
+    }
 
-    metadata.field_list.forEach(function(fieldname) {
-        fields.push(fieldname);
-    });
     var id = fields.indexOf("id");
 
     //push 'id' to front if it exists
@@ -793,7 +801,7 @@ amcat.datatables.create_table_header = function(opts){
 amcat.datatables.create_table_element = function(opts){
     return (
         $("<table>").attr("width", opts.sWidth)
-        .addClass("display datatable").append(
+        .addClass("display datatable table table-striped").append(
             $("<thead>").append(
                 amcat.datatables.create_table_header(opts)
             )
