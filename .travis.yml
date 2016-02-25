@@ -37,7 +37,7 @@ install:
  - wget "http://ftp.download-by.net/gnu/gnu/pspp/pspp-0.8.5.tar.gz" -O - | tar xvz
  - cd pspp*
  - ./configure
- - make -j4
+ - make -j4 >make_stdout.log 2>make_stderr.log
  - sudo make install
  - cd ..
 
