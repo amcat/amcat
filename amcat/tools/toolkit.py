@@ -33,7 +33,6 @@ this organisation!
  - mapping functions
  - string functions
  - date(time) functions
- - process handling and external processes
  - misc functions
 """
 
@@ -46,8 +45,6 @@ import logging
 import random
 import re
 import string
-import subprocess
-import threading
 import time
 import warnings
 
@@ -425,79 +422,6 @@ def dateToInterval(date, interval):
     elif interval == 'year':
         return date.strftime('%Y')
     raise Exception('invalid interval')
-
-
-###########################################################################
-##              Process Handling and External Processes                  ##
-###########################################################################
-
-class _Reader(threading.Thread):
-    """Class used for reading the streams in L{execute}"""
-
-    def __init__(self, stream, name, listener=None):
-        threading.Thread.__init__(self)
-        self.stream = stream
-        self.name = name
-        self.out = ""
-        self.listener = listener
-
-    def run(self):
-        """Read self.stream until it stops. If a listener is present,
-        call it for every read line"""
-        if self.listener:
-            while True:
-                s = self.stream.readline()
-                self.listener(self.name, s)
-                if not s:
-                    self.listener(self.name, None)
-                    break
-                self.out += s
-        else:
-            self.out = self.stream.read()
-
-
-def executepipe(cmd, listener=None, listenOut=False, outonly=False, **kargs):
-    """Execute a command, yielding an input pipe for writing,
-    then yielding out and err, using threads to avoid deadlock
-
-    Useful for large sending input streams for processes with
-    simple communication (everything in, then everything out)
-
-    @param cmd: the process to run
-    @param listener: An optional a listener, which should be a function that
-      accepts two arguments (source, message). This function will be
-      called for every line read from the error and output streams,
-      where source is 'out' or 'err' depending on the source and
-      message will be the line read. The listener will be called once
-      per stream with a non-True message to indicate closure of that
-      stream. These calls will come from the worker threads, so (especially
-      if listenOut is True) this might cause multithreading issues.
-    @param listenOut: if False (default), only the error stream will be used
-      for the listener, otherwise both error and output stream will be used.
-    @param outonly: if True, return only the out part, and raise an exception
-      if there is any data on the error stream
-    """
-    p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE, close_fds=True, **kargs)
-    outr = _Reader(p.stdout, "out", listenOut and listener)
-    errr = _Reader(p.stderr, "err", listener)
-    outr.start()
-    errr.start()
-    #print("Yielding input pipe")
-    yield p.stdin
-    #print("Closing input pipe")
-    p.stdin.close()
-
-    #print("Joining outr")
-    outr.join()
-    #print("Joining errr")
-    errr.join()
-    #print("Returning...")
-    if outonly:
-        e = errr.out.strip()
-        if e: raise Exception("Error on executing %r:\n%s" % (cmd, e))
-        yield outr.out
-    yield outr.out, errr.out
 
 
 ###########################################################################
