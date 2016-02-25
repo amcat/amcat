@@ -85,3 +85,6 @@ class IDLabel(Identity):
 
     def __repr__(self):
         return "%s(%s)" % (type(self).__name__, self.id)
+
+    def __hash__(self):
+        return hash(self.id)
