@@ -265,6 +265,13 @@ def get_highlight_query(query, fieldname):
     query = queryparser.parse(query, fieldname)
     return {"highlight_query": query, "number_of_fragments": 0}
 
+def delete_test_indices():
+    es = ES()
+    indices = es.es.indices.get_aliases().keys()
+    test_indices = filter(lambda i: i.startswith("test_"), indices)
+    for test_index in test_indices:
+        ES(index=test_index).delete_index()
+
 class ElasticSearchError(Exception):
     pass
 
@@ -275,7 +282,7 @@ class ES(object):
         self.index = settings.ES_INDEX if index is None else index
         self.doc_type = settings.ES_ARTICLE_DOCTYPE if doc_type is None else doc_type
 
-        if settings.TESTING:
+        if settings.TESTING and index is None:
             self.index += "_{pid}".format(pid=os.getpid())
 
     def flush(self):
@@ -352,9 +359,6 @@ class ES(object):
                 "transport_hosts": self.es.transport.hosts,
             }
 
-
-
-    
     def get(self, id, **options):
         """
         Get a single article from the index
