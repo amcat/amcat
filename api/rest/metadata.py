@@ -95,6 +95,6 @@ class AmCATMetadata(SimpleMetadata):
 
         metadata['filter_fields'] = list(view.get_filter_fields())
         metadata["fields"] = dict(self.get_metadata_fields(view))
-        metadata["field_list"] = list(zip(*next(self.get_metadata_fields(view))))
+        metadata["field_list"] = [field_name for field_name, _ in self.get_metadata_fields(view)]
         return metadata
 
