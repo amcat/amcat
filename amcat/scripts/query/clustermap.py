@@ -47,7 +47,7 @@ class ClusterMapHandler(QueryActionHandler):
 class ClusterMapForm(QueryActionForm):
     def clean(self):
         queries = self.cleaned_data["query"].split("\n")
-        queries = filter(bool, map(str.strip, queries))
+        queries = list(filter(bool, map(str.strip, queries)))
 
         if len(queries) < 2:
             raise ValidationError("You need to provide at least 2 queries to generate a clustermap")
@@ -78,7 +78,7 @@ class ClusterMapAction(QueryAction):
             coords = tuple(clustermap_html_to_coords(html))
 
             return json.dumps(
-                {"coords": coords, "image": b64encode(image),
+                {"coords": coords, "image": b64encode(image).decode("ascii"),
                  "clusters": [
                      {"query": q, "articles": tuple(a)}
                      for q, a in zip(cluster_queries, articles)
@@ -93,7 +93,7 @@ class ClusterMapAction(QueryAction):
 
             return table2sav(Table(
                 rows=list(rows),
-                columns=map(str, headers),
+                columns=list(map(str, headers)),
                 columnTypes=[int]*len(headers),
                 cellfunc=lambda row, col: row[_headers[col]]
             ))
@@ -104,7 +104,7 @@ class ClusterMapAction(QueryAction):
 
         result = StringIO()
         csvf = csv.writer(result, dialect=dialect)
-        csvf.writerow(map(str, headers))
+        csvf.writerow(list(map(str, headers)))
         csvf.writerows(sorted(rows))
 
         if form.cleaned_data["output_type"] == "application/json+clustermap+table":

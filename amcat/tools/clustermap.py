@@ -28,7 +28,7 @@ visualisation software such as:
 import os
 import subprocess
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from itertools import chain
 from tempfile import NamedTemporaryFile
 
@@ -73,7 +73,7 @@ def combinations(iterable):
         yield (head,) + result
         yield result
 
-def get_clusters(queries):
+def get_clusters(queries) -> dict:
     """Based on a mapping {query: ids} determine a mapping {[query] -> [ids]}, thus
     determining the cluster it belongs to.
 
@@ -99,7 +99,7 @@ def get_clustermap_table(queries):
     """
     Given a mapping of query to ids, return a table with the #hits for each boolean combination
     """
-    queries = {k: set(v) for (k,v) in queries.items()}
+    queries = OrderedDict((k, set(v)) for (k,v) in queries.items())
     header = sorted(queries.keys(), key=lambda q: str(q))
     rows = []
     allids = set(chain.from_iterable(queries.values()))
@@ -120,8 +120,9 @@ def get_clustermap_table(queries):
 
 
 def _get_cluster_query(all_queries, cluster_queries):
-    exclude_queries = "(%s)" % ") OR (".join(q.query for q in all_queries - cluster_queries)
-    include_queries = "(%s)" % ") AND (".join(q.query for q in cluster_queries)
+    # We sort the queries to generate the queries in a deterministic manner
+    exclude_queries = "(%s)" % ") OR (".join(sorted(q.query for q in all_queries - cluster_queries))
+    include_queries = "(%s)" % ") AND (".join(sorted(q.query for q in cluster_queries))
     return "({include_queries}) NOT ({exclude_queries})".format(**locals()).replace(" NOT (())", "")
 
 
@@ -145,13 +146,13 @@ def aduna(xml_path, img_path):
     if not stdout:
         raise AdunaException("Aduna clustermap proces generated error: %s" % stderr)
 
-    return open(img_path).read(), stdout, stderr
+    return open(img_path, "rb").read(), stdout, stderr
 
 
 def clustermap_html_to_coords(_html):
     doc = html.fromstring(_html)
     for area in doc.cssselect("area"):
-        coords = map(int, area.attrib["coords"].split(","))
+        coords = list(map(int, area.attrib["coords"].split(",")))
         article_id = int(area.attrib["href"])
         yield {"coords": coords, "article_id": article_id}
 
@@ -160,11 +161,12 @@ def get_clustermap_image(queries):
     """Based on a mapping {query: ids} render an Aduno clustermap.
 
     @returns: (image bytes, html) """
-    all_article_ids = chain.from_iterable(queries.values())
+    all_article_ids = list(chain.from_iterable(queries.values()))
 
-    with NamedTemporaryFile(suffix=".xml") as xml:
-        xml.write(XML_TEMPLATE.render(Context(locals())))
+    with NamedTemporaryFile(suffix=".xml", mode="wb") as xml:
+        context = Context(locals())
+        rendered = XML_TEMPLATE.render(context)
+        xml.write(rendered.encode('utf-8'))
         xml.flush()
         with NamedTemporaryFile(suffix=".png") as png:
             return aduna(xml.name, png.name)[:-1]
-
