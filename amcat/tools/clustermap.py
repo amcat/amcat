@@ -116,7 +116,7 @@ def get_clustermap_table(queries):
         if n:
             rows.append(tuple(row + [n]))
 
-    return header + ["Total"], rows
+    return [h.label for h in header] + ["Total"], rows
 
 
 def _get_cluster_query(all_queries, cluster_queries):

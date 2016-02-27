@@ -43,7 +43,7 @@ class TestClusterMap(AmCATTestCase):
 
 
     def test_get_clustermap_table(self):
-        queries = {"a": [1, 2, 3], "b": [1, 4], "c": [1]}
+        queries = {SearchQuery("a"): [1, 2, 3], SearchQuery("b"): [1, 4], SearchQuery("c"): [1]}
         headers, rows = get_clustermap_table(queries)
 
         self.assertEqual(['a', 'b', 'c', 'Total'], headers)
