@@ -117,6 +117,7 @@ Then, in the top-directory of AmCAT itself run:
 
 ```sh
 bower install
+cp static/components/highcharts/modules/{heatmap,heatmap-fixed}.js
 ```
 
 ### Setting up the database
