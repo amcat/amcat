@@ -67,10 +67,6 @@ def to_querydict(d, mutable=False):
     d = {k: encode(v) for (k,v) in d.items()}
     return QueryDict(urlencode(d, True), mutable=mutable)
 
-def from_querydict(d):
-    """Convert a QueryDict to a normal dictionary with lists as values."""
-    return dict(d.iterlists())
-
 def db_supports_distinct_on(db='default'):
     """
     Return a boolean indicating whether this database supports DISTINCT ON.

@@ -156,7 +156,7 @@ class ScriptMixin(FormMixin):
         # it thinks it's a dict)
         kwargs = self.get_form_kwargs()
         if isinstance(kwargs.get('data'), QueryDict):
-            kwargs['data'] = dict(kwargs['data'].iterlists())
+            kwargs['data'] = dict(kwargs['data'].lists())
 
         # Convert file objects to temporary filenames
         if isinstance(kwargs.get('files'), MultiValueDict):

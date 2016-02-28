@@ -71,7 +71,7 @@ class SummaryAction(QueryAction):
     form_class = SummaryActionForm
 
     def run(self, form):
-        form_data = json.dumps(dict(form.data._iterlists()))
+        form_data = json.dumps(dict(form.data.lists()))
 
         size = form.cleaned_data['size']
         offset = form.cleaned_data['offset']
