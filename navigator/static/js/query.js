@@ -827,6 +827,23 @@ define([
         modal.find(".btn-primary").addClass("disabled").off("click");
     };
 
+    self.download_uri_as = function (uri, name){
+        var a = $('<a>')
+            .attr('href', uri)
+            .attr('download', name)
+            .appendTo(document.body);
+        console.log(a);
+        a[0].dispatchEvent(new MouseEvent("click"));
+    };
+
+    self.get_data_uri = function(data, content_type){
+        data = btoa(data);
+        return "data:" + content_type + ";charset=utf-8;base64," + data;
+    };
+
+    self.download_data_as = function(data, content_type, name){
+        self.download_uri_as(self.get_data_uri(data, content_type), name);
+    };
 
     self.onclick_save_image_link = function(link, image, format){
         var w = image.width;
@@ -895,7 +912,8 @@ define([
         });
     };
     self.init_poll = function(uuid){
-        var poll = Poll(uuid, {download: self.download_result()});
+        // TODO: remove any remaining download logic from amcat-query-js/utils/poll
+        var poll = Poll(uuid /*, {download: self.download_result()}*/);
 
         poll.done(function(){
             progress_bar.css("width", "100%");
@@ -910,6 +928,10 @@ define([
             $("#loading-dialog").modal("hide");
             progress_bar.css("width", "0%");
         }).result(function(data, textStatus, jqXHR){
+            if(self.download_result()){
+                self.download_data_as(data, form_data.output_type, "data." + form_data.output_type.split(/[\/+;]/)[1]);
+                return;
+            }
             var contentType = jqXHR.getResponseHeader("Content-Type");
             var body = result.find(".panel-body").html("");
             var renderer = renderers[contentType];
