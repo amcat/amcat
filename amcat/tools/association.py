@@ -223,7 +223,7 @@ class Association(object):
         for aa in self.get_conditional_probabilities():
             probabilities[aa.interval][aa.of][aa.given] = aa.probability
 
-        for interval, probs in probabilities.items():
+        for interval, probs in sorted(probabilities.items()):
             yield (interval, self._get_crosstable(probs, format))
 
 
