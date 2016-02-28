@@ -70,7 +70,7 @@ class ScriptHandler(TaskHandler):
         # SimpleUploadedFile objects which Django understands.
         if 'files' in kwargs:
             files = MultiValueDict(kwargs['files'])
-            for filedict_list in files.viewvalues():
+            for filedict_list in files.values():
                 for i, fdict in enumerate(filedict_list):
                     if isinstance(fdict, dict):
                         fdict = dict(fdict)
@@ -160,7 +160,7 @@ class ScriptMixin(FormMixin):
 
         # Convert file objects to temporary filenames
         if isinstance(kwargs.get('files'), MultiValueDict):
-            for file_object_list in kwargs['files'].viewvalues():
+            for file_object_list in kwargs['files'].values():
                 for i, fo in enumerate(file_object_list):
                     file_object_list[i] = get_temporary_file_dict(fo)
             kwargs['files'] = dict(kwargs['files'])
