@@ -308,9 +308,11 @@ class Article(AmcatModel):
         modifies all articles in place with .hash, .id, .uuid, and .duplicate (None or Article)
         """
         es = amcates.ES()
-        dupe_values = {'uuid': {}, 'hash': {}}  # {"uuid" : {<uuid> : article}
-        internal_dupes = collections.defaultdict(list) # {article : articles}
-        # Iterate over articles, remove duplicates within addendum and build dupe values dictionary 
+
+        uuids = {} # {uuid : article}
+        hashes = collections.defaultdict(list) # {hash: articles}
+        
+        # Iterate over articles, mark duplicates within addendum and build uuids/hashes dictionaries
         for a in articles:
             if a.id:
                 raise ValueError("Specifying explicit article ID in save not allowed")
@@ -318,42 +320,37 @@ class Article(AmcatModel):
                 a.length = word_len(a.text) + word_len(a.headline) + word_len(a.byline)
             a.es_dict = amcates.get_article_dict(a)
             a.hash = a.es_dict['hash']
-            a.duplicate = None # innocent until proven guilty
+            if not hasattr(a, 'uuid'): a.uuid = None
+            a.duplicate, a.internal_duplicate = None, None # innocent until proven guilty
             if not deduplicate:
                 continue
-                
-            dupevals = {"hash": a.hash}
-            if getattr(a, 'uuid'):
-                dupevals['uuid'] = unicode(a.uuid)
-            for attr, val in dupevals.items():
-                if val in dupe_values[attr]:
-                    dupe = dupe_values[attr][val] # within-set duplicate
-                    a.duplicate = dupe
-                    internal_dupes[dupe].append(a)
-                else:
-                    dupe_values[attr][val] = a
 
+            if a.uuid:
+                uuid = unicode(a.uuid)
+                if uuid in uuids:
+                    raise ValueError("Duplicate UUID in article upload")
+                uuids[uuid] = a
+            else: # articles with explicit uuid cannot be deduplicated on hash
+                hashes[a.hash].append(a)
+            
         def _set_dupe(dupe, orig):
             dupe.duplicate = orig
             dupe.id = orig.id
             dupe.uuid = orig.uuid
-            for dupe2 in internal_dupes[dupe]:
-                _set_dupe(dupe2, orig)
-                    
-        if dupe_values['hash']:
-            results = es.query_all(filters={'hash': dupe_values['hash'].keys()},
-                                   fields=["hash", "uuid"], score=False)
-            for orig in results:
-                dupe = dupe_values['hash'][orig.hash]
-                if getattr(dupe, 'uuid') and dupe.uuid != orig.uuid:
-                    # not a dupe!
-                    continue
+
+        # check dupes based on hash
+        results = es.query_all(filters={'hash': hashes.keys()},
+                               fields=["hash", "uuid"], score=False)
+        for orig in results:
+            for dupe in hashes[orig.hash]:
                 _set_dupe(dupe, orig)
-        if dupe_values['uuid']:
-            results = es.query_all(filters={'uuid': dupe_values['uuid'].keys()},
+
+        # check dupes based on uuid (if any are given)
+        if uuids:
+            results = es.query_all(filters={'uuid': uuids.keys()},
                                    fields=["hash", "uuid"], score=False)
             for orig in results:
-                dupe = dupe_values['uuid'][orig.uuid]
+                dupe = uuids[orig.uuid]
                 if dupe.hash != orig.hash:
                     raise ValueError("Cannot modify existing articles: {orig.hash} != {dupe.hash}".format(**locals()))
                 _set_dupe(dupe, orig)
