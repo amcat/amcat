@@ -81,7 +81,7 @@ class ArticleListAction(QueryAction):
 
     def run(self, form):
         selection = SelectionSearch(form)
-        data = {API_KEYWORD_MAP.get(k, k): v for k,v in self.data.iterlists()}
+        data = {API_KEYWORD_MAP.get(k, k): v for k, v in self.data.items()}
         data["q"] = ["{}#{}".format(q.label, q.query) for q in selection.get_queries()]
         data["ids"] = data.get("ids", selection.get_filters().get("ids", []))
         url = urlencode(data, doseq=True)
