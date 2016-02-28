@@ -19,7 +19,7 @@ class TestExportCodebookAsXML(amcattest.AmCATTestCase):
 
         # Codebook with two roots
         cb = codebook_to_xml(amcattest.create_test_codebook_with_codes()[0])
-        self.assertEquals([c.find("label").text for c in cb.find("roots")], ["A", "B"])
+        self.assertEquals({c.find("label").text for c in cb.find("roots")}, {"A", "B"})
         self.assertTrue(b"A1a" in etree.tostring(cb))
 
         # Test unicode
