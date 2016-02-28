@@ -25,6 +25,7 @@ from urllib.parse import urlencode
 from django import forms
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
+from django.http import QueryDict
 from django.template import Context
 from django.template.loader import get_template
 from amcat.scripts.query import QueryAction, QueryActionForm
@@ -80,8 +81,10 @@ class ArticleListAction(QueryAction):
     form_class = ArticleListActionForm
 
     def run(self, form):
+        assert isinstance(self.data, QueryDict), "Class should have been instantiated with a django QueryDict as 'data'"
+
         selection = SelectionSearch(form)
-        data = {API_KEYWORD_MAP.get(k, k): v for k, v in self.data.items()}
+        data = {API_KEYWORD_MAP.get(k, k): v for k, v in self.data.lists()}
         data["q"] = ["{}#{}".format(q.label, q.query) for q in selection.get_queries()]
         data["ids"] = data.get("ids", selection.get_filters().get("ids", []))
         url = urlencode(data, doseq=True)

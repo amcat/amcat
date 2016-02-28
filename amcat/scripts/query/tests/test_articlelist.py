@@ -16,25 +16,25 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from collections import ChainMap
 
 from amcat.scripts.query import ArticleListAction
 from amcat.tools import amcattest
+from django.http import QueryDict
 
 
 class TestArticleListAction(amcattest.AmCATTestCase):
     def setUp(self):
         self.project = amcattest.create_test_project()
 
-    def get_query_action(self, output_type="text/html", **kwargs):
+    def get_query_action(self, query="text/html"):
         return ArticleListAction(
             user=self.project.owner, project=self.project,
             articlesets=self.project.all_articlesets(),
-            data=dict(ChainMap({"output_type": output_type}, kwargs))
+            data=QueryDict(query)
         )
 
     def test_basic(self):
-        action = self.get_query_action()
+        action = self.get_query_action("output_type=text/html")
         form = action.get_form()
         form.full_clean()
         str(action.run(form))
