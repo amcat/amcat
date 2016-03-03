@@ -271,7 +271,7 @@ class SearchResource(AmCATResource):
     @cached
     def queries(self):
         queries = filter(bool, self.params.getlist("q"))
-        return map(keywordsearch.SearchQuery.from_string, queries)
+        return [keywordsearch.SearchQuery.from_string(q) for q in queries]
 
     def get_queryset(self):
         fields = self.get_serializer().get_fields().keys()
