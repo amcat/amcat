@@ -43,6 +43,7 @@ API_KEYWORD_MAP = {
     "query": "q",
     "articlesets": "sets",
     "columns": "col",
+    "mediums": "mediumid"
 }
 
 
