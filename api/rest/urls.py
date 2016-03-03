@@ -32,6 +32,7 @@ router = DefaultRouter()
 for vs in get_viewsets():
     router.register(vs.get_url_pattern(), vs, base_name=vs.get_basename())
 
+
 urlpatterns = format_suffix_patterns(patterns('',
     url(r'^query/', include("api.rest.query.urls")),
     url(r'^$', resources.api_root),
