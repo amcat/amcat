@@ -16,6 +16,9 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+
+import re
+
 from django.forms import ModelChoiceField
 
 from rest_framework.fields import ModelField, CharField
@@ -34,6 +37,11 @@ from amcat.models import Article, ArticleSet, ROLE_PROJECT_READER
 from api.rest.viewsets.project import CannotEditLinkedResource, NotFoundInProject
 from django.db.models.query_utils import DeferredAttribute
 
+re_uuid = re.compile("[0-F]{8}-[0-F]{4}-[0-F]{4}-[0-F]{4}-[0-F]{12}", re.I)
+
+def is_uuid(val):
+    return isinstance(val, (str, unicode)) and re_uuid.match(val)
+    
 __all__ = ("ArticleSerializer", "ArticleViewSet")
 import logging
 log = logging.getLogger(__name__)
@@ -69,9 +77,61 @@ class MediumField(ModelField):
 
 from rest_framework import serializers
 class ArticleListSerializer(serializers.ListSerializer):
-    
+    def to_internal_value(self, data):
+        # override to change uuid parents into ids
+        # there might be a better place to do this?
+        if not isinstance(data, list):
+            raise ValidationError("Article upload content should be a list of dicts!")
+        internal_uuids = {a['uuid']: a for a in data if a.get('uuid')}
+        parent_uuids = {a['parent']: a for a in data if is_uuid(a.get('parent'))}
+
+        to_lookup = set(parent_uuids) - set(internal_uuids)
+        existing = {unicode(uuid): id for (uuid, id) in
+                    Article.objects.filter(uuid__in = to_lookup).values_list("uuid", "id")}
+
+        result = []
+        for a in data:
+            parent = a.get('parent')
+            if is_uuid(parent):
+                if parent in existing: # update with parent=id from database
+                    a['parent'] = existing[parent]
+                elif parent in internal_uuids: # add child to parent's children list, remove from result
+                    del a['parent']
+                    internal_uuids[parent].setdefault('children', []).append(a)
+                    continue # don't add this to result
+                else:
+                    logging.warn("Unknown parent: {parent}".format(**locals()))
+                    a['parent'] = None
+            result.append(a)
+        
+        return super(ArticleListSerializer, self).to_internal_value(result)
+        
+        
+        
+    def create(self, validated_data):
+        #print validated_data
+        def _process_children(article_dicts, parent=None):
+            for adict in article_dicts:
+                children = adict.pop("children")
+                if parent is not None:
+                    assert 'parent' not in adict
+                    adict['parent'] = parent
+                article = Article(**adict)
+                yield article
+                for a in _process_children(children, parent=article):
+                    yield a
+                    
+        articles = list(_process_children(validated_data))
+        articleset = self.context["view"].kwargs.get('articleset')
+        if articleset: articleset = ArticleSet.objects.get(pk=articleset)
+        Article.create_articles(articles, articleset=articleset)
+        return articles
+
+
     def to_representation(self, data):
         # check if text attribute is defferred
+        if u'RelatedManager' in unicode(type(data)):
+            data = list(data.all())
         if data and isinstance(data[0].__class__.__dict__.get('text'), DeferredAttribute):
             # text is deferred, so let's requery this whole page
             ids = [d.id for d in data]
@@ -86,13 +146,30 @@ class ArticleSerializer(AmCATProjectModelSerializer):
     mediumid = MediumField(model_field=ModelChoiceField(queryset=Medium.objects.all()), representation="id", required=False)
     uuid = CharField(read_only=False, required=False)
 
+    def to_internal_value(self, data):
+        if 'children' not in data:
+            data['children'] = []
+        return super(ArticleSerializer, self).to_internal_value(data)
+        
     def create(self, validated_data):
+        validated_data.pop('children')
         art = Article(**validated_data)
         articleset = self.context["view"].kwargs.get('articleset')
         if articleset: articleset = ArticleSet.objects.get(pk=articleset)
         Article.create_articles([art], articleset=articleset)
         return art
 
+    def get_fields(self):
+        fields = super(ArticleSerializer, self).get_fields()
+        fields["children"] = ArticleSerializer(many=True)
+        return fields
+        
+    def to_representation(self, data):
+        print self.context
+        if self.context['request'].method == "POST":
+            return {"id": data.id}
+        return super(ArticleSerializer, self).to_representation(data)
+        
     class Meta:
         model = Article
         read_only_fields = ('id', 'length', 'insertdate', 'insertscript')
@@ -173,3 +250,9 @@ class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSet
         queryset = queryset.filter(articlesets_set=self.articleset)
         queryset = super(ArticleViewSet, self).filter_queryset(queryset)
         return queryset
+
+
+    def get_serializer(self, *args, **kwargs):
+        if ('many' not in kwargs) and ('data' in kwargs):
+           kwargs['many']=isinstance(kwargs['data'], list)
+        return super(ArticleViewSet, self).get_serializer(*args, **kwargs)
