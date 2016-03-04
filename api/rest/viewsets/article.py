@@ -17,6 +17,20 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+"""
+Article API end-point at projects/pid/articlesets/sid/articles[/aid]
+
+This end-point accepts the 'normal' model viewsets, i.e.
+GET articles gives a list of articles
+GET articles/aid gives a single article
+POST articles < dict can post a single article
+
+However, it also supports addition POST options:
+POST articles < list-of-dicts can post multiple articles
+POST articles < {"id": aid} can add an existing article to a set
+POST articles < [{"id": aid}, ] can add multiple existing article to a set
+"""
+
 import re
 
 from django.forms import ModelChoiceField
@@ -109,7 +123,6 @@ class ArticleListSerializer(serializers.ListSerializer):
         
         
     def create(self, validated_data):
-        #print validated_data
         def _process_children(article_dicts, parent=None):
             for adict in article_dicts:
                 children = adict.pop("children")
@@ -121,11 +134,21 @@ class ArticleListSerializer(serializers.ListSerializer):
                 for a in _process_children(children, parent=article):
                     yield a
                     
-        articles = list(_process_children(validated_data))
         articleset = self.context["view"].kwargs.get('articleset')
         if articleset: articleset = ArticleSet.objects.get(pk=articleset)
-        Article.create_articles(articles, articleset=articleset)
-        return articles
+
+        result = []
+        to_add = [Article.objects.get(pk=a['id']) for a in validated_data if "id" in a]
+        to_create = [a for a in validated_data if "id" not in a]
+        if to_create:
+            articles = list(_process_children(to_create))
+            Article.create_articles(articles, articleset=articleset)
+            result += articles
+        if to_add:
+            articleset.add_articles(to_add)
+            result += to_add
+            
+        return result
 
 
     def to_representation(self, data):
@@ -147,15 +170,27 @@ class ArticleSerializer(AmCATProjectModelSerializer):
     uuid = CharField(read_only=False, required=False)
 
     def to_internal_value(self, data):
+        if 'id' in data:
+            if set(data.keys()) != {"id"}:
+                raise ValidationError("When uploading explicit ID, specifying other fields is not allowed")
+            return {"id": int(data['id'])}
+            
         if 'children' not in data:
             data['children'] = []
         return super(ArticleSerializer, self).to_internal_value(data)
-        
+
     def create(self, validated_data):
-        validated_data.pop('children')
-        art = Article(**validated_data)
         articleset = self.context["view"].kwargs.get('articleset')
         if articleset: articleset = ArticleSet.objects.get(pk=articleset)
+
+        if 'id' in validated_data:
+            art = Article.objects.get(pk=validated_data['id'])
+            if articleset:
+                articleset.add_articles([art])
+            return art
+        
+        validated_data.pop('children')
+        art = Article(**validated_data)
         Article.create_articles([art], articleset=articleset)
         return art
 
@@ -165,7 +200,6 @@ class ArticleSerializer(AmCATProjectModelSerializer):
         return fields
         
     def to_representation(self, data):
-        print self.context
         if self.context['request'].method == "POST":
             return {"id": data.id}
         return super(ArticleSerializer, self).to_representation(data)
