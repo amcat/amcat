@@ -121,7 +121,6 @@ class CodingJobAddView(ProjectScriptView):
 
     def get_context_data(self, **kwargs):
         context = super(CodingJobAddView, self).get_context_data(**kwargs)
-        context["help_context"] = "Create_a_codingjob"
         return context
         
     def run_form(self, form):

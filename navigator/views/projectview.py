@@ -66,6 +66,7 @@ class ProjectViewMixin(object):
     """
     project_id_url_kwarg = 'project'
     required_project_permission = authorisation.ROLE_PROJECT_METAREADER
+    help_context = None
 
     def get_context_data(self, **kwargs):
         context = super(ProjectViewMixin, self).get_context_data(**kwargs)
@@ -75,6 +76,7 @@ class ProjectViewMixin(object):
         context["is_admin"] = self.is_admin()
         context["can_view_text"] = self.can_view_text()
         context["main_active"] = 'Projects'
+        context["help_context"] = self.get_help_context()
         context["context_category"] = self.get_context_category()
         context["notification"] = (self.request.session
                                    .pop("notification", None))
@@ -134,6 +136,13 @@ class ProjectViewMixin(object):
         else:
             name = re.sub("[- ]", "_", self.get_view_name())
             return ["project/{name}.html".format(**locals())]
+
+    def get_help_context(self):
+        
+        if self.help_context is not None:
+            return self.help_context
+        return re.sub("[-_]", " ", self.get_view_name()).title()
+
 
 from django.views.generic.list import ListView
 
