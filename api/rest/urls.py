@@ -23,7 +23,6 @@ from rest_framework.routers import DefaultRouter
 
 from api.rest import resources
 
-from api.rest.views.articleupload import ArticleUploadView
 from api.rest.views.status import StatusView
 from api.rest.viewsets import get_viewsets
 from api.rest.viewsets.xtas import get_adhoc_tokens
@@ -31,6 +30,7 @@ from api.rest.viewsets.xtas import get_adhoc_tokens
 router = DefaultRouter()
 for vs in get_viewsets():
     router.register(vs.get_url_pattern(), vs, base_name=vs.get_basename())
+
 
 urlpatterns = format_suffix_patterns(patterns('',
     url(r'^query/', include("api.rest.query.urls")),
@@ -40,9 +40,6 @@ urlpatterns = format_suffix_patterns(patterns('',
     url(r'^taskresult/(?P<task_id>[0-9a-zA-Z-]+)$', resources.single_task_result, dict(uuid=True)),
     url(r'^get_token', 'api.rest.get_token.obtain_auth_token'),
     url(r'^tokens/', get_adhoc_tokens),
-    url(r'^article-upload/$', ArticleUploadView.as_view(), name="article-upload"),
-    url(r'^projects/(?P<project>[0-9]+)/articlesets/article-upload/$', ArticleUploadView.as_view(), name="project-article-upload"),
-    url(r'^projects/(?P<project>[0-9]+)/articlesets/(?P<articleset>[0-9]+)/article-upload/$', ArticleUploadView.as_view(), name="articleset-article-upload"),
     url(r'^status/$', StatusView.as_view(), name="status"),
 
     *tuple(r.get_url_pattern() for r in resources.all_resources())
