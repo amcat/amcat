@@ -58,7 +58,7 @@ class TestArticleViewSet(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, expected_status,
                          "Status code {response.status_code}: {response.content}".format(**locals()))
-        return json.loads(response.content)
+        return json.loads(response.content.decode(response.charset))
 
     def _get_article(self, aid, expected_status=200, as_user="self.user", **url_kwargs):
         if as_user == "self.user": as_user = self.user
@@ -69,7 +69,7 @@ class TestArticleViewSet(APITestCase):
         response = Client().get(self.url_article(aid, **url_kwargs))
         self.assertEqual(response.status_code, expected_status,
                          "Status code {response.status_code}: {response.content}".format(**locals()))
-        return json.loads(response.content)
+        return json.loads(response.content.decode(response.charset))
 
 
     def _post_articles(self, data, expected_status=201, as_user="self.user", **url_kwargs):
@@ -83,7 +83,7 @@ class TestArticleViewSet(APITestCase):
         self.assertEqual(response.status_code, expected_status,
                          "Status code {response.status_code}: {response.content}".format(**locals()))
         amcates.ES().flush()
-        return json.loads(response.content)
+        return json.loads(response.content.decode(response.charset))
             
 
     @amcattest.use_elastic
@@ -109,7 +109,7 @@ class TestArticleViewSet(APITestCase):
 
         # can we post explicit UUID?
         self.setUp_set()
-        a['uuid'] = unicode(uuid4())
+        a['uuid'] = str(uuid4())
         self._post_articles(a)
         res = self._get_articles()["results"]
         self.assertEqual(res[0]["uuid"], a['uuid'])
@@ -215,7 +215,7 @@ class TestArticleViewSet(APITestCase):
         self.assertEqual(article, new_article.parent)
 
         # test posting article and child with uuid
-        p = test_article(uuid=unicode(uuid4()))
+        p = test_article(uuid=str(uuid4()))
         c = test_article(parent=p['uuid'])
         result = self._post_articles([p,c])
         pa, ca = [Article.objects.get(pk=a["id"]) for a in result]

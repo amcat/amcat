@@ -322,7 +322,7 @@ class Article(AmcatModel):
             if not deduplicate:
                 continue
             if a.uuid:
-                uuid = unicode(a.uuid)
+                uuid = str(a.uuid)
                 if uuid in uuids:
                     raise ValueError("Duplicate UUID in article upload")
                 uuids[uuid] = a
@@ -407,7 +407,8 @@ def _check_read_access(user, aids):
     project_cache = {} # pid : True / False
     def project_ok(pid):
         if pid not in project_cache:
-            project_cache[pid] = (Project.objects.get(pk=pid).get_role_id(user) >= ROLE_PROJECT_READER)
+            role = Project.objects.get(pk=pid).get_role_id(user)
+            project_cache[pid] = role and (role >= ROLE_PROJECT_READER)
         return project_cache[pid]
 
     asets = [ArticleSet.objects.filter(pk__in=setids).values_list("pk", "project_id"),

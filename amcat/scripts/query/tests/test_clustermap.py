@@ -21,6 +21,8 @@ from collections import ChainMap
 import base64
 import json
 import os
+import shutil
+import unittest
 
 from amcat.scripts.query import ClusterMapAction
 from amcat.tools import amcattest
@@ -77,13 +79,13 @@ class TestClustermapAction(amcattest.AmCATTestCase):
 
 
     @amcattest.use_elastic
+    @unittest.skipUnless(shutil.which("pspp"), "PSPP not installed")
     def test_spss_sav(self):
         self.set_up()
-
         clustermap_action = self.get_query_action("application/spss-sav")
         clustermap_form = clustermap_action.get_form()
         clustermap_form.full_clean()
-
+            
         filename = clustermap_action.run(clustermap_form)
         self.assertTrue(os.path.exists(filename))
         self.assertTrue(os.path.getsize(filename) > 0)

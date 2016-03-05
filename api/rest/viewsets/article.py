@@ -63,7 +63,7 @@ from django.core.exceptions import PermissionDenied
 re_uuid = re.compile("[0-F]{8}-[0-F]{4}-[0-F]{4}-[0-F]{4}-[0-F]{12}", re.I)
 
 def is_uuid(val):
-    return isinstance(val, (str, unicode)) and re_uuid.match(val)
+    return isinstance(val, str) and re_uuid.match(val)
     
 __all__ = ("ArticleSerializer", "ArticleViewSet")
 import logging
@@ -116,7 +116,7 @@ class ArticleListSerializer(serializers.ListSerializer):
         parent_uuids = {a['parent']: a for a in data if is_uuid(a.get('parent'))}
 
         to_lookup = set(parent_uuids) - set(internal_uuids)
-        existing = {unicode(uuid): id for (uuid, id) in
+        existing = {str(uuid): id for (uuid, id) in
                     Article.objects.filter(uuid__in = to_lookup).values_list("uuid", "id")}
 
         result = []
@@ -169,7 +169,7 @@ class ArticleListSerializer(serializers.ListSerializer):
 
     def to_representation(self, data):
         # check if text attribute is defferred
-        if u'RelatedManager' in unicode(type(data)):
+        if u'RelatedManager' in str(type(data)):
             data = list(data.all())
         result = super(ArticleListSerializer, self).to_representation(data)
         return result

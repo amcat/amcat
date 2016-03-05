@@ -17,6 +17,8 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import datetime
+import shutil
+import unittest
 
 from amcat.tools.table.table2spss import get_pspp_version, PSPPVersion
 from django.test import TransactionTestCase
@@ -307,5 +309,7 @@ class TestAggregateORM(TransactionTestCase):
         aggr = aggregate_orm.ORMAggregate(Coding.objects.none(), threaded=False)
         self.assertEqual(set(aggr.get_aggregate(values=[CountArticlesValue()])), set())
 
+    
+    @unittest.skipUnless(shutil.which("pspp"), "PSPP not installed")
     def test_get_pspp_version(self):
         self.assertGreaterEqual(PSPPVersion(8, 5, 0), get_pspp_version())

@@ -33,3 +33,8 @@ pyinotify==0.9.6
 
 pdfminer3k==1.3.0
 splinter
+
+anyjson
+billiard
+siz
+pytz

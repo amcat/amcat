@@ -17,6 +17,8 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import datetime
+import shutil
+import unittest
 
 from amcat.tools import amcattest
 from amcat.tools.table import table3, table2spss
@@ -84,6 +86,7 @@ class TestTable2SPSS(amcattest.AmCATTestCase):
         spss_code = table2spss.table2spss(self.unicode_table, saveas="test.sav")
         self.assertEqual("".join(spss_code).strip(), EXPECTED_UNICODE_TABLE.strip())
 
+    @unittest.skipUnless(shutil.which("pspp"), "PSPP not installed")
     def test_table2sav(self):
         print("".join(table2spss.table2spss(self.ascii_table, 'abc')))
         print(table2spss.table2sav(self.ascii_table))
