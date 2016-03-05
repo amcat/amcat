@@ -30,6 +30,7 @@ import csv
 import collections
 from contextlib import contextmanager
 from django.core.files import File
+import io
 import tempfile
 import shutil
 
@@ -83,6 +84,9 @@ class FileUploadForm(RawFileUploadForm):
 
     def decode_file(self, f):
         enc, text = self.decode(f.read())
+        if isinstance(f.file, io.BufferedIOBase) and f.file.seekable():
+            f.seek(0)
+            return File(io.TextIOWrapper(f.file, encoding=enc), name=f.name)
         name = f.file.name if isinstance(f, File) else f.name
         return File(open(name, "r", encoding=enc), name=f.name)
 
