@@ -27,6 +27,7 @@ from django.db.models import Q
 from amcat.scripts.actions.deduplicate import Deduplicate
 from amcat.tools.amcates import ES
 from api.rest.resources import PluginResource
+from django.http import Http404
 
 from amcat.models import Plugin, Article
 from amcat.models.project import LITTER_PROJECT_ID
@@ -207,7 +208,14 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
 
     def get_context_data(self, **kwargs):
         context = super(ArticleSetDetailsView, self).get_context_data(**kwargs)
+        
+        if not ((self.object.project_id == self.project.id) or
+                self.project.articlesets.filter(pk=self.object.id).exists()):
+            raise Http404("ArticleSet {self.object.id}:{self.object} does not exist in project {self.project.id}: {self.project}"
+                          .format(**locals()))
 
+
+            
         star = self.request.GET.get("star")
         starred = self.project.favourite_articlesets.filter(pk=self.object.id).exists()
         if star is not None:

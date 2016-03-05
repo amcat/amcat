@@ -45,6 +45,7 @@ from rest_framework.fields import ModelField, CharField
 from rest_framework.viewsets import ModelViewSet
 
 from amcat.models import Medium, Project, ArticleSet
+from amcat.models.article import _check_read_access
 from amcat.tools.amcates import ES
 from amcat.tools.caching import cached
 from api.rest.filters import MappingOrderingFilter
@@ -159,7 +160,7 @@ class ArticleListSerializer(serializers.ListSerializer):
             Article.create_articles(articles, articleset=articleset)
             result += articles
         if to_add:
-            _check_read(self.context['request'].user, to_add)
+            _check_read_access(self.context['request'].user, to_add)
             articleset.add_articles(to_add)
             result += list(Article.objects.filter(pk__in=to_add).only("pk"))
             
@@ -174,42 +175,6 @@ class ArticleListSerializer(serializers.ListSerializer):
         return result
 
 
-def _check_read(user, aids):
-    """Does the user have full read access on all articles?"""
-    # get article set memberships
-    sets = list(ArticleSet.articles.through.objects.filter(article_id__in=aids).values_list("articleset_id", "article_id"))
-    setids = {setid for (setid, aid) in sets}
-    
-    # get project memberships
-    ok_sets = set()
-    project_cache = {} # pid : True / False
-    def project_ok(pid):
-        if pid not in project_cache:
-            project_cache[pid] = (Project.objects.get(pk=pid).get_role_id(user) >= ROLE_PROJECT_READER)
-        return project_cache[pid]
-
-    asets = [ArticleSet.objects.filter(pk__in=setids).values_list("pk", "project_id"),
-             Project.articlesets.through.objects.filter(articleset_id__in=setids)
-             .values_list("articleset_id", "project_id")]
-    
-    for aset in asets:
-        for sid, pid in aset:
-            if project_ok(pid):
-                ok_sets.add(sid)
-
-
-    ok_articles = set()
-    for sid, aid in sets:
-        if sid in ok_sets:
-            ok_articles.add(aid)
-    aids = {aid for (setid, aid) in sets}
-    if aids - ok_articles:
-        raise PermissionDenied("User does not have full read access on articles {}"
-                               .format(aids - ok_articles))
-    
-    
-    
-        
 class ArticleSerializer(AmCATProjectModelSerializer):
     project = ModelChoiceField(queryset=Project.objects.all(), required=True)
     medium = MediumField(model_field=ModelChoiceField(queryset=Medium.objects.all()))
@@ -233,7 +198,7 @@ class ArticleSerializer(AmCATProjectModelSerializer):
         if articleset: articleset = ArticleSet.objects.get(pk=articleset)
 
         if 'id' in validated_data:
-            _check_read(self.context['request'].user, [validated_data['id']])
+            _check_read_access(self.context['request'].user, [validated_data['id']])
             art = Article.objects.get(pk=validated_data['id'])
             if articleset:
                 articleset.add_articles([art])

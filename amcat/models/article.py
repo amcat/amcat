@@ -34,7 +34,7 @@ from django.template.loader import get_template
 from django.template import Context
 from django.db import models, transaction
 from django.db.utils import IntegrityError, DatabaseError
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, PermissionDenied
 from django.template.defaultfilters import escape as escape_filter
 from amcat.tools.djangotoolkit import bulk_insert_returning_ids
 
@@ -45,6 +45,7 @@ from amcat.models.medium import Medium
 from amcat.tools.toolkit import splitlist
 from amcat.tools.tree import Tree
 from amcat.tools.progress import ProgressMonitor
+from amcat.models.authorisation import ROLE_PROJECT_READER
 
 from amcat.tools.amcates import Result
 
@@ -400,6 +401,42 @@ def _check_index(articles):
     es.flush() 
             
 
+def _check_read_access(user, aids):
+    """Raises PermissionDenied if the user does not have full read access on all given articles"""
+    # get article set memberships
+    from amcat.models import ArticleSet, Project
 
+    sets = list(ArticleSet.articles.through.objects.filter(article_id__in=aids).values_list("articleset_id", "article_id"))
+    setids = {setid for (setid, aid) in sets}
+    
+    # get project memberships
+    ok_sets = set()
+    project_cache = {} # pid : True / False
+    def project_ok(pid):
+        if pid not in project_cache:
+            project_cache[pid] = (Project.objects.get(pk=pid).get_role_id(user) >= ROLE_PROJECT_READER)
+        return project_cache[pid]
+
+    asets = [ArticleSet.objects.filter(pk__in=setids).values_list("pk", "project_id"),
+             Project.articlesets.through.objects.filter(articleset_id__in=setids)
+             .values_list("articleset_id", "project_id")]
+    
+    for aset in asets:
+        for sid, pid in aset:
+            if project_ok(pid):
+                ok_sets.add(sid)
+
+
+    ok_articles = set()
+    for sid, aid in sets:
+        if sid in ok_sets:
+            ok_articles.add(aid)
+    aids = {aid for (setid, aid) in sets}
+    if aids - ok_articles:
+        logging.info("Permission denied for {user}, articles {}".format(aids - ok_articles, **locals()))
+        raise PermissionDenied("User does not have full read access on (some) of the selected articles")
     
     
+    
+        
+
