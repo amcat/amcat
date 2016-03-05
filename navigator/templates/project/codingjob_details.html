@@ -1,7 +1,5 @@
 {% extends "project/base.html" %}
 
-{% block help_context %}Create_a_codingjob{% endblock %}
-
 {% block actions %}
 {% if user == object.coder or is_admin %}
 <a class="btn btn-primary" href="{% url 'annotator:annotator-codingjob' project.id object.id %}"><i class="glyphicon glyphicon-list-alt"></i>

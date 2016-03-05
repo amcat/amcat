@@ -25,7 +25,7 @@ from amcat.models import ArticleSet
 from amcat.models import Project
 from amcat.models import Role
 from amcat.models.authorisation import ROLE_PROJECT_WRITER
-
+from amcat.models.article import _check_read_access
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools.keywordsearch import SelectionSearch
 
@@ -59,15 +59,20 @@ class SaveAsSetForm(QueryActionForm):
 class SaveAsSetAction(QueryAction):
     form_class = SaveAsSetForm
     output_types = (("text/html", "Result"),)
+    required_role = ROLE_PROJECT_WRITER
 
+    def target_project(self, form):
+        return form.cleaned_data["project"]
+    
     def run(self, form):
         name = form.cleaned_data["name"]
         #provenance = form.cleaned_data["provenance"]
         project = form.cleaned_data["project"]
-        aset = ArticleSet.objects.create(name=name, project=project)
         self.monitor.update(10, "Executing query..")
         article_ids = list(SelectionSearch(form).get_article_ids())
+        _check_read_access(self.user, article_ids)
         self.monitor.update(60, "Saving to set..")
+        aset = ArticleSet.objects.create(name=name, project=project)
         aset.add_articles(article_ids)
 
         return OK_TEMPLATE.render(Context({

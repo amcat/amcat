@@ -28,6 +28,7 @@ from django.forms.widgets import HiddenInput
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import CreateView
 from django.views.generic.list import ListView
+from django.http import Http404
 
 from amcat.models import Plugin, Article
 from amcat.models import Project, ArticleSet
@@ -202,7 +203,14 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
 
     def get_context_data(self, **kwargs):
         context = super(ArticleSetDetailsView, self).get_context_data(**kwargs)
+        
+        if not ((self.object.project_id == self.project.id) or
+                self.project.articlesets.filter(pk=self.object.id).exists()):
+            raise Http404("ArticleSet {self.object.id}:{self.object} does not exist in project {self.project.id}: {self.project}"
+                          .format(**locals()))
 
+
+            
         star = self.request.GET.get("star")
         starred = self.project.favourite_articlesets.filter(pk=self.object.id).exists()
         if star is not None:

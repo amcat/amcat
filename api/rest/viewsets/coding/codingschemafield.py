@@ -38,7 +38,7 @@ class CodingSchemaFieldViewSet(ProjectViewSetMixin, CodingSchemaFieldViewSetMixi
     model = CodingSchemaField
     queryset = CodingSchemaField.objects.all()
     serializer_class = CodingSchemaFieldSerializer
-
+    ordering_fields = ("id", "fieldnr", "name")
     def filter_queryset(self, fields):
         fields = super(CodingSchemaFieldViewSet, self).filter_queryset(fields)
         return fields.filter(codingschema__in=self.project.get_codingschemas())

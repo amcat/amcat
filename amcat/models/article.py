@@ -28,6 +28,8 @@ import logging
 import collections
 from django.db import models
 from django.template import Context
+
+from django.core.exceptions import PermissionDenied
 from django.template.defaultfilters import escape as escape_filter
 from django.template.loader import get_template
 
@@ -39,6 +41,7 @@ from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
 from amcat.tools.progress import ProgressMonitor
 from amcat.tools.toolkit import splitlist
 from amcat.tools.tree import Tree
+from amcat.models.authorisation import ROLE_PROJECT_READER
 
 log = logging.getLogger(__name__)
 
@@ -302,9 +305,11 @@ class Article(AmcatModel):
         modifies all articles in place with .hash, .id, .uuid, and .duplicate (None or Article)
         """
         es = amcates.ES()
-        dupe_values = {'uuid': {}, 'hash': {}}  # {"uuid" : {<uuid> : article}
-        internal_dupes = collections.defaultdict(list) # {article : articles}
-        # Iterate over articles, remove duplicates within addendum and build dupe values dictionary 
+
+        uuids = {} # {uuid : article}
+        hashes = collections.defaultdict(list) # {hash: articles}
+        
+        # Iterate over articles, mark duplicates within addendum and build uuids/hashes dictionaries
         for a in articles:
             if a.id:
                 raise ValueError("Specifying explicit article ID in save not allowed")
@@ -312,42 +317,35 @@ class Article(AmcatModel):
                 a.length = word_len(a.text) + word_len(a.headline) + word_len(a.byline)
             a.es_dict = amcates.get_article_dict(a)
             a.hash = a.es_dict['hash']
-            a.duplicate = None # innocent until proven guilty
+            if not hasattr(a, 'uuid'): a.uuid = None
+            a.duplicate, a.internal_duplicate = None, None # innocent until proven guilty
             if not deduplicate:
                 continue
-                
-            dupevals = {"hash": a.hash}
-            if getattr(a, 'uuid'):
-                dupevals['uuid'] = str(a.uuid)
-            for attr, val in dupevals.items():
-                if val in dupe_values[attr]:
-                    dupe = dupe_values[attr][val] # within-set duplicate
-                    a.duplicate = dupe
-                    internal_dupes[dupe].append(a)
-                else:
-                    dupe_values[attr][val] = a
-
+            if a.uuid:
+                uuid = unicode(a.uuid)
+                if uuid in uuids:
+                    raise ValueError("Duplicate UUID in article upload")
+                uuids[uuid] = a
+            else: # articles with explicit uuid cannot be deduplicated on hash
+                hashes[a.hash].append(a)
+            
         def _set_dupe(dupe, orig):
             dupe.duplicate = orig
             dupe.id = orig.id
             dupe.uuid = orig.uuid
-            for dupe2 in internal_dupes[dupe]:
-                _set_dupe(dupe2, orig)
-                    
-        if dupe_values['hash']:
-            results = es.query_all(filters={'hash': list(dupe_values['hash'].keys())},
-                                   fields=["hash", "uuid"], score=False)
-            for orig in results:
-                dupe = dupe_values['hash'][orig.hash]
-                if getattr(dupe, 'uuid') and dupe.uuid != orig.uuid:
-                    # not a dupe!
-                    continue
+        # check dupes based on hash
+        results = es.query_all(filters={'hash': hashes.keys()},
+                               fields=["hash", "uuid"], score=False)
+        for orig in results:
+            for dupe in hashes[orig.hash]:
                 _set_dupe(dupe, orig)
-        if dupe_values['uuid']:
-            results = es.query_all(filters={'uuid': list(dupe_values['uuid'].keys())},
+
+        # check dupes based on uuid (if any are given)
+        if uuids:
+            results = es.query_all(filters={'uuid': uuids.keys()},
                                    fields=["hash", "uuid"], score=False)
             for orig in results:
-                dupe = dupe_values['uuid'][orig.uuid]
+                dupe = uuids[orig.uuid]
                 if dupe.hash != orig.hash:
                     raise ValueError("Cannot modify existing articles: {orig.hash} != {dupe.hash}".format(**locals()))
                 _set_dupe(dupe, orig)
@@ -394,3 +392,42 @@ def _check_index(articles):
         log.info("Adding {} articles to index".format(len(missing)))
         es.add_articles(missing)
     es.flush() 
+            
+
+def _check_read_access(user, aids):
+    """Raises PermissionDenied if the user does not have full read access on all given articles"""
+    # get article set memberships
+    from amcat.models import ArticleSet, Project
+
+    sets = list(ArticleSet.articles.through.objects.filter(article_id__in=aids).values_list("articleset_id", "article_id"))
+    setids = {setid for (setid, aid) in sets}
+    
+    # get project memberships
+    ok_sets = set()
+    project_cache = {} # pid : True / False
+    def project_ok(pid):
+        if pid not in project_cache:
+            project_cache[pid] = (Project.objects.get(pk=pid).get_role_id(user) >= ROLE_PROJECT_READER)
+        return project_cache[pid]
+
+    asets = [ArticleSet.objects.filter(pk__in=setids).values_list("pk", "project_id"),
+             Project.articlesets.through.objects.filter(articleset_id__in=setids)
+             .values_list("articleset_id", "project_id")]
+    
+    for aset in asets:
+        for sid, pid in aset:
+            if project_ok(pid):
+                ok_sets.add(sid)
+
+
+    ok_articles = set()
+    for sid, aid in sets:
+        if sid in ok_sets:
+            ok_articles.add(aid)
+    aids = {aid for (setid, aid) in sets}
+    if aids - ok_articles:
+        logging.info("Permission denied for {user}, articles {}".format(aids - ok_articles, **locals()))
+        raise PermissionDenied("User does not have full read access on (some) of the selected articles")
+    
+    
+    

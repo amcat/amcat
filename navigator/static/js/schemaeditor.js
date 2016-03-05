@@ -767,7 +767,7 @@ define(["jquery", "amcat/djangofields", "pnotify", "jquery.tablednd"], function(
         // MAIN FUNCTIONS //
         self.main = function(){
             // Get fields of this schema
-            self.api_get("codingschemafield", self.fields_initialised, {
+            self.api_get("projects/" + self.PROJECT_ID + "/codingschemafields", self.fields_initialised, {
                 "codingschema__id" : self.SCHEMA_ID,
                 "order_by" : "fieldnr"
             });

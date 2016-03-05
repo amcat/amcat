@@ -1,6 +1,5 @@
 {% extends "project/base.html" %}
 
-{% block help_context %}Create_codingschemes{% endblock %}
 {% block actions %}
 {% if can_edit %}
   <a href="{% url "navigator:codingschema-new" context.id %}" class="btn btn-primary">

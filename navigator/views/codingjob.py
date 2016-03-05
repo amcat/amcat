@@ -45,7 +45,8 @@ def index(request, coder=None):
     ctx.update({
         'menu' : CODINGJOB_MENU,
         'context' : coder,
-        'selected' : 'unfinished jobs'
+        'selected' : 'unfinished jobs',
+        
     })
 
     return render(request, 'codingjobs.html', locals())

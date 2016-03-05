@@ -1,7 +1,5 @@
 {% extends "project/base.html" %}
 {% load staticfiles %}
-{% block help_context %}Adding_variables{% endblock %}
-
 
 {% block actions %}
 <div name="add-field" class="btn btn-primary disabled"><i class="glyphicon glyphicon-plus"></i> Add field</div>
@@ -19,6 +17,9 @@
 
 <style type="text/css">
 td.active{ background-color: #60A3FF !important; color:white; }
+td.active > input,
+td.active > select
+{ color:black; }
 </style>
 
 <p><span class="label label-warning">Resetting</span> Resetting only reverts changes which are not saved.</p>

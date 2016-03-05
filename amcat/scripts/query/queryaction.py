@@ -18,7 +18,7 @@
 ###########################################################################
 import traceback
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, PermissionDenied
 from django.core.urlresolvers import reverse
 from django.http import QueryDict, HttpResponse
 import sys
@@ -28,6 +28,8 @@ from django import forms
 from amcat.tools.caching import cached
 from amcat.tools.progress import ProgressMonitor
 from navigator.views.scriptview import CeleryProgressUpdater
+
+from amcat.models.authorisation import ROLE_PROJECT_METAREADER
 
 DOWNLOAD_HEADER = "Content-Disposition: attachment; "
 
@@ -94,7 +96,9 @@ class QueryActionHandler(TaskHandler):
         query_action.monitor.update(0, msg)
 
         try:
-            return query_action.run(query_action.get_form())
+            form = query_action.get_form()
+            query_action.before_run(form)
+            return query_action.run(form)
         except Exception as e:
             raise
 
@@ -133,7 +137,8 @@ class QueryAction(object):
     form_class = QueryActionForm
     task_handler = QueryActionHandler
     output_types = None
-
+    required_role = ROLE_PROJECT_METAREADER
+    
     def __init__(self, user, project, articlesets, codingjobs=None, data=None):
         """
         @type project: amcat.models.Project
@@ -162,6 +167,9 @@ class QueryAction(object):
     def get_task_handler(self):
         return self.task_handler
 
+    def target_project(self, form):
+        return self.project
+        
     @cached
     def get_form(self):
         form = self.form_class(**self.get_form_kwargs())
@@ -172,6 +180,9 @@ class QueryAction(object):
 
         return form
 
+    def before_run(self, form):
+        self.check_permission(form)
+        
     def run(self, form):
         """Needs to be overriden by subclass. Return value must be at least
         json serialisable, preferably bytes.
@@ -191,7 +202,8 @@ class QueryAction(object):
 
         if not form.is_valid():
             raise ValidationError(form._errors)
-
+        self.check_permission(form)
+            
         return self.get_task_handler().call(
             target_class=self.__class__, user=self.user,
             project=self.project, arguments={
@@ -200,3 +212,11 @@ class QueryAction(object):
                 "codingjobs": self.codingjobs
             }
         )
+
+    def check_permission(self, form):
+        project = self.target_project(form)
+        actual = project.get_role_id(self.user)
+        if actual < self.required_role:
+            raise PermissionDenied("User has no permission to perform {self.__class__.__name__}"
+                                   " on project {project}".format(**locals()))
+            

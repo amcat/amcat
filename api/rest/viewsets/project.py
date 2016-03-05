@@ -70,9 +70,7 @@ class ProjectPermission(permissions.BasePermission):
         if user and user.is_superuser:
             return True
 
-        required_role_id = getattr(view, 'permission_map', {}).get(request.method.upper())
-        if required_role_id is None:
-            required_role_id = _DEFAULT_PERMISSION_MAP[request.method.upper()]
+        required_role_id = view.required_role_id(request)
 
         if required_role_id in (True, False):
             return required_role_id
@@ -137,6 +135,13 @@ class ProjectViewSetMixin(AmCATViewSetMixin):
     model_key = "project"
     queryset = Project.objects.all()
 
+
+    def required_role_id(self, request):
+        required_role_id = getattr(self, 'permission_map', {}).get(request.method.upper())
+        if required_role_id is None:
+            required_role_id = _DEFAULT_PERMISSION_MAP[request.method.upper()]
+        return required_role_id
+    
 class ProjectViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     model = Project
 

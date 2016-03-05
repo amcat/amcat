@@ -24,8 +24,8 @@ from django.template.loader import get_template
 from amcat.models import ArticleSet, Project, Role
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools.keywordsearch import SelectionSearch
-from navigator.views.projectview import PROJECT_READ_WRITE
-
+from amcat.models.authorisation import ROLE_PROJECT_WRITER
+from amcat.models.article import _check_read_access
 
 OK_TEMPLATE = get_template("query/ok.html")
 
@@ -37,7 +37,7 @@ class AppendToSetForm(QueryActionForm):
     def __init__(self, *args, **kwargs):
         super(AppendToSetForm, self).__init__(*args, **kwargs)
 
-        rw_role = Role.objects.get(id=PROJECT_READ_WRITE)
+        rw_role = Role.objects.get(id=ROLE_PROJECT_WRITER)
         projects = self.user.userprofile.get_projects(rw_role).distinct()
         self.fields["project"].queryset = projects
         self.fields["project"].initial = self.project
@@ -57,10 +57,15 @@ class AppendToSetForm(QueryActionForm):
 class AppendToSetAction(QueryAction):
     form_class = AppendToSetForm
     output_types = (("text/html", "Result"),)
+    required_role = ROLE_PROJECT_WRITER
 
+    def target_project(self, form):
+        return form.cleaned_data["project"]
+    
     def run(self, form):
         self.monitor.update(10, "Executing query..")
         article_ids = list(SelectionSearch(form).get_article_ids())
+        _check_read_access(self.user, article_ids)
         self.monitor.update(60, "Saving to set..")
         form.cleaned_data["articleset"].add_articles(article_ids)
 
