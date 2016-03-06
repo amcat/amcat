@@ -43,6 +43,3 @@ from amcat.models.coding.codingrule import *
 
 from amcat.models.scraper import *
 
-
-
-from amcat.models.rule import *

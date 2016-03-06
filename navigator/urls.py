@@ -20,20 +20,17 @@
 from django.conf.urls import patterns, url
 from django.contrib.auth.views import password_change, password_change_done
 
-from navigator.views import rule_views
 
 from navigator.views.articleset_views import *  # noqa
 from navigator.views.article_views import *  # noqa
 from navigator.views.query import *  # noqa
 from navigator.views.project_views import *  # noqa
 from navigator.views.codebook_views import *  # noqa
-from navigator.views.clause_views import *  # noqa
 
 from navigator.views.task import TaskDetailsView, TaskListView, clean_ready, clean_stuck, uuid_redirect
 from navigator.views.user_views import *  # noqa
 from navigator.views.codingjob_views import *  # noqa
 from navigator.views.codingschema_views import *  # noqa
-from navigator.views.rule_views import *  # noqa
 
 
 UUID_RE = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
@@ -59,8 +56,6 @@ urlpatterns = patterns(
 
 
     url(r'^codingjobs/(?P<coder_id>\d+)?$' ,'navigator.views.codingjob.index', name='codingjobs'),
-    url(r'^ruleset/(?P<pk>[0-9]+)$', rule_views.RuleSetView.as_view(), name='ruleset'),
-    url(r'^ruleset$', rule_views.RuleSetTableView.as_view(), name='ruleset-list'),
 
     # Task actions
     url(r'^projects/(?P<project>[0-9]+)/tasks/clean_ready', clean_ready, name='task-clean-ready'),
@@ -73,7 +68,7 @@ _views = [
     ArticleSetArticleDetailsView, ProjectArticleDetailsView, ArticleRemoveFromSetView,
     ArticleSetUploadView, ArticleSetUploadListView, QueryView, SavedQueryRedirectView, ArticleSetSampleView,
     ArticleSetEditView, ArticleSetImportView, ArticleSetRefreshView,
-    ArticleSetDeleteView, ArticleSetUnlinkView, ArticleSetDeduplicateView, ArticleSetPreprocessView,
+    ArticleSetDeleteView, ArticleSetUnlinkView, ArticleSetDeduplicateView, 
     ArticleSplitView,
 
     CodebookListView, CodebookDetailsView, CodebookImportView, CodebookLinkView,
@@ -87,12 +82,9 @@ _views = [
     CodingJobExportSelectView, CodingJobExportView,
 
     ProjectUserListView, ProjectUserAddView,
-    ArticleRuleListView, ArticleRuleDetailsView,
-    ProjectUserListView, ProjectUserAddView,
 
     TaskDetailsView, TaskListView,
     MultipleArticleSetDestinationView,
-    ClauseView
 ]
 
 for view in _views:

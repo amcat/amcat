@@ -37,14 +37,6 @@ def queue_status():
     amcatq = app.conf['CELERY_DEFAULT_QUEUE']
     result["amcat"] = _inspect_queue(amcatq, host="localhost:5672", userid="guest", password="guest")
 
-    #xtas queues
-    from xtas import celeryconfig as xc
-    for queue in ["xtas", "corenlp", "background"]:
-        try:
-            result[queue] = _inspect_queue(queue, host="{}:5672".format(xc._BROKER_HOST),
-                                           userid=xc._BROKER_USERNAME, password=xc._BROKER_PASSWORD)
-        except:
-            logging.exception("Error on probing queue {queue}".format(**locals()))
     return result
 
 def git_status():

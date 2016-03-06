@@ -38,7 +38,6 @@ from api.rest.resources.coded_article import CodedArticleResource
 from api.rest.resources.search import SearchResource
 from api.rest.resources.plugin import PluginResource
 from api.rest.resources.aggregate import AggregateResource
-from api.rest.resources.ruleset import RuleSetResource
 from api.rest.resources.task import single_task_result, TaskResource, TaskResultResource
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
@@ -53,7 +52,6 @@ MODELS = ['Article', 'AmCAT',
           'CodebookCode', 'CodingSchemaFieldType', 'CodedArticleStatus',
           'django.contrib.auth.models.Group', 'django.contrib.auth.models.Permission',
           'PluginType',
-          "RuleSet",
           "CodingRuleAction",
           "Query"]
 

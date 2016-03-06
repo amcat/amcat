@@ -577,14 +577,14 @@ class ES(object):
         result = self.es.count(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=body)
         return result["count"]
 
-    def search_aggregate(self, aggregation, query=None, filters=None):
+    def search_aggregate(self, aggregation, query=None, filters=None, **options):
         """
         Run an aggregate search query and return the aggregation results
         @param aggregation: raw elastic query, e.g. {"terms" : {"field" : "medium"}}
         """
         body = dict(query={"filtered": dict(build_body(query, filters, query_as_filter=True))},
                     aggregations={"aggregation": aggregation})
-        result = self.search(body, size=0, search_type="count")
+        result = self.search(body, size=0, search_type="count", **options)
         return result['aggregations']['aggregation']
 
     def _parse_terms_aggregate(self, aggregate, group_by, terms, sets):
