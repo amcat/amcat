@@ -223,6 +223,8 @@ class CSVRenderer(TableRenderer):
         header = []       
         out = StringIO()
         w = csv.writer(out)
+        if 'results' not in data:
+            return ""
         for d in data['results']:
             keys = set(d.keys())
             extra = keys - set(header)

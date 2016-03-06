@@ -228,15 +228,7 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
         context['starred'] = starred
         return context
 
-from api.rest.viewsets.xtas import PreprocessViewSet
-class ArticleSetPreprocessView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, DetailView):
-    resource = PreprocessViewSet 
-    parent = ArticleSetDetailsView
-    url_fragment = 'preprocess'
-    model = ArticleSet
-    
-    def get_datatable_kwargs(self):
-        return {"url_kwargs": {"project": self.project.id, "articleset": self.object.id}}
+
     
 class ArticleSetImportView(ProjectScriptView):
     script = ImportSet
