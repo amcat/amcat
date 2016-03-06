@@ -40,6 +40,7 @@ django-markdown-deux==1.0.5
 splinter
 django-celery
 GitPython==1.0.1
-amqplib
-KafNafParserPy
--e git+https://github.com/amcat/nlpipe.git#egg=nlpipe
+amqplib==1.0.2
+KafNafParserPy==1.6
+nlpipe==0.1
+
