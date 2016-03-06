@@ -36,5 +36,5 @@ splinter
 
 anyjson
 billiard
-siz
+six
 pytz
