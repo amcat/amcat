@@ -84,7 +84,7 @@ class FileUploadForm(RawFileUploadForm):
 
     def decode_file(self, f):
         enc, text = self.decode(f.read())
-        if isinstance(f.file, io.BufferedIOBase) and f.file.seekable():
+        if isinstance(f.file, io.BytesIO) and f.file.seekable():
             f.seek(0)
             return File(io.TextIOWrapper(f.file, encoding=enc), name=f.name)
         name = f.file.name if isinstance(f, File) else f.name
