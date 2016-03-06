@@ -41,5 +41,5 @@ six
 pytz
 amqplib
 KafNafParserPy
-git+https://github.com/amcat/nlpipe.git#egg=nlpipe
+-e git+https://github.com/amcat/nlpipe.git#egg=nlpipe
 
