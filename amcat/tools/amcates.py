@@ -475,6 +475,10 @@ class ES(object):
             monitor.update(40/nbatches, "Added batch {iplus}/{nbatches}".format(iplus=i+1, **locals()))
             self.bulk_update(batch, UPDATE_SCRIPT_ADD_TO_SET, params={'set' : setid})
 
+    def term_vector(self, aid, fields=["text", "headline"]):
+        return self.es.termvectors(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE,
+                                   id = aid, fields=fields)
+            
     def bulk_insert(self, dicts, batch_size=1000, monitor=ProgressMonitor()):
         """
         Bulk insert the given articles in batches of batch_size

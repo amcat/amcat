@@ -50,6 +50,27 @@ from nlpipe.celery import app
 from KafNafParserPy import KafNafParser
 from io import BytesIO
 
+def _termvector(aid):
+    from amcat.tools import amcates
+    import collections
+    res =  amcates.ES().term_vector(aid)
+    tokens = collections.defaultdict(list)
+    for field, data in res['term_vectors'].items():
+        for term, info in data['terms'].items():
+            tokens[term] += info['tokens']
+    
+    print(tokens)
+    for term, tokens in tokens.items():
+        for token in tokens:
+            yield {"aid": aid,
+                   "id": token['position'],
+                   "offset": token['start_offset'],
+                   "word": term}
+    
+def _termvectors(aids):
+    return {aid: list(_termvector(aid)) for aid in aids}
+
+
 class NLPipeLemmataSerializer(serializers.Serializer):
 
     class Meta:
@@ -59,7 +80,10 @@ class NLPipeLemmataSerializer(serializers.Serializer):
                 only_cached = self.context['request'].GET.get('only_cached', 'N')
                 only_cached = only_cached[0].lower() in ['1', 'y']
                 aids = [a.pk for a in data]
-                self.child._cache = get_results(aids, self.child.module, only_cached=only_cached)
+                if self.context['request'].GET.get('module') == "elastic":
+                    self.child._cache = _termvectors(aids)
+                else:
+                    self.child._cache = get_results(aids, self.child.module, only_cached=only_cached)
                 if only_cached:
                     data = [a for a in data if a.pk in self.child._cache]
                 result = serializers.ListSerializer.to_representation(self, data)
@@ -77,7 +101,13 @@ class NLPipeLemmataSerializer(serializers.Serializer):
         return getattr(tasks, module)
     
     def to_representation(self, article):
-        naf = self._cache[article.pk].input
+        result = self._cache[article.pk]
+        if isinstance(result, list):
+            return result
+        else:
+            return self.from_naf(result.input)
+        
+    def from_naf(self, naf):
         naf = KafNafParser(BytesIO(naf.encode("utf-8")))
         tokendict = {token.get_id(): token for token in naf.get_tokens()}
 
