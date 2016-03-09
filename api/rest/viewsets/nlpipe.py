@@ -50,6 +50,36 @@ from nlpipe.celery import app
 from KafNafParserPy import KafNafParser
 from io import BytesIO
 
+def _get_tokens(term_vector, pos_inc=0, offset_inc=0):
+    for term, info in term_vector.items():
+        for token in info['tokens']:
+            token['position'] += pos_inc
+            token['start_offset'] += offset_inc
+            token['end_offset'] += offset_inc
+            token['term'] = term
+            yield token
+
+def _termvector(aid):
+    from amcat.tools import amcates
+    import collections
+    fields = ["headline", "text"]
+    res =  amcates.ES().term_vector(aid, fields=fields)
+    pos_inc, offset_inc = 0, 0
+    for field in fields:
+        tokens = _get_tokens(res['term_vectors'][field]['terms'],
+                             pos_inc=pos_inc, offset_inc=offset_inc)
+        tokens = sorted(tokens, key = lambda t:t['position'])
+        pos_inc = (tokens[-1]['position'] + 1) if tokens else 0
+        offset_inc = (tokens[-1]['end_offset'] + 1) if tokens else 0
+        for token in tokens:
+            token['aid'] = aid
+            yield token
+
+    
+def _termvectors(aids):
+    return {aid: list(_termvector(aid)) for aid in aids}
+
+
 class NLPipeLemmataSerializer(serializers.Serializer):
 
     class Meta:
@@ -59,7 +89,10 @@ class NLPipeLemmataSerializer(serializers.Serializer):
                 only_cached = self.context['request'].GET.get('only_cached', 'N')
                 only_cached = only_cached[0].lower() in ['1', 'y']
                 aids = [a.pk for a in data]
-                self.child._cache = get_results(aids, self.child.module, only_cached=only_cached)
+                if self.context['request'].GET.get('module') == "elastic":
+                    self.child._cache = _termvectors(aids)
+                else:
+                    self.child._cache = get_results(aids, self.child.module, only_cached=only_cached)
                 if only_cached:
                     data = [a for a in data if a.pk in self.child._cache]
                 result = serializers.ListSerializer.to_representation(self, data)
@@ -77,7 +110,13 @@ class NLPipeLemmataSerializer(serializers.Serializer):
         return getattr(tasks, module)
     
     def to_representation(self, article):
-        naf = self._cache[article.pk].input
+        result = self._cache[article.pk]
+        if isinstance(result, list):
+            return result
+        else:
+            return self.from_naf(result.input)
+        
+    def from_naf(self, naf):
         naf = KafNafParser(BytesIO(naf.encode("utf-8")))
         tokendict = {token.get_id(): token for token in naf.get_tokens()}
 

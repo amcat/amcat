@@ -486,6 +486,17 @@ class ES(object):
             monitor.update(40/nbatches, "Added batch {iplus}/{nbatches}".format(iplus=i+1, **locals()))
             self.bulk_update(batch, UPDATE_SCRIPT_ADD_TO_SET, params={'set' : setid})
 
+    def term_vector(self, aid, fields=["text", "headline"]):
+
+        # elasticsearch client supports term vectors from version 2.0
+        # so we do it 'manually' for now:
+        from elasticsearch.client.utils import _make_path
+        url = _make_path(self.index, settings.ES_ARTICLE_DOCTYPE, aid, "_termvector")
+        # I think perform_request tests status code?
+        fields = ",".join(fields)
+        _, data = self.es.transport.perform_request('GET', url, params={"fields": fields})
+        return data
+            
     def bulk_insert(self, dicts, batch_size=1000, monitor=ProgressMonitor()):
         """
         Bulk insert the given articles in batches of batch_size
