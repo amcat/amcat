@@ -89,7 +89,7 @@ class NLPipeLemmataSerializer(serializers.Serializer):
                 only_cached = self.context['request'].GET.get('only_cached', 'N')
                 only_cached = only_cached[0].lower() in ['1', 'y']
                 aids = [a.pk for a in data]
-                if self.context['request'].GET.get('module') == "elastic":
+                if self.context['request'].GET.get('module', 'elastic') == "elastic":
                     self.child._cache = _termvectors(aids)
                 else:
                     self.child._cache = get_results(aids, self.child.module, only_cached=only_cached)
