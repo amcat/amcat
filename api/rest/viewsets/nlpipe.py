@@ -50,22 +50,31 @@ from nlpipe.celery import app
 from KafNafParserPy import KafNafParser
 from io import BytesIO
 
+def _get_tokens(term_vector, pos_inc=0, offset_inc=0):
+    for term, info in term_vector.items():
+        for token in info['tokens']:
+            token['position'] += pos_inc
+            token['start_offset'] += offset_inc
+            token['end_offset'] += offset_inc
+            token['term'] = term
+            yield token
+
 def _termvector(aid):
     from amcat.tools import amcates
     import collections
-    res =  amcates.ES().term_vector(aid)
-    tokens = collections.defaultdict(list)
-    for field, data in res['term_vectors'].items():
-        for term, info in data['terms'].items():
-            tokens[term] += info['tokens']
-    
-    print(tokens)
-    for term, tokens in tokens.items():
+    fields = ["headline", "text"]
+    res =  amcates.ES().term_vector(aid, fields=fields)
+    pos_inc, offset_inc = 0, 0
+    for field in fields:
+        tokens = _get_tokens(res['term_vectors'][field]['terms'],
+                             pos_inc=pos_inc, offset_inc=offset_inc)
+        tokens = sorted(tokens, key = lambda t:t['position'])
+        pos_inc = (tokens[-1]['position'] + 1) if tokens else 0
+        offset_inc = (tokens[-1]['end_offset'] + 1) if tokens else 0
         for token in tokens:
-            yield {"aid": aid,
-                   "id": token['position'],
-                   "offset": token['start_offset'],
-                   "word": term}
+            token['aid'] = aid
+            yield token
+
     
 def _termvectors(aids):
     return {aid: list(_termvector(aid)) for aid in aids}
