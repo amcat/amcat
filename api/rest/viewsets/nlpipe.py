@@ -28,6 +28,7 @@ import itertools
 import json
 import tempfile
 import logging
+from io import BytesIO
 
 from rest_framework.response import Response
 from rest_framework.exceptions import APIException
@@ -37,18 +38,18 @@ from rest_framework import serializers
 from rest_framework.mixins import ListModelMixin, CreateModelMixin
 from rest_framework.viewsets import ModelViewSet, ViewSet, GenericViewSet
 
+from nlpipe.pipeline import get_results
+from nlpipe.celery import app
+
+from KafNafParserPy import KafNafParser
+
 from amcat.models import Article, ArticleSet
+from amcat.tools import amcates
 
 from api.rest.viewsets.articleset import ArticleSetViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
 from api.rest.viewsets.article import ArticleViewSetMixin
 from api.rest.mixins import DatatablesMixin
-
-from nlpipe.pipeline import get_results
-from nlpipe.celery import app
-
-from KafNafParserPy import KafNafParser
-from io import BytesIO
 
 def _get_tokens(term_vector, pos_inc=0, offset_inc=0):
     for term, info in term_vector.items():
@@ -59,14 +60,10 @@ def _get_tokens(term_vector, pos_inc=0, offset_inc=0):
             token['term'] = term
             yield token
 
-def _termvector(aid):
-    from amcat.tools import amcates
-    import collections
-    fields = ["headline", "text"]
-    res =  amcates.ES().term_vector(aid, fields=fields)
+def _tokens_from_vectors(vectors, fields, aid):
     pos_inc, offset_inc = 0, 0
     for field in fields:
-        tokens = _get_tokens(res['term_vectors'][field]['terms'],
+        tokens = _get_tokens(vectors[field]['terms'],
                              pos_inc=pos_inc, offset_inc=offset_inc)
         tokens = sorted(tokens, key = lambda t:t['position'])
         pos_inc = (tokens[-1]['position'] + 1) if tokens else 0
@@ -77,8 +74,10 @@ def _termvector(aid):
 
     
 def _termvectors(aids):
-    return {aid: list(_termvector(aid)) for aid in aids}
-
+    fields = ["headline", "text"]
+    for doc in amcates.ES().term_vectors(aids, fields):
+        aid = int(doc['_id'])
+        yield aid, list(_tokens_from_vectors(doc['term_vectors'], fields, aid))
 
 class NLPipeLemmataSerializer(serializers.Serializer):
 
@@ -90,7 +89,7 @@ class NLPipeLemmataSerializer(serializers.Serializer):
                 only_cached = only_cached[0].lower() in ['1', 'y']
                 aids = [a.pk for a in data]
                 if self.context['request'].GET.get('module', 'elastic') == "elastic":
-                    self.child._cache = _termvectors(aids)
+                    self.child._cache = dict(_termvectors(aids))
                 else:
                     self.child._cache = get_results(aids, self.child.module, only_cached=only_cached)
                 if only_cached:
