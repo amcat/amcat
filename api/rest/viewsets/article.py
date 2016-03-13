@@ -170,7 +170,12 @@ class ArticleListSerializer(serializers.ListSerializer):
         # check if text attribute is defferred
         if u'RelatedManager' in unicode(type(data)):
             data = list(data.all())
+        parents = [a.parent_id for a in data if a.parent_id]
+        uuids = dict(Article.objects.filter(pk__in=parents).values_list("pk", "uuid"))
         result = super(ArticleListSerializer, self).to_representation(data)
+        for r in result:
+            if r.get('parent'):
+                r['parent'] = unicode(uuids[r['parent']])
         return result
 
 
