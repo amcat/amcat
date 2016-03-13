@@ -28,6 +28,8 @@ from functools import partial
 
 from rest_framework.renderers import *
 from amcat.tools.table import table3
+from amcat.tools.amcatr import create_dataframe, save_to_bytes, to_r
+
 import logging
 
 
@@ -282,7 +284,40 @@ class XHTMLRenderer(TableRenderer):
         result = table.export(format='html')
         return result
 
-EXPORTERS = [CSVRenderer, XLSXRenderer, SPSSRenderer, XHTMLRenderer]
+class RdaRenderer(BaseRenderer):
+    """
+    Renderer which creates a .rda (R Data) file
+    """
+    
+    media_type = 'application/x-r-rda'
+    format = 'rda'
+    extension = 'rda'
+
+    def json_to_vectors(self, rows):
+        result = {}
+        n = len(rows)
+        for i, row in enumerate(rows):
+            for k, v in row.iteritems():
+                if k not in result:
+                    result[k] = [None] * n
+                result[k][i] = v
+        return result
+
+    def render(self, data, media_type=None, renderer_context=None):
+        try:
+            if 'response' in renderer_context and renderer_context['response'].exception:
+                data.update({'exception': True,
+                             'status': renderer_context['response'].status_code})
+            else:
+                vectors = self.json_to_vectors(data['results'])
+                data['results'] = create_dataframe(vectors.iteritems())
+            return save_to_bytes(**data)
+        except:
+            logging.exception("Error on rendering to rda")
+            raise
+        
+        
+EXPORTERS = [CSVRenderer, XLSXRenderer, SPSSRenderer, XHTMLRenderer, RdaRenderer]
 
 def set_response_content(response):
     """

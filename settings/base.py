@@ -275,6 +275,7 @@ REST_FRAMEWORK = {
         'api.rest.tablerenderer.XLSXRenderer',
         'api.rest.tablerenderer.SPSSRenderer',
         'api.rest.tablerenderer.XHTMLRenderer',
+        'api.rest.tablerenderer.RdaRenderer',
     ),
 
     # Auth
