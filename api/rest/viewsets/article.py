@@ -58,7 +58,6 @@ from amcat.models import Article, ArticleSet, ROLE_PROJECT_READER
 from api.rest.viewsets.project import CannotEditLinkedResource, NotFoundInProject
 from django.db.models.query_utils import DeferredAttribute
 from rest_framework.exceptions import ValidationError
-from django.core.exceptions import PermissionDenied
 
 re_uuid = re.compile("[0-F]{8}-[0-F]{4}-[0-F]{4}-[0-F]{4}-[0-F]{12}", re.I)
 
