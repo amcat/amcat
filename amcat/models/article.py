@@ -344,13 +344,18 @@ class Article(AmcatModel):
 
         # check dupes based on uuid (if any are given)
         if uuids:
-            results = es.query_all(filters={'uuid': uuids.keys()},
-                                   fields=["hash", "uuid"], score=False)
-            for orig in results:
-                dupe = uuids[orig.uuid]
-                if dupe.hash != orig.hash:
-                    raise ValueError("Cannot modify existing articles: {orig.hash} != {dupe.hash}".format(**locals()))
-                _set_dupe(dupe, orig)
+            # uuid is not stored correctly in amcat.nl as of 3.4, so use db to query uuids
+            aids = {id: unicode(uuid) for (id, uuid) in
+                    Article.objects.filter(uuid__in=uuids.keys()).values_list("pk", "uuid")}
+            if aids:
+                results = es.query_all(filters={'id': aids.keys()}, fields=["hash"], score=False)
+                for orig in results:
+                    orig.uuid = unicode(aids[orig.id])
+                    dupe = uuids[orig.uuid]
+                    if dupe.hash != orig.hash:
+                        amcates.get_article_dict(Article.objects.get(pk=orig.id))
+                        raise ValueError("Cannot modify existing article for uuid={orig.uuid}: {orig.hash} != {dupe.hash}".format(**locals()))
+                    _set_dupe(dupe, orig)
                 
         # now we can save the articles and set id
         to_insert = [a for a in articles if not a.duplicate]
