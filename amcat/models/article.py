@@ -191,9 +191,6 @@ class Article(AmcatModel):
         if self._highlighted:
             raise ValueError("Cannot save a highlighted article.")
 
-        if self.length is None:
-            self.length = word_len(self.text)
-
         super(Article, self).save(*args, **kwargs)
 
 
@@ -313,8 +310,6 @@ class Article(AmcatModel):
         for a in articles:
             if a.id:
                 raise ValueError("Specifying explicit article ID in save not allowed")
-            if a.length is None:
-                a.length = word_len(a.text) + word_len(a.headline) + word_len(a.byline)
             a.es_dict = amcates.get_article_dict(a)
             a.hash = a.es_dict['hash']
             if not hasattr(a, 'uuid'): a.uuid = None
@@ -334,11 +329,12 @@ class Article(AmcatModel):
             dupe.id = orig.id
             dupe.uuid = orig.uuid
         # check dupes based on hash
-        results = es.query_all(filters={'hash': hashes.keys()},
-                               fields=["hash", "uuid"], score=False)
-        for orig in results:
-            for dupe in hashes[orig.hash]:
-                _set_dupe(dupe, orig)
+        if hashes:
+            results = es.query_all(filters={'hash': hashes.keys()},
+                                   fields=["hash", "uuid"], score=False)
+            for orig in results:
+                for dupe in hashes[orig.hash]:
+                    _set_dupe(dupe, orig)
 
         # check dupes based on uuid (if any are given)
         if uuids:

@@ -229,7 +229,7 @@ class ArticleSerializer(AmCATProjectModelSerializer):
         
     class Meta:
         model = Article
-        read_only_fields = ('id', 'length', 'insertdate', 'insertscript')
+        read_only_fields = ('id', 'insertdate', 'insertscript')
         list_serializer_class = ArticleListSerializer
 
         
