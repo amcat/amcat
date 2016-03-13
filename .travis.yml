@@ -6,6 +6,11 @@ python:
 jvm:
   - "oraclejdk8"
 
+addons:
+  apt:
+    sources:
+    - r-packages-precise
+
 services:
  - postgresql
  - memcached

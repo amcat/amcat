@@ -10,3 +10,5 @@ curl
 python-pdfminer
 graphviz
 pspp
+r-base
+r-base-dev
