@@ -9,7 +9,7 @@ jvm:
 addons:
   apt:
     sources:
-    - r-packages-precise
+    - r-packages-trusty
 
 services:
  - postgresql
