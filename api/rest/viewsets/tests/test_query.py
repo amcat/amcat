@@ -125,7 +125,6 @@ class TestQueryViewSet(amcattest.AmCATTestCase):
         self.assertEqual(400, status_code)
         self.assertIn("name", results)
         self.assertIn("parameters", results)
-        self.assertEqual(2, len(results))
 
     def test_post(self):
         self.client.login(username=self.member.username, password="test")

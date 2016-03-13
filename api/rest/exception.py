@@ -2,6 +2,8 @@ import logging
 from rest_framework.response import Response
 from rest_framework.exceptions import APIException
 from django.http import Http404
+from django.core.exceptions import PermissionDenied
+
 
 def exception_handler(exc, context):
     try:
@@ -13,21 +15,29 @@ def exception_handler(exc, context):
     try:
     # from rest_framework.views.exception_handler
         headers = {}
+        data = {'exception_type': type(exc).__name__}
         if getattr(exc, 'auth_header', None):
             headers['WWW-Authenticate'] = exc.auth_header
         if getattr(exc, 'wait', None):
             headers['Retry-After'] = '%d' % exc.wait
 
         if isinstance(exc, Http404):
-            detail = exc.message
+            data['detail'] = exc.message
             exc.status_code = 404
+            
+        elif isinstance(exc, PermissionDenied):
+            exc.status_code = 403
+            data['detail'] = exc.message
         elif isinstance(exc, APIException):
-            detail = exc.detail
+            if isinstance(exc.detail, dict):
+                data.update(exc.detail)
+            else:
+                data['detail'] = exc.detail
         else:
-            detail = str(exc)
+            data['detail'] = str(exc)
             exc.status_code = 500
             
-        data = {'exception_type': type(exc).__name__, 'detail': detail}
+
         return Response(data, status=exc.status_code, headers=headers)
     except:
         logging.exception("Error on rendering exception")
