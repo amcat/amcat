@@ -20,24 +20,25 @@ def exception_handler(exc, context):
             headers['WWW-Authenticate'] = exc.auth_header
         if getattr(exc, 'wait', None):
             headers['Retry-After'] = '%d' % exc.wait
-
+            
         if isinstance(exc, Http404):
             data['detail'] = exc.message
-            exc.status_code = 404
+            status_code = 404
             
         elif isinstance(exc, PermissionDenied):
-            exc.status_code = 403
+            status_code = 403
             data['detail'] = exc.message
         elif isinstance(exc, APIException):
+            status_code = exc.status_code
             if isinstance(exc.detail, dict):
                 data.update(exc.detail)
             else:
                 data['detail'] = exc.detail
         else:
             data['detail'] = str(exc)
-            exc.status_code = 500
+            status_code = 500
             
 
-        return Response(data, status=exc.status_code, headers=headers)
+        return Response(data, status=status_code, headers=headers)
     except:
         logging.exception("Error on rendering exception")
