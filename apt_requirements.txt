@@ -9,3 +9,5 @@ git
 curl
 python-pdfminer
 graphviz
+r-base
+r-base-dev
