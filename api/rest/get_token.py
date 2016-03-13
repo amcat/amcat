@@ -10,6 +10,8 @@ from django.contrib.auth import authenticate
 from rest_framework import serializers
 import datetime
 
+from amcat._version import __version__
+
 class AuthTokenSerializer(serializers.Serializer):
     def __init__(self, *args, **kwargs):
         super(AuthTokenSerializer, self).__init__(*args, **kwargs)
@@ -51,7 +53,7 @@ class ObtainAuthToken(APIView):
             if not created:
                 token.created =datetime.datetime.now()
                 token.save()
-            return Response({'token': token.key})
+            return Response({'token': token.key, 'version':__version__})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
