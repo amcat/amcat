@@ -31,7 +31,7 @@ import logging
 from io import BytesIO
 
 from rest_framework.response import Response
-from rest_framework.exceptions import APIException
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.decorators import api_view
 from rest_framework.status import HTTP_200_OK
 from rest_framework import serializers
@@ -103,9 +103,11 @@ class NLPipeLemmataSerializer(serializers.Serializer):
     def module(self):
         module = self.context['request'].GET.get('module')
         if not module:
-            raise Exception("Please specify the NLP module to use "
-                            "with a module= GET parameter")
+            raise ValidationError("Please specify the NLP module to use with a module= GET parameter")
         from nlpipe import tasks
+        if not hasattr(tasks, module):
+            raise ValidationError("Module {module} not known".format(**locals()))
+        
         return getattr(tasks, module)
     
     def to_representation(self, article):
@@ -143,7 +145,11 @@ class NLPipeLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatabl
     def filter_queryset(self, queryset):
         queryset = super(NLPipeLemmataViewSet, self).filter_queryset(queryset)
         # only(.) would be better on serializer, but meh
-        queryset = queryset.filter(articlesets_set=self.articleset).only("pk")
+        try:
+            queryset = queryset.filter(articlesets_set=self.articleset).only("pk")
+        except ArticleSet.DoesNotExist:
+            from django.http import Http404
+            raise Http404("Articleset does not exist")
         return queryset
     
     def get_renderer_context(self):
