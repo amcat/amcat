@@ -40,3 +40,4 @@ six
 pytz
 KafNafParserPy
 nlpipe
+rpy2
