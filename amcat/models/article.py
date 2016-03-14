@@ -117,7 +117,7 @@ class Article(AmcatModel):
     pagenr = models.IntegerField(blank=True, null=True)
     headline = models.TextField()
     byline = models.TextField(blank=True, null=True)
-    length = models.IntegerField(blank=True)
+    length = models.IntegerField(blank=True, null=True)
     metastring = models.TextField(null=True, blank=True)
     url = models.TextField(null=True, blank=True, db_index=True, max_length=750)
     externalid = models.IntegerField(blank=True, null=True)
