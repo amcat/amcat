@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 from django import forms
 
 from amcat.scripts.script import Script
-from amcat.models import ArticleSet
+from amcat.models import ArticleSet, Project
 
 PLUGINTYPE_PARSER = 1
 
@@ -40,6 +40,13 @@ class SampleSet(Script):
         articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
         sample = forms.CharField(help_text="Sample in absolute number or percentage")
         target_articleset_name = forms.CharField(help_text="Name for the new articleset")
+        target_project = forms.ModelChoiceField(queryset=Project.objects.all())
+        def __init__(self, project=None, **kwargs):
+            super(self.__class__, self).__init__(**kwargs)
+
+            if project:
+                self.fields['target_project'].initial = project
+                self.fields['target_project'].widget = forms.HiddenInput()
 
         def clean_sample(self):
             sample = self.cleaned_data["sample"]
@@ -54,7 +61,7 @@ class SampleSet(Script):
             self.cleaned_data["sample"] = result
             return result
 
-    def _run(self, articleset, sample, target_articleset_name):
+    def _run(self, articleset, sample, target_articleset_name, target_project):
         log.info("Sampling {sample} from {articleset}".format(**locals()))
         if not isinstance(sample, int):
             n = articleset.articles.count()
@@ -64,7 +71,7 @@ class SampleSet(Script):
         selected = articleset.articles.order_by('?')[:sample]
         ids = [x for (x,) in selected.values_list("pk")]
 
-        target_set = ArticleSet.objects.create(name=target_articleset_name, project=articleset.project)
+        target_set = ArticleSet.objects.create(name=target_articleset_name, project=target_project)
         log.info(
             "Created set {target_set.id}:{target_set} in project {target_set.project_id}:{target_set.project}!".format(
                 **locals()))
