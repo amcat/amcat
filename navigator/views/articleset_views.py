@@ -255,7 +255,10 @@ class ArticleSetSampleView(ProjectScriptView):
     def get_success_url(self):
         return self.parent._get_breadcrumb_url({'project' : self.project.id, 'articleset' : self.result.id}, self)
 
-
+    def get_form_kwargs(self):
+        kwargs = super(ArticleSetSampleView, self).get_form_kwargs()
+        kwargs['project'] = self.project
+        return kwargs
     def success_message(self, result=None):
         old = ArticleSet.objects.get(pk=self.kwargs['articleset'])
         old_name = escape(old.name)
