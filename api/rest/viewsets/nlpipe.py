@@ -93,7 +93,7 @@ class NLPipeLemmataSerializer(serializers.Serializer):
                 else:
                     self.child._cache = get_results(aids, self.child.module, only_cached=only_cached)
                 if only_cached:
-                    data = [a for a in data if a.pk in self.child._cache]
+                    data = [a for a in data if str(a.pk) in self.child._cache]
                 result = serializers.ListSerializer.to_representation(self, data)
                 # flatten list of lists
                 result = itertools.chain(*result)
@@ -111,13 +111,13 @@ class NLPipeLemmataSerializer(serializers.Serializer):
         return getattr(tasks, module)
     
     def to_representation(self, article):
-        result = self._cache[article.pk]
+        result = self._cache[str(article.pk)]
         if isinstance(result, list):
             return result
         else:
-            return self.from_naf(result.input)
+            return self.from_naf(article, result.text)
         
-    def from_naf(self, naf):
+    def from_naf(self, article, naf):
         naf = KafNafParser(BytesIO(naf.encode("utf-8")))
         tokendict = {token.get_id(): token for token in naf.get_tokens()}
 
@@ -176,7 +176,7 @@ class PreprocessViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesM
     def get_queryset(self):
         ids = list(self.articleset.get_article_ids_from_elastic())
         result = [ModuleCount("Total #articles", len(ids))]
-        from nlpipe.document import count_cached
+        from nlpipe.backend import count_cached
         for module, n in count_cached(ids):
             result.append(ModuleCount(module, n))
         
