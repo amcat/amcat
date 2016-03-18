@@ -474,7 +474,7 @@ class Migration(migrations.Migration):
                 ('uuid', amcat.tools.model.PostgresNativeUUIDField(name='uuid', editable=False, blank=True, unique=True, db_index=True)),
                 ('handler_class_name', models.TextField()),
                 ('class_name', models.TextField()),
-                ('arguments', amcat.forms.fields.JSONField(default='{}')),
+                ('arguments', amcat.forms.fields.JSONField(default={})),
                 ('issued_at', models.DateTimeField(auto_now_add=True)),
                 ('persistent', models.BooleanField(default=False)),
                 ('project', models.ForeignKey(to='amcat.Project', null=True)),

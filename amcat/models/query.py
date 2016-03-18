@@ -34,7 +34,7 @@ class Query(AmcatModel):
     id = models.AutoField(primary_key=True, db_column="query_id")
 
     name = models.TextField()
-    parameters = JSONField()
+    parameters = JSONField(default={})
 
     project = models.ForeignKey("amcat.Project")
     user = models.ForeignKey(User)

@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(serialize=False, primary_key=True, db_column='query_id')),
                 ('name', models.TextField()),
-                ('parameters', amcat.forms.fields.JSONField(default=b'{}')),
+                ('parameters', amcat.forms.fields.JSONField(default={})),
                 ('private', models.BooleanField(default=True)),
                 ('last_saved', models.DateTimeField(auto_now=True)),
                 ('project', models.ForeignKey(to='amcat.Project')),

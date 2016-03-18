@@ -20,6 +20,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='query',
             name='parameters',
-            field=amcat.forms.fields.JSONField(default='{}'),
+            field=amcat.forms.fields.JSONField(default={}),
         ),
     ]
