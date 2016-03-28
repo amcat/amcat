@@ -12,8 +12,10 @@ Release 3.4: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=relea
 
 Most of the (python) prerequisites for AmCAT are automatically installed using pip (see below). To install the non-python requirements, you can use the following (on ubuntu):
 
+Note: these requirements are for ubuntu 14.04 LTS (trusty). If you use a different distro or version, you may need to adapt these instructions, e.g. a different postgresql server and R repository. 
+
 ```sh
-$ sudo apt-get install antiword unrtf rabbitmq-server python-pip python-dev libxml2-dev libxslt-dev lib32z1-dev postgresql postgresql-server-dev-9.4 postgresql-contrib-9.4 python-virtualenv git
+$ sudo apt-get install antiword unrtf rabbitmq-server python-pip python-dev libxml2-dev libxslt-dev lib32z1-dev postgresql postgresql-server-dev-9.3 postgresql-contrib-9.3 python-virtualenv git
 ```
 
 It is probably best to install AmCAT in a virtual environment. Run the following commands to setup and activate a virtual environment for AmCAT: (on ubuntu)
@@ -24,6 +26,18 @@ $ source amcat-env/bin/activate
 ```
 
 If you use a virtual environment, every time you start working with AmCAT you need to repeat the `source` line to load the environment. If you don't use a virtual environment, you will need to run most pip command below using `sudo`. 
+
+### Install R
+
+AmCAT uses R to directly supply .rda files. 
+The R version in the ubuntu repository is quite old, so we need to add a cran mirror to the apt sources:
+
+```sh
+sudo sh -c "echo 'deb https://cran.rstudio.com/bin/linux/ubuntu trusty/' > /etc/apt/sources.list.d/r-cran-trusty.list"
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
+sudo apt-get update
+sudo apt-get install r-base-dev
+```
 
 ### Database
 
@@ -97,7 +111,7 @@ git clone -b release-3.4 https://github.com/amcat/amcat.git
 pip install -r amcat/requirements.txt
 ```
 
-Be sure to add the new directory to the pythonpath and add AMCAT_ES_LEGACY hash to the environment.
+Be sure to add the new directory to the pythonpath and add AMCAT_ES_LEGACY hash to the environment, e.g. using the lines below.
 If you add these lines to amcat-env/bin/activate they will be automatically set when you activate.
 
 ```sh
