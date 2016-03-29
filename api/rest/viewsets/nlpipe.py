@@ -116,7 +116,7 @@ class NLPipeLemmataSerializer(serializers.Serializer):
         return getattr(tasks, module)
     
     def to_representation(self, article):
-        result = self._cache[article.pk]
+        result = self._cache[str(article.pk)]
         if isinstance(result, list):
             return result
         else:
