@@ -42,6 +42,6 @@ django-celery
 GitPython==1.0.1
 amqplib==1.0.2
 KafNafParserPy==1.6
-nlpipe==0.1
+nlpipe==0.24
 rpy2==2.7.8
 
