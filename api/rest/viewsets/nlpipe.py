@@ -51,6 +51,11 @@ from api.rest.viewsets.project import ProjectViewSetMixin
 from api.rest.viewsets.article import ArticleViewSetMixin
 from api.rest.mixins import DatatablesMixin
 
+# set nlpipe es settings from amcat es settings
+from nlpipe.backend import set_esconfig
+import settings
+set_esconfig(host=settings.ES_HOST, port=settings.ES_PORT)
+
 def _get_tokens(term_vector, pos_inc=0, offset_inc=0):
     for term, info in term_vector.items():
         for token in info['tokens']:
