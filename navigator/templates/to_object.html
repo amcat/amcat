@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block help_context %}Index{% endblock %}
+
+{% block content %}
+<div>
+ <ol class="breadcrumb">
+	
+	
+	<li>Go</li>
+	<li><b>{{query}}</b></li>
+	
+      </ol>
+
+
+{% if results %}
+<h1>Search results</h1>
+{% if results.project %}
+<h3>Projects:</h3>
+<ul class='list-group'>
+{% for p in results.project %}
+<li class="list-group-item"><a href="{% url 'navigator:articleset-list' p.id %}"><strong>{{p.id}}: {{p}}</strong></a>
+{% endfor %}
+</ul>
+{% endif %}
+
+
+{% if results.articleset %}
+<h3>Article Sets:</h3>
+<ul class='list-group'>
+{% for obj in results.articleset %}
+<li class="list-group-item"><a href="{% url 'navigator:articleset-details' obj.project_id obj.id %}"><strong>{{obj.id}}: {{obj}}</strong></a>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% if results.article %}
+<h3>Articles:</h3>
+<ul class='list-group'>
+{% for obj in results.article %}
+<li class="list-group-item"><a href="{% url 'navigator:articleset-details' obj.project_id obj.id %}"><strong>{{obj.id}}: {{obj}}</strong></a>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% elif query %}
+<h3>Sorry, no objects were found with {{query}}</h3>
+{% endif %}
+
+
+<h3>Search</h3>
+<p>Search for a Project, Article Set, or Article by ID or by name: </p>
+
+<form action="{% url 'navigator:to_object' %}" >
+   <div class="input-group" style="width:18em" >
+       <input type="Search" placeholder="Project, Set, or Article" class="form-control" name="search" />
+       <div class="input-group-btn">
+           <button class="btn btn-primary">
+           <span class="glyphicon glyphicon-search"></span>
+           </button>
+       </div>
+   </div>
+</form>
+
+This will directly navigate to the identified object.
+If multiple objects are found, a disambiguation page will be shown.
+You can also use prefix an ID with p, s, or a to restrict search to only projects, sets, or articles, respectively. 
+For example, p12 will directly open project 12, even if an article set 12 also exists)
+
+
+
+</div>
+
+{% endblock %}
