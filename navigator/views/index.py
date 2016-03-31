@@ -90,12 +90,12 @@ def to_object(request):
     def _filter_articles(arts):
         for a in arts:
             # choose set with best access, lowest project
-            sets = [(s.project.get_role_id(user=request.user), -s.project_id, s)
+            sets = [(s.project.get_role_id(user=request.user), -s.project_id, s.id)
                     for s in list(ArticleSet.objects.filter(articles=a.id))]
-            (role, s) = sorted(sets, reverse=True)[0]
+            (role, negproject, sid) = sorted(sets, reverse=True)[0]
             if role is not None:
                 role = role >= ROLE_PROJECT_READER
-            yield (role, s, a)
+            yield (role, sid, -negproject, a)
 
     if results.get('project'): results['project'] = list(_filter_projects(results['project']))
     if results.get('articleset'): results['articleset'] = list(_filter_sets(results['articleset']))
@@ -114,8 +114,8 @@ def to_object(request):
                 access, obj = val[0]
                 return redirect('navigator:articleset-details', obj.project_id, obj.id)
             if key == 'article':
-                access, s, obj = val[0]
-                return redirect('navigator:article-details', s.project_id, s.id, obj.id)
+                access, sid, pid, obj = val[0]
+                return redirect('navigator:article-details', pid, sid, obj.id)
 
     
     return render(request, 'to_object.html', locals())
