@@ -47,8 +47,8 @@ in project
 {% if results.article %}
 <h3>Articles:</h3>
 <ul class='list-group'>
-{% for obj in results.article %}
-<li class="list-group-item"><a href="{% url 'navigator:articleset-details' obj.project_id obj.id %}"><strong>{{obj.id}}: {{obj}}</strong></a>
+{% for can_read, sid, pid, obj in results.article %}
+<li class="list-group-item"><a href="{% url 'navigator:article-details' pid sid obj.id %}"><strong>{{obj.id}}: {{obj}}</strong></a>
 {% endfor %}
 </ul>
 {% endif %}
