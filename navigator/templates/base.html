@@ -63,6 +63,22 @@
         <div class="navbar-collapse collapse">
 
           <ul class="nav navbar-nav navbar-right">
+{% if user.is_authenticated %}
+<li>
+
+<form action="{% url 'navigator:to_object' %}" class="navbar-form navbar-right" >
+   <div class="input-group" style="width:18em" >
+       <input type="Search" placeholder="Project, Set, or Article ID" class="form-control" name="search" />
+       <div class="input-group-btn">
+           <button class="btn btn-primary">
+           <span class="glyphicon glyphicon-search"></span>
+           </button>
+       </div>
+   </div>
+</form>
+
+</li>
+{% endif %}
 	    {% if status != 503 %}
 {% if user.is_authenticated %}
 <li {% if main_active == 'Projects' %}class="active"{% endif %}><a href="{% url 'navigator:projects' %}">Projects</a></li>
@@ -110,6 +126,7 @@
 	    </div>
 	  </a>
 	</div>
+
       </div>
     </header>
 
