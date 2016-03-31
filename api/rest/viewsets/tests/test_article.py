@@ -72,8 +72,10 @@ class TestArticleViewSet(APITestCase):
         return json.loads(response.content.decode(response.charset))
 
 
-    def _post_articles(self, data, expected_status=201, as_user="self.user", **url_kwargs):
+    def _post_articles(self, data, expected_status=201, as_user="self.user", return_json=None, **url_kwargs):
         if as_user == "self.user": as_user = self.user
+        if return_json is None:
+            return_json = (expected_status // 100) == 2
         if as_user:
             self.client.login(username=as_user.username, password="test")
         else:
@@ -82,8 +84,12 @@ class TestArticleViewSet(APITestCase):
         response = self.client.post(url, content_type="application/json", data=json.dumps(data))
         self.assertEqual(response.status_code, expected_status,
                          "Status code {response.status_code}: {response.content}".format(**locals()))
+        
         amcates.ES().flush()
-        return json.loads(response.content.decode(response.charset))
+        if return_json:
+            return json.loads(response.content.decode(response.charset))
+        else:
+            return response
             
 
     @amcattest.use_elastic
