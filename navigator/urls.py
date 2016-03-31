@@ -61,6 +61,7 @@ urlpatterns = patterns(
     url(r'^projects/(?P<project>[0-9]+)/tasks/clean_ready', clean_ready, name='task-clean-ready'),
     url(r'^projects/(?P<project>[0-9]+)/tasks/clean_stuck', clean_stuck, name='task-clean-stuck'),
     url(r'^projects/(?P<project>[0-9]+)/tasks/(?P<uuid>%s)' % UUID_RE, uuid_redirect, name='task-uuid'),
+    url(r'^to_object$', 'navigator.views.index.to_object', name='to_object'),
 )
 
 _views = [
