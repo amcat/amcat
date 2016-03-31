@@ -5,7 +5,7 @@ usage_log = logging.getLogger("amcat.usage")
 
 def log_usage(username, type, action, project=None, **extra):
     if isinstance(project, Project):
-        project = "{}: {}".format(project.id, project.name)
+        project = "{}: {}".format(project.id, project.name.encode('latin-1'))
         
     extra.update({
         "username": username,
