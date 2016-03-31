@@ -17,9 +17,13 @@
 {% if results.project %}
 <h3>Projects:</h3>
 <ul class='list-group'>
-{% for p in results.project %}
+{% for can_read, p in results.project %}
 <li class="list-group-item"><a href="{% url 'navigator:articleset-list' p.id %}"><strong>{{p.id}}: {{p}}</strong></a>
+{% if not can_read %}
+<abbr class="text-warning" title="This project does not give full read access to the articles (probably because of copyright restrictions), so you might not be able to read the full text of all articles">(restricted access)</small>
+{% endif %}
 {% endfor %}
+
 </ul>
 {% endif %}
 
@@ -27,8 +31,15 @@
 {% if results.articleset %}
 <h3>Article Sets:</h3>
 <ul class='list-group'>
-{% for obj in results.articleset %}
+{% for can_read, obj in results.articleset %}
 <li class="list-group-item"><a href="{% url 'navigator:articleset-details' obj.project_id obj.id %}"><strong>{{obj.id}}: {{obj}}</strong></a>
+in project 
+<a href="{% url 'navigator:articleset-list' obj.project_id %}"><strong>{{obj.project_id}}: {{obj.project}}</strong></a>
+
+{% if not can_read %}
+<abbr class="text-warning" title="This project does not give full read access to the articles (probably because of copyright restrictions), so you might not be able to read the full text of all articles">(restricted access)</small>
+{% endif %}
+
 {% endfor %}
 </ul>
 {% endif %}

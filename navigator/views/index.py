@@ -58,7 +58,6 @@ def to_object(request):
         return render(request, 'to_object.html', locals())
 
     results = {}
-    
     m = re.match("([psa]?)(\d+)", search)
     if m:
         query = "id {search}".format(**locals())
@@ -73,24 +72,50 @@ def to_object(request):
                 results[cls] = [x]
     else:
         query = search
-        projects = Project.objects.filter(name__icontains=search)
-        if projects:
-            results['project'] = projects
-        sets = ArticleSet.objects.filter(name__icontains=search)
-        if sets:
-            results['articleset'] = sets
+        results['project'] = list(Project.objects.filter(name__icontains=search))
+        results['articleset'] = list(ArticleSet.objects.filter(name__icontains=search))
         
-        
-    
-    if len(results) == 1 and len(results.values()[0]) == 1:
-        (key, (val,)), = results.items()
-        if key == 'project':
-            return redirect('navigator:articleset-list', val.id)
-        if key == 'articleset':
-            return redirect('navigator:articleset-details', val.project_id, val.id)
-        if key == 'article':
-            s = ArticleSet.objects.filter(articles=val.id)[0]
-            return redirect('navigator:article-details', s.project_id, s.id, val.id)
+
+    def _filter_projects(projects):
+        for p in projects:
+            role = p.get_role_id(user=request.user)
+            if role is not None:
+                yield role >= ROLE_PROJECT_READER, p
+            
+    def _filter_sets(sets):
+        for s in sets:
+            role = s.project.get_role_id(user=request.user)
+            if role is not None:
+                yield role >= ROLE_PROJECT_READER, s
+    def _filter_articles(arts):
+        for a in arts:
+            # choose set with best access, lowest project
+            sets = [(s.project.get_role_id(user=request.user), -s.project_id, s)
+                    for s in list(ArticleSet.objects.filter(articles=a.id))]
+            (role, s) = sorted(sets, reverse=True)[0]
+            if role is not None:
+                role = role >= ROLE_PROJECT_READER
+            yield (role, s, a)
+
+    if results.get('project'): results['project'] = list(_filter_projects(results['project']))
+    if results.get('articleset'): results['articleset'] = list(_filter_sets(results['articleset']))
+    if results.get('article'): results['article'] = list(_filter_articles(results['article']))
+    results = {k: v for (k,v) in results.items() if v}
+
+    # redirect directly if there is only one result on an id search
+    if m and len(results) == 1:
+        key = list(results.keys())[0]
+        val = results[key]
+        if len(val) == 1:
+            if key == 'project':
+                access, obj = val[0]
+                return redirect('navigator:articleset-list', obj.id)
+            if key == 'articleset':
+                access, obj = val[0]
+                return redirect('navigator:articleset-details', obj.project_id, obj.id)
+            if key == 'article':
+                access, s, obj = val[0]
+                return redirect('navigator:article-details', s.project_id, s.id, obj.id)
 
     
     return render(request, 'to_object.html', locals())
