@@ -124,20 +124,29 @@ class NLPipeLemmataSerializer(serializers.Serializer):
         
     def from_naf(self, article, naf):
         naf = KafNafParser(BytesIO(naf.encode("utf-8")))
+
+        deps = {dep.get_to(): (dep.get_function(), dep.get_from())
+                for dep in naf.get_dependencies()}
         tokendict = {token.get_id(): token for token in naf.get_tokens()}
 
         for term in naf.get_terms():
             tokens = [tokendict[id] for id in term.get_span().get_span_ids()]
             for token in tokens:
-                yield {"aid": article.pk,
+                tid = term.get_id()
+                tok = {"aid": article.pk,
                        "token_id": token.get_id(),
                        "offset": token.get_offset(),
                        "sentence": token.get_sent(),
                        "para": token.get_para(),
                        "word": token.get_text(),
-                       "term_id": term.get_id(),
+                       "term_id": tid,
                        "lemma": term.get_lemma(),
                        "pos": term.get_pos()}
+                if tid in deps:
+                    rel, parent = deps[tid]
+                    tok['parent'] = parent
+                    tok['relation'] = rel.split("/")[-1]
+                yield tok
 
 
 
