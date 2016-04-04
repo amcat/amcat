@@ -15,7 +15,7 @@ Most of the (python) prerequisites for AmCAT are automatically installed using p
 Note: these requirements are for ubuntu 14.04 LTS (trusty). If you use a different distro or version, you may need to adapt these instructions, e.g. a different postgresql server and R repository. 
 
 ```sh
-$ sudo apt-get install antiword unrtf rabbitmq-server python-pip python-dev libxml2-dev libxslt-dev lib32z1-dev postgresql postgresql-server-dev-9.3 postgresql-contrib-9.3 python-virtualenv git
+$ sudo apt-get install antiword unrtf rabbitmq-server python-pip python-dev libxml2-dev libxslt-dev lib32z1-dev postgresql postgresql-server-dev-9.3 postgresql-contrib-9.3 python-virtualenv git graphviz
 ```
 
 It is probably best to install AmCAT in a virtual environment. Run the following commands to setup and activate a virtual environment for AmCAT: (on ubuntu)
