@@ -93,15 +93,6 @@ export ES_CLASSPATH
 sudo service elasticsearch restart
 ```
 
-### Installing AmCAT (pip install from git)
-
-Now you are ready to install AmCAT. The easiest way to do this is to `pip install` it direct from github. 
-This is not advised unless you use a virtual environment.
-
-```sh
-pip install git+https://github.com/amcat/amcat.git
-```
-
 ### Installing AmCAT (clone)
 
 Clone the project from github and pip install the requirements. 
