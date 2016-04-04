@@ -49,3 +49,4 @@ nosetests.xml
 # static files
 navigator/media/static
 static/components/
+env
