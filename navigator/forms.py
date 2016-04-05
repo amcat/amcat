@@ -125,9 +125,7 @@ class SplitArticleForm(forms.Form):
 
 class UserForm(forms.ModelForm):
     affiliation = forms.ModelChoiceField(queryset=Affiliation.objects.all())
-    role = forms.ModelChoiceField(queryset=Role.objects.all())
     language = forms.ModelChoiceField(queryset=Language.objects.all(), initial="en")
-    #theme = forms.ChoiceField(choices=[(t,t) for t in THEMES])
 
     def __init__(self, request, editing=True, *args, **kwargs):
         super(UserForm, self).__init__(*args, **kwargs)
@@ -135,16 +133,9 @@ class UserForm(forms.ModelForm):
         if not request.user.is_anonymous():
             uprofile = request.user.userprofile
 
-            # Only show roles lesser or equal to the current role of the user
-            self.fields['role'].queryset = Role.objects.filter(
-                projectlevel=False, id__lte=uprofile.role.id
-            )
-
             # Set initial values for this user
-            self.fields['role'].initial = uprofile.role if not editing else kwargs['instance'].userprofile.role
             self.fields['affiliation'].initial = uprofile.affiliation
             self.fields['language'].initial = uprofile.language
-            self.fields['theme'].initial = uprofile.theme
 
         # We don't use Django groups and permissions
         for fi in ("groups", "user_permissions"):
@@ -156,16 +147,14 @@ class UserForm(forms.ModelForm):
 
         up = u.userprofile
         up.affiliation = self.cleaned_data['affiliation']
-        up.role = self.cleaned_data['role']
         up.language = self.cleaned_data['language']
-        up.theme = self.cleaned_data['theme']
         up.save()
 
         return u
 
     class Meta:
         model = User
-        fields = ("affiliation", "role", "language")
+        fields = ("affiliation","language")
 
 class UserDetailsForm(UserForm):
     def __init__(self, request, *args, **kwargs):
