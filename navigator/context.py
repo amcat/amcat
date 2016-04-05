@@ -3,6 +3,7 @@ import logging
 from django.conf import settings
 from navigator.utils import session_pop
 import amcat
+import settings
 
 log = logging.getLogger(__name__)
 from amcat.models import AmCAT
@@ -37,7 +38,7 @@ def extra(request):
     announcement = get_announcement(request)
     warning = AmCAT.get_instance().server_warning
     notice = session_pop(request.session, "notice")
-
+    allow_register = settings.ALLOW_REGISTER
     # Set theme
     if hasattr(request, 'user'):
         if request.user.is_anonymous():
