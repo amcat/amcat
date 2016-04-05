@@ -6,6 +6,8 @@ from django.contrib.auth import authenticate, login as auth_login, logout as aut
 from django.contrib.auth import signals
 from django.contrib.auth.views import password_reset, password_reset_confirm
 from django.http import HttpResponseRedirect
+import django.core.exceptions
+
 
 from accounts.forms import UserPasswordResetForm
 from navigator.forms import AddUserForm, AddUserFormWithPassword
@@ -26,6 +28,7 @@ def _login(request, error, username, announcement):
     Render shortcut
     """
     allow_anonymous = not settings.REQUIRE_LOGON
+    allow_register = settings.ALLOW_REGISTER
 
     if allow_anonymous:
         
@@ -90,6 +93,11 @@ def register(request):
     """
     Let the user fill in a registration form or process such a form.
     """
+
+    if not settings.ALLOW_REGISTER:
+        
+        raise django.core.exceptions.PermissionDenied("Please use the admin dashboard to create users") 
+        
     form_class = AddUserForm if settings.REGISTER_REQUIRE_VALIDATION else AddUserFormWithPassword
     form = form_class(request, data=request.POST or None)
 

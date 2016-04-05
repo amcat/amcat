@@ -35,10 +35,12 @@
     <a href="{% url "accounts-recover" %}">Forgot your username or password?</a>
   </small>
 
+  {% if allow_register %}
   <hr/>
   <form method="POST" class="">
     <a href="{% url "accounts-register" %}" class="btn btn-block btn-success">Create a new Account</a>
   </form>
+  {% endif %}
 </p>
 
 
