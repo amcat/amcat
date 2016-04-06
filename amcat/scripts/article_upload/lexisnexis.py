@@ -217,7 +217,7 @@ def parse_online_article(art):
     if not re.match("(\d+) words", nwords):
         return
     date = toolkit.read_date(datestr)
-    return headline.strip(), None, lead, date, medium, {"length": nwords, "url": url}
+    return headline.strip(), None, lead.strip(), date, medium, {"length": nwords, "url": url}
 
 def parse_article(art):
     """
@@ -535,6 +535,8 @@ def body_to_article(headline, byline, text, date, source, meta):
         art.length = art.text.count(" ")
     if 'url' in meta:
         art.url = meta.pop('url')
+        art.url = re.sub("\s+", "", art.url)
+
     art.metastring = str(meta)
 
     return art
