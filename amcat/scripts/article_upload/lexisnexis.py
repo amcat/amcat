@@ -40,6 +40,7 @@ log = logging.getLogger(__name__)
 class RES:
     # Match at least 20 whitespace characters or at least 7 tabs, followed by # of # DOCUMENTS.
     DOCUMENT_COUNT = re.compile("( {20,}|\t{7,})(FOCUS -)? *\d* (of|OF) \d* DOCUMENTS?")
+    DOCUMENT_COUNT = re.compile("\s*(FOCUS -)? *\d* (of|OF) \d* DOCUMENTS?")
 
     # Header meta information group match
     HEADER_META = re.compile("([\w -]*):(.*)", re.UNICODE)
@@ -199,6 +200,24 @@ def _is_date(string):
 
     return True
 
+def parse_online_article(art):
+    # First, test for online articles with specific format
+    blocks = re.split("\n *\n\s*", _strip_article(art))
+    if len(blocks) != 6:
+        return
+    medium, url, datestr, headline, nwords, lead = blocks
+    if not (url.startswith("http://") or url.startswith("https://")):
+        return
+    if not lead.startswith(u'\xa0\xa0\xa0'):
+        return
+    lead = lead[3:].strip()
+    if lead.startswith("Bewaar lees artikel"):
+        lead = lead[len("Bewaar lees artikel"):]
+    
+    if not re.match("(\d+) words", nwords):
+        return
+    date = toolkit.read_date(datestr)
+    return headline.strip(), None, lead, date, medium, {"length": nwords, "url": url}
 
 def parse_article(art):
     """
@@ -216,6 +235,11 @@ def parse_article(art):
     The body ends with a 'load date', which is of form FIELDNAME: DATE ending with a four digit year
     """
 
+    online = parse_online_article(art)
+    if online:
+        return online
+
+    
     header, headline, meta, body = [], [], [], []
 
     header_headline = []
@@ -351,6 +375,11 @@ def parse_article(art):
             yield lines.pop(0)
 
     lines = _strip_article(art).split("\n")
+
+    
+
+
+    
     header = _get_header(lines)
     if not lines:
         # Something is wrong with this article, skip it
@@ -504,6 +533,8 @@ def body_to_article(headline, byline, text, date, source, meta):
         art.length = int(meta.pop('length').split()[0])
     else:
         art.length = art.text.count(" ")
+    if 'url' in meta:
+        art.url = meta.pop('url')
     art.metastring = str(meta)
 
     return art
