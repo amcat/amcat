@@ -39,6 +39,7 @@ from rest_framework.mixins import ListModelMixin, CreateModelMixin
 from rest_framework.viewsets import ModelViewSet, ViewSet, GenericViewSet
 
 from nlpipe.pipeline import get_results
+from nlpipe.backend import get_cached_document_ids
 from nlpipe.celery import app
 
 from KafNafParserPy import KafNafParser
@@ -81,7 +82,7 @@ def _tokens_from_vectors(vectors, fields, aid):
 def _termvectors(aids):
     fields = ["headline", "text"]
     for doc in amcates.ES().term_vectors(aids, fields):
-        aid = int(doc['_id'])
+        aid = doc['_id']
         yield aid, list(_tokens_from_vectors(doc['term_vectors'], fields, aid))
 
 class NLPipeLemmataSerializer(serializers.Serializer):
@@ -90,15 +91,10 @@ class NLPipeLemmataSerializer(serializers.Serializer):
         class list_serializer_class(serializers.ListSerializer):
             def to_representation(self, data):
 
-                only_cached = self.context['request'].GET.get('only_cached', 'N')
-                only_cached = only_cached[0].lower() in ['1', 'y']
-                aids = [a.pk for a in data]
                 if self.context['request'].GET.get('module', 'elastic') == "elastic":
-                    self.child._cache = dict(_termvectors(aids))
+                    self.child._cache = dict(_termvectors(data))
                 else:
-                    self.child._cache = get_results(aids, self.child.module, only_cached=only_cached)
-                if only_cached:
-                    data = [a for a in data if str(a.pk) in self.child._cache]
+                    self.child._cache = get_results(data, self.child.module)
                 result = serializers.ListSerializer.to_representation(self, data)
                 # flatten list of lists
                 result = itertools.chain(*result)
@@ -116,7 +112,7 @@ class NLPipeLemmataSerializer(serializers.Serializer):
         return getattr(tasks, module)
     
     def to_representation(self, article):
-        result = self._cache[str(article.pk)]
+        result = self._cache[str(article)]
         if isinstance(result, list):
             return result
         else:
@@ -133,7 +129,7 @@ class NLPipeLemmataSerializer(serializers.Serializer):
             tokens = [tokendict[id] for id in term.get_span().get_span_ids()]
             for token in tokens:
                 tid = term.get_id()
-                tok = {"aid": article.pk,
+                tok = {"aid": article,
                        "token_id": token.get_id(),
                        "offset": token.get_offset(),
                        "sentence": token.get_sent(),
@@ -156,7 +152,35 @@ class NLPipeLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatabl
     queryset = Article.objects.all()
     serializer_class = NLPipeLemmataSerializer
 
+    @property
+    def module(self):
+        module = self.request.GET.get('module')
+        if not module:
+            raise ValidationError("Please specify the NLP module to use with a module= GET parameter")
+        from nlpipe import tasks
+        if not hasattr(tasks, module):
+            raise ValidationError("Module {module} not known".format(**locals()))
+        
+        return getattr(tasks, module)
+    
     def filter_queryset(self, queryset):
+
+        logging.info("Getting ids")
+        ids = list(self.articleset.get_article_ids_from_elastic())
+        logging.info("Got {} ids".format(len(ids)))
+
+
+        only_cached = self.request.GET.get('only_cached', 'N')
+        only_cached = only_cached[0].lower() in ['1', 'y']
+
+        if only_cached:
+            logging.info("Filtering ids")
+            ids = list(get_cached_document_ids(ids, self.module.doc_type))
+            logging.info("{} ids left".format(len(ids)))
+            
+        
+        return ids
+              
         queryset = super(NLPipeLemmataViewSet, self).filter_queryset(queryset)
         # only(.) would be better on serializer, but meh
         try:
@@ -193,7 +217,7 @@ class PreprocessViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesM
         from nlpipe.backend import count_cached
         for module, n in count_cached(ids):
             result.append(ModuleCount(module, n))
-        
+
         return result
 
     def get_filter_fields(self):
