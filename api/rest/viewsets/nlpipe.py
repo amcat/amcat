@@ -82,7 +82,7 @@ def _tokens_from_vectors(vectors, fields, aid):
 def _termvectors(aids):
     fields = ["headline", "text"]
     for doc in amcates.ES().term_vectors(aids, fields):
-        aid = doc['_id']
+        aid = int(doc['_id'])
         yield aid, list(_tokens_from_vectors(doc['term_vectors'], fields, aid))
 
 class NLPipeLemmataSerializer(serializers.Serializer):
@@ -90,35 +90,28 @@ class NLPipeLemmataSerializer(serializers.Serializer):
     class Meta:
         class list_serializer_class(serializers.ListSerializer):
             def to_representation(self, data):
-
-                if self.context['request'].GET.get('module', 'elastic') == "elastic":
+                module = self.context['view'].module
+                if module is None:
                     self.child._cache = dict(_termvectors(data))
                 else:
-                    self.child._cache = get_results(data, self.child.module)
+                    self.child._cache = {int(aid): naf for (aid, naf) in get_results(data, module).iteritems()}
                 result = serializers.ListSerializer.to_representation(self, data)
                 # flatten list of lists
                 result = itertools.chain(*result)
                 return result
 
-    @property
-    def module(self):
-        module = self.context['request'].GET.get('module')
-        if not module:
-            raise ValidationError("Please specify the NLP module to use with a module= GET parameter")
-        from nlpipe import tasks
-        if not hasattr(tasks, module):
-            raise ValidationError("Module {module} not known".format(**locals()))
-        
-        return getattr(tasks, module)
     
-    def to_representation(self, article):
-        result = self._cache[str(article)]
+    def to_representation(self, aid):
+        result = self._cache[aid]
         if isinstance(result, list):
             return result
         else:
-            return self.from_naf(article, result.text)
+            return self.from_naf(aid, result.text)
         
     def from_naf(self, article, naf):
+        def _int(x):
+            return None if x is None else int(x)
+        
         naf = KafNafParser(BytesIO(naf.encode("utf-8")))
 
         deps = {dep.get_to(): (dep.get_function(), dep.get_from())
@@ -131,9 +124,9 @@ class NLPipeLemmataSerializer(serializers.Serializer):
                 tid = term.get_id()
                 tok = {"aid": article,
                        "token_id": token.get_id(),
-                       "offset": token.get_offset(),
-                       "sentence": token.get_sent(),
-                       "para": token.get_para(),
+                       "offset": _int(token.get_offset()),
+                       "sentence": _int(token.get_sent()),
+                       "para": _int(token.get_para()),
                        "word": token.get_text(),
                        "term_id": tid,
                        "lemma": term.get_lemma(),
@@ -155,8 +148,8 @@ class NLPipeLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatabl
     @property
     def module(self):
         module = self.request.GET.get('module')
-        if not module:
-            raise ValidationError("Please specify the NLP module to use with a module= GET parameter")
+        if not module or module == 'elastic':
+            return None
         from nlpipe import tasks
         if not hasattr(tasks, module):
             raise ValidationError("Module {module} not known".format(**locals()))
@@ -164,31 +157,20 @@ class NLPipeLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatabl
         return getattr(tasks, module)
     
     def filter_queryset(self, queryset):
-
         logging.info("Getting ids")
         ids = list(self.articleset.get_article_ids_from_elastic())
         logging.info("Got {} ids".format(len(ids)))
 
-
         only_cached = self.request.GET.get('only_cached', 'N')
         only_cached = only_cached[0].lower() in ['1', 'y']
 
-        if only_cached:
+        if only_cached and self.module:
             logging.info("Filtering ids")
-            ids = list(get_cached_document_ids(ids, self.module.doc_type))
+            ids = [int(aid) for aid in get_cached_document_ids(ids, self.module.doc_type)]
             logging.info("{} ids left".format(len(ids)))
-            
-        
+
         return ids
-              
-        queryset = super(NLPipeLemmataViewSet, self).filter_queryset(queryset)
-        # only(.) would be better on serializer, but meh
-        try:
-            queryset = queryset.filter(articlesets_set=self.articleset).only("pk")
-        except ArticleSet.DoesNotExist:
-            from django.http import Http404
-            raise Http404("Articleset does not exist")
-        return queryset
+
     
     def get_renderer_context(self):
         context = super(NLPipeLemmataViewSet, self).get_renderer_context()
