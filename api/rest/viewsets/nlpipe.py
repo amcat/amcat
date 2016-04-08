@@ -106,7 +106,11 @@ class NLPipeLemmataSerializer(serializers.Serializer):
         if isinstance(result, list):
             return result
         else:
-            return self.from_naf(aid, result.text)
+            try:
+                return list(self.from_naf(aid, result.text))
+            except:
+                logging.exception("Error on rendering tokens for {aid}".format(**locals()))
+                return []
         
     def from_naf(self, article, naf):
         def _int(x):
