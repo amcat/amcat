@@ -30,7 +30,6 @@ import tempfile
 import logging
 from io import BytesIO
 import bz2
-import pickle
 
 from django.core.cache import cache
 
@@ -141,35 +140,43 @@ class NLPipeLemmataSerializer(serializers.Serializer):
                 yield tok
 
 def cache_list(key, items, timeout, max_size=1000000):
-    d = bz2.compress(pickle.dumps(items))
+    """Cache a list of items in multiple chunks
+
+    memcache has max size of 1MB per object
+    so, store a (json+bz2) list directly if it is < max_size
+    otherwise, split into chunks and store list of keys
+    """
+    d = bz2.compress(json.dumps(items), 1)
     nchunks = 1 + len(d) // max_size
-    logging.info("{} // {max_size} = {nchunks}".format(len(d), **locals()))
+    logging.info("Saving {key}: {} // {max_size} = {nchunks}".format(len(d), **locals()))
     if nchunks > 1:
         keys = []
         for i in range(nchunks):
             _key = "{key}__batch_{i}".format(**locals())
             subset = d[i*max_size:(i+1)*max_size]
             cache.set(_key, subset, timeout)
-            logging.info("SAVED {_key}".format(**locals()))
             keys.append(_key)
         cache.set(key, keys, timeout)
     else:
         cache.set(key, d, timeout)
 
-def get_cached_list(key):
+def get_cached_list(key, extend_timeout):
+    """Retrieve and reconstruct a list from cache, extending the timeout"""
     result = cache.get(key)
     if result is None:
         return result
-    elif isinstance(result, list):
-        pickled_bytes = BytesIO()
+    cache.set(key, result, extend_timeout)
+    if isinstance(result, list):
+        json_bytes = BytesIO()
         d = bz2.BZ2Decompressor()
         for key in result:
-            logging.info("LOAD {key}".format(**locals()))
-            pickled_bytes.write(d.decompress(cache.get(key)))
-        pickled_bytes.seek(0)
-        return pickle.load(pickled_bytes)
+            val = cache.get(key)
+            cache.set(key, val, extend_timeout)
+            json_bytes.write(d.decompress(val))
+        json_bytes.seek(0)
+        return json.load(json_bytes)
     else:
-        return pickle.loads(bz2.decompress(result))
+        return json.loads(bz2.decompress(result))
 
 class TokensView(ListAPIView):
     model_key = "token"
@@ -201,7 +208,7 @@ class TokensView(ListAPIView):
         reset_cache = self.request.GET.get('reset_cache', 'N')
         reset_cache = reset_cache[0].lower() in ['1', 'y']
 
-        ids = None if reset_cache else get_cached_list(cache_key)
+        ids = None if reset_cache else get_cached_list(cache_key, 60 * 10)
         logging.info("Cache entry for {cache_key}? {}".format(ids is not None, **locals()))
         if ids is None:
             logging.info("Getting ids".format(**locals()))
@@ -214,7 +221,7 @@ class TokensView(ListAPIView):
                 ids = [int(aid) for aid in get_cached_document_ids(ids, self.module.doc_type)]
                 logging.info("{} ids left".format(len(ids)))
 
-        cache_list(cache_key, ids, 60 * 10)
+            cache_list(cache_key, ids, 60 * 10)
         return ids
 
 
