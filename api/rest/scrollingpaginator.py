@@ -9,13 +9,12 @@ class ScrollingPaginator(pagination.BasePagination):
     def paginate_queryset(self, queryset, request, view=None):
         self.request = request
         es = amcates.ES()
-        self.page_size = request.query_params.get("page_size", 10)
+
         scroll_id = request.query_params.get("scroll_id")
         if scroll_id:
             res = es.es.scroll(scroll_id, scroll="1m")
         else:
-            fields = ["date", "mediumid"]
-            res = es.search(queryset, scroll="1m", fields=fields, size=self.page_size)
+            res = es.search(scroll="1m", **queryset)
         self.total = res['hits']['total']
         self.scroll_id = res['_scroll_id']
         self.done = not res['hits']['hits']
@@ -30,7 +29,6 @@ class ScrollingPaginator(pagination.BasePagination):
             'next': self.get_next_link(),
             'results': data,
             'total': self.total,
-            "per_page": self.page_size,
         })
 
 
