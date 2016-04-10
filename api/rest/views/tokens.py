@@ -28,6 +28,11 @@ import itertools
 import json
 import tempfile
 import logging
+from io import BytesIO
+import bz2
+import pickle
+
+from django.core.cache import cache
 
 from rest_framework.response import Response
 from rest_framework.exceptions import APIException, ValidationError
@@ -52,7 +57,6 @@ from nlpipe.pipeline import get_results
 from nlpipe.celery import app
 
 from KafNafParserPy import KafNafParser
-from io import BytesIO
 
 def _get_tokens(term_vector, pos_inc=0, offset_inc=0):
     for term, info in term_vector.items():
@@ -136,7 +140,36 @@ class NLPipeLemmataSerializer(serializers.Serializer):
                     tok['relation'] = rel.split("/")[-1]
                 yield tok
 
+def cache_list(key, items, timeout, max_size=1000000):
+    d = bz2.compress(pickle.dumps(items))
+    nchunks = 1 + len(d) // max_size
+    logging.info("{} // {max_size} = {nchunks}".format(len(d), **locals()))
+    if nchunks > 1:
+        keys = []
+        for i in range(nchunks):
+            _key = "{key}__batch_{i}".format(**locals())
+            subset = d[i*max_size:(i+1)*max_size]
+            cache.set(_key, subset, timeout)
+            logging.info("SAVED {_key}".format(**locals()))
+            keys.append(_key)
+        cache.set(key, keys, timeout)
+    else:
+        cache.set(key, d, timeout)
 
+def get_cached_list(key):
+    result = cache.get(key)
+    if result is None:
+        return result
+    elif isinstance(result, list):
+        pickled_bytes = BytesIO()
+        d = bz2.BZ2Decompressor()
+        for key in result:
+            logging.info("LOAD {key}".format(**locals()))
+            pickled_bytes.write(d.decompress(cache.get(key)))
+        pickled_bytes.seek(0)
+        return pickle.load(pickled_bytes)
+    else:
+        return pickle.loads(bz2.decompress(result))
 
 class TokensView(ListAPIView):
     model_key = "token"
@@ -164,12 +197,11 @@ class TokensView(ListAPIView):
         cache_key = "api-tokens-ids-{setid}-{module}".format(
             setid=setid, module=self.module.doc_type if only_cached else None)
 
-        from django.core.cache import cache
 
         reset_cache = self.request.GET.get('reset_cache', 'N')
         reset_cache = reset_cache[0].lower() in ['1', 'y']
 
-        ids = None if reset_cache else cache.get(cache_key)
+        ids = None if reset_cache else get_cached_list(cache_key)
         logging.info("Cache entry for {cache_key}? {}".format(ids is not None, **locals()))
         if ids is None:
             logging.info("Getting ids".format(**locals()))
@@ -182,7 +214,7 @@ class TokensView(ListAPIView):
                 ids = [int(aid) for aid in get_cached_document_ids(ids, self.module.doc_type)]
                 logging.info("{} ids left".format(len(ids)))
 
-        cache.set(cache_key, ids, 60 * 10)
+        cache_list(cache_key, ids, 60 * 10)
         return ids
 
 
