@@ -37,6 +37,7 @@ from rest_framework.status import HTTP_200_OK
 from rest_framework import serializers
 from rest_framework.mixins import ListModelMixin, CreateModelMixin
 from rest_framework.viewsets import ModelViewSet, ViewSet, GenericViewSet
+from rest_framework.generics import ListAPIView
 
 from nlpipe.pipeline import get_results
 from nlpipe.backend import get_cached_document_ids
@@ -78,7 +79,7 @@ def _tokens_from_vectors(vectors, fields, aid):
             token['aid'] = aid
             yield token
 
-    
+
 def _termvectors(aids):
     fields = ["headline", "text"]
     for doc in amcates.ES().term_vectors(aids, fields):
@@ -100,7 +101,7 @@ class NLPipeLemmataSerializer(serializers.Serializer):
                 result = itertools.chain(*result)
                 return result
 
-    
+
     def to_representation(self, aid):
         result = self._cache[aid]
         if isinstance(result, list):
@@ -111,11 +112,11 @@ class NLPipeLemmataSerializer(serializers.Serializer):
             except:
                 logging.exception("Error on rendering tokens for {aid}".format(**locals()))
                 return []
-        
+
     def from_naf(self, article, naf):
         def _int(x):
             return None if x is None else int(x)
-        
+
         naf = KafNafParser(BytesIO(naf.encode("utf-8")))
 
         deps = {dep.get_to(): (dep.get_function(), dep.get_from())
@@ -143,7 +144,7 @@ class NLPipeLemmataSerializer(serializers.Serializer):
 
 
 
-class NLPipeLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
+class TokensView(ListAPIView):
     model_key = "token"
     model = Article
     queryset = Article.objects.all()
@@ -157,12 +158,14 @@ class NLPipeLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatabl
         from nlpipe import tasks
         if not hasattr(tasks, module):
             raise ValidationError("Module {module} not known".format(**locals()))
-        
+
         return getattr(tasks, module)
-    
-    def filter_queryset(self, queryset):
+
+
+    def get_queryset(self):
+        setid = int(self.kwargs['articleset_id'])
         logging.info("Getting ids")
-        ids = list(self.articleset.get_article_ids_from_elastic())
+        ids = list(amcates.ES().query_ids(filters={"sets" : [setid]}))
         logging.info("Got {} ids".format(len(ids)))
 
         only_cached = self.request.GET.get('only_cached', 'N')
@@ -175,36 +178,8 @@ class NLPipeLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatabl
 
         return ids
 
-    
+
     def get_renderer_context(self):
-        context = super(NLPipeLemmataViewSet, self).get_renderer_context()
-        context['fast_csv'] = True 
+        context = super(TokensView, self).get_renderer_context()
+        context['fast_csv'] = True
         return context
-
-
-ModuleCount = namedtuple("ModuleCount", ["module", "n"])
-
-class PreprocessViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin,
-                        ListModelMixin, GenericViewSet):
-    model_key = "preproces"
-    model = None
-    base_name = "preprocess"
-
-    class serializer_class(serializers.Serializer):
-        module = serializers.CharField()
-        n = serializers.IntegerField()
-    
-    def filter_queryset(self, queryset):
-        return queryset
-    
-    def get_queryset(self):
-        ids = list(self.articleset.get_article_ids_from_elastic())
-        result = [ModuleCount("Total #articles", len(ids))]
-        from nlpipe.backend import count_cached
-        for module, n in count_cached(ids):
-            result.append(ModuleCount(module, n))
-
-        return result
-
-    def get_filter_fields(self):
-        return []

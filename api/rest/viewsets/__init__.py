@@ -33,7 +33,7 @@ from api.rest.viewsets.coding.codingschemafield import *
 #from api.rest.viewsets.sentence import *
 from api.rest.viewsets.project import *
 from api.rest.viewsets.task import *
-from api.rest.viewsets.nlpipe import *
+from api.rest.viewsets.preprocess import *
 from api.rest.viewsets.query import *
 
 def get_viewsets():
