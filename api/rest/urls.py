@@ -42,10 +42,10 @@ urlpatterns = format_suffix_patterns(patterns('',
     url(r'^taskresult/(?P<task_id>[0-9]+)$', resources.single_task_result, dict(uuid=False)),
     url(r'^taskresult/(?P<task_id>[0-9a-zA-Z-]+)$', resources.single_task_result, dict(uuid=True)),
     url(r'^get_token', 'api.rest.get_token.obtain_auth_token'),
-    url(r'^status/$', StatusView.as_view(), name="status"),                                              
-    url(r'^projects/(?P<project_id>[0-9]+)/articlesets/(?P<articleset_id>[0-9]+)/meta$', ArticleMetaView.as_view(), name="meta"),
-    url(r'^projects/(?P<project_id>[0-9]+)/articlesets/(?P<articleset_id>[0-9]+)/tokens$', TokensView.as_view(), name="tokens"),
-                                              
+    url(r'^status/$', StatusView.as_view(), name="status"),
+    url(r'^projects/(?P<project_id>[0-9]+)/articlesets/(?P<articleset_id>[0-9]+)/meta/?$', ArticleMetaView.as_view(), name="meta"),
+    url(r'^projects/(?P<project_id>[0-9]+)/articlesets/(?P<articleset_id>[0-9]+)/tokens/?$', TokensView.as_view(), name="tokens"),
+
 
     *tuple(r.get_url_pattern() for r in resources.all_resources())
 ))
