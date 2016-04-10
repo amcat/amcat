@@ -158,18 +158,31 @@ class TokensView(ListAPIView):
 
     def get_queryset(self):
         setid = int(self.kwargs['articleset_id'])
-        logging.info("Getting ids")
-        ids = list(amcates.ES().query_ids(filters={"sets" : [setid]}))
-        logging.info("Got {} ids".format(len(ids)))
-
         only_cached = self.request.GET.get('only_cached', 'N')
         only_cached = only_cached[0].lower() in ['1', 'y']
 
-        if only_cached and self.module:
-            logging.info("Filtering ids")
-            ids = [int(aid) for aid in get_cached_document_ids(ids, self.module.doc_type)]
-            logging.info("{} ids left".format(len(ids)))
+        cache_key = "api-tokens-ids-{setid}-{module}".format(
+            setid=setid, module=self.module.doc_type if only_cached else None)
 
+        from django.core.cache import cache
+
+        reset_cache = self.request.GET.get('reset_cache', 'N')
+        reset_cache = reset_cache[0].lower() in ['1', 'y']
+
+        ids = None if reset_cache else cache.get(cache_key)
+        logging.info("Cache entry for {cache_key}? {}".format(ids is not None, **locals()))
+        if ids is None:
+            logging.info("Getting ids".format(**locals()))
+            ids = list(amcates.ES().query_ids(filters={"sets" : [setid]}))
+            logging.info("Got {} ids".format(len(ids)))
+
+
+            if only_cached and self.module:
+                logging.info("Filtering ids")
+                ids = [int(aid) for aid in get_cached_document_ids(ids, self.module.doc_type)]
+                logging.info("{} ids left".format(len(ids)))
+
+        cache.set(cache_key, ids, 60 * 10)
         return ids
 
 
