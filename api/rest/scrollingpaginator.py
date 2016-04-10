@@ -20,7 +20,8 @@ class ScrollingPaginator(pagination.BasePagination):
         self.done = not res['hits']['hits']
         for hit in res['hits']['hits']:
             item = {'id': hit['_id']}
-            item.update({k: v[0] for (k,v) in hit['fields'].iteritems()})
+            if 'fields' in hit:
+                item.update({k: v[0] for (k,v) in hit['fields'].iteritems()})
             yield item
 
 
