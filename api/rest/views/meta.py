@@ -17,5 +17,11 @@ class ArticleMetaView(ListAPIView):
     pagination_class = ScrollingPaginator
 
     def get_queryset(self):
+        columns = self.request.query_params.get('columns')
+        fields = columns.split(",") if columns else ['date', 'medium']
+        page_size = int(self.request.query_params.get("page_size", 10))
+
         setid = self.kwargs['articleset_id']
-        return {u'filter': {'terms': {u'sets': [setid]}}}
+
+        return {'body': {u'filter': {'terms': {u'sets': [setid]}}},
+                'fields': fields, 'size': page_size}
