@@ -25,6 +25,9 @@ from api.rest import resources
 
 from api.rest.views.status import StatusView
 from api.rest.views.meta import ArticleMetaView
+from api.rest.views.tokens import TokensView
+
+
 from api.rest.viewsets import get_viewsets
 
 router = DefaultRouter()
@@ -41,6 +44,7 @@ urlpatterns = format_suffix_patterns(patterns('',
     url(r'^get_token', 'api.rest.get_token.obtain_auth_token'),
     url(r'^status/$', StatusView.as_view(), name="status"),                                              
     url(r'^projects/(?P<project_id>[0-9]+)/articlesets/(?P<articleset_id>[0-9]+)/meta$', ArticleMetaView.as_view(), name="meta"),
+    url(r'^projects/(?P<project_id>[0-9]+)/articlesets/(?P<articleset_id>[0-9]+)/tokens$', TokensView.as_view(), name="tokens"),
                                               
 
     *tuple(r.get_url_pattern() for r in resources.all_resources())

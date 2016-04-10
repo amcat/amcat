@@ -36,6 +36,7 @@ from rest_framework.status import HTTP_200_OK
 from rest_framework import serializers
 from rest_framework.mixins import ListModelMixin, CreateModelMixin
 from rest_framework.viewsets import ModelViewSet, ViewSet, GenericViewSet
+from rest_framework.generics import ListAPIView
 
 
 
@@ -74,23 +75,6 @@ def _tokens_from_vectors(vectors, fields, aid):
             token['aid'] = aid
             yield token
 
-def _termvector(aid):
-    from amcat.tools import amcates
-    import collections
-    fields = ["headline", "text"]
-    res =  amcates.ES().term_vector(aid, fields=fields)
-    pos_inc, offset_inc = 0, 0
-    for field in fields:
-        tokens = _get_tokens(res['term_vectors'][field]['terms'],
-                             pos_inc=pos_inc, offset_inc=offset_inc)
-        tokens = sorted(tokens, key = lambda t:t['position'])
-        pos_inc = (tokens[-1]['position'] + 1) if tokens else 0
-        offset_inc = (tokens[-1]['end_offset'] + 1) if tokens else 0
-        for token in tokens:
-            token['aid'] = aid
-            yield token
-
-    
 def _termvectors(aids):
     fields = ["headline", "text"]
     for doc in amcates.ES().term_vectors(aids, fields):
@@ -112,7 +96,7 @@ class NLPipeLemmataSerializer(serializers.Serializer):
                 result = itertools.chain(*result)
                 return result
 
-    
+
     def to_representation(self, aid):
         result = self._cache[aid]
         if isinstance(result, list):
@@ -123,7 +107,7 @@ class NLPipeLemmataSerializer(serializers.Serializer):
             except:
                 logging.exception("Error on rendering tokens for {aid}".format(**locals()))
                 return []
-        
+
     def from_naf(self, article, naf):
         def _int(x):
             return None if x is None else int(x)
@@ -154,7 +138,7 @@ class NLPipeLemmataSerializer(serializers.Serializer):
 
 
 
-class NLPipeLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
+class TokensView(ListAPIView):
     model_key = "token"
     model = Article
     queryset = Article.objects.all()
@@ -168,12 +152,14 @@ class NLPipeLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatabl
         from nlpipe import tasks
         if not hasattr(tasks, module):
             raise ValidationError("Module {module} not known".format(**locals()))
-        
+
         return getattr(tasks, module)
-    
-    def filter_queryset(self, queryset):
+
+
+    def get_queryset(self):
+        setid = int(self.kwargs['articleset_id'])
         logging.info("Getting ids")
-        ids = list(self.articleset.get_article_ids_from_elastic())
+        ids = list(amcates.ES().query_ids(filters={"sets" : [setid]}))
         logging.info("Got {} ids".format(len(ids)))
 
         only_cached = self.request.GET.get('only_cached', 'N')
@@ -186,36 +172,8 @@ class NLPipeLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatabl
 
         return ids
 
-    
+
     def get_renderer_context(self):
-        context = super(NLPipeLemmataViewSet, self).get_renderer_context()
-        context['fast_csv'] = True 
+        context = super(TokensView, self).get_renderer_context()
+        context['fast_csv'] = True
         return context
-
-
-ModuleCount = namedtuple("ModuleCount", ["module", "n"])
-
-class PreprocessViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin,
-                        ListModelMixin, GenericViewSet):
-    model_key = "preproces"
-    model = None
-    base_name = "preprocess"
-
-    class serializer_class(serializers.Serializer):
-        module = serializers.CharField()
-        n = serializers.IntegerField()
-    
-    def filter_queryset(self, queryset):
-        return queryset
-    
-    def get_queryset(self):
-        ids = list(self.articleset.get_article_ids_from_elastic())
-        result = [ModuleCount("Total #articles", len(ids))]
-        from nlpipe.document import count_cached
-        for module, n in count_cached(ids):
-            result.append(ModuleCount(module, n))
-
-        return result
-
-    def get_filter_fields(self):
-        return []
