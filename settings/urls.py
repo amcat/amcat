@@ -24,6 +24,7 @@ from django.conf import settings
 from django.conf.urls import include, patterns, url
 from django.contrib import admin
 from django.views.generic import RedirectView
+from navigator.views.index import IndexRedirect
 
 admin.autodiscover()
 
