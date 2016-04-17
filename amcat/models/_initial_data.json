@@ -348,6 +348,15 @@
     }
   },
   {
+    "pk": 3,
+    "model": "amcat.plugin",
+    "fields": {
+      "class_name": "amcat.scripts.article_upload.coosto.CoostoUpload",
+      "label": "Coosto",
+      "plugin_type": 1
+    }
+  },
+  {
     "pk": 5,
     "model": "amcat.plugin",
     "fields": {
