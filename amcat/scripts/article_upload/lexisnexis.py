@@ -208,9 +208,6 @@ def parse_online_article(art):
     medium, url, datestr, headline, nwords, lead = blocks
     if not (url.startswith("http://") or url.startswith("https://")):
         return
-    if not lead.startswith(u'\xa0\xa0\xa0'):
-        return
-    lead = lead[3:].strip()
     if lead.startswith("Bewaar lees artikel"):
         lead = lead[len("Bewaar lees artikel"):]
     

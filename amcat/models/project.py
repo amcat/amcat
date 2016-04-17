@@ -161,7 +161,7 @@ class Project(AmcatModel):
         if not user.is_anonymous and user.role_id >= ADMIN_ROLE:
             return True
 
-        if isinstance(role, (str, unicode)):
+        if isinstance(role, str):
             role = Role.objects.get(label=role).id
         if isinstance(role, Role):
             role = role.id
