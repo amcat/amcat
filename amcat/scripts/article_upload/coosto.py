@@ -1,6 +1,7 @@
 from .fileupload import FileUploadForm
 from .upload import UploadScript
 import csv, datetime, json
+from io import BytesIO
 from amcat.models import Article, Medium
 from amcat.scripts.article_upload.fileupload import ZipFileUploadForm
 
@@ -15,8 +16,7 @@ class CoostoUpload(UploadScript):
     options_form =  CoostoForm
 
     def _get_units(self, file):
-        from cStringIO import StringIO
-        io = StringIO(file.text.encode("utf-8"))
+        io = BytesIO(file.text.encode("utf-8"))
         self.queries = set()
         rows = csv.DictReader(io, delimiter=";")
         return rows
