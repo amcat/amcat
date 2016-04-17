@@ -1,6 +1,7 @@
 import logging
 from rest_framework.response import Response
 from rest_framework.exceptions import APIException
+from rest_framework import views
 from django.http import Http404
 from django.core.exceptions import PermissionDenied
 
