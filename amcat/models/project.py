@@ -171,7 +171,7 @@ class Project(AmcatModel):
         log.info("{user.id}:{user.username} has role {actual_role_id} on project {self}, >=? {role}"
                  .format(**locals()))
 
-        return actual_role_id >= role
+        return actual_role_id is not None and actual_role_id >= role
         
     def get_role_id(self, user=None):
         """
