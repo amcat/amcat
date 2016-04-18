@@ -362,7 +362,9 @@ class Datatable(object):
             return "&".join([self._filter(selector, v, check_can_filter=check_can_filter) for v in value])
 
         if isinstance(value, Model):
-            return self._filter(selector + '__%s' % value._meta.pk.attname, value.pk, check_can_filter=check_can_filter)
+            if (selector != "pk"):
+                selector = selector + '__%s' % value._meta.pk.attname
+            return self._filter(selector, value.pk, check_can_filter=check_can_filter)
 
         if isinstance(value, unicode):
             value = value.encode('utf-8')

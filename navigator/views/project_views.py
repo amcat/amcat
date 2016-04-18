@@ -76,7 +76,6 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
     
     def filter_table(self, table):
         table = table.rowlink_reverse('navigator:articleset-list', args=['{id}'])
-
         if self.what == 'all':
             return table
 
@@ -92,7 +91,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
             ids = ids.values_list("id", flat=True)
 
         if ids:
-            return table.filter(pk=ids, active=True)
+            return table.filter(pk__in=ids, active=True)
         else:
             return table.filter(name="This is a really stupid way to force an empty table (so sue me!)")
 
