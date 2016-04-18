@@ -186,15 +186,3 @@
     </script>
 {% endif %}
 
-{% if announcement %}
-    <script type="text/javascript">
-        require(["pnotify"], function(PNotify){
-            new PNotify({
-                title: 'AmCAT Announcement',
-                text: '{{announcement|safe}}',
-                type: 'info',
-                hide: false
-            });
-        });
-</script>
-{% endif %}
