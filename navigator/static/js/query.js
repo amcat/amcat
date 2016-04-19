@@ -993,7 +993,9 @@ define([
             // Compatability fix for Firefox:
             .keyup(self.datetype_changed)
             // Check initial value
-            .trigger("change");
+            .trigger("change")
+            
+            .multiselect("rebuild");
     };
 
     self.init_scripts = function(){
