@@ -34,9 +34,10 @@ from amcat.tools.caching import cached
 from amcat.models import Project, Article, ROLE_PROJECT_METAREADER
 
 
+
 # NOTE: Adding 'page' to filter fields introduces ambiguity (article-page vs. API page)
-FILTER_FIELDS = frozenset({"start_date", "end_date", "mediumid", "sets", "section"})
-FILTER_SINGLE_FIELDS = frozenset({"start_date", "end_date", "section"})
+FILTER_FIELDS = frozenset({"start_date", "end_date", "on_date", "mediumid", "sets", "section"})
+FILTER_SINGLE_FIELDS = frozenset({"start_date", "end_date", "on_date", "section"})
 FILTER_ID_FIELDS = frozenset({"ids", "pk"})
 
 RE_KWIC = re.compile("(?P<left>.*?)<mark>(?P<keyword>.*?)</mark>(?P<right>.*)", re.DOTALL)
