@@ -3,22 +3,18 @@
 </div>
 
 <div id="dates" class="col-md-9">
-    <select class="wide" tabindex="1" name="datetype" id="id_datetype">
-        <option selected="selected" value="all">All</option>
-        <option value="on">On</option>
-        <option value="after">After</option>
-        <option value="between">Between</option>
-        <option value="before">Before</option>
-    </select>
+    <div>
+        <select class="wide" tabindex="1" name="datetype" id="id_datetype">
+            <option selected="selected" value="all">All</option>
+            <option value="on">On</option>
+            <option value="after">After</option>
+            <option value="between">Between</option>
+            <option value="before">Before</option>
+        </select>
+        <span class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
+        title="When chosing 'between', 'after' or 'before', the given 'start' date is included, the 'end' date is not."></span>
 
-    <script>
-        require(["jquery", "bootstrap-multiselect"], function($){
-            $(function(){
-                $("#id_datetype").multiselect();
-            });
-        });
-    </script>
-
+    </div>
     <input disabled name="on_date" placeholder="On" class="input-sm form-control" type="text"/>
 
     <div data-min="{{ statistics.start_date|date:'c' }}" data-max="{{ statistics.end_date|date:'c' }}" class="input-daterange input-group">
