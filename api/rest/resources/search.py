@@ -275,7 +275,7 @@ class SearchResource(AmCATResource):
         return [keywordsearch.SearchQuery.from_string(q) for q in queries]
 
     def get_queryset(self):
-        fields = self.get_serializer().get_fields().keys()
+        fields = list(self.get_serializer().get_fields().keys())
         if "text" in self.columns: fields += ["text"]
         if "lead" in self.columns: fields += ["lead"]
         if "kwic" in self.columns and "lead" not in fields: fields += ["lead"]
