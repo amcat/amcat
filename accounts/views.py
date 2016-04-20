@@ -101,7 +101,7 @@ def register(request):
     form_class = AddUserForm if settings.REGISTER_REQUIRE_VALIDATION else AddUserFormWithPassword
     form = form_class(request, data=request.POST or None)
 
-    del form.fields['role']
+    del form.fields['language']
     del form.fields['affiliation']
 
     user = None
@@ -111,9 +111,6 @@ def register(request):
             form.cleaned_data['first_name'],
             form.cleaned_data['last_name'],
             form.cleaned_data['email'],
-            Affiliation.objects.all()[0],
-            form.cleaned_data['language'],
-            Role.objects.get(id=1),
             password=form.cleaned_data.get('password'),
         )
 

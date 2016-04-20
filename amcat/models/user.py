@@ -157,8 +157,7 @@ class UserProfile(AmcatModel):
         app_label = "amcat"
 
 
-def create_user(username, first_name, last_name, email, affiliation, language, role,
-                password=None):
+def create_user(username, first_name, last_name, email, password=None):
     """
         Create a user with the given attributes, creating both the db user and
         the entry in the users table.
@@ -178,13 +177,6 @@ def create_user(username, first_name, last_name, email, affiliation, language, r
     u.first_name = first_name
     u.last_name = last_name
     u.save()
-
-    # Correct profile
-    prof = u.userprofile
-    prof.role = role
-    prof.affiliation = affiliation
-    prof.language = language
-    prof.save(force_permissions=True)
 
     return u
 

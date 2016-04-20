@@ -49,7 +49,7 @@ def get_request():
     th = threading.current_thread()
     return th.request if hasattr(th, 'request') else None
 
-def create_user(username, first_name, last_name, email, affiliation, language, role, password=None):
+def create_user(username, first_name, last_name, email,  password=None):
     """
     This function creates an user with the given properties. Moreover: it
     generates a passwords and emails it to the new user.
@@ -62,10 +62,7 @@ def create_user(username, first_name, last_name, email, affiliation, language, r
         
     log.info("Creating new user: {username}".format(**locals()))
 
-    u = _create_user(
-        username, first_name, last_name, email,
-        affiliation, language, role, password=password
-    )
+    u = _create_user(username, first_name, last_name, email, password=password)
 
     log.info("Created new user, sending email...")
     html = render(get_request(), "welcome_email.html", locals()).content
