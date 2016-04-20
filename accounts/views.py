@@ -1,27 +1,20 @@
 # Create your views here.
-import json
-from django.shortcuts import render, redirect
-from django.core.urlresolvers import reverse
+import django.core.exceptions
+import settings
+from accounts.forms import UserPasswordResetForm
+from amcat.models import AmCAT
+from amcat.models import ArticleSet
+from amcat.models.authorisation import ROLE_PROJECT_READER
+from amcat.tools.usage import log_request_usage
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth import signals
 from django.contrib.auth.views import password_reset, password_reset_confirm
+from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
-import django.core.exceptions
-
-
-from accounts.forms import UserPasswordResetForm
+from django.shortcuts import render, redirect
 from navigator.forms import AddUserForm, AddUserFormWithPassword
 from navigator.utils.auth import create_user
 
-from amcat.models.user import Affiliation
-from amcat.models.authorisation import Role
-from amcat.models import AmCAT
-
-from amcat.tools.usage import log_request_usage
-import settings
-
-from amcat.models import ArticleSet, RecentProject
-from amcat.models.authorisation import ROLE_PROJECT_READER
 
 def _login(request, error, username, announcement):
     """
@@ -119,7 +112,7 @@ def register(request):
             new_user = authenticate(username=user.username,
                                     password=form.cleaned_data['password'])
             auth_login(request, new_user)
-            return HttpResponseRedirect("/navigator/")
+            return HttpResponseRedirect("/")
         
     return render(request, "accounts/register.html", locals())
 

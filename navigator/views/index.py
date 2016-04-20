@@ -129,7 +129,5 @@ class IndexRedirect(RedirectView):
     
     def get(self, request, *args, **kwargs):
         if request.user.is_anonymous():
-            url = "accounts/login"
-        else:
-            url = "navigator"
-        return http.HttpResponseRedirect(url)
+            return http.HttpResponseRedirect("/accounts/login")
+        return http.HttpResponseRedirect("/projects")

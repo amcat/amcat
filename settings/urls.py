@@ -30,7 +30,6 @@ admin.autodiscover()
 
 urlpatterns = patterns(
     '',
-    ('^$', IndexRedirect.as_view()),
     (r'^admin/', include(admin.site.urls)),
     (r'^accounts/', include('accounts.urls')),
     (r'^', include('navigator.urls', namespace="navigator")),
