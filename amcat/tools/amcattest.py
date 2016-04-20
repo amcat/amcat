@@ -79,8 +79,6 @@ def create_test_query(**kargs):
 def create_test_user(**kargs):
     """Create a user to be used in unit testing"""
     from amcat.models.user import Affiliation, User, create_user
-    if 'affiliation' not in kargs:
-        kargs['affiliation'] = Affiliation.objects.create()
     if 'username' not in kargs:
         kargs['username'] = "testuser_%i" % User.objects.count()
     if 'email' not in kargs:
@@ -89,10 +87,6 @@ def create_test_user(**kargs):
         kargs['first_name'] = kargs['username']
     if 'last_name' not in kargs:
         kargs['last_name'] = kargs['username']
-    if 'language' not in kargs:
-        kargs['language'] = get_test_language()
-    if 'role' not in kargs:
-        kargs['role'] = get_test_role()
     if 'password' not in kargs:
         kargs['password'] =  'test'
     #if "id" not in kargs: kargs["id"] = _get_next_id()
