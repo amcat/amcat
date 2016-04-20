@@ -72,7 +72,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
         if self.request.user.is_anonymous():
             return 'all'
         else:
-            return self.kwargs.get('what', 'favourites')
+            return self.kwargs.get('what', 'active')
     
     def filter_table(self, table):
         table = table.rowlink_reverse('navigator:articleset-list', args=['{id}'])
