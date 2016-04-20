@@ -75,7 +75,9 @@ def get_extra_args(qdict):
 
 
 class ArticleListAction(QueryAction):
-    output_types = (("text/html", "HTML"),)
+    output_types = (
+        ("text/html", "Inline"),
+    )
     form_class = ArticleListActionForm
 
     def run(self, form):
@@ -85,8 +87,15 @@ class ArticleListAction(QueryAction):
         data["ids"] = data.get("ids", selection.get_filters().get("ids", []))
         url = urllib.urlencode(data, doseq=True)
         rowlink = ARTICLE_ROWLINK.format(reverse("navigator:project-details", args=[self.project.id]), "{id}")
-        table = Datatable(SearchResource, url="/api/v4/search", rowlink=rowlink, rowlink_open_in="new", checkboxes=True,
-                          allow_export_via_post=True)
+        table = Datatable(
+            SearchResource,
+            url="/api/v4/search",
+            rowlink=rowlink,
+            rowlink_open_in="new",
+            checkboxes=True,
+            allow_export_via_post=True,
+            allow_html_export=True
+        )
         table = table.add_arguments(minimal="1")
         table = table.add_arguments(project=str(self.project.id))
 
