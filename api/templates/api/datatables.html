@@ -23,6 +23,26 @@
         <p>
             Limit to <input name="page_size" min="0" type="number" /> results.
         </p>
+        <div class="alert alert-warning spss-warning hide">
+          <p>
+          Exporting to SPSS has certain limitations and will therefore not transfer information
+          perfectly.
+          </p>
+          <br/>
+
+          <ul>
+            <li>1. Each cell cannot contain more than 32767 characters;</li>
+            <li>2. Tabs are removed and replaced by spaces;</li>
+            <li>3. Newlines are removed and replaced by dots.</li>
+          </ul>
+
+          <br/>
+          <p>
+          These limitations are inherent to SPSS itself, and cannot be solved in AmCAT. If you see
+          behaviour which cannot be explained by the limitations listed above, feel free to file a
+          bug report at <a href="https://github.com/amcat/amcat/issues">github.com/amcat/amcat</a>.
+          </p>
+        </div>
       </div>
       <div class="modal-footer">
         <div class="btn-group">
