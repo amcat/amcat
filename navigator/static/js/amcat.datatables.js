@@ -95,6 +95,13 @@ function open_export_dialog(event){
     };
 
     $("[name=export]", modal).unbind().click(export_clicked.bind(data));
+    $("select", modal).unbind().change(function(){
+        if(this.options[this.selectedIndex].value === "spss"){
+            $(".spss-warning").removeClass("hide");
+        } else {
+            $(".spss-warning").addClass("hide");
+        }
+    });
 
     modal.modal();
 }
