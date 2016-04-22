@@ -159,7 +159,7 @@ class Project(AmcatModel):
         @param role: a role instance, ID, or label
         @param user: a user object
         """
-        if not user.is_anonymous and user.role_id >= ADMIN_ROLE:
+        if (not user.is_anonymous()) and (user.userprofile.role_id >= ADMIN_ROLE or user.is_superuser):
             return True
 
         if isinstance(role, (str, unicode)):
