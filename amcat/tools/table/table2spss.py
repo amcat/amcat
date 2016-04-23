@@ -1,9 +1,26 @@
-#from amcat.models.coding import codingjob
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+import subprocess
+
+import itertools
+
 import tempfile
-
-from amcat.tools import toolkit, idlabel
-
-import sys
 import re
 import datetime
 import collections
@@ -12,42 +29,61 @@ import logging
 
 log = logging.getLogger(__name__)
 
-def clean(s, maxchars=None):
-    if type(s) == str: s = s.decode('latin-1')
-    if type(s) == unicode:
-        s = s.encode('ascii', 'replace')
-    else:
-        s = str(s)
-    s = re.sub("[^\w, :-]", "", str(s).strip())
-    if maxchars and len(s) > maxchars: s = s[:maxchars - 1]
-    return s
+# Do not let PSPP documentation get in the way of writing proper PSPP input :)
+MAX_STRING_LENGTH = 32767 # PSPP Maximum per: http://bit.ly/1SVPNfU
+
+PSPP_TYPES = {
+    int: "F8.0",
+    str: "A{}".format(MAX_STRING_LENGTH),
+    float: "DOT9.2",
+    datetime.datetime: "DATETIME20"
+}
+
+PSPP_SERIALIZERS = {
+    type(None): lambda n: "",
+    unicode: lambda s: s.replace('\n', ". ").replace("\r", "").replace("\t", " ")[:MAX_STRING_LENGTH],
+    datetime.datetime: lambda d: d.strftime("%d-%b-%Y-%H:%M:%S").upper()
+}
+
+PSPP_COMMANDS = r"""
+GET DATA
+    /type=txt
+    /file="{txt}"
+    /encoding="utf-8"
+    /arrangement=delimited
+    /delimiters="\t"
+    /qualifier=""
+    /variables {variables}.
+SAVE OUTFILE='{sav}'.
+"""
+
+PSPP_VERSION_RE = re.compile(b"pspp \(GNU PSPP\) (\d+)\.(\d+).(\d+)")
+PSPPVersion = collections.namedtuple("PSPPVersion", ["major", "minor", "micro"])
 
 
-def getSPSSFormat(type):
-    log.debug("Determining format of %s" % type)
-    if type == int: return " (F8.0)"
-    if issubclass(type, idlabel.IDLabel): return " (F8.0)"
+def get_pspp_version():
+    try:
+        process = subprocess.Popen(["pspp", "--version"], stdout=subprocess.PIPE)
+    except OSError:
+        raise OSError("Could not execute pspp. Is it installed?")
 
-    if type == float:
-        return " (F8.3)"
+    stdout, _ = process.communicate()
+    for line in stdout.splitlines():
+        match = PSPP_VERSION_RE.match(line)
+        if match:
+            return PSPPVersion(*map(int, match.groups()))
 
-    if type in (unicode, str):
-        return " (A255)"
-
-    if type == datetime.datetime:
-        return " (date10)"
-
-    raise Exception("Unknown type: %s" % type)
+    raise PSPPError("Could not find version of installed pspp.")
 
 
-def getVarName(col, seen):
+def get_var_name(col, seen):
     fn = str(col).replace(" ", "_")
     fn = fn.replace("-", "_")
     fn = re.sub('[^a-zA-Z_]+', '', fn)
     fn = re.sub('^_+', '', fn)
     fn = fn[:16]
     if fn in seen:
-        for i in xrange(400):
+        for i in itertools.count():
             if "%s_%i" % (fn, i) not in seen:
                 fn = "%s_%i" % (fn, i)
                 break
@@ -55,90 +91,77 @@ def getVarName(col, seen):
     return fn
 
 
-def _getVarDef(varname, vartype):
-    """Remove duplicates and spaces from field names"""
-    vardef = "%s%s" % (varname, getSPSSFormat(vartype))
-    return vardef
+def serialize_spss_value(typ, value, default=lambda o: PSPP_SERIALIZERS[unicode](unicode(o))):
+    return PSPP_SERIALIZERS.get(typ, default)(value)
 
 
-def table2spss(t, writer=sys.stdout, saveas=None):
-    cols = list(t.getColumns())
+def table2pspp(table, saveas):
+    # Deduce cleaned variable names and variable types
     seen = set()
-    varnames = {col: getVarName(col, seen) for col in cols}
-    vartypes = {col: t.getColumnType(col) or str for col in cols}
+    cols = list(table.getColumns())
+    varnames = {col: get_var_name(col, seen) for col in cols}
+    vartypes = {col: table.getColumnType(col) or str for col in cols}
+    variables = ((varnames[col], PSPP_TYPES[vartypes[col]]) for col in cols)
+    variables = " ".join(map(str, itertools.chain.from_iterable(variables)))
 
-    vardefs = " ".join(_getVarDef(varnames[col], vartypes[col]) for col in cols)
+    # Open relevant files (reopen so we're sure that we're writing utf-8)
+    _, txt = tempfile.mkstemp(suffix=".txt")
+    txt = open(txt, "wb")
 
-    log.debug("Writing var list")
-    log.info(vardefs)
-    writer.write("DATA LIST LIST\n / %s .\nBEGIN DATA.\n" % vardefs)
-
-    log.debug("Writing data")
-    valuelabels = collections.defaultdict(dict)  # col : id : label
-    for row in t.getRows():
+    # Write table in tab separated format
+    for row in table.getRows():
         for i, col in enumerate(cols):
-            if i: writer.write(",")
-            typ = vartypes[col]
-            val = t.getValue(row, col)
-            oval = val
-            if val and (typ in (str, unicode)):
-                val = '"%s"' % clean(val)
-            if val and typ == datetime.datetime:
-                val = val.strftime("%d/%m/%Y")
-            val = "" if val is None else str(val)
-            writer.write(val)
-        writer.write("\n")
-    writer.write("END DATA.\n")
+            if i: txt.write("\t")
+            value = table.getValue(row, col)
+            txt.write(serialize_spss_value(vartypes[col], value).encode("utf-8"))
+        txt.write("\n")
 
-    log.debug("Writing var labels")
-    varlabels = " / ".join("%s '%s'" % (varnames[c], clean(unicode(c), 55)) for c in cols)
-    writer.write("VARIABLE LABELS %s.\n" % varlabels)
-
-    log.debug("Writing value labels")
-    for c in cols:
-        vl = valuelabels[c]
-        if vl:
-            writer.write("VALUE LABELS %s\n" % varnames[c])
-            for id, lbl in sorted(vl.iteritems()):
-                writer.write("  %i  '%s'\n" % (id, clean(lbl, 250)))
-            writer.write(".\n")
-    if saveas:
-        log.debug("Saving file")
-        writer.write("SAVE OUTFILE='%s'.\n" % saveas)
+    return txt.name, PSPP_COMMANDS.format(txt=txt.name, sav=saveas, variables=variables)
 
 
-class EchoWriter(object):
-    def __init__(self, writer):
-        self.writer = writer
-        self.log = tempfile.NamedTemporaryFile(suffix=".sps", prefix="data-", delete=False)
-        log.warn("Writing spss commands to %s" % self.log.name)
-
-    def write(self, bytes):
-        self.log.write(bytes)
-        self.writer.write(bytes)
+class PSPPError(Exception):
+    pass
 
 
-def table2sav(t, filename=None):
-    if filename is None:
-        _, filename = tempfile.mkstemp(suffix=".save", prefix="table-")
+def table2sav(table):
+    _, sav = tempfile.mkstemp(suffix=".sav", prefix="table-")
 
-    log.debug("Creating SPSS syntax")
-    log.debug("Executing PSPP")
-    pspp = toolkit.executepipe("pspp -b")
-    writer = pspp.next()
-    writer = EchoWriter(writer)
-    log.debug("Creating SPS script and sending to PSPP")
-    table2spss(t, writer=writer, saveas=filename)
-    log.debug("Closing PSPP")
-    out, err = pspp.next()
-    log.debug("PSPPP err: %s" % err)
-    log.debug("PSPPP out: %s" % out)
-    err = err.replace('pspp: error creating "pspp.jnl": Permission denied', '')
-    err = err.replace('pspp: ascii: opening output file "pspp.list": Permission denied', '')
-    if err.strip():
-        raise Exception(err)
-    if "error:" in out.lower():
-        raise Exception("PSPP Exited with error: \n\n%s" % out)
-    if not os.path.exists(filename):
-        raise Exception("PSPP Exited without errors, but file was not saved.\n\nOut=%r\n\nErr=%r" % (out, err))
-    return filename
+    log.debug("Check if we've got the right version of PSPP installed")
+    version = get_pspp_version()
+    if version < PSPPVersion(0, 8, 5):
+        raise PSPPVersion("Expected pspp>=8.5.0, but found {}".format(version))
+
+    log.debug("Starting PSPP")
+    pspp = subprocess.Popen(
+        ["pspp", "-b"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+
+    log.debug("Generating SPSS code..")
+    txt, pspp_code = table2pspp(table, sav)
+
+    log.debug("Encoding PSPP code as ASCII..")
+    pspp_code = pspp_code.encode("ascii")
+
+    log.debug("Sending code to pspp..")
+    stdout, stderr = pspp.communicate(input=pspp_code)
+    os.unlink(txt)
+
+    stdout = stdout.decode("utf-8")
+    stderr = stderr.decode("utf-8")
+
+    log.debug("PSPP stderr: %s" % stderr)
+    log.debug("PSPP stdout: %s" % stdout)
+
+    stderr = stderr.replace('pspp: error creating "pspp.jnl": Permission denied', '')
+    stdout = stdout.replace('pspp: ascii: opening output file "pspp.list": Permission denied', '')
+
+    if stderr.strip():
+        raise PSPPError(stderr)
+    if "error:" in stdout.lower():
+        raise PSPPError("PSPP Exited with error: \n\n%s" % stdout)
+    if not os.path.exists(sav):
+        raise PSPPError("PSPP Exited without errors, but file was not saved.\n\nOut=%r\n\nErr=%r" % (stdout, stderr))
+    return sav

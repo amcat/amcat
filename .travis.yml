@@ -31,6 +31,14 @@ install:
  - sudo apt-get update
  - cat apt_requirements.txt | tr '\n' ' ' | xargs sudo apt-get install -y
  - sudo service rabbitmq-server start
+  # Latest PSPP (present in 15.04, 15.10, 16.04 archives)
+ - sudo apt-get install debhelper dh-apparmor gir1.2-atk-1.0 gir1.2-gtk-2.0 gir1.2-pango-1.0 gperf libatk1.0-dev libgsl0-dev libgtk2.0-dev libgtksourceview2.0-dev libharfbuzz-dev libharfbuzz-gobject0 libintl-perl libkpathsea6 libpango1.0-dev libptexenc1 librsvg2-bin libtext-diff-perl libtext-unidecode-perl libxcomposite-dev libxcursor-dev libxi-dev libxinerama-dev libxml-libxml-perl libxml-namespacesupport-perl libxml-sax-base-perl libxml-sax-perl libxml2-utils libxrandr-dev x11proto-composite-dev x11proto-randr-dev x11proto-xinerama-dev -y
+ - wget "http://ftp.download-by.net/gnu/gnu/pspp/pspp-0.8.5.tar.gz" -O - | tar xvz
+ - cd pspp*
+ - ./configure
+ - make -j4 >make_stdout.log 2>make_stderr.log
+ - sudo make install
+ - cd ..
 
  # Elasticsearch
  - wget --no-check-certificate https://hmbastiaan.nl/martijn/amcat/hitcount.jar

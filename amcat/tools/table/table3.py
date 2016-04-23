@@ -384,8 +384,8 @@ class ListTable(Table):
        if the data is not subscriptable
     """
 
-    def __init__(self, data=None, colnames=None):
-        super(ListTable, self).__init__(rows=data or [])
+    def __init__(self, data=None, colnames=None, columnTypes=None):
+        super(ListTable, self).__init__(rows=data or [], columnTypes=columnTypes)
         self.colnames = colnames
 
     def getColumns(self):
