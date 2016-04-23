@@ -41,6 +41,7 @@ PSPP_TYPES = {
 
 PSPP_SERIALIZERS = {
     type(None): lambda n: "",
+    str: lambda s: s.replace('\n', ". ").replace("\r", "").replace("\t", " ")[:MAX_STRING_LENGTH],
     unicode: lambda s: s.replace('\n', ". ").replace("\r", "").replace("\t", " ")[:MAX_STRING_LENGTH],
     datetime.datetime: lambda d: d.strftime("%d-%b-%Y-%H:%M:%S").upper()
 }
@@ -91,7 +92,7 @@ def get_var_name(col, seen):
     return fn
 
 
-def serialize_spss_value(typ, value, default=lambda o: PSPP_SERIALIZERS[unicode](unicode(o))):
+def serialize_spss_value(typ, value, default=lambda o: unicode(o)):
     return PSPP_SERIALIZERS.get(typ, default)(value)
 
 
