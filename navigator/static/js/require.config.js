@@ -12,9 +12,7 @@ requirejs.config({
         "highcharts.core": "highcharts/highcharts",
         "highcharts.data": "highcharts/modules/data",
         "highcharts.exporting": "highcharts/modules/exporting",
-        // For some reasons, Firefox refuses to load the heatmap plugin if it's
-        // called just 'heatmap'. Soo..... :|
-        "highcharts.heatmap": "highcharts/modules/heatmap-fixed",
+        "highcharts.heatmap": "highcharts/modules/heatmap",
         "jquery.depends": AMCAT_STATIC_URL + "js/jquery.depends",
         "bootstrap": "bootstrap/dist/js/bootstrap",
         "bootstrap-multiselect": "bootstrap-multiselect/dist/js/bootstrap-multiselect",
