@@ -307,11 +307,16 @@ define([
             $(".depends", widget).depends();
         });
 
+        
         $("select[multiple=multiple]", script_form).multiselect(MULTISELECT_DEFAULTS);
 
         $.map($("select", script_form), function(el){
             if ($(el).attr("multiple") === "multiple") return;
-            $(el).multiselect({ disableIfEmpty: true });
+            
+            var options = { disableIfEmpty: true, maxHeight: 200, enableCaseInsensitiveFiltering:true};
+            $(el).multiselect(options);
+            $(el).multiselect('setOptions', options);
+            $(el).multiselect('rebuild');
         });
 
         if (saved_query.loading){
