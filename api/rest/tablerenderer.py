@@ -298,14 +298,21 @@ class RdaRenderer(BaseRenderer):
                 result[k][i] = v
         return result
 
+    def vectors_to_rvectors(self, vectors, text_columns=[]):
+        for k,v in vectors.iteritems():
+            v = to_r(v, stringsAsFactors=(k not in text_columns))
+            yield k,v
+    
     def render(self, data, media_type=None, renderer_context=None):
         try:
             if 'response' in renderer_context and renderer_context['response'].exception:
                 data.update({'exception': True,
                              'status': renderer_context['response'].status_code})
             else:
+                text_columns = renderer_context.get('text_columns', [])
                 vectors = self.json_to_vectors(data['results'])
-                data['results'] = create_dataframe(vectors.iteritems())
+                columns = self.vectors_to_rvectors(vectors, text_columns)
+                data['results'] = create_dataframe(columns)
             return save_to_bytes(**data)
         except:
             logging.exception("Error on rendering to rda")

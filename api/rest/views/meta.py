@@ -25,3 +25,9 @@ class ArticleMetaView(ListAPIView):
 
         return {'body': {u'filter': {'terms': {u'sets': [setid]}}},
                 'fields': fields, 'size': page_size}
+
+    def get_renderer_context(self):
+        context = super(ArticleMetaView, self).get_renderer_context()
+        context["text_columns"] = ["text", "headline"]
+        return context
+

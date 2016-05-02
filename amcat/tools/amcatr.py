@@ -5,7 +5,7 @@ Useful functions for interfacing with R
 from rpy2 import robjects, rinterface
 from rpy2.rlike.container import OrdDict
 
-def to_r(values):
+def to_r(values, stringsAsFactors=False):
     """
     Convert primitive python value(s) into an R vector
 
@@ -27,13 +27,18 @@ def to_r(values):
         raise TypeError("Don't know how to convert {} to R".format(type(val)))
 
     values = [natype if x is None else x for x in values]
-    return vtype(values)
+    result = vtype(values)
+    if vtype == robjects.StrVector and stringsAsFactors:
+        result = robjects.FactorVector(result)
+    return result
+
     
 
 def create_dataframe(columns):
     """
     Create a data frame from [(name, values), ..] columns (e.g. from a dict.iteritems())
     """
+    robjects.r['options'](stringsAsFactors=False)
     result = OrdDict()
     for name, values in columns:
         result[name] = to_r(values)
