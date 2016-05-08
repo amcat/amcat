@@ -15,10 +15,16 @@ class TestLexisNexis(amcattest.AmCATTestCase):
 
         self.test_text = open(os.path.join(self.dir, 'test.txt'), encoding="utf-8").read()
         self.test_text2 = open(os.path.join(self.dir, 'test2.txt'), encoding="utf-8").read()
+        self.test_text3 = open(os.path.join(self.dir, 'test3.txt'), encoding="utf-8").read()
 
         self.test_body_sols = json.load(open(os.path.join(self.dir, 'test_body_sols.json')))
         self.test_header_sols = json.load(open(os.path.join(self.dir, 'test_header_sols.json')))
 
+    def test_kop_as_headline(self):
+        # Some lexis nexis files contain "KOP: " instaed of "HEADLINE: "
+        header, body = split_header(self.test_text3)
+        article = body_to_article(*parse_article(next(split_body(body))))
+        self.assertEqual("Gretta Duisenberg oprichtster van Palestina-groep", article.headline)
 
     def split(self):
         return split_header(self.test_text)
