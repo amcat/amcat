@@ -35,6 +35,7 @@ MAX_STRING_LENGTH = 32767 # PSPP Maximum per: http://bit.ly/1SVPNfU
 PSPP_TYPES = {
     int: "F8.0",
     str: "A{}".format(MAX_STRING_LENGTH),
+    unicode: "A{}".format(MAX_STRING_LENGTH),
     float: "DOT9.2",
     datetime.datetime: "DATETIME20"
 }
