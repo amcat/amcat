@@ -398,9 +398,12 @@ def parse_article(art):
         headline, byline = _get_headline(lines)
 
     meta = _get_meta(lines)
-    if headline is None and 'headline' in meta:
-        headline = meta.pop('headline')
-        
+    if headline is None:
+        if 'headline' in meta:
+            headline = meta.pop('headline')
+        elif 'kop' in meta:
+            headline = meta.pop('kop')
+
     body = _get_body(lines)
 
     meta.update(_get_meta(lines))

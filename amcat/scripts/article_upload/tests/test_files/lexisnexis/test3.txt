@@ -1,0 +1,83 @@
+﻿
+
+
+
+Download Request: Selected Items: 1201-1262
+Time Of Request: Friday, March 18, 2016  11:16:19
+
+Send To:
+
+UNIVERSITEIT VAN AMSTERDAM
+POSTBUS 19185
+AMSTERDAM, NLD 1000 GD
+
+
+Terms: ((HEADLINE(AEX) OR HEADLINE(Damrak) OR HEADLINE(Dow Jones) OR
+HEADLINE(NASDAQ) OR HEADLINE(Nikkei) OR HEADLINE(beurskoers!) OR
+HEADLINE(huizenp!) OR HEADLINE(huizenm!) OR HEADLINE(economi!) OR
+HEADLINE(financi!) OR HEADLINE(bezuinig!) OR HEADLINE(ontslagen!) OR
+HEADLINE(vacatures) OR HEADLINE(werknemer!) OR HEADLINE(rente!) OR
+HEADLINE(olieprijs) OR HEADLINE(hypothe!) OR HEADLINE(schulden!) OR
+HEADLINE(werkgever!) OR HEADLINE(werknemer!) OR HLEAD(massaontslag!) OR
+HLEAD(werkgelegen!) OR HLEAD(werklo!) OR HLEAD(inflatie) OR HLEAD(deflatie) OR
+HLEAD(consumentenbesteding!) OR HLEAD(monetai!) OR HLEAD(beroepsbevolk!) OR
+HLEAD(conjunctu!) OR HLEAD(Centrale Bank) OR HLEAD(Nederlandsche Bank) OR
+HLEAD(export) OR HLEAD(import) OR HLEAD(nationaal inkomen) OR HLEAD(nationaal
+product) OR HLEAD(nationaal bruto) OR HLEAD(overheidsuitga!) OR
+HLEAD(overheidsbested!) OR HLEAD(arbeidspartici!) OR HLEAD(recessie) OR
+HLEAD(arbeidsplaats!) OR HLEAD(spaarrente!) ) and Date(geq(01/09/2002) and
+leq(31/12/2003)))
+
+
+Source: De Telegraaf
+Project ID:
+
+
+
+                               1 of 62 DOCUMENTS
+
+                          Copyright 2002 De Telegraaf
+
+                                  De Telegraaf
+
+                               24. September 2002
+
+                               September 24, 2002
+
+LENGTE: 158 words
+
+KOP: Gretta Duisenberg oprichtster van Palestina-groep
+
+AUTEUR: PRUIM, FRED
+
+TEKST:
+
+
+Van onze Haagse redactie
+
+
+DEN HAAG, dinsdag
+
+
+Gretta Duisenberg, de vrouw van Wim Duisenberg, is opnieuw in actie gekomen voor
+het Palestijnse volk.
+
+Nadat de vrouw van de president van de Europese centrale bank al eerder opzien
+baarde door een Palestijnse vlag aan haar balkon te hangen, heeft zij dit keer
+zo'n 175 medestanders gevonden in de initiatiefgroep 'Stop de bezetting'. Die is
+opgericht om te strijden tegen de al jaren durende bezetting van Israel van de
+Palestijnse gebieden. Ook wil Gretta Duisenberg dat Nederland en andere
+EU-lidstaten een actievere rol spelen in de oplossing van het langslepende
+Israelisch-Palestijns conflict.
+
+In een grote advertentie in de media doet Duisenberg een oproep aan onder meer
+de Nederlandse regering en de Europese Commissie. Ondertekenaar zijn onder
+anderen oud-premier Dries van Agt, cabaretiere Jenny Arean, oud-minister Relus
+ter Beek en hoogleraar prof. dr. Th. van Boven.
+
+PUB-TYPE: Paper
+
+TAAL: Dutch / Nederlands
+
+LOAD-DATE: September 26, 2002
+
