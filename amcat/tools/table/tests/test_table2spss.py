@@ -71,6 +71,22 @@ class TestTable2SPSS(amcattest.AmCATTestCase):
             data=self.unicode_with_none_data
         )
 
+    def test_date_hack(self):
+        data = [[datetime.datetime(2020, 9, 8, 7, 6, 5).isoformat()]]
+        table = table3.ListTable(columnTypes=[str], colnames=["date"], data=data)
+        file = table2spss.table2sav(table)
+
+        pspp = subprocess.Popen(
+            ["pspp", "-b"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        input = b"get file='%s'.\nlist.\nshow n.\n" % file.encode("utf-8")
+        stdout, stderr = pspp.communicate(input=input)
+        self.assertIn(b"07-SEP-2020 16:53:55", stdout)
+
+
     def test_unicode_with_nones(self):
         file = table2spss.table2sav(self.unicode_with_none_table)
 
