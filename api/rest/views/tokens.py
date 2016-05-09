@@ -73,6 +73,8 @@ def _get_tokens(term_vector, pos_inc=0, offset_inc=0):
 def _tokens_from_vectors(vectors, fields, aid):
     pos_inc, offset_inc = 0, 0
     for field in fields:
+        if field not in vectors:
+            continue
         tokens = _get_tokens(vectors[field]['terms'],
                              pos_inc=pos_inc, offset_inc=offset_inc)
         tokens = sorted(tokens, key = lambda t:t['position'])
