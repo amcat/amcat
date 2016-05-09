@@ -46,6 +46,13 @@ class TestTable2SPSS(amcattest.AmCATTestCase):
             [5,     test_date_1, 5.0, "\u2704"],
         ]
 
+        self.unicode_with_none_data = [
+            [None,  test_date_1, 1.0,  "\u265d"],
+            [74321, None,        3.0,  "\u265c"],
+            [4,     test_date_3, None, "\u2704"],
+            [5,     test_date_1, 5.0,  None]
+        ]
+
         self.ascii_table = table3.ListTable(
             columnTypes=[int, datetime.datetime, float, str],
             colnames=["a1", "a2", "a3", "a4"],
@@ -57,6 +64,27 @@ class TestTable2SPSS(amcattest.AmCATTestCase):
             colnames=["a1\u26f1", "a2\u26fd", "a3", "a4"],
             data=self.unicode_data
         )
+
+        self.unicode_with_none_table = table3.ListTable(
+            columnTypes=[int, datetime.datetime, float, str],
+            colnames=["a1\u26f1", "a2\u26fd", "a3", "a4"],
+            data=self.unicode_with_none_data
+        )
+
+    def test_unicode_with_nones(self):
+        file = table2spss.table2sav(self.unicode_with_none_table)
+
+        pspp = subprocess.Popen(
+            ["pspp", "-b"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+
+        input = b"get file='%s'.\nlist.\nshow n.\n" % file.encode("utf-8")
+        stdout, stderr = pspp.communicate(input=input, timeout=30)
+        self.assertIn(b"N is 4.", stdout)
+
 
     def test_asciitable2sav(self):
         file = table2spss.table2sav(self.ascii_table)

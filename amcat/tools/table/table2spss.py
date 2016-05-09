@@ -113,7 +113,8 @@ def table2pspp(table, saveas):
         for i, col in enumerate(cols):
             if i: txt.write("\t")
             value = table.getValue(row, col)
-            txt.write(serialize_spss_value(vartypes[col], value))
+            if value is not None:
+                txt.write(serialize_spss_value(vartypes[col], value))
         txt.write("\n")
 
     return txt.name, PSPP_COMMANDS.format(txt=txt.name, sav=saveas, variables=variables)
