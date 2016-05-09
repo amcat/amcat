@@ -83,7 +83,7 @@ class TestTable2SPSS(amcattest.AmCATTestCase):
         )
 
         input = b"get file='%s'.\nlist.\nshow n.\n" % file.encode("utf-8")
-        stdout, stderr = pspp.communicate(input=input, timeout=30)
+        stdout, stderr = pspp.communicate(input=input)
         self.assertIn(b"N is 4.", stdout)
 
 
