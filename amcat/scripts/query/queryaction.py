@@ -16,6 +16,15 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import json
+import zlib
+
+import pickle
+
+from django.core.cache import cache
+
+import functools
+import hashlib
 import traceback
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, PermissionDenied
@@ -134,11 +143,16 @@ class QueryActionHandler(TaskHandler):
         return reverse("api:queryaction-index"), "No redirect"
 
 
+class NotInCacheError(Exception):
+    pass
+
+
 class QueryAction(object):
     form_class = QueryActionForm
     task_handler = QueryActionHandler
     output_types = None
     required_role = ROLE_PROJECT_METAREADER
+    ignore_cache_fields = ("output_type",)
     
     def __init__(self, user, project, articlesets, codingjobs=None, data=None):
         """
@@ -154,6 +168,34 @@ class QueryAction(object):
         self.monitor = ProgressMonitor()
 
         assert(issubclass(self.form_class, SelectionForm))
+
+    def _get_cache_key(self) -> str:
+        """Returns a cache key (SHA256 hexdigest) of user id and form hash"""
+        form_hash = self.get_form().get_hash(ignore_fields=self.ignore_cache_fields)
+        return hashlib.sha256("{}|{}".format(self.user.id, form_hash).encode("ascii")).hexdigest()
+
+    def serialize_cache_value(self, value):
+        """Pickle then compress value"""
+        return zlib.compress(pickle.dumps(value))
+
+    def desearialize_cache_value(self, value):
+        """Decompress then depickle value"""
+        return pickle.loads(zlib.decompress(value))
+
+    def get_cache(self):
+        """Get cached value for this particular form+user. Raises NotInCacheError if not cached
+        value is found."""
+        cache_key = self._get_cache_key()
+        value = cache.get(cache_key)
+        if value is None:
+            raise NotInCacheError("Cache value for {} was not found".format(cache_key))
+        return self.desearialize_cache_value(value)
+
+    def set_cache(self, value):
+        """Sets cache for this particular form+user to 'value'. The value is serialized
+        with QueryAction.serialize_cache_value. Note that large values may not fit in
+        memcached."""
+        cache.set(self._get_cache_key(), self.serialize_cache_value(value))
 
     def get_form_kwargs(self, **kwargs):
         return dict({
@@ -172,7 +214,7 @@ class QueryAction(object):
         return self.project
         
     @cached
-    def get_form(self):
+    def get_form(self) -> SelectionForm:
         form = self.form_class(**self.get_form_kwargs())
         form.fields["output_type"].choices = self.output_types
 
