@@ -190,7 +190,7 @@ class QueryAction(object):
         """Sets cache for this particular form+user to 'value'. The value is serialized
         with QueryAction.serialize_cache_value. Note that large values may not fit in
         memcached."""
-        cache.set(self._get_cache_key(), self.serialize_cache_value(value))
+        cache.set(self._get_cache_key(), self.serialize_cache_value(value), timeout=5*60)
 
     def get_form_kwargs(self, **kwargs):
         return dict({
