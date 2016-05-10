@@ -16,6 +16,9 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import logging
+
+from amcat.scripts.query.queryaction import NotInCacheError
 
 try:
     from StringIO import StringIO
@@ -36,6 +39,8 @@ from amcat.tools import aggregate_es
 from amcat.tools.aggregate_es.categories import ELASTIC_TIME_UNITS, IntervalCategory
 from amcat.tools.aggregate_orm import CountArticlesValue
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery, to_sortable_tuple
+
+log = logging.getLogger(__name__)
 
 AGGREGATION_FIELDS = (
     ("articleset", "Articleset"),
@@ -186,16 +191,25 @@ class AggregationAction(QueryAction):
     form_class = AggregationActionForm
 
     def run(self, form):
-        self.monitor.update(1, "Executing query..")
         selection = SelectionSearch(form)
-        narticles = selection.get_count()
-        self.monitor.update(10, "Found {narticles} articles. Aggregating..".format(**locals()))
 
-        # Get aggregation
-        primary = form.cleaned_data["primary"]
-        secondary= form.cleaned_data["secondary"]
-        categories = list(filter(None, [primary, secondary]))
-        aggregation = list(selection.get_aggregate(categories, flat=False))
+        try:
+            # Try to retrieve cache values
+            primary, secondary, categories, aggregation = self.get_cache()
+        except NotInCacheError:
+            self.monitor.update(1, "Executing query..")
+            narticles = selection.get_count()
+            self.monitor.update(10, "Found {narticles} articles. Aggregating..".format(**locals()))
+
+            # Get aggregation
+            primary = form.cleaned_data["primary"]
+            secondary= form.cleaned_data["secondary"]
+            categories = list(filter(None, [primary, secondary]))
+            aggregation = list(selection.get_aggregate(categories, flat=False))
+
+            self.set_cache([primary, secondary, categories, aggregation])
+        else:
+            self.monitor.update(11, "Found in cache, rendering..")
 
         if form.cleaned_data.get("fill_zeroes") and type(primary) is IntervalCategory:
             aggregation = list(aggregate_es.fill_zeroes(aggregation, primary, secondary))

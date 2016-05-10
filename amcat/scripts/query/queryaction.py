@@ -16,29 +16,22 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-import json
-import zlib
-
 import pickle
-
-from django.core.cache import cache
-
-import functools
+import zlib
 import hashlib
-import traceback
+
+from amcat.models import Project, ArticleSet, TaskHandler, CodingJob
+from amcat.models.authorisation import ROLE_PROJECT_METAREADER
+from amcat.scripts.forms import SelectionForm
+from amcat.tools.caching import cached
+from amcat.tools.progress import ProgressMonitor
+from django import forms
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.core.urlresolvers import reverse
 from django.http import QueryDict, HttpResponse
-import sys
-from amcat.models import Project, ArticleSet, TaskHandler, CodingJob
-from amcat.scripts.forms import SelectionForm
-from django import forms
-from amcat.tools.caching import cached
-from amcat.tools.progress import ProgressMonitor
 from navigator.views.scriptview import CeleryProgressUpdater
-
-from amcat.models.authorisation import ROLE_PROJECT_METAREADER
 
 DOWNLOAD_HEADER = "Content-Disposition: attachment; "
 
@@ -166,6 +159,7 @@ class QueryAction(object):
         self.codingjobs = codingjobs
         self.data = data
         self.monitor = ProgressMonitor()
+        self.cache_hit = False
 
         assert(issubclass(self.form_class, SelectionForm))
 
@@ -189,6 +183,7 @@ class QueryAction(object):
         value = cache.get(cache_key)
         if value is None:
             raise NotInCacheError("Cache value for {} was not found".format(cache_key))
+        self.cache_hit = True
         return self.desearialize_cache_value(value)
 
     def set_cache(self, value):

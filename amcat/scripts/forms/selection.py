@@ -24,6 +24,7 @@ import json
 import logging
 import itertools
 import hashlib
+from amcat.tools import aggregate_es, aggregate_orm
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -99,6 +100,8 @@ def prepare(value):
         return value.isoformat()
     elif isinstance(value, (int, bool, float, str)):
         return value
+    elif isinstance(value, (aggregate_orm.Category, aggregate_orm.Value, aggregate_es.Category)):
+        return repr(value)
     elif value is None:
         return value
 

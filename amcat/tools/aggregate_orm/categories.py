@@ -48,6 +48,7 @@ POSTGRES_DATE_TRUNC_VALUES = [
 DATE_TRUNC_SQL = 'date_trunc(\'{interval}\', T_articles.date)'
 
 __all__ = (
+    "Category",
     "IntervalCategory",
     "MediumCategory",
     "ArticleSetCategory",
@@ -97,6 +98,8 @@ class ModelCategory(Category):
     def get_column_values(self, obj):
         return obj.id, getattr(obj, obj.__label__)
 
+    def __repr__(self):
+        return "<ModelCategory: {}>".format(self.model.__name__)
 
 class IntervalCategory(Category):
     joins_needed = ("codings", "coded_articles", "articles")
@@ -113,15 +116,15 @@ class IntervalCategory(Category):
     def get_selects(self):
         return [DATE_TRUNC_SQL.format(interval=self.interval)]
 
-    def __repr__(self):
-        return "<Interval: %s>" % self.interval
-
     def get_column_names(self):
         yield "date"
 
     def get_column_values(self, obj):
         """@type obj: datetime.datetime"""
         yield obj.isoformat()
+
+    def __repr__(self):
+        return "<IntervalCategory: %s>" % self.interval
 
 class DuplicateLabelError(ValueError):
     pass
@@ -294,6 +297,9 @@ class TermCategory(Category):
     def get_column_values(self, obj):
         """@type obj: SearchQuery"""
         yield obj.label
+
+    def __repr__(self):
+        return "<TermCategory: {}>".format(self.terms)
 
 
 class SchemafieldCategory(ModelCategory):

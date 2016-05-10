@@ -22,6 +22,7 @@ from amcat.models import CodingSchemaField, FIELDTYPE_IDS, Coding, CodedArticle,
 from amcat.tools.aggregate_orm.sqlobj import SQLObject, JOINS, INNER_JOIN
 
 __all__ = (
+    "Value",
     "AverageValue",
     "CountValue",
     "CountArticlesValue",
@@ -164,6 +165,9 @@ class CountArticlesValue(CountValue):
     def get_selects(self):
         return ['COUNT(DISTINCT(T_articles.article_id))']
 
+    def __repr__(self):
+        return "<CountArticlesValue>"
+
 
 class CountCodingsValue(CountValue):
     joins_needed = ("codings",)
@@ -171,7 +175,13 @@ class CountCodingsValue(CountValue):
     def get_selects(self):
         return ['COUNT(DISTINCT(T_coded_articles.id))']
 
+    def __repr__(self):
+        return "<CountCodingsValue>"
+
 
 class CountCodingValuesValue(CountValue):
     def get_selects(self):
         return ['COUNT(codings_values.codingvalue_id)']
+
+    def __repr__(self):
+        return "<CountCodingValuesValue>"

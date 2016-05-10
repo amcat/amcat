@@ -24,7 +24,13 @@ from collections import OrderedDict
 
 from amcat.models import ArticleSet, Medium
 
-__all__ = ("IntervalCategory", "ArticlesetCategory", "MediumCategory", "TermCategory")
+__all__ = (
+    "Category",
+    "IntervalCategory",
+    "ArticlesetCategory",
+    "MediumCategory",
+    "TermCategory"
+)
 
 log = logging.getLogger(__name__)
 
@@ -95,6 +101,9 @@ class ModelCategory(Category):
     def get_column_values(self, obj):
         return obj.id, getattr(obj, obj.__label__)
 
+    def __repr__(self):
+        return "<ModelCategory: {}>".format(self.model.__name__)
+
 class ArticlesetCategory(ModelCategory):
     model = ArticleSet
     field = "sets"
@@ -110,6 +119,9 @@ class ArticlesetCategory(ModelCategory):
         for aset_id, sub in super(ArticlesetCategory, self).parse_aggregation_result(result):
             if aset_id in self.all_articleset_ids:
                 yield aset_id, sub
+
+    def __repr__(self):
+        return "<ArticlesetCategory>"
 
 
 class MediumCategory(ModelCategory):
@@ -138,6 +150,9 @@ class TermCategory(Category):
 
     def parse_aggregation_result(self, result):
         return result.items()
+
+    def __repr__(self):
+        return "<TermCategory: {}>".format(self.terms)
 
 
 class IntervalCategory(Category):
@@ -169,3 +184,6 @@ class IntervalCategory(Category):
     def get_column_values(self, obj):
         """@type obj: datetime.datetime"""
         yield obj.isoformat()
+
+    def __repr__(self):
+        return "<IntervalCategory: {}>".format(self.interval)
