@@ -1,5 +1,5 @@
 import datetime
-from amcat.models import Language
+from amcat.models import Language, Medium
 from amcat.scripts.forms.selection import DAY_DELTA, SelectionForm
 from amcat.tools import amcattest
 from amcat.tools.toolkit import to_datetime
@@ -16,6 +16,40 @@ class TestSelectionForm(amcattest.AmCATTestCase):
             project = codebook.project
 
         return project, codebook, SelectionForm(project, data=kwargs)
+
+    def test_hash(self):
+        aset1 = amcattest.create_test_set(2)
+        aset2 = amcattest.create_test_set(2, project=aset1.project)
+        project = aset1.project
+
+        _, _, form1 = self.get_form(
+            project=project,
+            articlesets=[aset1.id, aset2.id],
+            mediums=[Medium.objects.all()[0].id],
+            article_ids="1\n2\n3",
+            query="abc\ndefg"
+        )
+
+        _, _, form2 = self.get_form(
+            project=project,
+            articlesets=[aset2.id, aset1.id],
+            mediums=[Medium.objects.all()[0].id],
+            article_ids="1\n3\n2",
+            query="abc\ndifferent\nquery"
+        )
+
+        form1.full_clean()
+        form2.full_clean()
+
+        self.assertEqual(
+            form1.get_hash(ignore_fields=("query",)),
+            form2.get_hash(ignore_fields=("query",))
+        )
+
+        self.assertNotEqual(
+            form1.get_hash(),
+            form2.get_hash()
+        )
 
     def test_date_formats(self):
         dates = (

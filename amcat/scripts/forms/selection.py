@@ -23,6 +23,7 @@ import datetime
 import json
 import logging
 import itertools
+import hashlib
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -36,6 +37,8 @@ from amcat.tools.caching import cached
 from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.toolkit import to_datetime
 from amcat.tools.djangotoolkit import db_supports_distinct_on
+from django.db.models import Model
+from django.db.models.query import QuerySet
 
 log = logging.getLogger(__name__)
 
@@ -85,6 +88,21 @@ def get_all_schemafields(codingjobs):
     codingschema_ids = set(itertools.chain.from_iterable(codingschema_ids))
     codingschemas = CodingSchema.objects.filter(id__in=codingschema_ids)
     return CodingSchemaField.objects.filter(codingschema__in=codingschemas)
+
+
+def prepare(value):
+    if isinstance(value, (list, tuple, set, QuerySet)):
+        return sorted(map(prepare, value))
+    elif isinstance(value, Model):
+        return value.id
+    elif isinstance(value, (datetime.datetime, datetime.date)):
+        return value.isoformat()
+    elif isinstance(value, (int, bool, float, str)):
+        return value
+    elif value is None:
+        return value
+
+    raise ValueError("Could not prepare {} of type {} for serialization".format(value, type(value)))
 
 
 @order_fields()
@@ -174,6 +192,19 @@ class SelectionForm(forms.Form):
 
         if data is not None:
             self.data = self.get_data()
+
+
+    def get_hash(self, ignore_fields=()) -> str:
+        """
+        Calculate a hash based on current form. Form *must* be cleaned and valid before executing
+        this method. Method returns a SHA256 hexdigest.
+        """
+        assert self.is_valid(), "Can only calculate hash for valid forms."
+        hash_fields = (fname for fname in self.cleaned_data.keys() if fname not in ignore_fields)
+        cleaned_data = [(fname, prepare(self.cleaned_data[fname])) for fname in hash_fields]
+        cleaned_data = json.dumps(sorted(cleaned_data)).encode("utf-8")
+        return hashlib.sha256(cleaned_data).hexdigest()
+
 
     def get_data(self):
         """Include initials in form-data."""
