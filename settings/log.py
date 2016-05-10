@@ -92,8 +92,8 @@ if os.environ.get('AMCAT_USE_LOGSTASH', 'N').upper() in ("1", "Y", "ON"):
     }
         
 if 'AMCAT_LOG_FILE' in os.environ:
+    # Add file log handler
     LOG_FILE = os.environ['AMCAT_LOG_FILE']
-
     LOGGING['handlers']['logfile'] = {
         'level': LOG_LEVEL,
         'class': 'logging.handlers.RotatingFileHandler',
@@ -103,6 +103,20 @@ if 'AMCAT_LOG_FILE' in os.environ:
         'formatter': 'color',
     }
     LOGGING['loggers']['']['handlers'] += ['logfile']
+
+    # Make sure all exceptions are logged to the logfile
+    LOGGING['loggers'].update({
+        'django.request': {
+            'handlers': ['logfile'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+        'django.security': {
+            'handlers': ['logfile'],
+            'level': 'ERROR',
+            'propagate': True,
+        }
+    })
 
 
 if os.environ.get('AMCAT_LOG_TO_CONSOLE', 'Y') in ("1", "Y", "ON"):
