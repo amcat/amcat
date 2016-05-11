@@ -873,10 +873,62 @@ define([
             self.render_complete(body);
             result.attr("class", window.location.hash.slice(1));
             $(window).scrollTo(result, 500);
+
+            // Reset cache messages
+            $(".cache-clear").unbind("click");
+            $(".cache-message").hide();
+            $(".cache-clearing").hide();
+            $(".cache-timestamp").text("");
+            
+            // Check for cache in HTTP headers
+            if (jqXHR.getResponseHeader("X-Query-Cache-Hit") === "1"){
+                var nTimestamp = jqXHR.getResponseHeader("X-Query-Cache-Natural-Timestamp");
+                nTimestamp = ("nTimestamp" === "now") ? "just now" : nTimestamp;
+                $(".cache-timestamp").text(nTimestamp);
+                var cacheKey = jqXHR.getResponseHeader("X-Query-Cache-Key");
+                $(".cache-clear").click(self.clear_cache.bind(cacheKey));
+                $(".cache-message").show();
+            }
         }).always(function() {
             loading_dialog.modal("hide");
             progress_bar.css("width", 0);
         }).progress_bar(message_element, progress_bar);
+    };
+
+    /**
+     * Clear cached query
+     */
+    self.clear_cache = function(event){
+        event.preventDefault();
+        $(".cache-message").hide();
+        $(".cache-clearing").show();
+        
+        $.ajax("../clear-query-cache/", {
+            type: "POST",
+            data: {
+                "cache-key": this
+            },
+            headers: {
+                "X-CSRFTOKEN": $.cookie("csrftoken")
+            }
+        }).success(function(){
+            $(".cache-clearing").hide();
+            
+            new PNotify({
+                type: "success",
+                text: "Cache cleared!",
+                delay: 1000
+            });
+        }).error(function(){
+            $(".cache-message").show();
+            $(".cache-clearing").hide();
+
+            new PNotify({
+                type: "error",
+                text: "Failed to clear cache.",
+                delay: 3500
+            });
+        });
     };
 
     /**

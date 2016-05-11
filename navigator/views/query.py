@@ -20,10 +20,13 @@
 import json
 import logging
 
+from amcat.scripts.query.queryaction import is_valid_cache_key
 from django import conf
+from django.core.cache import cache
 from django.core.urlresolvers import reverse
 from django.db.models.query_utils import Q
-from django.views.generic.base import TemplateView, RedirectView
+from django.http import HttpResponseBadRequest, HttpResponse
+from django.views.generic.base import TemplateView, RedirectView, View
 
 from amcat.models import Query
 from amcat.scripts.forms import SelectionForm
@@ -36,6 +39,23 @@ from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin,
 log = logging.getLogger(__name__)
 
 SHOW_N_RECENT_QUERIES = 5
+
+class ClearQueryCacheView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, View):
+    context_category = 'Query'
+    parent = ProjectDetailsView
+    url_fragment = 'clear-query-cache'
+    view_name = 'clear-query-cache'
+
+    http_method_names = ["post"]
+
+    def post(self, *args, **kwargs):
+        cache_key = self.request.POST.get("cache-key")
+
+        if not is_valid_cache_key(cache_key):
+            return HttpResponseBadRequest("Invalid cache key.")
+
+        cache.set(cache_key, None)
+        return HttpResponse("OK")
 
 class SavedQueryRedirectView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, RedirectView):
     model = Query

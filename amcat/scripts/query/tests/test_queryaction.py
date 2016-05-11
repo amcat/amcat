@@ -1,3 +1,4 @@
+import datetime
 import string
 
 import pylibmc
@@ -8,6 +9,7 @@ from amcat.models import ArticleSet
 from amcat.scripts.query import QueryAction
 from amcat.scripts.query.queryaction import NotInCacheError
 from amcat.tools import amcattest
+from django.contrib.humanize.templatetags.humanize import naturaltime
 
 
 class FooBarQueryAction(QueryAction):

@@ -16,8 +16,12 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import datetime
 import pickle
 import zlib
+
+import dateutil.parser
+import functools
 import hashlib
 
 from amcat.models import Project, ArticleSet, TaskHandler, CodingJob
@@ -27,6 +31,7 @@ from amcat.tools.caching import cached
 from amcat.tools.progress import ProgressMonitor
 from django import forms
 from django.contrib.auth.models import User
+from django.contrib.humanize.templatetags.humanize import naturaltime
 from django.core.cache import cache
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.core.urlresolvers import reverse
@@ -101,7 +106,9 @@ class QueryActionHandler(TaskHandler):
         try:
             form = query_action.get_form()
             query_action.before_run(form)
-            return query_action.run(form)
+            result = query_action.run(form)
+            cache_key = query_action.get_cache_key() if query_action.cache_hit else None
+            return cache_key, result
         except Exception as e:
             raise
 
@@ -127,7 +134,15 @@ class QueryActionHandler(TaskHandler):
         return content_type
 
     def get_response(self):
-        response = HttpResponse(content=self.get_result())
+        cache_key, result = self.get_result()
+        response = HttpResponse(content=result)
+        response["X-Query-Cache-Hit"] = int(cache_key is not None)
+        if cache_key:
+            response["X-Query-Cache-Key"] = cache_key
+            timestamp = cache.get("{}.timestamp".format(cache_key))
+            timestamp = dateutil.parser.parse(timestamp)
+            response["X-Query-Cache-Timestamp"] = timestamp.isoformat()
+            response["X-Query-Cache-Natural-Timestamp"] = naturaltime(timestamp)
         response["Content-Disposition"] = "attachment"
         response["Content-Type"] = self._get_content_type()
         return response
@@ -140,13 +155,17 @@ class NotInCacheError(Exception):
     pass
 
 
+def is_valid_cache_key(cache_key):
+    return len(cache_key) == 64 + 12 and cache_key.endswith(".query-cache")
+
+
 class QueryAction(object):
     form_class = QueryActionForm
     task_handler = QueryActionHandler
     output_types = None
     required_role = ROLE_PROJECT_METAREADER
     ignore_cache_fields = ("output_type",)
-    
+
     def __init__(self, user, project, articlesets, codingjobs=None, data=None):
         """
         @type project: amcat.models.Project
@@ -163,10 +182,12 @@ class QueryAction(object):
 
         assert(issubclass(self.form_class, SelectionForm))
 
-    def _get_cache_key(self) -> str:
+    @functools.lru_cache()
+    def get_cache_key(self) -> str:
         """Returns a cache key (SHA256 hexdigest) of user id and form hash"""
         form_hash = self.get_form().get_hash(ignore_fields=self.ignore_cache_fields)
-        return hashlib.sha256("{}|{}".format(self.user.id, form_hash).encode("ascii")).hexdigest()
+        query_hash = hashlib.sha256("{}|{}".format(self.user.id, form_hash).encode("ascii")).hexdigest()
+        return "{}.query-cache".format(query_hash)
 
     def serialize_cache_value(self, value):
         """Pickle then compress value"""
@@ -179,7 +200,7 @@ class QueryAction(object):
     def get_cache(self):
         """Get cached value for this particular form+user. Raises NotInCacheError if not cached
         value is found."""
-        cache_key = self._get_cache_key()
+        cache_key = self.get_cache_key()
         value = cache.get(cache_key)
         if value is None:
             raise NotInCacheError("Cache value for {} was not found".format(cache_key))
@@ -190,7 +211,9 @@ class QueryAction(object):
         """Sets cache for this particular form+user to 'value'. The value is serialized
         with QueryAction.serialize_cache_value. Note that large values may not fit in
         memcached."""
-        cache.set(self._get_cache_key(), self.serialize_cache_value(value), timeout=5*60)
+        timestamp = datetime.datetime.now().isoformat()
+        cache.set("{}.timestamp".format(self.get_cache_key()), timestamp, timeout=7200+1)
+        cache.set(self.get_cache_key(), self.serialize_cache_value(value), timeout=7200)
 
     def get_form_kwargs(self, **kwargs):
         return dict({
