@@ -50,7 +50,7 @@ class AmCATPage(Page):
 # Warning: this code has been monkey-patched, see below
 class AmCATPageNumberPagination(pagination.PageNumberPagination):
     page_size = 10
-    max_page_size = 10000
+    max_page_size = 100000
     page_size_query_param = "page_size"
 
     def paginate_queryset(self, queryset, request, view=None):
