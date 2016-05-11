@@ -37,6 +37,7 @@ from django.core.exceptions import ValidationError, PermissionDenied
 from django.core.urlresolvers import reverse
 from django.http import QueryDict, HttpResponse
 from navigator.views.scriptview import CeleryProgressUpdater
+from settings import SECRET_KEY
 
 DOWNLOAD_HEADER = "Content-Disposition: attachment; "
 
@@ -184,9 +185,10 @@ class QueryAction(object):
 
     @functools.lru_cache()
     def get_cache_key(self) -> str:
-        """Returns a cache key (SHA256 hexdigest) of user id and form hash"""
+        """Returns a cache key (SHA256 hexdigest) of user id and form hash. To prevent guessing
+        attacks, we also embed the Django SECRET_KEY (240 random bits in AmCAT)."""
         form_hash = self.get_form().get_hash(ignore_fields=self.ignore_cache_fields)
-        query_hash = hashlib.sha256("{}|{}".format(self.user.id, form_hash).encode("ascii")).hexdigest()
+        query_hash = hashlib.sha256("{}|{}|{}".format(SECRET_KEY, self.user.id, form_hash).encode("ascii")).hexdigest()
         return "{}.query-cache".format(query_hash)
 
     def serialize_cache_value(self, value):
