@@ -8,6 +8,7 @@
 {% endblock %}
 
 {% block actions %}
+    <div class="btn-group">
     <a class="btn btn-primary" href="{% url "navigator:query" project.id %}?sets={{ object.id }}"><i class="glyphicon glyphicon-cog"></i>Query</a>
     {% if can_edit and  object.project.id == project.id %}
         <a class="btn btn-default" data-confirm="You're about to refresh the index for <i>{{ object.name }}</i>. This action can take a while, and all articles in the index will be unavailable for search in the meantime." href="{% url "navigator:articleset-refresh" project.id object.id %}"><i class="glyphicon glyphicon-refresh"></i> Refresh Index</a>
@@ -27,6 +28,7 @@
         {% endif %}
 
     {% endif %}
+    </div>
 
 {% endblock actions %}
 
@@ -39,6 +41,8 @@
     </div>
 
     {% include "project/modal_add_to_set.html" %}
+
+    <br/>
 
     <div class="panel panel-default" style="margin-bottom: 1em">
         <div class="panel-heading">
