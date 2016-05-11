@@ -318,16 +318,16 @@ class RdaRenderer(BaseRenderer):
         
         
 EXPORTERS = [CSVRenderer, XLSXRenderer, SPSSRenderer, XHTMLRenderer, RdaRenderer]
+FORMAT_RENDERER_MAP = {renderer.format: renderer for renderer in EXPORTERS}
 
-def set_response_content(response):
+def set_response_content(response, format, filename="data"):
     """
     Add media type and content disposition to the response if applicable.
     Cannot be handled by the renderer since that returns data rather than a Response
     """
-    for exporter in EXPORTERS:
-        if response.accepted_media_type == exporter.media_type:
-            response['Content-Type'] = response.accepted_media_type
-            response['Content-Disposition'] = 'attachment; filename="data.{exporter.extension}"'.format(**locals())
-            break
+    if format in FORMAT_RENDERER_MAP:
+        renderer = FORMAT_RENDERER_MAP[format]
+        response['Content-Type'] = renderer.media_type
+        response['Content-Disposition'] = 'attachment; filename="{}.{}"'.format(filename, renderer.extension)
     return response
 

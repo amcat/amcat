@@ -117,8 +117,10 @@ class AmCATResource(DatatablesMixin, generics.ListAPIView):
         return "{" + getattr(model, '__label__', 'label') + "}"
 
     def finalize_response(self, request, response, *args, **kargs):
+        format = request.query_params.get("format", request.data.get("format", "api"))
+        filename = request.query_params.get("filename", request.data.get("filename", "data"))
         response = super(AmCATResource, self).finalize_response(request, response, *args, **kargs)
-        response = tablerenderer.set_response_content(response)
+        response = tablerenderer.set_response_content(response, format, filename)
         return response
 
     def get_queryset(self):
