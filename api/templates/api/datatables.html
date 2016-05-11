@@ -10,11 +10,12 @@
       <div class="modal-body">
         <p>You're about to export <strong class="num_items">68</strong> item(s). Options:</p>
         <p>Export as:
+            <input name="filename" type="text" placeholder="data">
             <select name="format">
-                <option value="csv">CSV</option>
-                <option value="xlsx">Excel</option>
-                <option value="json">JSON</option>
-                <option value="spss">SPSS</option>
+                <option value="csv">.csv</option>
+                <option value="xlsx">.xlsx</option>
+                <option value="json">.json</option>
+                <option value="spss">.spss</option>
                 {% if allow_html_export %}
                     <option value="xhtml">HTML</option>
                 {% endif %}

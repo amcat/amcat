@@ -51,7 +51,8 @@ function export_clicked(){
     var params = {
         order_by: order_dir + order_str,
         format: this.format.val(),
-        page_size: this.page_size.val()
+        page_size: this.page_size.val(),
+        filename: this.filename.val() || "data"
     };
     var has_params = this.table.parents(".amcat-table-wrapper").data("url").indexOf('?');
     var separator = has_params >= 0 ? "&" : "?";
@@ -89,6 +90,7 @@ function open_export_dialog(event){
     var data = {
         format: $("[name=format]", modal),
         page_size: $("[name=page_size]", modal),
+        filename: $("[name=filename]", modal),
         task: false,
         modal: modal,
         table: $(this.dom.table)
