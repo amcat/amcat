@@ -153,7 +153,7 @@ var _AMCAT_DEFAULT_OPTS = {
             "fnClick": open_export_dialog
         }]
     },
-    "lengthMenu": [[10, 100, 300, 1000, 10000000], [10, 100, 300, 1000, "All"]],
+    "lengthMenu": [[10, 100, 300, 1000, 100000000], [10, 100, 300, 1000, "All"]],
 };
 
 $.fn.dataTableExt.sErrMode = 'throw';
