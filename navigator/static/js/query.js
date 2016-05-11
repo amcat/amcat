@@ -848,11 +848,15 @@ define([
             progress_bar.css("width", "100%");
             message_element.text("Fetching results..")
         }).fail(function(data){
-	    if (data.error === undefined) {
-		self.show_error("Server replied with " + data.status + " error: " + data.responseText);
-	    } else {
-		self.show_error("<b>"+data.error.exc_type+":</b><br/><pre>"+data.error.exc_message+"</pre>", false, "600px");
-	    }
+            if (data.results){
+                data = data.results[0];
+            }
+            
+            if (data.error === undefined) {
+                self.show_error("Server replied with " + data.status + " error: " + data.responseText);
+            } else {
+                self.show_error("<b>"+data.error.exc_type+":</b><br/><pre>"+data.error.exc_message+"</pre>", false, "600px");
+            }
 
             $("#loading-dialog").modal("hide");
             progress_bar.css("width", "0%");
@@ -879,7 +883,7 @@ define([
             $(".cache-message").hide();
             $(".cache-clearing").hide();
             $(".cache-timestamp").text("");
-            
+
             // Check for cache in HTTP headers
             if (jqXHR.getResponseHeader("X-Query-Cache-Hit") === "1"){
                 var nTimestamp = jqXHR.getResponseHeader("X-Query-Cache-Natural-Timestamp");
