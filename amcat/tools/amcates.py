@@ -121,11 +121,11 @@ def _get_legacy_hash(article_dict):
     for k in LEGACY_HASH_FIELDS:
         v = article_dict[k]
         if isinstance(v, int):
-            c.update(str(v))
+            c.update(str(v).encode('utf-8'))
         elif isinstance(v, str):
             c.update(v.encode('utf-8'))
         elif v is not None:
-            c.update(v)
+            c.update(str(v).encode('utf-8'))
     return c.hexdigest()
 
 def _encode_field(object, encoding="utf-8"):
