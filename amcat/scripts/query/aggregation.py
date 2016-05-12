@@ -152,6 +152,7 @@ class AggregationAction(QueryAction):
         ("text/json+aggregation+line", "Line plot"),
         ("text/json+aggregation+heatmap", "Heatmap"),
         ("text/csv", "CSV (Download)"),
+        ("text/csv+semicolon", "CSV (semicolon separated, Download)"),
     )
     form_class = AggregationActionForm
     task_handler = AggregationHandler
@@ -187,13 +188,19 @@ class AggregationAction(QueryAction):
             aggregation = list(get_relative(aggregation, column))
 
         self.monitor.update(60, "Serialising..".format(**locals()))
-        if form.cleaned_data["output_type"] == "text/csv":
-            serializer = AggregationCSVSerializer()
+        if form.cleaned_data["output_type"].startswith("text/csv"):
+            delimiter = ','
+            if form.cleaned_data["output_type"].endswith("+semicolon"):
+                delimiter = ';'
+            serializer = AggregationCSVSerializer(delimiter)
             return serializer.csv_serialize(aggregation, x_axis, y_axis)
         return json.dumps(list(aggregation), cls=AggregationEncoder, check_circular=False)
 
 
 class AggregationCSVSerializer:
+    def __init__(self, delimiter=','):
+        self.delimiter = delimiter
+
     def csv_serialize(self, aggregation, x_axis, y_axis):
         srio = StringIO()
 
@@ -215,7 +222,7 @@ class AggregationCSVSerializer:
                 if field_name not in fields:
                     fields.add(field_name)
         fields = [x_axis] + list(fields)
-        writer = DictWriter(srio, fieldnames=fields, restval=0)
+        writer = DictWriter(srio, fieldnames=fields, restval=0, delimiter=self.delimiter)
         writer.writeheader()
         for row in aggregation:
             row_dict = {x_axis: self._csv_field_to_str(row[0])}
@@ -227,7 +234,7 @@ class AggregationCSVSerializer:
 
     def _csv_serialize_totals(self, aggregation, srio, x_axis):
         fields = [x_axis, "total"]
-        writer = DictWriter(srio, fieldnames=fields, restval=0)
+        writer = DictWriter(srio, fieldnames=fields, restval=0, delimiter=self.delimiter)
         writer.writeheader()
         for row in aggregation:
             row_dict = {"total": row[1], x_axis: self._csv_field_to_str(row[0])}
