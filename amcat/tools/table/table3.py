@@ -41,11 +41,6 @@ from collections import namedtuple
 log = logging.getLogger(__name__)
 
 
-def trivialCellFunc(row, col):
-    """'Default' cell function that returns a string representation row/col"""
-    return "%s/%s" % (row, col)
-
-
 class Table(object):
     """Generic interface on rectangular tables.
 
@@ -58,7 +53,7 @@ class Table(object):
     maps column and row to a value.
     """
 
-    def __init__(self, columns=None, rows=None, cellfunc=trivialCellFunc,
+    def __init__(self, columns=None, rows=None, cellfunc="{}/{}".format,
                  columnTypes=None, **kargs):
         """
         @param columns: a sequence of columns, or None if getColumns is overridden
@@ -66,26 +61,14 @@ class Table(object):
         @param cellfunc: a function taking a row and column argument, or None
                          if getValue is overridden.
         """
-        if columns is None:
-            columns = []
-
-        if rows is None:
-            rows = []
-
-        self.columns = columns
-        self.rows = rows
+        self.columns = columns or []
+        self.rows = rows or []
         self.cellfunc = cellfunc
+        self.columnTypes = dict(zip(self.getColumns(), columnTypes or []))
 
-        if isinstance(columnTypes, (list, tuple)):
-            self.columnTypes = dict(zip(self.getColumns(), columnTypes))
-        elif columnTypes is None:
-            self.columnTypes = {}
-
-    # Basic table interface
     def getValue(self, row, column):
         """Get the value corresponding to this row and column"""
-        result = self.cellfunc(row, column)
-        return result
+        return self.cellfunc(row, column)
 
     def getRows(self):
         """Get a sequence of objects representing the rows"""
@@ -103,12 +86,6 @@ class Table(object):
     def __getitem__(self, index):
         """Get the n-th column"""
         return list(self.getRows())[index]
-
-    def getColumnByLabel(self, label):
-        """Return the column that matches the given label, or None"""
-        stringify = str if type(label) == str else str
-        for c in self.getColumns():
-            if stringify(c) == label: return c
 
     def output(self, **kargs):
         """Output the table; see tableoutput.table2unicode for options"""
@@ -239,8 +216,7 @@ class DictTable(Table):
     """
 
     def __init__(self, default=None):
-        Table.__init__(self, OrderedSet(), OrderedSet(),
-                       self.getValue)
+        Table.__init__(self, OrderedSet(), OrderedSet(), self.getValue)
         self.data = {}
         self.default = default
 
