@@ -209,27 +209,6 @@ class AttributeColumn(ObjectColumn):
         return getattr(row, self.attribute)
 
 
-class DictTable(Table):
-    """
-    Convenience subclass of Table that creates a dict to hold the cell values,
-    and adds column and row objects as needed
-    """
-
-    def __init__(self, default=None):
-        Table.__init__(self, OrderedSet(), OrderedSet(), self.get_value)
-        self.data = {}
-        self.default = default
-
-    def add_value(self, row, col, value):
-        """Set the given value in the data dict"""
-        self.data[row, col] = value
-        self.columns.add(col)
-        self.rows.add(row)
-
-    def get_value(self, row, column):
-        return self.data.get((row, column), self.default)
-
-
 class ListTable(Table):
     """
     Convenience subclass of Table that is based on a list-of-lists
