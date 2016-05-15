@@ -29,17 +29,14 @@ Interface Table:
 see tableoutput.py for useful methods for rendering tables in different ways
 """
 
-
-from collections import namedtuple
-import types
 import re
 import logging
 
+from amcat.contrib.oset import OrderedSet
 from amcat.tools import toolkit, idlabel
 from amcat.tools.table import tableoutput
 from amcat.tools.table.export import EXPORTERS
-from amcat.contrib.oset import OrderedSet
-
+from collections import namedtuple
 
 log = logging.getLogger(__name__)
 
@@ -62,13 +59,12 @@ class Table(object):
     """
 
     def __init__(self, columns=None, rows=None, cellfunc=trivialCellFunc,
-                 rowNamesRequired=False, columnTypes=None, **kargs):
+                 columnTypes=None, **kargs):
         """
         @param columns: a sequence of columns, or None if getColumns is overridden
         @param rows:a sequence of rows, or None if getRows is overridden
         @param cellfunc: a function taking a row and column argument, or None
                          if getValue is overridden.
-        @param rowNamesRequired: a hint to output functions that rownames should be printed
         """
         if columns is None:
             columns = []
@@ -79,7 +75,6 @@ class Table(object):
         self.columns = columns
         self.rows = rows
         self.cellfunc = cellfunc
-        self.rowNamesRequired = rowNamesRequired
 
         if isinstance(columnTypes, (list, tuple)):
             self.columnTypes = dict(zip(self.getColumns(), columnTypes))
@@ -104,22 +99,6 @@ class Table(object):
         if column in self.columnTypes:
             return self.columnTypes[column]
         return getattr(column, "fieldtype", None)
-
-    # Convenience access using iteration / index and NamedRows
-    def getNamedRows(self):
-        """Get a sequence of NamedRow objects that can be used to access the values"""
-        for r in self.getRows():
-            yield NamedRow(self, r)
-
-    def getNamedRow(self, rowname):
-        """Get a NamedRow object for the given row(name)"""
-        for r in self.getRows():
-            if r == rowname:
-                return NamedRow(self, r)
-        return None
-
-    def __iter__(self):
-        return iter(self.getNamedRows())
 
     def __getitem__(self, index):
         """Get the n-th column"""
@@ -157,43 +136,6 @@ class Table(object):
             vals = [self.getValue(row, col) for col in cols]
             if row_names: vals.insert(0, row)
             yield factory(vals)
-
-
-class NamedRow(object):
-    """Interface for a row in a table that supports attribute and index access"""
-
-    def __init__(self, table, row):
-        self.table = table
-        self.row = row
-
-    def get(self, column):
-        """Get the specified column on this row?"""
-        for col in self.table.getColumns():
-            if str(col) == column:
-                return self.table.getValue(self.row, col)
-
-    def __getattr__(self, attr):
-        """If attr is the str(col) for any column, return that column"""
-        if attr != 'table':
-            for col in self.table.getColumns():
-                if str(col) == attr:
-                    return self.table.getValue(self.row, col)
-        return super(NamedRow, self).__getattribute__(attr)
-
-    def __getitem__(self, index):
-        """Get the n-th column"""
-        col = list(self.table.getColumns())[index]
-        return self.table.getValue(self.row, col)
-
-    def __iter__(self):
-        """Iterate over the columns"""
-        for c in self.table.getColumns():
-            yield self.table.getValue(self.row, c)
-
-
-# Why are these here?
-OBJECTCOLUMN_PROPERTIES = ('fieldname', 'fieldtype', 'label',
-                           'visible', 'editable', 'url')
 
 
 class ObjectTable(Table):
@@ -310,9 +252,6 @@ class DictTable(Table):
 
     def getValue(self, row, column):
         return self.data.get((row, column), self.default)
-
-
-DataTable = DictTable
 
 
 class ListTable(Table):

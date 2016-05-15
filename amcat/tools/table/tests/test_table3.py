@@ -59,10 +59,10 @@ UKKKKKKHKKKKHKKKKKKKKKX'''
                       data=[[1, 2, 3], [7, 8, 9], [4, 5, -4]])
 
         s = SortedTable(t, key=lambda row: row[1])
-        self.assertEqual([list(row) for row in s], [[1, 2, 3], [4, 5, -4], [7, 8, 9]])
+        self.assertEqual([list(row) for row in s.getRows()], [[1, 2, 3], [4, 5, -4], [7, 8, 9]])
 
         s = SortedTable(t, key=lambda row: row[2])
-        self.assertEqual([list(row) for row in s], [[4, 5, -4], [1, 2, 3], [7, 8, 9]])
+        self.assertEqual([list(row) for row in s.getRows()], [[4, 5, -4], [1, 2, 3], [7, 8, 9]])
 
 
 def _striplines(x):
