@@ -1,7 +1,7 @@
 from amcat.tools import amcattest
 from amcat.tools.table import tableoutput
 from amcat.tools.table.table3 import Table, ListTable, ObjectTable, ObjectColumn, \
-    SortedTable, ColumnViewTable
+    SortedTable
 
 
 class TestTable(amcattest.AmCATTestCase):
@@ -55,14 +55,11 @@ UKKKKKKHKKKKHKKKKKKKKKX'''
         self.assertEquals(_striplines(result), _striplines(correct.strip()))
 
     def test_sort(self):
-        """Do wrapped tables work?"""
         t = ListTable(colnames=["a1", "a2", "a3"],
                       data=[[1, 2, 3], [7, 8, 9], [4, 5, -4]])
 
         s = SortedTable(t, key=lambda row: row[1])
         self.assertEqual([list(row) for row in s], [[1, 2, 3], [4, 5, -4], [7, 8, 9]])
-        v = ColumnViewTable(s, ["a1", "a3"])
-        self.assertEqual([list(row) for row in v], [[1, 3], [4, -4], [7, 9]])
 
         s = SortedTable(t, key=lambda row: row[2])
         self.assertEqual([list(row) for row in s], [[4, 5, -4], [1, 2, 3], [7, 8, 9]])
