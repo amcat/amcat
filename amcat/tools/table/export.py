@@ -92,10 +92,10 @@ class CSV(TableExporter):
 
         csvwriter = csv.writer(stream, dialect=self.dialect)
 
-        cols = list(table.getColumns())
+        cols = list(table.get_columns())
         csvwriter.writerow([encode(col) for col in cols])
-        for row in table.getRows():
-            csvwriter.writerow([encode(table.getValue(row, col)) for col in cols])
+        for row in table.get_rows():
+            csvwriter.writerow([encode(table.get_value(row, col)) for col in cols])
 
 
 class CSV_semicolon(CSV):
@@ -127,8 +127,8 @@ def _get_values(table, row):
     if table.rowNamesRequired:
         yield str(row)
 
-    for column in table.getColumns():
-        yield _convert_value(table.getValue(row, column))
+    for column in table.get_columns():
+        yield _convert_value(table.get_value(row, column))
 
 
 class XLSX(TableExporter):
@@ -139,13 +139,13 @@ class XLSX(TableExporter):
         ws = wb.create_sheet()
 
         # Determine columns. We may need an extra (first) column which 'names' the row
-        columns = list(map(str, list(table.getColumns())))
+        columns = list(map(str, list(table.get_columns())))
         if table.rowNamesRequired:
             columns.insert(0, "")
         ws.append(columns)
 
         # Write rows to worksheet
-        for row in table.getRows():
+        for row in table.get_rows():
             ws.append(tuple(_get_values(table, row)))
         writer = ExcelWriter(wb)
 
@@ -172,7 +172,7 @@ class HTML(TableExporter):
 
     def to_bytes(self, table, encoding):
         context = Context({
-            "articles": table.getRows(), "encoding": encoding,
+            "articles": table.get_rows(), "encoding": encoding,
             "non_meta": {"text", "headline", "byline"}
         })
         return get_template().render(context).encode(encoding)

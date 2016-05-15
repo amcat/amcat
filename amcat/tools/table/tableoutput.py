@@ -43,8 +43,8 @@ def table2unicode(table, box=True, rownames=False, stream=None):
 
     con_sep2t, con_sep2b, con_sep, con_line = CONNECTORS[box]
 
-    cols = list(table.getColumns())
-    rows = list(table.getRows())
+    cols = list(table.get_columns())
+    rows = list(table.get_rows())
 
     headers = cols
 
@@ -61,7 +61,7 @@ def table2unicode(table, box=True, rownames=False, stream=None):
                 headers.append(str(col))
 
     def cell(row, col):
-        value = table.getValue(row, col)
+        value = table.get_value(row, col)
         return str(value) if value is not None else ""
 
     def formatheader(h):
@@ -109,7 +109,7 @@ def table2csv(table, csvwriter=None, outfile=sys.stdout, writecolnames=True, wri
         dialect = csv.excel_tab if tabseparated else csv.excel
         csvwriter = csv.writer(outfile, dialect=dialect)
 
-    cols = list(table.getColumns())
+    cols = list(table.get_columns())
 
     if writecolnames:
         _columns = ([""] + cols) if writerownames else cols
@@ -117,9 +117,9 @@ def table2csv(table, csvwriter=None, outfile=sys.stdout, writecolnames=True, wri
 
     log.debug("Starting export")
 
-    for row in table.getRows():
+    for row in table.get_rows():
         values = [str(row)] if writerownames else []
-        values += [str(table.getValue(row, col)) or "" for col in cols]
+        values += [str(table.get_value(row, col)) or "" for col in cols]
         csvwriter.writerow(values)
 
     return outfile

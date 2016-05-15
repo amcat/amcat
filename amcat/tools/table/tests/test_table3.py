@@ -37,9 +37,9 @@ class TestTable(amcattest.AmCATTestCase):
                 self.a, self.b, self.c = a, b, c
 
         l = ObjectTable(rows=[Test(1, 2, 3), Test("bla", None, 7), Test(-1, -1, None)])
-        l.addColumn(lambda x: x.a, "de a")
-        l.addColumn("b")
-        l.addColumn(ObjectColumn("en de C", lambda x: x.c))
+        l.add_column(lambda x: x.a, "de a")
+        l.add_column("b")
+        l.add_column(ObjectColumn("en de C", lambda x: x.c))
 
         result = tableoutput.table2unicode(l)
         # get rid of pesky unicode
@@ -59,10 +59,10 @@ UKKKKKKHKKKKHKKKKKKKKKX'''
                       data=[[1, 2, 3], [7, 8, 9], [4, 5, -4]])
 
         s = SortedTable(t, key=lambda row: row[1])
-        self.assertEqual([list(row) for row in s.getRows()], [[1, 2, 3], [4, 5, -4], [7, 8, 9]])
+        self.assertEqual([list(row) for row in s.get_rows()], [[1, 2, 3], [4, 5, -4], [7, 8, 9]])
 
         s = SortedTable(t, key=lambda row: row[2])
-        self.assertEqual([list(row) for row in s.getRows()], [[4, 5, -4], [1, 2, 3], [7, 8, 9]])
+        self.assertEqual([list(row) for row in s.get_rows()], [[4, 5, -4], [1, 2, 3], [7, 8, 9]])
 
 
 def _striplines(x):

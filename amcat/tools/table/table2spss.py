@@ -100,9 +100,9 @@ def serialize_spss_value(typ, value, default=lambda o: str(o)):
 def table2pspp(table, saveas):
     # Deduce cleaned variable names and variable types
     seen = set()
-    cols = list(table.getColumns())
+    cols = list(table.get_columns())
     varnames = {col: get_var_name(col, seen) for col in cols}
-    vartypes = {col: table.getColumnType(col) or str for col in cols}
+    vartypes = {col: table.get_column_type(col) or str for col in cols}
 
     variables = []
     for col in cols:
@@ -118,10 +118,10 @@ def table2pspp(table, saveas):
     txt = open(txt, "w", encoding="utf-8")
 
     # Write table in tab separated format
-    for row in table.getRows():
+    for row in table.get_rows():
         for i, col in enumerate(cols):
             if i: txt.write("\t")
-            value = table.getValue(row, col)
+            value = table.get_value(row, col)
 
             # HACK: forcefully convert column 'date' to datetime
             if value is not None:

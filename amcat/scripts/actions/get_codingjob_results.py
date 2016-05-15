@@ -326,7 +326,7 @@ class CodingColumn(table3.ObjectColumn):
         self.cache = {}  # assume that the function is deterministic!
         super(CodingColumn, self).__init__(label)
 
-    def getCell(self, row):
+    def get_cell(self, row):
         coding = row.article_coding if self.field.codingschema.isarticleschema else row.sentence_coding
         if coding is None:
             return None
@@ -344,7 +344,7 @@ class MetaColumn(table3.ObjectColumn):
         self.field = field
         super(MetaColumn, self).__init__(self.field.label)
 
-    def getCell(self, row):
+    def get_cell(self, row):
         obj = getattr(row, self.field.object)
         if obj is not None:
             return str(getattr(obj, self.field.attr))
@@ -370,8 +370,8 @@ class MappingMetaColumn(MetaColumn):
         self.include_not_found = include_not_found
         super(MappingMetaColumn, self).__init__(field)
 
-    def getCell(self, row):
-        value = super(MappingMetaColumn, self).getCell(row)
+    def get_cell(self, row):
+        value = super(MappingMetaColumn, self).get_cell(row)
         if value is None:
             return value
         return self.mapping.get(value, value if self.include_not_found else None)
@@ -382,7 +382,7 @@ class DateColumn(table3.ObjectColumn):
         self.format = format
         super(DateColumn, self).__init__(label)
 
-    def getCell(self, row):
+    def get_cell(self, row):
         return row.article.date.strftime(self.format)
 
 
@@ -391,7 +391,7 @@ class SubSentenceColumn(table3.ObjectColumn):
         self.field = field
         super(SubSentenceColumn, self).__init__(self.field.label)
 
-    def getCell(self, row):
+    def get_cell(self, row):
         coding = row.sentence_coding
         if not coding: return None
         if self.field.attr == "rangefrom": return coding.start
@@ -438,16 +438,16 @@ class GetCodingJobResults(Script):
         for field in _METAFIELDS:
             if self.options.get("meta_{field.object}_{field.attr}".format(**locals())):
                 if field.object == "subsentence":
-                    table.addColumn(SubSentenceColumn(field))
+                    table.add_column(SubSentenceColumn(field))
                 elif field.attr == "date":
-                    table.addColumn(DateColumn(field.label, kargs["date_format"]))
+                    table.add_column(DateColumn(field.label, kargs["date_format"]))
                 else:
-                    table.addColumn(MetaColumn(field))
+                    table.add_column(MetaColumn(field))
 
         # Date formatting (also belongs to meta)
         for id, label, strftime in DATE_FORMATS:
             if self.options.get("meta_{id}".format(id=id)):
-                table.addColumn(DateColumn(label, strftime))
+                table.add_column(DateColumn(label, strftime))
 
         for field_name in AGGREGATABLE_FIELDS:
             codebook = self.options.get("aggregation_{field_name}".format(field_name=field_name))
@@ -458,7 +458,7 @@ class GetCodingJobResults(Script):
 
             codebook.cache()
      
-            table.addColumn(MappingMetaColumn(
+            table.add_column(MappingMetaColumn(
                 _MetaField("article", field_name, field_name + " aggregation"),
                 codebook.get_aggregation_mapping(), not_found
             ))
@@ -470,7 +470,7 @@ class GetCodingJobResults(Script):
                 options = {k[len(prefix) + 1:]: v for (k, v) in self.options.items() if k.startswith(prefix)}
 
                 for label, function in schemafield.serialiser.get_export_columns(**options):
-                    table.addColumn(CodingColumn(schemafield, label, function))
+                    table.add_column(CodingColumn(schemafield, label, function))
         return table
 
     def _run(self, export_format, codingjobs, **kargs):
@@ -520,7 +520,7 @@ class ProgressTable(WrappedTable):
         self.monitor = monitor
         self.seen_jobs = set()
 
-    def getValue(self, row, col):
+    def get_value(self, row, col):
         jobid = row.job.id
         if jobid not in self.seen_jobs:
             self.seen_jobs.add(jobid)
@@ -528,7 +528,7 @@ class ProgressTable(WrappedTable):
             i = len(self.seen_jobs)
             self.monitor.update(tick, "Exporting job {i} / {self.njobs}: {row.job.name}"
                                 .format(**locals()))
-        return super(ProgressTable, self).getValue(row, col)
+        return super(ProgressTable, self).get_value(row, col)
 
 
 if __name__ == '__main__':

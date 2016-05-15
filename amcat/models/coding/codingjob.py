@@ -140,7 +140,7 @@ class SchemaFieldColumn(table3.ObjectColumn):
     def __init__(self, field):
         super(SchemaFieldColumn, self).__init__(field.label)
         self.field = field
-    def getCell(self, coding):
+    def get_cell(self, coding):
         return coding.get_value(field=self.field)
 
 

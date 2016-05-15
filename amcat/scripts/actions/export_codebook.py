@@ -41,7 +41,7 @@ class TreeCodeColumn(table3.ObjectColumn):
         super(TreeCodeColumn, self).__init__(label="code-{n}".format(n=i+1))
         self.i = i
 
-    def getCell(self, row):
+    def get_cell(self, row):
         if row.indent == self.i:
             return row.code.label
 
@@ -52,7 +52,7 @@ class CodeColumn(table3.ObjectColumn):
         self.attr = attr
         self.language = language
 
-    def getCell(self, row):
+    def get_cell(self, row):
         code = getattr(row, self.attr)
         try:
             return code.get_label(self.language) if self.language else code.label
@@ -87,27 +87,27 @@ class ExportCodebook(Script):
             cb = self.options['codebook']
             langs = set(Language.objects.filter(labels__code__codebook_codes__codebook=cb).distinct())
             for lang in langs:
-                table.addColumn(CodeColumn("label - {lang}".format(**locals()), "code", lang))
+                table.add_column(CodeColumn("label - {lang}".format(**locals()), "code", lang))
 
     def tree_table(self, codebook, labelcols):
         rows = list(_get_tree(codebook))
 
         result = table3.ObjectTable(rows=rows)
-        result.addColumn(lambda row : str(row.code.uuid), label="uuid")
-        result.addColumn(lambda row : row.code.id, label="code_id")
+        result.add_column(lambda row : str(row.code.uuid), label="uuid")
+        result.add_column(lambda row : row.code.id, label="code_id")
         depth = max(row.indent for row in rows) + 1
         for i in range(depth):
-            result.addColumn(TreeCodeColumn(i))
+            result.add_column(TreeCodeColumn(i))
         self.add_label_columns(result)
 
         return result
 
     def parent_table(self, codebook, labelcols):
         result = table3.ObjectTable(rows=codebook.codebookcodes)
-        result.addColumn(lambda row: str(row.code.uuid), label="uuid")
-        result.addColumn(lambda row: row.code.id, label="code_id")
-        result.addColumn(lambda row: getattr(row.parent, "id", None), label="parent_id")
-        result.addColumn(lambda row: row.code.label, label="label")
+        result.add_column(lambda row: str(row.code.uuid), label="uuid")
+        result.add_column(lambda row: row.code.id, label="code_id")
+        result.add_column(lambda row: getattr(row.parent, "id", None), label="parent_id")
+        result.add_column(lambda row: row.code.label, label="label")
         self.add_label_columns(result)
         return result
 

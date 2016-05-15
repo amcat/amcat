@@ -173,10 +173,10 @@ def query_list_to_table(queries, maxqlen=120, output=False, normalise_numbers=Tr
         #print(query)
         time[query].append(float(q["time"]))
     t = ObjectTable(rows=time.items())
-    t.addColumn(lambda kv: len(kv[1]), "N")
-    t.addColumn(lambda kv: kv[0][:maxqlen], "Query")
-    t.addColumn(lambda kv: "%1.4f" % sum(kv[1]), "Cum.")
-    t.addColumn(lambda kv: "%1.4f" % (sum(kv[1]) / len(kv[1])), "Avg.")
+    t.add_column(lambda kv: len(kv[1]), "N")
+    t.add_column(lambda kv: kv[0][:maxqlen], "Query")
+    t.add_column(lambda kv: "%1.4f" % sum(kv[1]), "Cum.")
+    t.add_column(lambda kv: "%1.4f" % (sum(kv[1]) / len(kv[1])), "Avg.")
 
     t = SortedTable(t, key=lambda row: row[2])
 

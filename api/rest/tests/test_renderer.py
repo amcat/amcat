@@ -26,7 +26,7 @@ class TestTableRenderer(amcattest.AmCATTestCase):
     def _test(self, d, header, data):
         t = TableRenderer().tablize(d)
         # check contents are the same while allowing for header order changes
-        mapping = {str(col): i for (i, col) in enumerate(t.getColumns())}
+        mapping = {str(col): i for (i, col) in enumerate(t.get_columns())}
         self.assertEqual(set(header), set(mapping))
         found = [tuple(row[mapping[h]] for h in header)
                  for row in t.to_list(tuple_name=None)]

@@ -21,7 +21,7 @@ class FieldColumn(ObjectColumn):
     def getUnit(self, row):
         return row.ca if self.article else row.cs
 
-    def getCell(self, row):
+    def get_cell(self, row):
         try:
             val = self.getValue(row)
             return val
@@ -37,7 +37,7 @@ class FieldColumn(ObjectColumn):
 
     def getValue(self, row, fieldname=None):
         if not fieldname: fieldname = self.field.fieldname
-        log.debug(">>>>>> getValue(%r, %r)" % (row, fieldname))
+        log.debug(">>>>>> get_value(%r, %r)" % (row, fieldname))
         values = self.getValues(row)
         if values is None: return None
         try:

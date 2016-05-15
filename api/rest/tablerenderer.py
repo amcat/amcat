@@ -102,7 +102,7 @@ class TableRenderer(BaseRenderer):
         for col, (key, types) in keys.items():
             fieldtype = list(types)[0] if len(types) == 1 else None
             fieldtype = {bool:str, type(None):str}.get(fieldtype, fieldtype)
-            table.addColumn(label=col, col=partial(_get_val, key=key), fieldtype=fieldtype)
+            table.add_column(label=col, col=partial(_get_val, key=key), fieldtype=fieldtype)
 
         return table
     
@@ -138,7 +138,7 @@ class TableRenderer(BaseRenderer):
             else:
                 fieldtype = None
             fieldtype = {bool:str, type(None):str}.get(fieldtype, fieldtype)
-            table.addColumn(label=header, col=partial(lambda key, item: item.get(key, None), header), fieldtype=fieldtype)
+            table.add_column(label=header, col=partial(lambda key, item: item.get(key, None), header), fieldtype=fieldtype)
         return table
 
 
