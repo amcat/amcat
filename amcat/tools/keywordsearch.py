@@ -105,7 +105,6 @@ class SelectionSearch:
         @rtype: iterable of SearchQuery"""
         if not self.data.query:
             return []
-
         codebook = self.data.codebook
         label_lan = self.data.codebook_label_language
         replacement_lan = self.data.codebook_replacement_language
@@ -302,7 +301,7 @@ def _clean(s):
 
 
 def _resolve_recursive(codebook, tree_item, rlanguage):
-    this = codebook.get_code(tree_item.code_id).get_label(rlanguage, fallback=False)
+    this = codebook.get_code(tree_item.code_id).get_label(rlanguage)
 
     if this is not None:
         yield this
@@ -320,7 +319,7 @@ def resolve_reference(reference, recursive, queries, codebook=None, labels=None,
             tree = codebook.get_tree(roots=[code])
             tree = list(_resolve_recursive(codebook, tree[0], rlanguage))
             return " OR ".join(tree)
-        return code.get_label(rlanguage, fallback=False)
+        return code.get_label(rlanguage)
 
     # Case 2: reference refers to labeled subquery
     if reference in queries:
@@ -341,7 +340,7 @@ def resolve_reference(reference, recursive, queries, codebook=None, labels=None,
             tree = list(_resolve_recursive(codebook, tree[0], rlanguage))
             return " OR ".join(tree)
         else:
-            return code.get_label(rlanguage, fallback=False)
+            return code.get_label(rlanguage)
     except Label.DoesNotExist:
         raise QueryValidationError(
             "Code with label '{reference}' has no label in replacement-language."
@@ -352,7 +351,7 @@ def resolve_reference(reference, recursive, queries, codebook=None, labels=None,
             "No code with label '{reference}' found in {codebook}"
             .format(**locals()), code="invalid"
         )
-    except TypeError:
+    except TypeError as e:
         log.warn(reference)
         raise QueryValidationError(
             "<{reference}> does not refer to either a code or a query-label. "
@@ -386,6 +385,11 @@ def resolve_query(query, queries, codebook=None, labels=None, rlanguage=None):
 
     return query
 
+def try_get_label(code, label_language):
+    try:
+        return code.get_label(label_language)
+    except Label.DoesNotExist:
+        return None
 
 def resolve_queries(queries, codebook=None, label_language=None, replacement_language=None):
     log.warn("Resolving queries {queries}, {codebook}:{label_language} -> {replacement_language}".format(**locals()))
@@ -405,8 +409,9 @@ def resolve_queries(queries, codebook=None, label_language=None, replacement_lan
         _queries[label] = q
 
     labels = None
+
     if codebook is not None:
-        labels = {c.get_label(label_language, fallback=False): c for c in codebook.get_codes()}
+        labels = {label: c for label, c in ((try_get_label(c, label_language), c) for c in codebook.get_codes()) if label is not None}
 
     for query in queries:
         yield resolve_query(query, _queries, codebook, labels, replacement_language)

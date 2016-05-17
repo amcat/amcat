@@ -77,6 +77,9 @@ class CodebookViewSet(ProjectViewSetMixin, CodebookViewSetMixin, DatatablesMixin
         qs = super(CodebookViewSet, self).filter_queryset(queryset)
         return qs.filter(Q(project=self.project)|Q(projects_set=self.project)).distinct()
 
+class LanguageSerializer(AmCATModelSerializer):
+    class Meta:
+        model = Language
 
 class LanguageViewSetMixin(AmCATViewSetMixin):
     model_key = "language"
@@ -85,6 +88,8 @@ class LanguageViewSetMixin(AmCATViewSetMixin):
 class CodebookLanguageViewSet(ProjectViewSetMixin, CodebookViewSetMixin,
                               LanguageViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = Language
+    serializer_class = LanguageSerializer
+    queryset = Language.objects.all()
 
     def filter_queryset(self, queryset):
         return Language.objects.filter(id__in=self.codebook.get_language_ids())
