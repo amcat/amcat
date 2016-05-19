@@ -232,7 +232,9 @@ class Span(Boolean, FieldTerm):
                 return [get_clause(t, field)[0] for t in term.terms]
 
         clauses = [get_clause(t, self.qfield) for t in self.terms]
-        clauses = itertools.product(*clauses)
+        clauses = list(itertools.product(*clauses))
+        if len(clauses) > 9:
+            raise ParseError("Query too complex: please reduce the number of disjunctions in span queries (max: 9, your query: {}".format(len(clauses)))
         clauses = [{"span_near": {"slop": self.slop, "in_order": self.in_order, "clauses": list(c)}}
                    for c in clauses]
         if len(clauses) == 1:

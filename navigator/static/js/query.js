@@ -924,10 +924,13 @@ define([
             progress_bar.css("width", "100%");
             message_element.text("Fetching results..")
         }).fail(function(data){
-	    if (data.error === undefined) {
+	    console.log(data);
+	    var error  = data.error;
+	    if (error === undefined) error = data['results'][0]['error'];
+	    if (error === undefined) {
 		self.show_error("Server replied with " + data.status + " error: " + data.responseText);
 	    } else {
-		self.show_error("<b>"+data.error.exc_type+":</b><br/><pre>"+data.error.exc_message+"</pre>", false, "600px");
+		self.show_error("<b>"+error.exc_type+":</b><br/><pre>"+error.exc_message+"</pre>", false, "600px");
 	    }
 
             $("#loading-dialog").modal("hide");
