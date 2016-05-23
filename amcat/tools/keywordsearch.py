@@ -238,10 +238,10 @@ class SearchQuery(object):
         return SearchQuery(q.strip(), label=lbl.strip())
 
     def __repr__(self):
-        return "SearchQuery(label=%s)" % self.label
+        return "SearchQuery(label={})".format(repr(self.label.encode("utf-8")))
 
     def __str__(self):
-        return self.label
+        return self.label.encode("utf-8")
 
 
 class QueryValidationError(ValidationError):
