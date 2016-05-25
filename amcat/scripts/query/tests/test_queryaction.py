@@ -73,5 +73,9 @@ class TestQueryAction(amcattest.AmCATTestCase):
         self.assertEqual(qa.get_cache(), "a")
 
         # Change the user. Does it yield a cache error?
-        qa.user = amcattest.create_test_user()
+        user = amcattest.create_test_user()
+        qa = FooBarQueryAction(user, project, asets, data={
+            "query": query,
+            "output_type": "text/foo"
+        })
         self.assertRaises(NotInCacheError, qa.get_cache)

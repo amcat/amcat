@@ -96,8 +96,12 @@ class AmCATViewSetMixin(object):
         return getattr(cls, "base_name", cls.get_default_basename())
 
     def finalize_response(self, request, response, *args, **kargs):
-        format = request.query_params.get("format", request.data.get("format", "api"))
-        filename = request.query_params.get("filename", request.data.get("filename", "data"))
+        if isinstance(request.data, dict):
+            format = request.query_params.get("format", request.data.get("format", "api"))
+            filename = request.query_params.get("filename", request.data.get("filename", "data"))
+        else:
+            format = "api"
+            filename = "data"
         response = super(AmCATViewSetMixin, self).finalize_response(request, response, *args, **kargs)
         response = tablerenderer.set_response_content(response, format, filename)
         return response

@@ -21,11 +21,11 @@ class TestSelectionForm(amcattest.AmCATTestCase):
         aset1 = amcattest.create_test_set(2)
         aset2 = amcattest.create_test_set(2, project=aset1.project)
         project = aset1.project
-
+        medium = aset1.get_mediums()[0]
         _, _, form1 = self.get_form(
             project=project,
             articlesets=[aset1.id, aset2.id],
-            mediums=[Medium.objects.all()[0].id],
+            mediums=[medium.id],
             article_ids="1\n2\n3",
             query="abc\ndefg"
         )
@@ -33,7 +33,7 @@ class TestSelectionForm(amcattest.AmCATTestCase):
         _, _, form2 = self.get_form(
             project=project,
             articlesets=[aset2.id, aset1.id],
-            mediums=[Medium.objects.all()[0].id],
+            mediums=[medium.id],
             article_ids="1\n3\n2",
             query="abc\ndifferent\nquery"
         )
@@ -62,20 +62,29 @@ class TestSelectionForm(amcattest.AmCATTestCase):
         project = amcattest.create_test_project()
 
         for date in dates:
-            p, c, form = self.get_form(start_date=date, project=project)
+            form = SelectionForm(data={"start_date":date}, project=project)
             form.full_clean()
+            self.assertFormValid(form, "Date: {}".format(repr(date)))
             self.assertEqual(datetime.date(2006, 10, 25), form.cleaned_data["start_date"].date())
 
         for date in dates:
-            p, c, form = self.get_form(on_date=date, project=project, datetype="on")
+            form = SelectionForm(data={"on_date":date, "datetype": "on"}, project=project)
             form.full_clean()
+            self.assertFormValid(form, "Date: {}".format(repr(date)))
             self.assertEqual(datetime.date(2006, 10, 25), form.cleaned_data["start_date"].date())
             self.assertEqual(datetime.date(2006, 10, 25), form.cleaned_data["end_date"].date())
 
         for date in dates:
-            p, c, form = self.get_form(end_date=date, project=project)
+            form = SelectionForm(data={"end_date":date}, project=project)
             form.full_clean()
+            self.assertFormValid(form, "Date: {}".format(repr(date)))
             self.assertEqual(datetime.date(2006, 10, 25), form.cleaned_data["end_date"].date())
+
+    def assertFormValid(self, form, msg):
+        if not form.is_valid():
+            stdmsg = "Form errors: {}".format(form.errors.as_data())
+            msg = self._formatMessage(msg, stdmsg)
+            raise self.failureException(msg)
 
     @amcattest.use_elastic
     def test_defaults(self):
