@@ -103,7 +103,7 @@ def table2unicode(table, box=True, rownames=False, stream=None):
 def table2csv(table, csvwriter=None, outfile=sys.stdout, writecolnames=True, writerownames=False,
               tabseparated=False):
 
-    writerownames = table.rowNamesRequired or writerownames
+    writerownames = writerownames
 
     if csvwriter is None:
         dialect = csv.excel_tab if tabseparated else csv.excel

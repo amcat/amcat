@@ -123,9 +123,6 @@ def _convert_value(value):
 
 
 def _get_values(table, row):
-    # TODO: Remove hacks by accessing type info?
-    if table.rowNamesRequired:
-        yield str(row)
 
     for column in table.get_columns():
         yield _convert_value(table.get_value(row, column))
@@ -140,8 +137,6 @@ class XLSX(TableExporter):
 
         # Determine columns. We may need an extra (first) column which 'names' the row
         columns = list(map(str, list(table.get_columns())))
-        if table.rowNamesRequired:
-            columns.insert(0, "")
         ws.append(columns)
 
         # Write rows to worksheet
