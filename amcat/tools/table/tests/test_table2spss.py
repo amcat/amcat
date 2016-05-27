@@ -82,7 +82,7 @@ class TestTable2SPSS(amcattest.AmCATTestCase):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
-        input = b"get file='%s'.\nlist.\nshow n.\n" % file.encode("utf-8")
+        input = self.get_pspp_command(file)
         stdout, stderr = pspp.communicate(input=input)
         self.assertIn(b"07-SEP-2020 16:53:55", stdout)
 
@@ -97,9 +97,10 @@ class TestTable2SPSS(amcattest.AmCATTestCase):
             stderr=subprocess.PIPE
         )
 
-        input = b"get file='%s'.\nlist.\nshow n.\n" % file.encode("utf-8")
+        input = self.get_pspp_command(file)
         stdout, stderr = pspp.communicate(input=input, timeout=30)
         self.assertIn(b"N is 4.", stdout)
+
 
 
     def test_asciitable2sav(self):
@@ -112,7 +113,7 @@ class TestTable2SPSS(amcattest.AmCATTestCase):
             stderr=subprocess.PIPE
         )
 
-        input = b"get file='%s'.\nlist.\nshow n.\n" % file.encode("utf-8")
+        input = self.get_pspp_command(file)
         stdout, stderr = pspp.communicate(input=input, timeout=30)
         self.assertIn(b"N is 3.", stdout)
         self.assertIn(b"74321", stdout)
@@ -129,7 +130,7 @@ class TestTable2SPSS(amcattest.AmCATTestCase):
             stderr=subprocess.PIPE
         )
 
-        input = b"get file='%s'.\nlist.\nshow n.\n" % file.encode("utf-8")
+        input = self.get_pspp_command(file)
         stdout, stderr = pspp.communicate(input=input, timeout=30)
         print(stdout)
         self.assertIn(b"N is 4.", stdout)
@@ -141,3 +142,7 @@ class TestTable2SPSS(amcattest.AmCATTestCase):
         self.assertIn("♝".encode("utf-8"), stdout)
         self.assertIn("✄".encode("utf-8"), stdout)
 
+
+    def get_pspp_command(self, file: str) -> bytes:
+        input = "get file='{0}'.\nlist.\nshow n.\n".format(file)
+        return input.encode("ascii")
