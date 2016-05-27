@@ -20,7 +20,7 @@ from django.db.models.fields.related import RelatedField, ForeignObjectRel
 
 
 def get_related_fieldname(model, fieldname):
-    field = model._meta.get_field_by_name(fieldname)[0]
+    field = model._meta.get_field(fieldname)
 
     if isinstance(field, (ForeignObjectRel, RelatedField)):
         return "{}__id".format(fieldname)
