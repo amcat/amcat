@@ -82,10 +82,18 @@ class AmCATPageNumberPagination(pagination.PageNumberPagination):
             self.display_page_controls = True
 
         self.request = request
-        return list(self.page)
+        return self.page
 
     def get_paginated_response(self, data):
-        return Response(OrderedDict([
+        headers = {
+            'X-REST-ECHO': get_echo(self.request) or "",
+            'X-REST-TOTAL': self.page.paginator.count,
+            'X-REST-PER-PAGE': self.page.paginator.per_page,
+            'X-REST-PAGES': self.page.paginator.num_pages,
+            'X-REST-PAGE': self.page.number,
+        }
+
+        return Response(headers=headers, data=OrderedDict([
             ('echo', get_echo(self.request)),
             ('total', self.page.paginator.count),
             ('per_page', self.page.paginator.per_page),
