@@ -43,6 +43,13 @@ class AmCATPaginator(Paginator):
 
 
 class AmCATPage(Page):
+    def __iter__(self):
+        if hasattr(self.object_list, "iterator"):
+            # If possible, return a Django iterator which, if the database supports it,
+            # scrolls through the results instead of fetching them all at once.
+            return self.object_list.iterator()
+        return iter(super())
+
     def __len__(self):
         return count.count(self.object_list)
 
