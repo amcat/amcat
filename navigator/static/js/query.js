@@ -396,7 +396,10 @@ define([
         }
         var form = name_btn.closest('form');
 
-        
+        form.one("submit", function(e){
+            e.preventDefault();
+            save_btn.click();
+        });
 
         if (!dialog_visible && this.confirm === true) {
             if(dialogtype === "CONFIRM-ONLY"){
