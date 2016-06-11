@@ -583,7 +583,9 @@ define([
             .multiselect('select', SETS)
             .multiselect('rebuild')
             .multiselect('disable');
-
+        
+        self.articlesets_changed();
+        
         $("#change-articlesets-query-dialog").modal("hide");
         $("#script_{script}".format({
             script: window.location.hash.slice(1)
@@ -596,6 +598,43 @@ define([
             jobs: jobs.join(","),
             hash: hash
         });
+    };
+
+    self.articlesets_changed = function(){
+        var formdata = serializeForm($("<form>"), JOBS, SETS);
+        $.extend(formdata,
+            {
+                "query": "",
+                "output_type": "application/json"
+            }
+        );
+
+        $.ajax({
+            type: "POST", dataType: "json",
+            url: API.getActionUrl("statistics", PROJECT, JOBS, SETS),
+            data: formdata,
+            traditional: true,
+            headers: {
+                "X-CSRFTOKEN": csrf_middleware_token
+            }
+        }).done(function(data){
+            // Form accepted, we've been given a task uuid
+            Poll(data.uuid).result(function(data){
+                var medium_options = [];
+                for(var value in data.mediums){
+                    medium_options.push({
+                        "value": value,
+                        "label": "{value} - {label}".format({"value": value, "label": data.mediums[value]})
+                    });
+                }
+                $('#id_mediums').multiselect("dataprovider", medium_options);
+
+                var startDate = data.statistics.start_date ? new Date(data.statistics.start_date) : null;
+                var endDate = data.statistics.end_date ? new Date(data.statistics.end_date) : null;
+                var dateInputs  = $('.input-daterange').find('input').add('[name=on_date]');
+                dateInputs.datepicker('setStartDate', startDate).datepicker("setEndDate", endDate);
+            });
+        }).fail(self.fail);
     };
 
     self.fill_form = function(){
