@@ -57,10 +57,17 @@ LOGGING = {
         },
     },
     'loggers': {
-        'urllib3': {  # avoid annoying 'starting new connection' messages
-                      'handlers': ['console'],
-                      'propagate': True,
-                      'level': 'WARN',
+        'urllib3': {
+            # avoid annoying 'starting new connection' messages
+            'handlers': ['console'],
+            'propagate': True,
+            'level': 'WARN',
+        },
+        'django.db.backends.schema': {
+            # avoid 'create table' messages (YES WE KNOW! Stahp!)
+            'handlers': ['console'],
+            'propagate': True,
+            'level': "INFO"
         },
         'elasticsearch': {  # avoid annoying 'starting new connection' messages
                             'handlers': ['console'],

@@ -16,15 +16,6 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from django.conf.urls import patterns
 
-from django.conf.urls import patterns, url, include
-from django.shortcuts import redirect
-
-urlpatterns = patterns(
-    '',
-    url(r'^$', lambda r: redirect("v4/"), name="api"),
-    (r'^v4/', include('api.rest.urls')),
-    (r'^v5/', include('api5.urls')),
-    url(r'^restframework', include('rest_framework.urls', namespace='rest_framework')),
-)
-
+urlpatterns = patterns('')

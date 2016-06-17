@@ -16,15 +16,33 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from django.forms import Field
 
-from django.conf.urls import patterns, url, include
-from django.shortcuts import redirect
 
-urlpatterns = patterns(
-    '',
-    url(r'^$', lambda r: redirect("v4/"), name="api"),
-    (r'^v4/', include('api.rest.urls')),
-    (r'^v5/', include('api5.urls')),
-    url(r'^restframework', include('rest_framework.urls', namespace='rest_framework')),
-)
+class Filter:
+    field = None  # type: Field
 
+    def __init__(self, param, filter_param=None):
+        self.param = param
+        self.filter_param = filter_param or param
+
+    def filter(self, objects, value):
+        if self.field is not None:
+            value = self.field.to_python(value)
+        return objects.filter(**{self.filter_param: value})
+
+
+class InFilter(Filter):
+    class field(Field):
+        def to_python(self, value):
+            return value.split(",")
+
+
+class PKInFilter(InFilter):
+    def __init__(self):
+        super().__init__("pk__in")
+
+
+class PKFilter(Filter):
+    def __init__(self):
+        super().__init__("pk")

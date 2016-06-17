@@ -16,15 +16,15 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from django.db.models import Model
+from exportable.columns import IntColumn
 
-from django.conf.urls import patterns, url, include
-from django.shortcuts import redirect
 
-urlpatterns = patterns(
-    '',
-    url(r'^$', lambda r: redirect("v4/"), name="api"),
-    (r'^v4/', include('api.rest.urls')),
-    (r'^v5/', include('api5.urls')),
-    url(r'^restframework', include('rest_framework.urls', namespace='rest_framework')),
-)
+class ModelColumn(IntColumn):
+    def __init__(self, model: Model=None, label=None, **kwargs):
+        super().__init__(label=label, **kwargs)
+        self.model = model
 
+
+class PrimaryKeyColumn(IntColumn):
+    pass
