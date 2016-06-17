@@ -240,7 +240,8 @@ def get_secret():
     if os.path.exists(sfile):
         if os.path.isfile(sfile):
             try:
-                return open(sfile).read()
+                with open(sfile) as f:
+                    return f.read()
             except IOError as e:
                 print("%r is not readable!" % sfile)
                 raise

@@ -239,8 +239,8 @@ class WrappedTable(Table):
     """Base class for encapsulating another table to provide a different 'view' on it"""
 
     def __init__(self, table, *args, **kargs):
-        super(WrappedTable, self).__init__(*args, **kargs)
         self.table = table
+        super(WrappedTable, self).__init__(*args, **kargs)
         self._kargs = kargs
 
     def get_columns(self):

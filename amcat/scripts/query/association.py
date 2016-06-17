@@ -102,7 +102,7 @@ class AssociationAction(QueryAction):
 
     def svg_to_image_tag(self, svg):
         tag = '<img class="svg-image save-image" src="data:image/svg+xml;base64,{}">'
-        return tag.format(base64.b64encode(svg))
+        return tag.format(base64.b64encode(svg.encode("utf-8")).decode("utf-8"))
 
     def run(self, form):
         association = self.get_association(form)

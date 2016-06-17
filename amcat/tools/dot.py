@@ -131,8 +131,8 @@ class Graph(object):
     def getHTMLSVG(self, *args, **kargs):
         kargs['format'] = 'svg'
         svg = self.getImage(*args, **kargs)
-        svg = re.match('.*?(<svg.*</svg>)', svg, re.DOTALL).group(1)
-        return svg
+        svg = re.match(b'.*?(<svg.*</svg>)', svg, re.DOTALL).group(1)
+        return svg.decode("utf-8")
 
     def normalizeWeights(self, wmin=1, wmax=10):
         max, min = None, None

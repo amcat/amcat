@@ -9,7 +9,7 @@ class TestTable(amcattest.AmCATTestCase):
         """Does init use 'empty' parameters?"""
         a = []
         t = Table(columns=a)
-        self.assertIs(t.columns, a)
+        self.assertEqual(t.columns, a)
 
     def test_list_table(self):
         """Can we create a list table and output as ascii"""
