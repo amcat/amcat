@@ -212,7 +212,8 @@ INSTALLED_APPS = [
     'api',
     'amcat',
     "django_extensions",
-    'djcelery'
+    'djcelery',
+    "formtools"
 ]
 
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"

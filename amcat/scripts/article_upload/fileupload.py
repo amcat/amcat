@@ -34,6 +34,7 @@ import io
 import tempfile
 import shutil
 
+
 @contextmanager
 def TemporaryFolder(*args, **kargs):
     tempdir = tempfile.mkdtemp(*args, **kargs)
@@ -41,7 +42,7 @@ def TemporaryFolder(*args, **kargs):
         yield tempdir
     finally:
         shutil.rmtree(tempdir)
-        
+
 
 DecodedFile = collections.namedtuple("File", ["name", "file", "bytes", "encoding", "text"])
 ENCODINGS = ["Autodetect", "ISO-8859-15", "UTF-8", "Latin-1"]
@@ -53,14 +54,14 @@ class RawFileUploadForm(forms.Form):
 
     def get_entries(self):
         return [self.files['file']]
-    
+
+
 class FileUploadForm(RawFileUploadForm):
     """Helper form to handle uploading a file with encoding"""
     encoding = forms.ChoiceField(choices=enumerate(ENCODINGS),
-                                 initial=0, required=False, 
+                                 initial=0, required=False,
                                  help_text="Try to change this value when character issues arise.", )
 
-    
     def decode(self, bytes):
         """
         Decode the given bytes using the encoding specified in the form.
@@ -93,18 +94,23 @@ class FileUploadForm(RawFileUploadForm):
     def get_uploaded_text(self):
         """Returns a DecodedFile object representing the file"""
         return self.decode_file(self.files['file'])
-        
+
     def get_entries(self):
         return [self.get_uploaded_text()]
-    
+
+
 DIALECTS = [("autodetect", "Autodetect"),
             ("excel", "CSV, comma-separated"),
             ("excel-semicolon", "CSV, semicolon-separated (Europe)"),
             ]
 
+
 class excel_semicolon(csv.excel):
     delimiter = ';'
+
+
 csv.register_dialect("excel-semicolon", excel_semicolon)
+
 
 def namedtuple_csv_reader(csv_file, encoding='utf-8', **kargs):
     """
@@ -119,7 +125,7 @@ def namedtuple_csv_reader(csv_file, encoding='utf-8', **kargs):
         encoding = chardet.detect(csv_file.read(1024))["encoding"]
         log.info("Guessed encoding: {encoding}".format(**locals()))
         csv_file.seek(0)
-    
+
     r = csv.reader(csv_file, **kargs)
     return namedtuples_from_reader(r, encoding=encoding)
 
@@ -134,7 +140,8 @@ def _xlsx_as_csv(file):
     for row in ws.rows:
         row = [c.value for c in row]
         yield row
-    
+
+
 def namedtuple_xlsx_reader(xlsx_file):
     """
     Uses openpyxl to read an xslx file and provide a named-tuple interface to it
@@ -142,40 +149,44 @@ def namedtuple_xlsx_reader(xlsx_file):
     reader = _xlsx_as_csv(xlsx_file)
     return namedtuples_from_reader(reader)
 
+
 def namedtuples_from_reader(reader, encoding=None):
     """
     returns a sequence of namedtuples from a (csv-like) reader which should yield the header followed by value rows
     """
-    
+
     header = next(iter(reader))
+
     class Row(collections.namedtuple("Row", header, rename=True)):
-        column_names=header
+        column_names = header
+
         def __getitem__(self, key):
             if not isinstance(key, int):
                 # look up key in self.header
                 key = self.column_names.index(key)
             return super(Row, self).__getitem__(key)
+
         def items(self):
             return zip(self.column_names, self)
-        
+
     for values in reader:
         if encoding is not None:
             values = [x.decode(encoding) if isinstance(x, bytes) else x for x in values]
         if len(values) < len(header):
             values += [None] * (len(header) - len(values))
         yield Row(*values)
-    
-        
+
+
 class CSVUploadForm(FileUploadForm):
-    dialect = forms.ChoiceField(choices=DIALECTS, initial="autodetect", required=False, 
+    dialect = forms.ChoiceField(choices=DIALECTS, initial="autodetect", required=False,
                                 help_text="Select the kind of CSV file")
 
     def get_entries(self):
         return self.get_reader(reader_class=namedtuple_csv_reader)
-    
+
     def get_reader(self, reader_class=namedtuple_csv_reader):
         file = self.decode_file(self.files['file'])
-        
+
         if file.name.endswith(".xlsx"):
             if reader_class != namedtuple_csv_reader:
                 raise ValueError("Cannot handle xlsx files with non-default reader, sorry!")
@@ -233,6 +244,3 @@ class ZipFileUploadForm(FileUploadForm):
 
                     with open(os.path.join(tempdir, fn), "rb") as fh:
                         yield File(fh, name=name)
-
-
-

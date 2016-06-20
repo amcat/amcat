@@ -25,25 +25,24 @@ from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.forms.widgets import HiddenInput
+from django.http import Http404
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import CreateView
 from django.views.generic.list import ListView
-from django.http import Http404
 
-from amcat.models import Plugin, Article
+from amcat.models import Article
 from amcat.models import Project, ArticleSet
 from amcat.models.project import LITTER_PROJECT_ID
 from amcat.scripts.actions.deduplicate_set import DeduplicateSet
 from amcat.scripts.actions.import_articleset import ImportSet
 from amcat.scripts.actions.sample_articleset import SampleSet
 from amcat.tools.amcates import ES
-from api.rest.resources import PluginResource
 from api.rest.resources import SearchResource
 from api.rest.viewsets import FavouriteArticleSetViewSet, ArticleSetViewSet, CodingjobArticleSetViewSet
 from navigator.views.datatableview import DatatableMixin
 from navigator.views.project_views import ProjectDetailsView
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectActionRedirectView, ProjectEditView
-from navigator.views.scriptview import ScriptHandler
+
 UPLOAD_PLUGIN_TYPE = 1
 
 from django.utils.safestring import SafeText
@@ -312,27 +311,6 @@ class ArticleSetCreateView(HierarchicalViewMixin, ProjectViewMixin, CreateView):
     def get_success_url(self):
         return reverse("navigator:articleset-details", args=[self.project.id, self.object.id])
 
-class ArticleSetUploadListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
-    parent = ArticleSetListView
-    model = Plugin
-    resource = PluginResource
-    view_name = "articleset-upload-list"
-    url_fragment = "upload"
-
-    def filter_table(self, table):
-        table = table.rowlink_reverse('navigator:articleset-upload', args=[self.project.id, '{id}'])
-        return table.filter(plugin_type=UPLOAD_PLUGIN_TYPE).hide('id', 'class_name')#, 'plugin_type')
-
-class ArticleSetRedirectHandler(ScriptHandler):
-    def get_redirect(self):
-        aset_ids = self.task._get_raw_result()
-
-        if len(aset_ids) == 1:
-            return reverse("navigator:articleset-details", args=[self.task.project.id, aset_ids[0]]), "View set"
-
-        # Multiple articlesets
-        url = reverse("navigator:articleset-multiple", args=[self.task.project.id])
-        return url + "?set=" + "&set=".join(map(str, aset_ids)), "View sets"
 
 class MultipleArticleSetDestinationView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     """
@@ -348,33 +326,7 @@ class MultipleArticleSetDestinationView(HierarchicalViewMixin, ProjectViewMixin,
     def filter_table(self, table):
         return table.filter(pk=self.request.GET.getlist('set'), project=self.project)
 
-class ArticleSetUploadView(ProjectScriptView):
-    parent = ArticleSetUploadListView
-    view_name = "articleset-upload"
-    template_name = "project/articleset_upload.html"
 
-    def get_script(self):
-        return Plugin.objects.get(pk=self.kwargs['plugin']).get_class()
-
-    def get_form(self, form_class):
-        if self.request.method == 'GET':
-            return form_class.get_empty(project=self.project)
-        else:
-            return super(ArticleSetUploadView, self).get_form(form_class)
-
-    def form_valid(self, form):
-        return self.run_form_delayed(self.project, handler=ArticleSetRedirectHandler)
-
-    def get_context_data(self, **kwargs):
-        self.script = self.get_script()
-        context = super(ArticleSetUploadView, self).get_context_data(**kwargs)
-        if getattr(self, 'success', False):
-            context['created_set'] = self.script_object.articleset
-            context['created_n'] = len(self.result)
-
-        return context
-
-        
 class ArticleSetRefreshView(ProjectActionRedirectView):
     parent = ArticleSetDetailsView
     url_fragment = "refresh"

@@ -66,17 +66,20 @@ class ScriptHandler(TaskHandler):
                     d[k] = v
             kwargs['data'] = d
 
+        from logging import getLogger
+        log = getLogger(__name__)
         # Convert file dictionaries (as supplied by get_temporary_file_dict) to
         # SimpleUploadedFile objects which Django understands.
         if 'files' in kwargs:
-            files = MultiValueDict(kwargs['files'])
-            for key in files.keys():
-                filedict_list = files.getlist(key)
+            files = MultiValueDict()
+            files.update(kwargs['files'])
+            for key, filedict_list in files.lists():
                 for i, fdict in enumerate(filedict_list):
                     if isinstance(fdict, dict):
                         fdict = dict(fdict)
                         fdict["content"] = open(fdict["path"], "rb").read()
                         filedict_list[i] = SimpleUploadedFile.from_dict(fdict)
+                        log.warn(fdict)
                 files.setlist(key, filedict_list)
             kwargs['files'] = files
         return kwargs

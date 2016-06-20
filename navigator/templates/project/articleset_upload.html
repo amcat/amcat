@@ -29,8 +29,11 @@ some errors where encountered while uploading:
 {% endif %}
 
 <legend> Uploading articles using {{script_name}} </legend>
+<p>Step {{ wizard.steps.step1 }} of {{ wizard.steps.count }}</p>
 
 <form method="POST" enctype="multipart/form-data" action="">
+
+{{ wizard.management_form }}
     {% csrf_token %}
   {{ form.non_field_errors }}
     {% for hidden in form.hidden_fields %}
