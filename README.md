@@ -84,7 +84,7 @@ sudo systemctl start elasticsearch
 Clone the project from github and pip install the requirements. 
 
 ```sh
-git clone -b release-3.4 https://github.com/amcat/amcat.git
+git clone https://github.com/amcat/amcat.git
 pip install -r amcat/requirements.txt
 ```
 
