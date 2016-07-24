@@ -59,7 +59,7 @@ class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         # Highlight headline / text
         self.highlight()
         context['text'] = self.object.text
-        context['headline'] = self.object.headline
+        context['title'] = self.object.title
 
         context['articleset'] = None
         if 'articleset' in self.kwargs:

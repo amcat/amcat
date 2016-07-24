@@ -177,17 +177,9 @@ class ScoreField(IntegerField):
 
 class SearchResourceSerialiser(Serializer):
     id = IntegerField()
+    title = HighlightField()
     date = DateTimeField()
-    headline = HighlightField()
-    mediumid = IntegerField()
-    medium = CharField()
-    creator = CharField()
-    byline = CharField()
-    addressee = CharField()
-    section = CharField()
     url = CharField()
-    length = IntegerField()
-    page = IntegerField()
 
     def __init__(self, *args, **kwargs):
         Serializer.__init__(self, *args, **kwargs)

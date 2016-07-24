@@ -56,7 +56,7 @@ class TextForm(UploadScript.options_form, fileupload.ZipFileUploadForm):
     date = forms.DateField(required=False,
                            help_text='If left blank, use date from filename, which should be of form "yyyy-mm-dd_name"')
     text = forms.CharField(widget=forms.Textarea, required=False)
-    properties = JSONField(required=False)
+    properties = JSONField(required=False, help_text='Enter additional properties as a valid json string')
     
     def get_entries(self):
         if 'file' in self.files:
@@ -139,7 +139,7 @@ class Text(UploadScript):
             dirname, filename, ext = None, None, None
 
         metadata = dict((k, v) for (k, v) in self.options.items()
-                        if k in ["title", "project", "date"])
+                        if k in ["title", "project", "date", "properties"])
 
         if not metadata["date"]:
             datestring, filename = filename.split("_", 1)

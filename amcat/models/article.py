@@ -338,6 +338,7 @@ class Article(AmcatModel):
 
         @rtype: ArticleTree
         """
+        return ArticleTree(self, [])
         # Do we need to render the complete tree?
         if include_parents and self.parent and self.parent.id != self.id:
             return self.parent.get_tree(include_parents=True)
