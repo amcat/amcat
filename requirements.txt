@@ -19,7 +19,7 @@ djangorestframework==3.1
 elasticsearch==1.2.0
 html2text==2014.7.3
 jdcal==1.2
-kombu==3.0.21
+kombu==3.0.30
 lxml==3.3.5
 openpyxl==2.0.4
 pdfminer==20140328
