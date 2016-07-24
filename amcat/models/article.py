@@ -33,6 +33,8 @@ from django.core.exceptions import PermissionDenied
 from django.template.defaultfilters import escape as escape_filter
 from django.template.loader import get_template
 
+from django.contrib.postgres.fields import JSONField
+
 from amcat.models.authorisation import Role
 from amcat.models.medium import Medium
 from amcat.tools import amcates
@@ -107,36 +109,24 @@ class Article(AmcatModel):
     __label__ = 'headline'
 
     id = models.AutoField(primary_key=True, db_column="article_id")
-
+    
     date = models.DateTimeField(db_index=True)
-    section = models.CharField(blank=True, null=True, max_length=500)
-    pagenr = models.IntegerField(blank=True, null=True)
-    headline = models.TextField()
-    byline = models.TextField(blank=True, null=True)
-    length = models.IntegerField(blank=True, null=True)
-    metastring = models.TextField(null=True, blank=True)
+    title = models.TextField()
+
     url = models.TextField(null=True, blank=True, db_index=True, max_length=750)
-    externalid = models.IntegerField(blank=True, null=True)
-    author = models.TextField(blank=True, null=True, max_length=100)
-    addressee = models.TextField(blank=True, null=True, max_length=100)
+    externalid = models.TextField(blank=True, null=True)
     uuid = PostgresNativeUUIDField(db_index=True, unique=True)
 
     #sets = models.ManyToManyField("amcat.Set", db_table="sets_articles")
 
     text = models.TextField()
 
-    parent = models.ForeignKey("self", null=True, db_column="parent_article_id",
-                               db_index=True, blank=True, related_name="children")
-    # Allow .parent to be set to an article that still needs saving
-    # cf. https://www.caktusgroup.com/blog/2015/07/28/using-unsaved-related-models-sample-data-django-18/
-    parent.allow_unsaved_instance_assignment = True
-    
+    parent_uuid = PostgresNativeUUIDField(null=True, blank=True)
+
     project = models.ForeignKey("amcat.Project", db_index=True, related_name="articles")
-    medium = models.ForeignKey(Medium, db_index=True)
 
-    insertscript = models.CharField(blank=True, null=True, max_length=500)
-    insertdate = models.DateTimeField(blank=True, null=True, auto_now_add=True)
-
+    properties = JSONField(null=True, blank=True)
+    
     def __init__(self, *args, **kwargs):
         super(Article, self).__init__(*args, **kwargs)
         self._highlighted = False
@@ -185,7 +175,7 @@ class Article(AmcatModel):
     @property
     def children(self):
         """Return a sequence of all child articles (eg reactions to a post)"""
-        return Article.objects.filter(parent=self)
+        return Article.objects.filter(parent_uuid=self.uuid)
 
     def save(self, *args, **kwargs):
         if self._highlighted:
@@ -251,7 +241,7 @@ class Article(AmcatModel):
         @param articleset(s): articleset object(s), specify either or none
         """
         _check_index(articles)
-        cls._create_articles_per_layer(articles, deduplicate=deduplicate)
+        cls._create_articles(articles, deduplicate=deduplicate)
         if articlesets is None:
             articlesets = [articleset] if articleset else []
         es = amcates.ES()
@@ -272,29 +262,9 @@ class Article(AmcatModel):
             for aset in articlesets:
                 aset.add_articles(dupes, add_to_index=True)
             
-    @classmethod
-    def _create_articles_per_layer(cls, articles, deduplicate=True):
-        """Call _do_create_articles for each layer of the .parent tree"""
-        while articles:
-            to_save, todo = [], []
-            for a in articles:
-                # set parent_id from dupe if needed
-                if a.parent and not a.parent_id:
-                    if a.parent.id:
-                        a.parent_id = a.parent.id
-                    elif hasattr(a.parent, "duplicate"):
-                        a.parent_id = a.parent.duplicate.id
-                if (a.parent is None) or a.parent_id or a.parent.id:
-                    to_save.append(a)
-                else:
-                    todo.append(a)
-            if not to_save:
-                raise ValueError("Parent cycle")
-            cls._do_create_articles(to_save, deduplicate=deduplicate)
-            articles = todo
     
     @classmethod
-    def _do_create_articles(cls, articles, deduplicate=True):
+    def _create_articles(cls, articles, deduplicate=True):
         """Check duplicates and save the articles to db.
         Does *not* save to elastic or add to articlesets
         Assumes that if .parent is given, it has an id

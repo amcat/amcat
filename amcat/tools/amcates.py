@@ -42,91 +42,42 @@ if settings.ES_USE_LEGACY_HASH_FUNCTION is None:
     error_msg = "Environment variable AMCAT_ES_LEGACY_HASH should be explicitely set."
     raise ImproperlyConfigured(error_msg)
 
-
-ARTICLE_FIELDS = frozenset({
-    "id", "date", "section", "pagenr", "headline",
-    "byline", "length", "metastring", "url", "externalid",
-    "author", "addressee", "uuid", "text", "parent_id",
-    "medium_id", "medium__name"
-})
-
-# These fields should be cleaned using _clean()
-ARTICLE_CLEAN_FIELDS = frozenset({
-    "section", "headline", "byline",
-    "metastring", "addressee", "text",
-})
-
-# Postgres field name -> Elastic field name
-ARTICLE_FIELD_MAP = {
-    "author": "creator",
-    "medium_id": "mediumid",
-    "parent_id": "parentid",
-    "pagenr": "page",
-    "medium__name": "medium"
-}
-
-# These fields should be hashed by _get_hash()
-HASH_FIELDS = sorted({
-    "date", "section", "page", "headline",
-    "byline", "length", "metastring", "url", "externalid",
-    "creator", "addressee", "text", "parentid",
-    "mediumid"
-})
-
-LEGACY_HASH_FIELDS = sorted({
-    "headline", "text", "date", "creator",
-    "mediumid", "byline", "section", "page",
-    "addressee", "length"
-})
-
 _clean_re = re.compile('[\x00-\x08\x0B\x0C\x0E-\x1F]')
-
 def _clean(s):
-    """Remove non-printalbe characters
-    @type s: str | NoneType"""
-    if s is not None:
-        return _clean_re.sub(' ', s)
+    """Remove non-printable characters and convert dates"""
+    if isinstance(s, str):
+        s = _clean_re.sub(' ', s)
+    if isinstance(s, (datetime.date, datetime.datetime)):
+        # [WvA] we used to convert date to datetime first, why?
+        s = s.isoformat()
+    return s
 
 
-def get_article_dict_from_model(article):
-    for field_name in ARTICLE_FIELDS:
-        value = get_model_field(article, field_name)
-        if field_name in ARTICLE_CLEAN_FIELDS:
-            value = _clean(value)
-        yield ARTICLE_FIELD_MAP.get(field_name, field_name), value
+ARTICLE_FIELDS = frozenset({"text", "title", "url", "uuid", "date"})
 
+
+def get_properties(article):
+    if article.properties:
+        if not isinstance(article.properties, dict):
+            raise TypeError("Article properties should be a simple key:value dict")
+        for k, v in article.properties.items():
+            if not isinstance(k, str):
+                raise TypeError("Article properties should be a simple key:value dict")
+            if not isinstance(v, (str, int, float, datetime.datetime)):
+                raise TypeError("Article properties should be a simple key:value dict")
+            if k in ARTICLE_FIELDS | {"id", "sets", "hash"}:
+                raise ValueError("Article properties cannot duplicate built-in properties")
+            yield k, v
+                              
 
 def get_article_dict(article, sets=None):
-    # Build article dict. We filter non-printable characters for fields in ARTICLE_CLEAN_FIELDS
-    article_dict = dict(get_article_dict_from_model(article))
-
-    # Previous versions of get_article_dict() accepted strings as dates,
-    # which current versions do not accept. Thus, explicitely assert type.
-    date = article_dict["date"]
-    assert isinstance(date, (datetime.date, datetime.datetime)) or date is None
-
-    # We need to convert it to datetime.datetime to get an uniform isoformat() representation.
-    if not isinstance(date, datetime.datetime) and isinstance(date, datetime.date):
-        date = datetime.datetime(date.year, date.month, date.day)
-
-    article_dict["date"] = date.isoformat() if date is not None else None
-    article_dict["uuid"] = str(article_dict["uuid"])
-    article_dict["sets"] = sets
-
-    article_dict['hash'] = _get_hash(article_dict)
-    return article_dict
-
-def _get_legacy_hash(article_dict):
-    c = hash_class()
-    for k in LEGACY_HASH_FIELDS:
-        v = article_dict[k]
-        if isinstance(v, int):
-            c.update(str(v).encode('utf-8'))
-        elif isinstance(v, str):
-            c.update(v.encode('utf-8'))
-        elif v is not None:
-            c.update(str(v).encode('utf-8'))
-    return c.hexdigest()
+    d = {field_name: _clean(getattr(article, field_name))
+         for field_name in ARTICLE_FIELDS}   
+    d.update(get_properties(article))
+    d['hash'] = _get_hash(d) # [WvA] why not just hash(frozenset(my_dict.items()))?
+    d["uuid"] = str(d["uuid"])
+    d["sets"] = sets
+    return d
 
 def _encode_field(object, encoding="utf-8"):
     if isinstance(object, datetime.datetime):
@@ -136,14 +87,11 @@ def _encode_field(object, encoding="utf-8"):
 def _escape_bytes(b):
     return b.replace(b"\\", b"\\\\").replace(b",", b"\\,")
 
-def _get_hash(article):
-    if settings.ES_USE_LEGACY_HASH_FUNCTION:
-        return _get_legacy_hash(article)
-
+def _get_hash(article_dict):
     c = hash_class()
-    for fn in HASH_FIELDS:
+    for fn in sorted(article_dict.keys()):
         c.update(_escape_bytes(_encode_field(fn)))
-        c.update(_escape_bytes(_encode_field(article[fn])))
+        c.update(_escape_bytes(_encode_field(article_dict[fn])))
         c.update(b",")
     return c.hexdigest()
 
