@@ -29,6 +29,7 @@ log = logging.getLogger(__name__)
 import os.path, tempfile, subprocess
 
 from django import forms
+from django.contrib.postgres.forms import JSONField
 
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scripts.article_upload import fileupload
@@ -50,14 +51,13 @@ class TextForm(UploadScript.options_form, fileupload.ZipFileUploadForm):
         help_text="You can also upload a zip file containing the desired files. Uploading very large files can take a long time. If you encounter timeout problems, consider uploading smaller files",
         required=False)
 
-    medium = forms.CharField(required=True)
-    headline = forms.CharField(required=False,
-                               help_text='If left blank, use filename (without extension and optional date prefix) as headline')
+    title = forms.CharField(required=False,
+                               help_text='If left blank, use filename (without extension and optional date prefix) as title')
     date = forms.DateField(required=False,
                            help_text='If left blank, use date from filename, which should be of form "yyyy-mm-dd_name"')
-    section = forms.CharField(required=False, help_text='If left blank, use directory name')
     text = forms.CharField(widget=forms.Textarea, required=False)
-
+    properties = JSONField(required=False)
+    
     def get_entries(self):
         if 'file' in self.files:
             return super(TextForm, self).get_entries()
@@ -139,21 +139,14 @@ class Text(UploadScript):
             dirname, filename, ext = None, None, None
 
         metadata = dict((k, v) for (k, v) in self.options.items()
-                        if k in ["headline", "project", "date", "section"])
-        metadata["medium"] = Medium.get_or_create(self.options['medium'])
+                        if k in ["title", "project", "date"])
 
         if not metadata["date"]:
             datestring, filename = filename.split("_", 1)
             metadata["date"] = toolkit.read_date(datestring)
 
-        if not metadata["headline"].strip():
-            metadata["headline"] = filename
-
-        if not metadata["headline"].strip():
-            metadata["headline"] = filename
-
-        if not metadata["section"].strip():
-            metadata["section"] = dirname
+        if not metadata["title"].strip():
+            metadata["title"] = filename
 
         if file:
             convertors = None
