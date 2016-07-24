@@ -16,7 +16,7 @@ To install stable releases, please see the readme file for those releases:
 Most of the (python) prerequisites for AmCAT are automatically installed using pip (see below). To install the non-python requirements, you can use the following (on Ubuntu 15.10 or 16.04):
 
 ```sh
-sudo apt-get install antiword unrtf rabbitmq-server python3-pip postgresql postgresql-contrib python3-venv git postgresql-server-dev-9.4 python3-dev libxml2-dev libxslt-dev graphviz pspp
+sudo apt-get install antiword unrtf rabbitmq-server python3-pip postgresql postgresql-contrib python3-venv git postgresql-server-dev-9.5 python3-dev libxml2-dev libxslt-dev graphviz pspp
 ```
 
 If you want to compile lxml and psycopg2 yourself (through pip), you need to install:
@@ -54,19 +54,19 @@ createdb amcat
 AmCAT uses elasticsearch for searching articles. Elasticsearch is provided as a debian package, but it does need some extra plugins to be ready for AmCAT.
 
 ```sh
-wget https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/deb/elasticsearch/2.1.1/elasticsearch-2.1.1.deb
-sudo dpkg -i elasticsearch-2.1.1.deb
-rm elasticsearch-2.1.1.deb
+wget https://download.elastic.co/elasticsearch/release/org/elasticsearch/distribution/deb/elasticsearch/2.3.4/elasticsearch-2.3.4.deb
+sudo dpkg -i elasticsearch-2.3.4.deb
+rm elasticsearch-2.3.4.deb
 
 # Install plugins
 cd /usr/share/elasticsearch
 sudo bin/plugin install mobz/elasticsearch-head
 sudo bin/plugin install analysis-icu
-sudo bin/plugin install amcat/hitcount
+# sudo bin/plugin install amcat/hitcount # WIP, see #548
 
 # Enable hitcount as default similarity provider, and enable groovy scripting
 cat <<EOT | sudo tee --append /etc/elasticsearch/elasticsearch.yml
-index.similarity.default.type: hitcountsimilarity
+# index.similarity.default.type: hitcountsimilarity # WIP, see #548
 script.inline: on
 script.update: on
 EOT
