@@ -8,6 +8,8 @@ Release 3.4: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=relea
 
 ## Installation and Configuration for release 3.4 (stable)
 
+AmCAT 3.4 is the current stable (release) build of AmCAT. It is targeted at ubuntu 14.04, elastic 1.4.4, python 2.7, django 1.8. 
+
 ### Prerequisites
 
 Most of the (python) prerequisites for AmCAT are automatically installed using pip (see below). To install the non-python requirements, you can use the following (on ubuntu):
