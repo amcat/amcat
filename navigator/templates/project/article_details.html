@@ -62,6 +62,22 @@
                   <td>URL:</td>
                   <td>{% if article.url %}{{article.url|urlizetrunc:20}}{% endif %}</td>
                 </tr>
+		<tr>
+                  <td>Parent:</td>
+                  <td>{% if article.parent %}<a href="{% url "navigator:project-article-details" project.id article.parent.id %}">{{article.parent}}</a>{% endif %}</td>
+		</tr>
+
+		<tr class="hbreak">
+                  <td>Children:</td>
+                  <td>{% if article.children %}
+		    <ul>
+		      {% for child in article.children %}
+		      <li/><a href="{% url "navigator:project-article-details" project.id child.id %}">{{child}}</a>
+		      {% endfor %}
+		    </ul>
+		    {% endif %}</td>
+                </tr>
+		
 		{% for k, v in article.properties.items %}
 		<tr>
 		  <td>{{k}}:</td>

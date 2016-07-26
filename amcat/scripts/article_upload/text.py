@@ -35,7 +35,6 @@ from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scripts.article_upload import fileupload
 
 from amcat.models.article import Article
-from amcat.models.medium import Medium
 from amcat.tools import toolkit
 from django.core.exceptions import ValidationError
 
