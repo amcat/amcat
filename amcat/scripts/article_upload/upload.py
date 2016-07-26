@@ -54,6 +54,9 @@ class UploadForm(RawFileUploadForm):
 
     def clean_articleset_name(self):
         """If articleset name not specified, use file base name instead"""
+        if 'articlesets' in self.errors:
+            #skip check if error in articlesets: cleaned_data['articlesets'] does not exist
+            return
         if self.files.get('file') and not (
                     self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
             fn = os.path.basename(self.files['file'].name)
@@ -62,7 +65,7 @@ class UploadForm(RawFileUploadForm):
         if not bool(name) ^ bool(self.cleaned_data['articlesets']):
             raise forms.ValidationError("Please specify either articleset or articleset_name")
         return name
-
+    
     @classmethod
     def get_empty(cls, project=None, post=None, files=None, **_options):
         f = cls(post, files) if post is not None else cls()

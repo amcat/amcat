@@ -11,7 +11,7 @@ from django.utils.datastructures import MultiValueDict
 from django.views.generic import ListView
 from formtools.wizard.views import SessionWizardView
 
-from amcat.models import Plugin, OrderedDict
+from amcat.models import AmcatModel, Plugin, OrderedDict
 from amcat.scripts.article_upload.fileupload import FileUploadForm
 from amcat.scripts.article_upload.upload import UploadForm
 from amcat.tools.caching import cached
@@ -61,8 +61,23 @@ class ArticleSetUploadScriptHandler(ScriptHandler):
     def serialise_arguments(cls, arguments):
         arguments = super().serialise_arguments(arguments)
         arguments = cls.serialize_files(arguments)
+        arguments = cls.serialize_models(arguments)
         return arguments
-
+    
+    @classmethod
+    def serialize_models(cls, arguments):
+        args = dict(arguments)
+        data = {}
+        for k, v in args['data'].items():
+            if isinstance(v, AmcatModel):
+                data[k] = v.pk
+            else:
+                try:
+                    data[k] = [item.pk for item in v]
+                except:
+                    pass
+        arguments['data'].update(data)
+        return arguments
 
 class DummyOptionsForm(UploadForm):
     pass
@@ -148,7 +163,7 @@ class ArticleSetUploadView(BaseMixin, WizardFormView):
     file_storage = FileSystemStorage(location=mkdtemp(prefix="upload_wiz"))
 
     def dispatch(self, request, *args, **kwargs):
-        self.options_step = next(k for k, v in self.form_list.items() if v is DummyOptionsForm)
+        self.options_step = next(k for k, v in self.form_list.items() if v is DummyOptionsForm) 
         self.wizard_form = self.get_wizard_form(self.script_class)
         self.form_list = self.wizard_form.form_list
         return super(ArticleSetUploadView, self).dispatch(request, *args, **kwargs)
@@ -170,7 +185,6 @@ class ArticleSetUploadView(BaseMixin, WizardFormView):
             prev_form.full_clean()
             if 'file' in prev_form.cleaned_data and hasattr(self.wizard_form, 'get_file_info'):
                 kwargs['file_info'] = self.wizard_form.get_file_info(prev_form)
-            print(kwargs)
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -193,12 +207,12 @@ class ArticleSetUploadView(BaseMixin, WizardFormView):
     def done(self, form_list, form_dict, **kwargs):
         data = self.get_all_cleaned_data()
         data["project"] = self.project.id
-        raise Exception(data)
+
         arguments = {
             "data": data,
             "files": {}
         }
-        print(arguments)
+        
         task = ArticleSetUploadScriptHandler.call(self.script_class,
                                                   user=self.request.user,
                                                   project=self.project,
