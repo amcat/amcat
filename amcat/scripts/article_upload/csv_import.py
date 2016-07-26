@@ -28,7 +28,7 @@ import itertools
 from django import forms
 from django.db.models.fields import FieldDoesNotExist
 
-from amcat.models import Article, Medium
+from amcat.models import Article 
 from amcat.scripts.article_upload import fileupload
 from amcat.scripts.article_upload.upload import UploadScript, ParseError
 from amcat.scripts.article_upload.upload_formtools import FieldMapFormSet, FileInfo
@@ -46,14 +46,12 @@ TYPES = {
     "pagenr": int,
     "externalid": int,
     "parent_externalid": int,
-    "medium": Medium
 }
 
 PARSERS = {
     datetime.datetime: readDate,
     int: int,
     str: str,
-    Medium: Medium.get_or_create
 }
 
 HELP_TEXTS = {
