@@ -43,8 +43,7 @@ class ArticleMetaSerializer(AmCATModelSerializer):
     class Meta:
         model = Article
         fields = (
-            "id", "date", "project", "medium", "headline",
-            "section", "pagenr", "author", "length", "uuid"
+            "id", "date", "project", "title"
         )
 
 

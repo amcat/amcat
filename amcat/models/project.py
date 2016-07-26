@@ -26,7 +26,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
-from amcat.models import ProjectRole, get_mediums
+from amcat.models import ProjectRole
 from amcat.tools.model import AmcatModel
 from amcat.models.coding.codebook import Codebook
 from amcat.models.coding.codingschema import CodingSchema
@@ -128,9 +128,6 @@ class Project(AmcatModel):
             Article.objects.filter(project=self).values_list("id", flat=True),
             ArticleSetArticle.objects.filter(articleset__project=self).values_list("article__id", flat=True)
         )
-
-    def get_mediums(self):
-        return get_mediums(self.all_articlesets().values_list("id", flat=True))
 
     class Meta():
         db_table = 'projects'

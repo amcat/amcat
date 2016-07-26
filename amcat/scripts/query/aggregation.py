@@ -33,7 +33,7 @@ from itertools import chain, repeat
 from django.core.exceptions import ValidationError
 from django.forms import ChoiceField, BooleanField
 
-from amcat.models import Medium, ArticleSet, CodingSchemaField, Code, CodingJob
+from amcat.models import ArticleSet, CodingSchemaField, Code, CodingJob
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools import aggregate_es
 from amcat.tools.aggregate_es.categories import ELASTIC_TIME_UNITS, IntervalCategory
@@ -44,7 +44,6 @@ log = logging.getLogger(__name__)
 
 AGGREGATION_FIELDS = (
     ("articleset", "Articleset"),
-    ("medium", "Medium"),
     ("term", "Term"),
     ("Interval", (
         ("year", "Year"),
@@ -123,7 +122,7 @@ class AggregationEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime):
             return obj.isoformat()
-        if isinstance(obj, (Medium, ArticleSet, CodingJob)):
+        if isinstance(obj, (ArticleSet, CodingJob)):
             return {"id": obj.id, "label": obj.name}
         if isinstance(obj, SearchQuery):
             return {"id": obj.label, "label": obj.query}
@@ -131,8 +130,6 @@ class AggregationEncoder(json.JSONEncoder):
             return {"id": obj.id, "label": obj.label}
         return super(AggregationEncoder, self).default(obj)
 
-
-MEDIUM_ERR = "Could not find medium with id={column} or name={column}"
 
 class AggregationActionForm(QueryActionForm):
     primary = ChoiceField(label="Primary aggregation", choices=AGGREGATION_FIELDS)
@@ -156,9 +153,6 @@ class AggregationActionForm(QueryActionForm):
 
         if field_value in ELASTIC_TIME_UNITS:
             return aggregate_es.IntervalCategory(field_value)
-
-        if field_value == "medium":
-            return aggregate_es.MediumCategory()
 
         if field_value == "articleset":
             return aggregate_es.ArticlesetCategory(self.articlesets)

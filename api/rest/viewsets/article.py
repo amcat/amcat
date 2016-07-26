@@ -44,7 +44,7 @@ from django.forms import ModelChoiceField
 from rest_framework.fields import ModelField, CharField
 from rest_framework.viewsets import ModelViewSet
 
-from amcat.models import Medium, Project, ArticleSet
+from amcat.models import Project, ArticleSet
 from amcat.models.article import _check_read_access
 from amcat.tools.amcates import ES
 from amcat.tools.caching import cached
@@ -73,29 +73,6 @@ class ArticleViewSetMixin(AmCATViewSetMixin):
     model_key = "article"
     model = Article
 
-class MediumField(ModelField):
-
-    def __init__(self, model_field, representation="name", *args, **kargs):
-        super(MediumField, self).__init__(model_field, *args, **kargs)
-        self.representation = representation
-        self._cache = {} # should be safe as field is initiated per request
-    
-    def to_internal_value(self, data):
-        try:
-            int(data)
-        except ValueError:
-            return Medium.get_or_create(data)
-        else:
-            return super(MediumField, self).to_internal_value(data)
-
-    def to_representation(self, obj):
-        if self.representation == "name":
-            if obj.medium_id in self._cache:
-                return self._cache[obj.medium_id]
-            else:
-                self._cache[obj.medium_id] = obj.medium.name
-                return obj.medium.name
-        return obj.medium_id
 
 from rest_framework import serializers
 class ArticleListSerializer(serializers.ListSerializer):
@@ -181,9 +158,6 @@ class ArticleListSerializer(serializers.ListSerializer):
 
 class ArticleSerializer(AmCATProjectModelSerializer):
     project = ModelChoiceField(queryset=Project.objects.all(), required=True)
-    medium = MediumField(model_field=ModelChoiceField(queryset=Medium.objects.all()))
-    mediumid = MediumField(model_field=ModelChoiceField(queryset=Medium.objects.all()), representation="id", required=False)
-    uuid = CharField(read_only=False, required=False)
 
     def to_internal_value(self, data):
         if isinstance(data, int):

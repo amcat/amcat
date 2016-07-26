@@ -19,7 +19,7 @@
 from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
-from amcat.models import Sentence, CodedArticle, Article, Medium, ROLE_PROJECT_READER
+from amcat.models import Sentence, CodedArticle, Article, ROLE_PROJECT_READER
 from amcat.tools.caching import cached
 from amcat.tools import sbd
 from api.rest.mixins import DatatablesMixin
@@ -39,10 +39,6 @@ def article_property(property_name):
         return getattr(self.get_article(coded_article), property_name)
     return inner
 
-# Hack class to allow queryset to be set, which in turn allows the metadata (OPTIONS) generator
-# to include this field in its models-property.
-class PseudoSerializerMethodField(serializers.SerializerMethodField):
-    queryset = Medium.objects.none()
 
 class CodedArticleSerializer(AmCATModelSerializer):
     headline = serializers.SerializerMethodField()
@@ -50,17 +46,11 @@ class CodedArticleSerializer(AmCATModelSerializer):
     pagenr = serializers.SerializerMethodField()
     length = serializers.SerializerMethodField()
     article_id = serializers.SerializerMethodField()
-    medium = PseudoSerializerMethodField()
     get_headline = article_property("headline")
     get_date = article_property("date")
     get_pagenr = article_property("pagenr")
     get_length = article_property("length")
     get_article_id = article_property("id")
-
-    @classmethod
-    def get_metadata_field_name(self, field):
-        if hasattr(field, "method_name") and field.method_name is self.base_fields["medium"].method_name:
-            return "ModelChoiceField"
 
     def _get_coded_articles(self):
         view = self.context["view"]
@@ -74,9 +64,6 @@ class CodedArticleSerializer(AmCATModelSerializer):
 
     def get_article(self, coded_article):
         return self._get_articles().get(coded_article.article_id)
-
-    def get_medium(self, coded_article):
-        return self.get_article(coded_article).medium_id
 
 
     class Meta:
@@ -100,7 +87,6 @@ class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
 
     ordering_mapping = {
         "headline": "article__headline",
-        "medium": "article__medium__name",
         "date": "article__date",
         "pagenr": "article__pagenr",
         "length": "article__length",

@@ -32,7 +32,6 @@ from django.core.exceptions import ValidationError
 from amcat.models import Codebook, Language, Article, ArticleSet, CodingJob, CodingSchemaField, Code, \
     CodebookCode, CodingSchema
 from amcat.models.coding.codingschemafield import FIELDTYPE_IDS
-from amcat.models.medium import Medium, get_mediums
 from amcat.forms.forms import order_fields
 from amcat.tools.caching import cached
 from amcat.tools.keywordsearch import SelectionSearch
@@ -113,7 +112,6 @@ class SelectionForm(forms.Form):
     include_all = forms.BooleanField(label="Include articles not matched by any keyword", required=False, initial=False)
     articlesets = ModelMultipleChoiceFieldWithIdLabel(queryset=ArticleSet.objects.none(), required=False, initial=())
     codingjobs = ModelMultipleChoiceFieldWithIdLabel(queryset=CodingJob.objects.none(), required=False, initial=())
-    mediums = ModelMultipleChoiceFieldWithIdLabel(queryset=Medium.objects.all(), required=False, initial=())
     article_ids = forms.CharField(widget=forms.Textarea, required=False)
     start_date = forms.DateField(required=False)
     end_date = forms.DateField(required=False)
@@ -165,7 +163,6 @@ class SelectionForm(forms.Form):
         self.fields['articlesets'].queryset = articlesets.order_by('-pk')
         self.fields['codebook'].queryset = project.get_codebooks()
         self.fields['codingjobs'].queryset = project.codingjob_set.filter(id__in=self.codingjobs)
-        self.fields['mediums'].queryset = self._get_mediums()
         self.fields['codebook_label_language'].queryset = self.fields['codebook_replacement_language'].queryset = (
             Language.objects.filter(labels__code__codebook_codes__codebook__in=project.get_codebooks()).distinct()
         )
@@ -222,9 +219,6 @@ class SelectionForm(forms.Form):
                 _add_to_dict(data, field_name, field.initial)
         return data
 
-    @cached
-    def _get_mediums(self):
-        return get_mediums(self.fields["articlesets"].queryset)
 
     def clean_codebook_label_language(self):
         return self.cleaned_data.get("codebook_label_language")
@@ -304,11 +298,6 @@ class SelectionForm(forms.Form):
         if not self.cleaned_data["articlesets"]:
             return self.project.all_articlesets()
         return self.cleaned_data["articlesets"]
-
-    def clean_mediums(self):
-        if not self.cleaned_data["mediums"]:
-            return self._get_mediums()
-        return self.cleaned_data["mediums"]
 
     def clean_article_ids(self):
         article_ids = self.cleaned_data["article_ids"].split("\n")
