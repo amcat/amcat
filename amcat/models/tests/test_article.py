@@ -213,7 +213,7 @@ class TestArticle(amcattest.AmCATTestCase):
         # do the right articles have the right headline?
         for saved in articles:
             indb = Article.objects.get(pk=saved.id)
-            self.assertEqual(indb.headline, saved.headline)
+            self.assertEqual(indb.title, saved.title)
 
 
     @amcattest.use_elastic
@@ -221,16 +221,10 @@ class TestArticle(amcattest.AmCATTestCase):
         """Test unicode headlines"""
         for offset in range(1, 10000, 1000):
             s = "".join(chr(offset + c) for c in range(1, 1000, 100))
-            a = amcattest.create_test_article(headline=s)
-            self.assertIsInstance(a.headline, str)
-            self.assertEqual(a.headline, s)
+            a = amcattest.create_test_article(title=s)
+            self.assertIsInstance(a.title, str)
+            self.assertEqual(a.title, s)
 
-        
-    @amcattest.use_elastic
-    def test_medium_name(self):
-        m = amcattest.create_test_medium(name="de testkrant")
-        a = amcattest.create_test_article(medium=m)
-        r = amcates.ES().query(filters={"id": a.id}, fields=["medium"])
 
     @amcattest.use_elastic
     def test_get_tree(self):
