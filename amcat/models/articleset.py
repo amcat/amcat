@@ -30,7 +30,6 @@ import logging
 from django.db import models
 from django.db import connection
 
-from amcat.models.medium import Medium
 from amcat.models.coding.codedarticle import CodedArticle
 from amcat.tools.model import AmcatModel
 from amcat.tools import amcates, toolkit
@@ -68,13 +67,6 @@ class ArticleSet(AmcatModel):
         db_table = 'articlesets'
         ordering = ['name']
 
-    def get_mediums(self):
-        """
-        Return a sequence of Medium object used in this set
-        """
-        from amcat.tools.amcates import ES
-        medium_ids = ES().list_media(filters=dict(sets=self.id))
-        return Medium.objects.filter(id__in=medium_ids)
 
     def get_count(self):
         """

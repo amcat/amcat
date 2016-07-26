@@ -29,7 +29,7 @@ from itertools import chain
 from dateutil.relativedelta import relativedelta
 from django.core.exceptions import ValidationError
 
-from amcat.models import Label, Medium, ArticleSet, CodingJob, Code
+from amcat.models import Label, ArticleSet, CodingJob, Code
 from amcat.tools.aggregate_es import aggregate, TermCategory
 from amcat.tools.amcates import ES
 from amcat.tools.caching import cached
@@ -41,7 +41,6 @@ REFERENCE_RE = re.compile(r"<(?P<reference>.*?)(?P<recursive>\+?)>")
 log = logging.getLogger(__name__)
 
 FIELD_MAP = {
-    "medium": "mediumid",
     "term": "terms",
     "set": "sets"
 }
@@ -49,7 +48,7 @@ FIELD_MAP = {
 def to_sortable_tuple(key):
     if isinstance(key, tuple):
         return tuple(map(to_sortable_tuple, key))
-    elif isinstance(key, (Medium, ArticleSet, CodingJob)):
+    elif isinstance(key, (ArticleSet, CodingJob)):
         return key.name.lower()
     elif isinstance(key, (Code, SearchQuery)):
         return key.label.lower()
@@ -97,7 +96,7 @@ class SelectionSearch:
 
     def _get_filters(self):
         """
-        Get filters for dates, mediums, articlesets and articles for given form. Yields
+        Get filters for dates,  articlesets and articles for given form. Yields
         iterables of tuples containing (filter_name, filter_value).
 
         @type form: SelectionForm
@@ -107,7 +106,6 @@ class SelectionSearch:
             self.data.on_date, self.data.datetype
         )
 
-        yield (("mediumid", [m.id for m in self.data.mediums]),)
         yield (("sets", [a.id for a in self.data.articlesets]),)
         yield (("ids", self.data.article_ids or None),)
 
@@ -166,10 +164,6 @@ class SelectionSearch:
     def get_statistics(self):
         return self.es.statistics(self.get_query(), self.get_filters())
 
-    @cached
-    def get_mediums(self):
-        return Medium.objects.filter(id__in=self.get_medium_ids())
-
     def get_aggregate(self, categories, flat=True):
         # If we're aggregating on terms, we don't want a global filter
         query = None
@@ -181,9 +175,6 @@ class SelectionSearch:
 
     def get_nested_aggregate(self, categories):
         return to_nested(self.get_aggregate(categories))
-
-    def get_medium_ids(self):
-        return self.es.list_media(self.get_query(), self.get_filters())
 
     def get_article_ids(self):
         return ES().query_ids(self.get_query(), self.get_filters())

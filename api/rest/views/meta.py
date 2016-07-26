@@ -18,7 +18,7 @@ class ArticleMetaView(ListAPIView):
 
     def get_queryset(self):
         columns = self.request.query_params.get('columns')
-        fields = columns.split(",") if columns else ['date', 'medium']
+        fields = columns.split(",") if columns else ['date']
         page_size = int(self.request.query_params.get("page_size", 10))
 
         setid = self.kwargs['articleset_id']

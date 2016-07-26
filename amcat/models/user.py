@@ -41,25 +41,6 @@ from amcat.tools.model import AmcatModel
 LITTER_USER_ID = 1
 
 
-class Affiliation(AmcatModel):
-    """
-    Model for table affiliations. Users are categorised by affiliation, and
-    some permissions are granted only for ones own  affiliation
-    """
-    __label__ = 'name'
-
-    id = models.AutoField(primary_key=True, db_column='affiliation_id')
-    name = models.CharField(max_length=200)
-
-    class Meta():
-        db_table = 'affiliations'
-        ordering = ('name',)
-        app_label = 'amcat'
-
-    def can_update(self, user):
-        return user.haspriv('manage_users')
-
-
 THEMES = ['AmCAT', 'Pink', 'Pink Dreamliner', 'Darkly', 'Amelia']
 
 
@@ -68,9 +49,6 @@ class UserProfile(AmcatModel):
     Additional user information is stored here
     """
     user = models.OneToOneField(User)
-
-    affiliation = models.ForeignKey(Affiliation, default=1)
-    language = models.ForeignKey(Language, default=1)
     role = models.ForeignKey(Role, default=0)
 
     recent_projects = models.ManyToManyField(Project, through=RecentProject,
@@ -193,9 +171,3 @@ post_save.connect(create_user_profile, sender=User, dispatch_uid="create_user_pr
 def _random_password(length=8, chars=string.ascii_letters + string.digits):
     #http://code.activestate.com/recipes/59873/
     return ''.join([random.choice(chars) for i in range(length)])
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-
