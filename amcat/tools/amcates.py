@@ -38,62 +38,67 @@ from amcat.tools.toolkit import multidict, splitlist
 
 log = logging.getLogger(__name__)
 
-if settings.ES_USE_LEGACY_HASH_FUNCTION is None:
-    error_msg = "Environment variable AMCAT_ES_LEGACY_HASH should be explicitely set."
-    raise ImproperlyConfigured(error_msg)
-
 _clean_re = re.compile('[\x00-\x08\x0B\x0C\x0E-\x1F]')
 def _clean(s):
     """Remove non-printable characters and convert dates"""
     if isinstance(s, str):
         s = _clean_re.sub(' ', s)
+    if isinstance(s, datetime.date):
+        s = datetime.datetime(s.year, s.month, s.day)
     if isinstance(s, (datetime.date, datetime.datetime)):
-        # [WvA] we used to convert date to datetime first, why?
         s = s.isoformat()
     return s
 
+ARTICLE_FIELDS = frozenset({"text", "title", "url", "date"})
 
-ARTICLE_FIELDS = frozenset({"text", "title", "url", "uuid", "date"})
+RE_PROPERTY_NAME = re.compile('[A-Za-z][A-Za-z0-9]*$')
+PROPERTY_TYPES = frozenset({"date", "num", "int", "url"})
 
+def _is_valid_property_name(name):
+    if isinstance(name, str):
+        if "_" in name:
+            name, ptype = name.rsplit("_", 1)
+            if not ptype in PROPERTY_TYPES:
+                return False
+        return RE_PROPERTY_NAME.match(name)
 
 def get_properties(article):
     if article.properties:
         if not isinstance(article.properties, dict):
             raise TypeError("Article properties should be a simple key:value dict")
         for k, v in article.properties.items():
-            if not isinstance(k, str):
+            if not _is_valid_property_name(k):
                 raise TypeError("Article properties should be a simple key:value dict")
-            if not isinstance(v, (str, int, float, datetime.datetime)):
+            if not isinstance(v, (str, int, float, datetime.datetime, datetime.date)):
                 raise TypeError("Article properties should be a simple key:value dict")
             if k in ARTICLE_FIELDS | {"id", "sets", "hash"}:
                 raise ValueError("Article properties cannot duplicate built-in properties")
-            yield k, v
+            yield k, _clean(v)
                               
 
 def get_article_dict(article, sets=None):
     d = {field_name: _clean(getattr(article, field_name))
          for field_name in ARTICLE_FIELDS}   
     d.update(get_properties(article))
-    d['hash'] = _get_hash(d) # [WvA] why not just hash(frozenset(my_dict.items()))?
-    d["uuid"] = str(d["uuid"])
+    d['hash'] = _hash_dict(d)
     d["sets"] = sets
     return d
+
+def _escape_bytes(b):
+    return b.replace(b"\\", b"\\\\").replace(b",", b"\\,")
+
+def _hash_dict(d):
+    c = hash_class()
+    for k, v in d.items():
+        c.update(_escape_bytes(_encode_field(k)))
+        c.update(_escape_bytes(_encode_field(v)))
+        c.update(b",")
+    return c.hexdigest()
 
 def _encode_field(object, encoding="utf-8"):
     if isinstance(object, datetime.datetime):
         return object.isoformat().encode(encoding)
     return str(object).encode(encoding)
-
-def _escape_bytes(b):
-    return b.replace(b"\\", b"\\\\").replace(b",", b"\\,")
-
-def _get_hash(article_dict):
-    c = hash_class()
-    for fn in sorted(article_dict.keys()):
-        c.update(_escape_bytes(_encode_field(fn)))
-        c.update(_escape_bytes(_encode_field(article_dict[fn])))
-        c.update(b",")
-    return c.hexdigest()
 
 
 HIGHLIGHT_OPTIONS = {
