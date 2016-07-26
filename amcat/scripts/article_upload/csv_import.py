@@ -20,24 +20,24 @@
 """
 Plugin for uploading csv files
 """
-
-
+import csv
 import datetime
 import json
 
+import itertools
 from django import forms
 from django.db.models.fields import FieldDoesNotExist
 
-from amcat.scripts.article_upload.upload import UploadScript
-from amcat.scripts.article_upload import fileupload
 from amcat.models.article import Article
 from amcat.models.medium import Medium
+from amcat.scripts.article_upload import fileupload
+from amcat.scripts.article_upload.upload import UploadScript
 from amcat.tools.toolkit import readDate
-
+from navigator.views.articleset_upload_views import UploadWizardForm
 
 FIELDS = ("text", "date", "medium", "pagenr", "section", "headline", "byline", "url", "externalid",
           "author", "addressee", "parent_url", "parent_externalid")
-REQUIRED = [True] * 2 + [False] * (len(FIELDS) - 2)
+REQUIRED = {"text", "date"}
 
 PARSERS = {
     "date": readDate,
@@ -58,6 +58,8 @@ def is_nullable(field_name):
         return Article._meta.get_field(field_name).null
     except FieldDoesNotExist:
         return True
+
+
 
 
 class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
@@ -83,7 +85,8 @@ class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
 
     def __init__(self, *args, **kargs):
         super(CSVForm, self).__init__(*args, **kargs)
-        for fieldname, required in reversed(list(zip(FIELDS, REQUIRED))):
+        for fieldname in reversed(FIELDS):
+            required = fieldname in REQUIRED
             label = fieldname + " field"
             if fieldname in HELP_TEXTS:
                 help_text = HELP_TEXTS[fieldname]
@@ -106,6 +109,135 @@ class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
             raise forms.ValidationError("Cannot specify both external id and URL for parents")
         return idfield
 
+    @classmethod
+    def as_wizard_form(cls):
+        return CSVWizardForm
+
+
+
+class FileInfo:
+    def __init__(self, file_name, file_fields):
+        self.file_name = file_name
+        self.file_fields = set(file_fields)
+
+class BaseFieldMapFormSet(forms.BaseFormSet):
+    def __init__(self, file_info=None, *args, **kwargs):
+        initial = kwargs.pop('initial')
+        if not initial:
+            initial = self.get_initial(file_info)
+        super().__init__(*args, initial=initial, **kwargs)
+        self.file_info = file_info
+
+    def get_initial(self, file_info: FileInfo):
+        if file_info is None:
+            return None
+        return [{"field": field, "column": field}
+                for field in self.get_fields() if field in file_info.file_fields]
+
+    def _construct_form(self, i, **kwargs):
+        return super()._construct_form(i, file_info=self.file_info, **kwargs)
+
+
+    def clean(self):
+        if any(self.errors):
+            return
+
+        errors = []
+        existing = set(self.get_fields())
+        required = set(self.get_required_fields())
+        non_existent = []
+
+        for form in self.forms:
+            cleaned_data = form.cleaned_data
+            if 'field' not in cleaned_data:
+                continue
+            required.discard(cleaned_data['field'])
+            if cleaned_data['field'] not in existing and (not cleaned_data['create']):
+                non_existent.append(cleaned_data['field'])
+                errors.append("Dynamic fields not supported yet. Fill in an existing field.") #todo: allow dynamic fields
+
+        if non_existent:
+            errors.append("The following fields do not exist: '{}'.".format("', '".join(non_existent)))
+        if required:
+            errors.append("Field definitions for field(s) '{}' are required.".format("', '".join(required)))
+
+        if errors:
+            raise forms.ValidationError(errors)
+
+    @property
+    def cleaned_data(self):
+        cleaned_data = super().cleaned_data
+        field_dict = {d['field']: {k: v for k, v in d.items() if v and k != 'field'}
+                      for d in cleaned_data if 'field' in d}
+        return {"field_map": field_dict}
+
+    def get_required_fields(self):
+        return REQUIRED
+
+    def get_fields(self):
+        return FIELDS
+
+    def non_field_errors(self):
+        return self.non_form_errors()
+
+
+class FieldMapForm(forms.Form):
+    field = forms.CharField(max_length=100, help_text="The article field")
+    column = forms.CharField(max_length=100, required=False,
+                             help_text="The source column or field in the uploaded file")
+    value = forms.CharField(max_length=200, required=False,
+                            help_text="The literal value to assign to the field")
+    create = forms.BooleanField(required=False, help_text="Create field if it does not exist")
+
+    def __init__(self, *args, file_info=None, **kwargs):
+        self.file_info = file_info
+        super().__init__(*args, **kwargs)
+        if file_info:
+            self.fields['column'] = forms.ChoiceField(choices=[(None, "-- use single value --")] + [(field, field) for field in file_info.file_fields], required=False)
+
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if bool(cleaned_data['value']) == bool(cleaned_data['column']):
+            raise forms.ValidationError("Fill in one of 'value' or 'column'")
+        if self.file_info and cleaned_data['column'] and cleaned_data['column'] not in self.file_info.file_fields:
+            raise forms.ValidationError("Field {} does not exist in file {}".format(cleaned_data['column'],
+                                                                                    self.file_info.file_name))
+        return cleaned_data
+
+
+CSVFieldMapFormSet = forms.formset_factory(FieldMapForm, formset=BaseFieldMapFormSet, validate_max=False, extra=2)
+
+class CSVWizardForm(UploadWizardForm):
+    def __init__(self, inner_form=CSVForm, *args, **kwargs):
+        super().__init__(inner_form)
+
+    def get_form_list(self, inner_form):
+        upload_form = super().get_form_list(inner_form)[0]
+        upload_form.base_fields['dialect'] = inner_form.base_fields['dialect']
+        field_form = CSVFieldMapFormSet
+        return [upload_form, field_form]
+
+    class CSVUploadStepForm(UploadScript.options_form, fileupload.CSVUploadForm): pass
+
+    @classmethod
+    def get_upload_step_form(cls):
+        return cls.CSVUploadStepForm
+
+
+    @classmethod
+    def get_file_info(cls, upload_form: fileupload.CSVUploadForm):
+        try:
+            reader = upload_form.get_reader()
+        except csv.Error:
+            raise
+            return None
+        try:
+            firststep = next(reader)
+        except StopIteration:
+            return None
+
+        return FileInfo(upload_form.cleaned_data['file'].name, firststep.column_names)
 
 class CSV(UploadScript):
     """

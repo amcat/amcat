@@ -20,19 +20,20 @@
 """
 Base module for article upload scripts
 """
-import os.path
 import datetime
 import logging
-
-log = logging.getLogger(__name__)
+import os.path
 
 from django import forms
 from django.forms.widgets import HiddenInput
 
-from amcat.scripts import script
 from amcat.models import Article, Project, ArticleSet
-from amcat.scripts.article_upload.fileupload import RawFileUploadForm
 from amcat.models.articleset import create_new_articleset
+from amcat.scripts import script
+from amcat.scripts.article_upload.fileupload import RawFileUploadForm
+
+log = logging.getLogger(__name__)
+
 
 class ParseError(Exception):
     pass
@@ -44,8 +45,8 @@ class UploadForm(RawFileUploadForm):
     articlesets = forms.ModelMultipleChoiceField(
         queryset=ArticleSet.objects.all(), required=False,
         help_text="If you choose an existing articleset, the articles will be "
-        "appended to that set. If you leave this empty, a new articleset will be "
-        "created using either the name given below, or using the file name")
+                  "appended to that set. If you leave this empty, a new articleset will be "
+                  "created using either the name given below, or using the file name")
 
     articleset_name = forms.CharField(
         max_length=ArticleSet._meta.get_field_by_name('name')[0].max_length,
@@ -53,7 +54,8 @@ class UploadForm(RawFileUploadForm):
 
     def clean_articleset_name(self):
         """If articleset name not specified, use file base name instead"""
-        if self.files.get('file') and not (self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
+        if self.files.get('file') and not (
+                    self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
             fn = os.path.basename(self.files['file'].name)
             return fn
         name = self.cleaned_data['articleset_name']
@@ -101,7 +103,7 @@ class UploadScript(script.Script):
 
     def get_errors(self):
         """return a list of document index, message pairs that explains encountered errors"""
-        
+
         for error in self.errors:
             yield self.explain_error(error)
 
@@ -134,7 +136,7 @@ class UploadScript(script.Script):
         for unit in self._get_units(file):
             for a in self._scrape_unit(unit):
                 yield a
-            
+
     def run(self, _dummy=None):
         monitor = self.progress_monitor
 
@@ -142,23 +144,23 @@ class UploadScript(script.Script):
         filename = file and file.name
         monitor.update(10, u"Importing {self.__class__.__name__} from {filename} into {self.project}"
                        .format(**locals()))
-        
+
         articles = []
-        
+
         files = list(self._get_files())
-        nfiles = len(files)        
+        nfiles = len(files)
         for i, f in enumerate(files):
             filename = getattr(f, 'name', str(f))
-            monitor.update(20/nfiles, "Parsing file {i}/{nfiles}: {filename}".format(**locals()))
+            monitor.update(20 / nfiles, "Parsing file {i}/{nfiles}: {filename}".format(**locals()))
             articles += list(self.parse_file(f))
-            
+
         for article in articles:
             _set_project(article, self.project)
 
         monitor.update(10, "All files parsed, saving {n} articles".format(n=len(articles)))
-        Article.create_articles(articles, articlesets = self.articlesets,
+        Article.create_articles(articles, articlesets=self.articlesets,
                                 monitor=monitor.submonitor(40))
-        
+
         if not articles:
             raise Exception("No articles were imported")
 
@@ -172,10 +174,10 @@ class UploadScript(script.Script):
 
         if getattr(self, 'task', None):
             self.task.log_usage("articles", "upload", n=len(articles))
-        
+
         monitor.update(10, "Done! Uploaded articles".format(n=len(articles)))
         return [a.id for a in self.articlesets]
-        
+
     def postprocess(self, articles):
         """
         Optional postprocessing of articles. Removing aricles from the list will exclude them from the
@@ -185,12 +187,12 @@ class UploadScript(script.Script):
 
     def _get_files(self):
         return self.bound_form.get_entries()
-    
+
     def _get_units(self, file):
         return self.split_file(file)
 
     def _scrape_unit(self, document):
-        result =  self.parse_document(document)
+        result = self.parse_document(document)
         if isinstance(result, Article):
             result = [result]
         for art in result:
