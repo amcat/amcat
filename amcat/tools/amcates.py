@@ -816,12 +816,8 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
 
     # Allow singulars as alias for plurals
     f = {}
-    for singular, plural in [("mediumid", "mediumids"),
-                             ("id", "ids"),
-                             ("uuid", "uuids"),
+    for singular, plural in [("id", "ids"),
                              ("set", "sets"),
-                             ("section", "sections"),
-                             ("page", "pages"),
                              ("hash", "hashes")]:
         if plural in filters:
             if singular in filters:
@@ -830,15 +826,12 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
         elif singular in filters:
             f[singular] = filters.pop(singular)
 
-    if filters:
-        raise TypeError("Unknown filter keywords: {filters}".format(**locals()))
+
+    for k, v in filters.items():
+        yield {'terms': {k: _list(v, number=False)}}
 
     if 'set' in f: yield dict(terms={'sets': _list(f['set'])})
-    if 'mediumid' in f: yield dict(terms={'mediumid': _list(f['mediumid'])})
     if 'id' in f: yield dict(ids={'values': _list(f['id'])})
-    if 'section' in f: yield dict(terms={'section' : _list(f['section'])})
-    if 'page' in f: yield dict(terms={'page' : _list(f['page'])})
-    if 'uuid' in f: yield dict(terms={'uuid' : _list(f['uuid'], number=False)})
     if 'hash' in f: yield dict(terms={'hash' : _list(f['hash'], number=False)})
 
     date_range = {}

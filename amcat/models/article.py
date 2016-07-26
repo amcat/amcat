@@ -73,35 +73,6 @@ def unescape_em(txt):
             .replace("&lt;/em&gt;", "</em>"))
 
 
-class ArticleTree(Tree):
-    @property
-    def article(self):
-        return self.obj
-
-    def get_ids(self):
-        return self.traverse(func=lambda t: t.obj.id)
-
-    def get_html(self, active=None, articleset=None):
-        """
-        Returns tree represented as HTML.
-
-        @param active: highlight this article (wrap in em-tags)
-        @type active: amcat.models.Article
-
-        @param articleset: for all articles in this tree which are also in this
-                           articleset, created a hyperlink.
-        @type articleset: amcat.models.ArticleSet
-        @rtype: compiled Template object
-        """
-        articles = set()
-        if articleset is not None:
-            articles = articleset.articles.filter(id__in=self.get_ids())
-            articles = set(articles.values_list("id", flat=True))
-
-        context = Context(dict(locals(), tree=self))
-        return get_template("amcat/article_tree_root.html").render(context)
-
-
 class Article(AmcatModel):
     """
     Class representing a newspaper article
@@ -160,23 +131,31 @@ class Article(AmcatModel):
             return
 
         self.text = highlighted.get("text", self.text)
-        self.headline = highlighted.get("headline", self.headline)
+        self.title = highlighted.get("title", self.title)
 
         if escape:
             self.text = escape_filter(self.text)
-            self.headline = escape_filter(self.headline)
+            self.title = escape_filter(self.title)
 
             if keep_em:
                 self.text = unescape_em(self.text)
-                self.headline = unescape_em(self.headline)
+                self.title = unescape_em(self.title)
 
         return highlighted
 
     @property
     def children(self):
         """Return a sequence of all child articles (eg reactions to a post)"""
-        raise NotImplementedError() #TODO!
+        return Article.objects.filter(parent_hash = self.hash)
 
+    @property
+    def parent(self):
+        if self.parent_hash:
+            try:
+                return Article.objects.get(hash=self.parent_hash)
+            except Article.DoesNotExist:
+                pass
+    
     def save(self, *args, **kwargs):
         if self._highlighted:
             raise ValueError("Cannot save a highlighted article.")
@@ -216,7 +195,7 @@ class Article(AmcatModel):
         return False
 
     def __repr__(self):
-        return "<Article %s: %r>" % (self.id, self.headline)
+        return "<Article %s: %r>" % (self.id, self.title)
 
     @classmethod
     def exists(cls, article_ids, batch_size=500):
@@ -271,7 +250,7 @@ class Article(AmcatModel):
         es = amcates.ES()
         hashes = collections.defaultdict(list) # {hash: articles}
         
-        # Iterate over articles, mark duplicates within addendum and build uuids/hashes dictionaries
+        # Iterate over articles, mark duplicates within addendum and build hashes dictionaries
         for a in articles:
             if a.id:
                 raise ValueError("Specifying explicit article ID in save not allowed")
@@ -288,9 +267,8 @@ class Article(AmcatModel):
         # check dupes based on hash
         if hashes:
             results = Article.objects.filter(hash__in=hashes.keys()).only("hash")
-
             for orig in results:
-                for dupe in hashes[orig.hash]:
+                for dupe in hashes[bytes(orig.hash)]:
                     dupe.duplicate = orig
                     dupe.id = orig.id
             # [WvA] Shouldn't we do something with internal dupes???
@@ -302,22 +280,6 @@ class Article(AmcatModel):
             for a, inserted in zip(to_insert, result):
                 a.id = inserted.id
         return to_insert
-
-    def get_tree(self, include_parents=True, fields=("id",)):
-        """
-        Returns a deterministic (sorted by id) tree of articles, based on their parent
-        property. It runs O(2n) database queries, where `n` depth of tree queries.
-
-        @param include_parents: start at root of tree, instead of this node
-        @type include_parents: bool
-
-        @param fields:
-        @type fields: tuple of string
-
-        @rtype: ArticleTree
-        """
-        #TODO!
-        return ArticleTree(self, [])
 
 
 def _check_read_access(user, aids):
