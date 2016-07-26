@@ -51,3 +51,6 @@ navigator/media/static
 static/components/
 env
 .eggs
+
+# R package library
+amcat/scripts/query/r_plugins/package_library
