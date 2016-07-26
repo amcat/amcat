@@ -62,8 +62,8 @@ HELP_TEXTS = {
 }
 
 
-def field_required(field):
-    return field in REQUIRED
+def get_required():
+    return REQUIRED
 
 def get_fields():
     return FIELDS 
@@ -189,9 +189,6 @@ class CSV(UploadScript):
                 val = csvfield['value']
             
             if not val:
-                if field_required(fieldname):
-                    raise ParseError('Missing value for required field "{}".'.format(fieldname))
-                
                 article[fieldname] = None
                 continue
             
@@ -200,8 +197,14 @@ class CSV(UploadScript):
                 try:
                     val = get_parser(field_type)(val)
                 except:
-                    raise ParseError('Failed to parse value "{}". Expected "{}".'.format(val, field_type)) 
+                    raise ParseError('Failed to parse value "{}". Expected {}.'.format(val, field_type.__name__)) 
             article[fieldname] = val
+
+
+        for field in get_required():
+            if field not in article or not article[field]: 
+                raise ParseError('Missing value for required field "{}".'.format(field))        
+
         return Article(**article)
     
 if __name__ == '__main__':

@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 
 
 class ParseError(Exception):
-    pass
+    pass 
 
 
 class UploadForm(RawFileUploadForm):
@@ -136,9 +136,13 @@ class UploadScript(script.Script):
                 "using {self.__class__.__name__}".format(**locals()))
 
     def parse_file(self, file):
-        for unit in self._get_units(file):
-            for a in self._scrape_unit(unit):
-                yield a
+        for i, unit in enumerate(self._get_units(file)):
+            try:
+                for a in self._scrape_unit(unit):
+                    yield a
+            except ParseError as e:
+                e.unit = i
+                self.errors.append(e)
 
     def run(self, _dummy=None):
         monitor = self.progress_monitor
@@ -159,7 +163,9 @@ class UploadScript(script.Script):
 
         for article in articles:
             _set_project(article, self.project)
-
+        
+        if self.errors:
+            raise ParseError(self.errors)
         monitor.update(10, "All files parsed, saving {n} articles".format(n=len(articles)))
         Article.create_articles(articles, articlesets=self.articlesets,
                                 monitor=monitor.submonitor(40))
