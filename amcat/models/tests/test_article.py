@@ -24,6 +24,7 @@ from amcat.tools.amcattest import create_test_article, create_test_set
 import datetime
 import uuid
 import random
+import binascii
 
 def _setup_highlighting():
     from amcat.tools.amcates import ES
@@ -131,15 +132,15 @@ class TestArticle(amcattest.AmCATTestCase):
     @amcattest.use_elastic
     def test_create(self):
         """Can we create/store/index an article object?"""
-        a = amcattest.create_test_article(create=False, date='2010-12-31', headline=u'\ua000abcd\u07b4')
+        a = amcattest.create_test_article(create=False, date='2010-12-31', title=u'\ua000abcd\u07b4')
         Article.create_articles([a])
         db_a = Article.objects.get(pk=a.id)
         amcates.ES().flush()
-        es_a = list(amcates.ES().query(filters={'ids': [a.id]}, fields=["date", "headline", "uuid"]))[0]
-        self.assertEqual(str(a.uuid), str(db_a.uuid))
-        self.assertEqual(str(a.uuid), str(es_a.uuid))
-        self.assertEqual(a.headline, db_a.headline)
-        self.assertEqual(a.headline, es_a.headline)
+        es_a = list(amcates.ES().query(filters={'ids': [a.id]}, fields=["date", "title", "hash"]))[0]
+        self.assertEqual(bytes(a.hash), bytes(db_a.hash))
+        self.assertEqual(bytes(a.hash), binascii.unhexlify(es_a.hash))
+        self.assertEqual(a.title, db_a.title)
+        self.assertEqual(a.title, es_a.title)
         self.assertEqual('2010-12-31T00:00:00', db_a.date.isoformat())
         self.assertEqual('2010-12-31T00:00:00', es_a.date.isoformat())
 

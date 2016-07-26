@@ -24,8 +24,9 @@ articles database table.
 
 
 import logging
-
 import collections
+import binascii
+
 from django.db import models
 from django.template import Context
 
@@ -275,9 +276,10 @@ class Article(AmcatModel):
             if a.id:
                 raise ValueError("Specifying explicit article ID in save not allowed")
             a.es_dict = amcates.get_article_dict(a)
-            if a.hash and bytes(a.hash) != a.es_dict['hash']:
+            hash_bytes = binascii.unhexlify(a.es_dict['hash'])
+            if a.hash and bytes(a.hash) != hash_bytes:
                 raise ValueError("Incorrect hash specified")
-            a.hash = a.es_dict['hash']
+            a.hash = hash_bytes
             a.duplicate, a.internal_duplicate = None, None # innocent until proven guilty
             if not deduplicate:
                 continue
