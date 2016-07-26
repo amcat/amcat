@@ -85,6 +85,7 @@ Clone the project from github and pip install the requirements.
 
 ```sh
 git clone https://github.com/amcat/amcat.git
+pip install wheel
 pip install -r amcat/requirements.txt
 ```
 
