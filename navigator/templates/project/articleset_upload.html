@@ -36,13 +36,35 @@
     <form method="POST" enctype="multipart/form-data" action="">
 
         {{ wizard.management_form }}
+        {% if is_field_mapping_form %}
+        {{ form.management_form }}
+        {% endif %}
         {% csrf_token %}
         {{ form.non_field_errors }}
         {% for hidden in form.hidden_fields %}
             {{ hidden }}
         {% endfor %}
         <table>
+            {% if is_field_mapping_form %}
+                <thead>
+                    <tr>
+                        {% for field in form.forms.0.fields %}
+                            <th>{{ field|title }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for formpart in form.forms %}
+                    <tr>
+                        {% for field in formpart %}
+                            <td> {{ field }} </td>
+                        {% endfor%}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            {% else %}
             {{ form.as_table }}
+            {% endif %}
         </table>
         <div class="form-actions">
             <input class="btn btn-primary" type="submit" value="Upload">

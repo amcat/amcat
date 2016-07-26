@@ -14,6 +14,7 @@ from formtools.wizard.views import SessionWizardView
 from amcat.models import AmcatModel, Plugin, OrderedDict
 from amcat.scripts.article_upload.fileupload import FileUploadForm
 from amcat.scripts.article_upload.upload import UploadForm
+from amcat.scripts.article_upload.upload_formtools import FieldMapFormSet 
 from amcat.tools.caching import cached
 from api.rest.resources import PluginResource
 from navigator.views.articleset_views import ArticleSetListView, UPLOAD_PLUGIN_TYPE
@@ -190,6 +191,7 @@ class ArticleSetUploadView(BaseMixin, WizardFormView):
     def get_context_data(self, **kwargs):
         context = super(ArticleSetUploadView, self).get_context_data(**kwargs)
         context["script_name"] = self.script_class.__name__
+        context["is_field_mapping_form"] = isinstance(context['form'], FieldMapFormSet)
         return context
 
     def get_all_raw_data(self, form_dict):
