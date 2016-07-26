@@ -38,114 +38,67 @@ from amcat.tools.toolkit import multidict, splitlist
 
 log = logging.getLogger(__name__)
 
-if settings.ES_USE_LEGACY_HASH_FUNCTION is None:
-    error_msg = "Environment variable AMCAT_ES_LEGACY_HASH should be explicitely set."
-    raise ImproperlyConfigured(error_msg)
-
-
-ARTICLE_FIELDS = frozenset({
-    "id", "date", "section", "pagenr", "headline",
-    "byline", "length", "metastring", "url", "externalid",
-    "author", "addressee", "uuid", "text", "parent_id",
-    "medium_id", "medium__name"
-})
-
-# These fields should be cleaned using _clean()
-ARTICLE_CLEAN_FIELDS = frozenset({
-    "section", "headline", "byline",
-    "metastring", "addressee", "text",
-})
-
-# Postgres field name -> Elastic field name
-ARTICLE_FIELD_MAP = {
-    "author": "creator",
-    "medium_id": "mediumid",
-    "parent_id": "parentid",
-    "pagenr": "page",
-    "medium__name": "medium"
-}
-
-# These fields should be hashed by _get_hash()
-HASH_FIELDS = sorted({
-    "date", "section", "page", "headline",
-    "byline", "length", "metastring", "url", "externalid",
-    "creator", "addressee", "text", "parentid",
-    "mediumid"
-})
-
-LEGACY_HASH_FIELDS = sorted({
-    "headline", "text", "date", "creator",
-    "mediumid", "byline", "section", "page",
-    "addressee", "length"
-})
-
 _clean_re = re.compile('[\x00-\x08\x0B\x0C\x0E-\x1F]')
-
 def _clean(s):
-    """Remove non-printalbe characters
-    @type s: str | NoneType"""
-    if s is not None:
-        return _clean_re.sub(' ', s)
+    """Remove non-printable characters and convert dates"""
+    if isinstance(s, str):
+        s = _clean_re.sub(' ', s)
+    if isinstance(s, datetime.date):
+        s = datetime.datetime(s.year, s.month, s.day)
+    if isinstance(s, (datetime.date, datetime.datetime)):
+        s = s.isoformat()
+    return s
 
+ARTICLE_FIELDS = frozenset({"text", "title", "url", "date"})
 
-def get_article_dict_from_model(article):
-    for field_name in ARTICLE_FIELDS:
-        value = get_model_field(article, field_name)
-        if field_name in ARTICLE_CLEAN_FIELDS:
-            value = _clean(value)
-        yield ARTICLE_FIELD_MAP.get(field_name, field_name), value
+RE_PROPERTY_NAME = re.compile('[A-Za-z][A-Za-z0-9]*$')
+PROPERTY_TYPES = frozenset({"date", "num", "int", "url"})
 
+def _is_valid_property_name(name):
+    if isinstance(name, str):
+        if "_" in name:
+            name, ptype = name.rsplit("_", 1)
+            if not ptype in PROPERTY_TYPES:
+                return False
+        return RE_PROPERTY_NAME.match(name)
+
+def get_properties(article):
+    if article.properties:
+        if not isinstance(article.properties, dict):
+            raise TypeError("Article properties should be a simple key:value dict")
+        for k, v in article.properties.items():
+            if not _is_valid_property_name(k):
+                raise TypeError("Article properties should be a simple key:value dict")
+            if not isinstance(v, (str, int, float, datetime.datetime, datetime.date)):
+                raise TypeError("Article properties should be a simple key:value dict")
+            if k in ARTICLE_FIELDS | {"id", "sets", "hash"}:
+                raise ValueError("Article properties cannot duplicate built-in properties")
+            yield k, _clean(v)
+                              
 
 def get_article_dict(article, sets=None):
-    # Build article dict. We filter non-printable characters for fields in ARTICLE_CLEAN_FIELDS
-    article_dict = dict(get_article_dict_from_model(article))
+    d = {field_name: _clean(getattr(article, field_name))
+         for field_name in ARTICLE_FIELDS}   
+    d.update(get_properties(article))
+    d['hash'] = _hash_dict(d)
+    d["sets"] = sets
+    return d
 
-    # Previous versions of get_article_dict() accepted strings as dates,
-    # which current versions do not accept. Thus, explicitely assert type.
-    date = article_dict["date"]
-    assert isinstance(date, (datetime.date, datetime.datetime)) or date is None
+def _escape_bytes(b):
+    return b.replace(b"\\", b"\\\\").replace(b",", b"\\,")
 
-    # We need to convert it to datetime.datetime to get an uniform isoformat() representation.
-    if not isinstance(date, datetime.datetime) and isinstance(date, datetime.date):
-        date = datetime.datetime(date.year, date.month, date.day)
-
-    article_dict["date"] = date.isoformat() if date is not None else None
-    article_dict["uuid"] = str(article_dict["uuid"])
-    article_dict["sets"] = sets
-
-    article_dict['hash'] = _get_hash(article_dict)
-    return article_dict
-
-def _get_legacy_hash(article_dict):
+def _hash_dict(d):
     c = hash_class()
-    for k in LEGACY_HASH_FIELDS:
-        v = article_dict[k]
-        if isinstance(v, int):
-            c.update(str(v).encode('utf-8'))
-        elif isinstance(v, str):
-            c.update(v.encode('utf-8'))
-        elif v is not None:
-            c.update(str(v).encode('utf-8'))
+    for k, v in d.items():
+        c.update(_escape_bytes(_encode_field(k)))
+        c.update(_escape_bytes(_encode_field(v)))
+        c.update(b",")
     return c.hexdigest()
 
 def _encode_field(object, encoding="utf-8"):
     if isinstance(object, datetime.datetime):
         return object.isoformat().encode(encoding)
     return str(object).encode(encoding)
-
-def _escape_bytes(b):
-    return b.replace(b"\\", b"\\\\").replace(b",", b"\\,")
-
-def _get_hash(article):
-    if settings.ES_USE_LEGACY_HASH_FUNCTION:
-        return _get_legacy_hash(article)
-
-    c = hash_class()
-    for fn in HASH_FIELDS:
-        c.update(_escape_bytes(_encode_field(fn)))
-        c.update(_escape_bytes(_encode_field(article[fn])))
-        c.update(b",")
-    return c.hexdigest()
 
 
 HIGHLIGHT_OPTIONS = {
@@ -863,12 +816,8 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
 
     # Allow singulars as alias for plurals
     f = {}
-    for singular, plural in [("mediumid", "mediumids"),
-                             ("id", "ids"),
-                             ("uuid", "uuids"),
+    for singular, plural in [("id", "ids"),
                              ("set", "sets"),
-                             ("section", "sections"),
-                             ("page", "pages"),
                              ("hash", "hashes")]:
         if plural in filters:
             if singular in filters:
@@ -877,15 +826,12 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
         elif singular in filters:
             f[singular] = filters.pop(singular)
 
-    if filters:
-        raise TypeError("Unknown filter keywords: {filters}".format(**locals()))
+
+    for k, v in filters.items():
+        yield {'terms': {k: _list(v, number=False)}}
 
     if 'set' in f: yield dict(terms={'sets': _list(f['set'])})
-    if 'mediumid' in f: yield dict(terms={'mediumid': _list(f['mediumid'])})
     if 'id' in f: yield dict(ids={'values': _list(f['id'])})
-    if 'section' in f: yield dict(terms={'section' : _list(f['section'])})
-    if 'page' in f: yield dict(terms={'page' : _list(f['page'])})
-    if 'uuid' in f: yield dict(terms={'uuid' : _list(f['uuid'], number=False)})
     if 'hash' in f: yield dict(terms={'hash' : _list(f['hash'], number=False)})
 
     date_range = {}

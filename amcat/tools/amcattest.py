@@ -79,7 +79,7 @@ def create_test_query(**kargs):
 
 def create_test_user(**kargs):
     """Create a user to be used in unit testing"""
-    from amcat.models.user import Affiliation, User, create_user
+    from amcat.models.user import  User, create_user
     if 'username' not in kargs:
         kargs['username'] = "testuser_%i" % User.objects.count()
     if 'email' not in kargs:
@@ -147,24 +147,18 @@ def get_test_role(**kargs):
     from amcat.tools import djangotoolkit
     return djangotoolkit.get_or_create(Role, label='admin', projectlevel=False)
 
-def create_test_medium(**kargs):
-    from amcat.models.medium import Medium
-    if "language" not in kargs: kargs["language"] = get_test_language()
-    if "id" not in kargs: kargs["id"] = _get_next_id()
-    if "name" not in kargs: kargs["name"] = "Medium_%i" % kargs["id"]
-    return Medium.objects.create(**kargs)
-
 def create_test_article(create=True, articleset=None, deduplicate=True, **kargs):
     """Create a test article"""
     from amcat.models.article import Article
 
+    if 'headline' in kargs: kargs['title'] = kargs.pop('headline')
+    
     if "date" in kargs and isinstance(kargs["date"], str):
         kargs["date"] = read_date(kargs["date"])
 
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "date" not in kargs: kargs["date"] = datetime.date(2000, 1, 1)
-    if "medium" not in kargs: kargs["medium"] = create_test_medium()
-    if 'headline' not in kargs: kargs['headline'] = 'test headline {} : {}'.format(_get_next_id(), uuid4())
+    if 'title' not in kargs: kargs['title'] = 'test headline {} : {}'.format(_get_next_id(), uuid4())
     if 'text' not in kargs: kargs["text"] = 'test text {}'.format(_get_next_id())
 
     a = Article(**kargs)

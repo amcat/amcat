@@ -9,11 +9,10 @@ from amcat.tools import amcates, keywordsearch
 
 from api.rest.resources.amcatresource import AmCATResource
 from amcat.tools.caching import cached
-from amcat.models import Medium
 
 
 DATES = ['year', 'quarter', 'month', 'week', 'day']
-FILTER_FIELDS = "start_date", "end_date", "mediumid", "ids", "sets"
+FILTER_FIELDS = "start_date", "end_date", "ids", "sets"
 
 # TODO: Copypasta: AggregateES/lazyES and AggregateResource/SearchResource should share common ancestors
 
@@ -47,16 +46,6 @@ class AggregateES(object):
         if y is None:
             for (group, n) in self._get_counts(x):
                 yield self.result_type(group, n)
-        elif y in ("mediumid", "medium"):
-            medium_ids = self.es.list_media(self.query, self.filters)
-            if y == "medium":
-                medium_ids = list(medium_ids)
-                media = {pk: name for (pk, name)
-                         in Medium.objects.filter(pk__in=medium_ids).values_list("pk", "name")}
-            for medium_id in medium_ids:
-                medium = media[medium_id] if y == "medium" else medium_id
-                for group, n in self._get_counts(x, mediumid=medium_id):
-                    yield self.result_type(group, medium, n)
         elif y == "query":
             if not self.queries:
                 raise ValueError("Please specify at least one query (using q=) when aggregating on query")

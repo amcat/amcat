@@ -29,7 +29,7 @@ from django.forms import ChoiceField, BooleanField, ModelChoiceField
 from .aggregation import AggregationEncoder, aggregation_to_matrix, aggregation_to_csv
 from amcat.models import CodedArticle
 from amcat.models import CodingSchemaField, Code, CodingValue, Coding
-from amcat.models import Medium, ArticleSet, CodingJob
+from amcat.models import ArticleSet, CodingJob
 from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
 from amcat.scripts.forms.selection import get_all_schemafields
 from amcat.scripts.query import QueryAction, QueryActionForm
@@ -45,7 +45,6 @@ log = logging.getLogger(__name__)
 CODINGSCHEMAFIELD_RE = re.compile("^codingschemafield\((?P<id>[0-9]+)\)$")
 AVERAGE_CODINGSCHEMAFIELD_RE = re.compile("^avg\((?P<id>[0-9]+)\)$")
 
-MEDIUM_ERR = "Could not find medium with id={column} or name={column}"
 
 
 def get_schemafield_choices(codingjobs, values=True):
@@ -79,12 +78,10 @@ def get_value_fields(fields):
 
 class CodingAggregationActionForm(QueryActionForm):
     primary_use_codebook = BooleanField(initial=False, required=False, label="Group codings using codebook")
-    primary_group_mediums = ModelChoiceField(queryset=Medium.objects.all(), label="Group mediums using", required=False)
     primary = ChoiceField(choices=AGGREGATION_FIELDS, label="Aggregate on (primary)")
     primary_fill_zeroes = BooleanField(initial=True, required=False, label="Show empty dates as 0 (if interval selected)")
 
     secondary_use_codebook = BooleanField(initial=False, required=False, label="Group codings using codebook")
-    secondary_group_mediums = ModelChoiceField(queryset=Medium.objects.all(), label="Group mediums using", required=False)
     secondary = ChoiceField(choices=(("", "------"),) + AGGREGATION_FIELDS, required=False, label="Aggregate on (secondary)")
 
     value1 = ChoiceField(label="First value", initial="count(articles)")
@@ -105,8 +102,6 @@ class CodingAggregationActionForm(QueryActionForm):
         self.fields["secondary"].choices += schema_choices
 
         project_codebooks = self.project.get_codebooks()
-        self.fields["primary_group_mediums"].queryset = project_codebooks
-        self.fields["secondary_group_mediums"].queryset = project_codebooks
 
     def _clean_aggregation(self, field_name, prefix=None):
         field_value = self.cleaned_data[field_name]
@@ -117,9 +112,6 @@ class CodingAggregationActionForm(QueryActionForm):
         if field_value in POSTGRES_DATE_TRUNC_VALUES:
             return aggregate_orm.IntervalCategory(field_value, prefix=prefix)
 
-        if field_value == "medium":
-            codebook = self.cleaned_data["{}_group_mediums".format(field_name)]
-            return aggregate_orm.MediumCategory(prefix=prefix, codebook=codebook, create_missing=True)
 
         if field_value == "articleset":
             return aggregate_orm.ArticleSetCategory(prefix=prefix)
@@ -189,7 +181,7 @@ class CodingAggregationActionForm(QueryActionForm):
 def to_sortable_tuple(key):
     if isinstance(key, tuple):
         return tuple(map(to_sortable_tuple, key))
-    elif isinstance(key, (Medium, ArticleSet, CodingJob)):
+    elif isinstance(key, (ArticleSet, CodingJob)):
         return key.name.lower()
     elif isinstance(key, (Code, SearchQuery)):
         return key.label.lower()

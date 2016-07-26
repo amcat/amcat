@@ -22,13 +22,12 @@ import datetime
 
 from collections import OrderedDict
 
-from amcat.models import ArticleSet, Medium
+from amcat.models import ArticleSet
 
 __all__ = (
     "Category",
     "IntervalCategory",
     "ArticlesetCategory",
-    "MediumCategory",
     "TermCategory"
 )
 
@@ -123,10 +122,6 @@ class ArticlesetCategory(ModelCategory):
     def __repr__(self):
         return "<ArticlesetCategory>"
 
-
-class MediumCategory(ModelCategory):
-    model = Medium
-    field = "mediumid"
 
 
 class TermCategory(Category):

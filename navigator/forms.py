@@ -34,7 +34,7 @@ from amcat.models.coding.codingjob import CodingJob
 from amcat.models.coding.codingschema import CodingSchema
 from amcat.models.language import Language
 from amcat.models.project import Project
-from amcat.models.user import Affiliation, THEMES
+from amcat.models.user import THEMES
 from amcat.tools import toolkit
 from navigator.utils.misc import cache_function
 
@@ -51,21 +51,14 @@ def get_admin_id():
     return _ADMIN_ID
 
 @cache_function(60)
-def gen_user_choices(project=None):
+def gen_user_choices(project):
     """This function generates a list of users formatted in such a
     way it's usable for a Django Choicefield.
+    """
 
-    See: https://docs.djangoproject.com/en/dev/ref/models/fields/#field-choices"""
-    users = User.objects.all().select_related('userprofile__affiliation__name').only(
-        'username', 'first_name', 'last_name'
-    )
-
-    if project:
-        users = users.filter(projectrole__project=project)
-    vals = toolkit.multidict(((u.userprofile.affiliation, u) for u in users), ltype=list)
-
-    for aff, users in sorted(vals.items(), key=name_sort):
-        yield(aff, [(u.id, "%s - %s %s (%s)" % (u.id, u.first_name, u.last_name, u.username)) for u in users])
+    #TODO! This used to yield affiliation, [users]
+    users = users.filter(projectrole__project=project)
+    yield("-", [(u.id, "%s - %s %s (%s)" % (u.id, u.first_name, u.last_name, u.username)) for u in users])
 
 @cache_function(60)
 def gen_roles():
@@ -113,7 +106,6 @@ class SplitArticleForm(forms.Form):
         self.fields["add_to_sets"].queryset = project.all_articlesets()
 
 class UserForm(forms.ModelForm):
-    affiliation = forms.ModelChoiceField(queryset=Affiliation.objects.all())
     role = forms.ModelChoiceField(queryset=Role.objects.all())
     language = forms.ModelChoiceField(queryset=Language.objects.all(), initial="en")
     #theme = forms.ChoiceField(choices=[(t,t) for t in THEMES])
@@ -131,7 +123,6 @@ class UserForm(forms.ModelForm):
 
             # Set initial values for this user
             self.fields['role'].initial = uprofile.role if not editing else kwargs['instance'].userprofile.role
-            self.fields['affiliation'].initial = uprofile.affiliation
             self.fields['language'].initial = uprofile.language
             self.fields['theme'].initial = uprofile.theme
 
@@ -144,7 +135,6 @@ class UserForm(forms.ModelForm):
         u = super(UserForm, self).save(commit)
 
         up = u.userprofile
-        up.affiliation = self.cleaned_data['affiliation']
         up.role = self.cleaned_data['role']
         up.language = self.cleaned_data['language']
         up.theme = self.cleaned_data['theme']
@@ -154,7 +144,7 @@ class UserForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ("affiliation", "role", "language")
+        fields = ("role", "language")
 
 class UserDetailsForm(UserForm):
     def __init__(self, request, *args, **kwargs):
@@ -237,15 +227,6 @@ class AddProjectForm(ProjectForm):
         super(AddProjectForm, self).__init__(*args, **kwargs)
         self.fields['owner'].initial = owner.id if owner else None
 
-class MediumForm(forms.ModelForm):
-    class Meta:
-        model = models.medium.Medium
-        exclude = ()
-
-class MediumAliasForm(forms.ModelForm):
-    class Meta:
-        model = models.medium.MediumAlias
-        exclude = ()
 
 class CodingJobForm(forms.ModelForm):
     unitschema = forms.ModelChoiceField(CodingSchema.objects.none(), widget=widgets.BootstrapSelect)

@@ -17,42 +17,10 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-import json
-import logging
-
-from django_filters import filters, FilterSet
-
-from amcat.models import Article, ArticleSet
-from api.rest.resources.amcatresource import AmCATResource
-from api.rest.serializer import AmCATModelSerializer
-from api.rest.filters import InFilter, DjangoPrimaryKeyFilterBackend
-
-log = logging.getLogger(__name__)
+from django.core.management import BaseCommand
+from amcat.tools import amcates
 
 
-class ArticleMetaFilter(DjangoPrimaryKeyFilterBackend.default_filter_set):
-    date_from = filters.DateFilter(name='date', lookup_type='gte')
-    date_to = filters.DateFilter(name='date', lookup_type='lt')
-    articleset = InFilter(name='articlesets_set', queryset=ArticleSet.objects.all())
-
-    class Meta:
-        model = Article
-
-
-class ArticleMetaSerializer(AmCATModelSerializer):
-    class Meta:
-        model = Article
-        fields = (
-            "id", "date", "project", "title"
-        )
-
-
-class ArticleMetaResource(AmCATResource):
-    model = Article
-    serializer_class = ArticleMetaSerializer
-    filter_class = ArticleMetaFilter
-
-    @classmethod
-    def get_model_name(cls):
-        return "ArticleMeta".lower()
-
+class Command(BaseCommand):
+    def handle(self, *args, **options):
+        amcates.ES().check_index()

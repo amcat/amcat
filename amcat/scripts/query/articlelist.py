@@ -29,13 +29,13 @@ from django.http import QueryDict
 from django.template import Context
 from django.template.loader import get_template
 from amcat.scripts.query import QueryAction, QueryActionForm
-from amcat.tools.amcates import HASH_FIELDS
+from amcat.tools.amcates import ARTICLE_FIELDS
 from amcat.tools.keywordsearch import SelectionSearch
 from api.rest.datatable import Datatable
 from api.rest.resources import SearchResource
 
 
-COLUMNS = ["id"] + sorted(set(HASH_FIELDS) | {"medium"})
+COLUMNS = ["id"] + sorted(set(ARTICLE_FIELDS) | {"medium"})
 TABLE_TEMPLATE = get_template("query/articlelist.html")
 ARTICLE_ROWLINK = "{}articles/{}"
 

@@ -57,3 +57,10 @@ ul.articles {padding-left: 0px}
 .article-meta {
     font-size:80%; color: grey;
 }
+
+
+.hbreak {border-bottom: 1px dotted #e2e2e2;}
+.hbreak-before {border-top: 1px dotted #e2e2e2;}
+
+
+

@@ -47,7 +47,7 @@ from collections import OrderedDict
 
 MODELS = ['Article', 'AmCAT',
           'Role', 'ProjectRole',
-          'Medium', 'Language',
+          'Language',
           'CodingSchema', 'CodingSchemaField',
           'CodebookCode', 'CodingSchemaFieldType', 'CodedArticleStatus',
           'django.contrib.auth.models.Group', 'django.contrib.auth.models.Permission',
