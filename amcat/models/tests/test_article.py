@@ -24,7 +24,6 @@ from amcat.tools.amcattest import create_test_article, create_test_set
 import datetime
 import uuid
 import random
-import binascii
 
 def _setup_highlighting():
     from amcat.tools.amcates import ES
@@ -87,8 +86,8 @@ class TestArticle(amcattest.AmCATTestCase):
         db_a = Article.objects.get(pk=a.id)
         amcates.ES().flush()
         es_a = list(amcates.ES().query(filters={'ids': [a.id]}, fields=["date", "title", "hash"]))[0]
-        self.assertEqual(a.hexhash, db_a.hexhash)
-        self.assertEqual(a.hexhash, es_a.hash)
+        self.assertEqual(a.hash, db_a.hash)
+        self.assertEqual(a.hash, es_a.hash)
         self.assertEqual(a.title, db_a.title)
         self.assertEqual(a.title, es_a.title)
         self.assertEqual('2010-12-31T00:00:00', db_a.date.isoformat())

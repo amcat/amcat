@@ -361,5 +361,5 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
         self.assertEqual(article.id, es_article.id)
         self.assertEqual(hash, es_article.hash)
-        self.assertEqual(hash, article.hexhash)
+        self.assertEqual(hash, article.hash)
         #self.assertEqual(_get_hash(es_article.to_dict()), hash)

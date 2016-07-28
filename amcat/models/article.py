@@ -36,6 +36,8 @@ from django.template.loader import get_template
 
 from django.contrib.postgres.fields import JSONField
 
+from django_hash_field import HashField
+
 from amcat.models.authorisation import Role
 from amcat.tools import amcates
 from amcat.tools.djangotoolkit import bulk_insert_returning_ids
@@ -80,22 +82,19 @@ class Article(AmcatModel):
     __label__ = 'title'
 
     id = models.AutoField(primary_key=True, db_column="article_id")
-    
-    date = models.DateTimeField()
-    title = models.TextField()
-
-    url = models.TextField(null=True, blank=True, max_length=750)
-    externalid = models.TextField(blank=True, null=True)
-    hash = models.BinaryField(unique=True, max_length=64)
-
-    #sets = models.ManyToManyField("amcat.Set", db_table="sets_articles")
-
-    text = models.TextField()
-
-    parent_hash = models.BinaryField(null=True, blank=True, max_length=64)
-
     project = models.ForeignKey("amcat.Project", db_index=True, related_name="articles")
 
+    # dublin core metadata fields
+    date = models.DateTimeField()
+    title = models.TextField()
+    url = models.TextField(null=True, blank=True, max_length=750)
+    text = models.TextField()
+
+    # hash and parent / tree structure
+    hash = HashField(unique=True, max_length=64)
+    parent_hash = HashField(null=True, blank=True, max_length=64)
+
+    # flexible properties, should be flat str:primitive (json) dict 
     properties = JSONField(null=True, blank=True)
     
     def __init__(self, *args, **kwargs):
@@ -106,12 +105,7 @@ class Article(AmcatModel):
         db_table = 'articles'
         app_label = 'amcat'
 
-    @property
-    def hexhash(self):
-        """Returns a hex string representing this article's hash"""
-        if self.hash:
-            return binascii.hexlify(self.hash).decode("ascii")
-        
+
     def highlight(self, query, escape=True, keep_em=True):
         """
         Highlight headline and text property by inserting HTML tags (em). You won't be able to
@@ -261,10 +255,10 @@ class Article(AmcatModel):
             if a.id:
                 raise ValueError("Specifying explicit article ID in save not allowed")
             a.es_dict = amcates.get_article_dict(a)
-            hash_bytes = binascii.unhexlify(a.es_dict['hash'])
-            if a.hash and bytes(a.hash) != hash_bytes:
+            hash = a.es_dict['hash']
+            if a.hash and a.hash != hash:
                 raise ValueError("Incorrect hash specified")
-            a.hash = hash_bytes
+            a.hash = hash
             a.duplicate, a.internal_duplicate = None, None # innocent until proven guilty
             if not deduplicate:
                 continue
@@ -272,12 +266,12 @@ class Article(AmcatModel):
                 a.internal_duplicate = hashes[a.hash]
             else:
                 hashes[a.hash] = a
-            
+
         # check dupes based on hash
         if hashes:
             results = Article.objects.filter(hash__in=hashes.keys()).only("hash")
             for orig in results:
-                dupe = hashes[bytes(orig.hash)]
+                dupe = hashes[orig.hash]
                 dupe.duplicate = orig
                 dupe.id = orig.id
 
