@@ -93,7 +93,7 @@ class TestArticle(amcattest.AmCATTestCase):
         self.assertEqual(a.title, es_a.title)
         self.assertEqual('2010-12-31T00:00:00', db_a.date.isoformat())
         self.assertEqual('2010-12-31T00:00:00', es_a.date.isoformat())
-
+        
     @amcattest.use_elastic
     def test_deduplication(self):
         """Does deduplication work as it is supposed to?"""
@@ -127,11 +127,19 @@ class TestArticle(amcattest.AmCATTestCase):
         self.assertEqual(_q(sets=s1.id), {a1.id})
 
         # if an existing hash is set, it should be correct
-        art['hash'] = b'blabla'
-        self.assertRaises(ValueError, amcattest.create_test_article, **art)
+        art2 = dict(hash = b'hash', **art)
+        self.assertRaises(ValueError, amcattest.create_test_article, **art2)
 
         #TODO! Check duplicates within new articles
+        art['title'] = "internaldupe"
+        a1, a2 = (Article(**art), Article(**art))
+        Article.create_articles([a1, a2], articleset=s1)
+        self.assertEqual(a1.id, a2.id)
+        self.assertEqual(len(_q(title='internaldupe')), 1)
 
+        
+
+        
     def test_unicode_word_len(self):
         """Does the word counter eat unicode??"""
         u = u'Kim says: \u07c4\u07d0\u07f0\u07cb\u07f9'

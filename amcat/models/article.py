@@ -248,7 +248,7 @@ class Article(AmcatModel):
         modifies all articles in place with .hash, .id, .uuid, and .duplicate (None or Article)
         """
         es = amcates.ES()
-        hashes = collections.defaultdict(list) # {hash: articles}
+        hashes = {} # {hash: article}
         
         # Iterate over articles, mark duplicates within addendum and build hashes dictionaries
         for a in articles:
@@ -262,23 +262,28 @@ class Article(AmcatModel):
             a.duplicate, a.internal_duplicate = None, None # innocent until proven guilty
             if not deduplicate:
                 continue
-            hashes[a.hash].append(a)
+            if a.hash in hashes:
+                a.internal_duplicate = hashes[a.hash]
+            else:
+                hashes[a.hash] = a
             
         # check dupes based on hash
         if hashes:
             results = Article.objects.filter(hash__in=hashes.keys()).only("hash")
             for orig in results:
-                for dupe in hashes[bytes(orig.hash)]:
-                    dupe.duplicate = orig
-                    dupe.id = orig.id
-            # [WvA] Shouldn't we do something with internal dupes???
+                dupe = hashes[bytes(orig.hash)]
+                dupe.duplicate = orig
+                dupe.id = orig.id
 
         # now we can save the articles and set id
-        to_insert = [a for a in articles if not a.duplicate]
+        to_insert = [a for a in articles if not (a.duplicate or a.internal_duplicate)]
         result = bulk_insert_returning_ids(to_insert)
         if to_insert:
             for a, inserted in zip(to_insert, result):
                 a.id = inserted.id
+            for a in articles:
+                if a.internal_duplicate and not a.id:
+                    a.id = a.internal_duplicate.id
         return to_insert
 
 
