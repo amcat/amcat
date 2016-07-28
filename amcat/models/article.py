@@ -106,6 +106,12 @@ class Article(AmcatModel):
         db_table = 'articles'
         app_label = 'amcat'
 
+    @property
+    def hexhash(self):
+        """Returns a hex string representing this article's hash"""
+        if self.hash:
+            return binascii.hexlify(self.hash).decode("ascii")
+        
     def highlight(self, query, escape=True, keep_em=True):
         """
         Highlight headline and text property by inserting HTML tags (em). You won't be able to

@@ -87,12 +87,23 @@ class TestArticle(amcattest.AmCATTestCase):
         db_a = Article.objects.get(pk=a.id)
         amcates.ES().flush()
         es_a = list(amcates.ES().query(filters={'ids': [a.id]}, fields=["date", "title", "hash"]))[0]
-        self.assertEqual(bytes(a.hash), bytes(db_a.hash))
-        self.assertEqual(bytes(a.hash), binascii.unhexlify(es_a.hash))
+        self.assertEqual(a.hexhash, db_a.hexhash)
+        self.assertEqual(a.hexhash, es_a.hash)
         self.assertEqual(a.title, db_a.title)
         self.assertEqual(a.title, es_a.title)
         self.assertEqual('2010-12-31T00:00:00', db_a.date.isoformat())
         self.assertEqual('2010-12-31T00:00:00', es_a.date.isoformat())
+
+    @amcattest.use_elastic
+    def test_properties(self):
+        s1 = amcattest.create_test_set()
+        a = amcattest.create_test_article(properties=dict(x=1, foo="bar"), articleset=s1)
+        db_a = s1.articles.get()
+        self.assertEqual(db_a.properties, {"x":1, "foo": "bar"})
+
+        illegal_properties = ([1,2], {"id": 1}, {1: 1}, {"test": [1,2,3]})
+        for p in illegal_properties:
+            self.assertRaises(Exception, amcattest.create_test_article, properties=p)
         
     @amcattest.use_elastic
     def test_deduplication(self):

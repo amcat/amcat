@@ -81,6 +81,7 @@ def get_article_dict(article, sets=None):
          for field_name in ARTICLE_FIELDS}   
     d.update(get_properties(article))
     d['hash'] = _hash_dict(d)
+    d['id'] = article.id
     d["sets"] = sets
     return d
 
