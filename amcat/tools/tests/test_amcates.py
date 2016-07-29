@@ -19,12 +19,12 @@
 
 import datetime
 from unittest import skip
+from django.conf import settings
 from amcat.models import Article, ArticleSet
 from amcat.tools import amcattest
-from amcat.tools.amcates import ES, get_article_dict
+from amcat.tools.amcates import ES, get_article_dict, ALL_FIELDS
 from amcat.tools.amcattest import create_test_project, create_test_set
 from amcat.tools.keywordsearch import SearchQuery
-
 
 class TestAmcatES(amcattest.AmCATTestCase):
     def setup(self):
@@ -169,7 +169,6 @@ class TestAmcatES(amcattest.AmCATTestCase):
         s1 = amcattest.create_test_set(articles=[a, b, c])
         s2 = amcattest.create_test_set(articles=[b, c])
         s3 = amcattest.create_test_set(articles=[b])
-        ES().add_articles([a.id, b.id, c.id])
         ES().flush()
 
         es_c = ES().get(c.id)
@@ -275,14 +274,14 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(set(ES().query_ids('"sociale huur*"', filters=dict(title='m2'))), {d.id})
 
 
-    @skip("ComplexPhraseQueryParser does not work for elastic")
+    @amcattest.use_elastic
     def test_complex_phrase_query(self):
         """Test complex phrase queries. DOES NOT WORK YET"""
         a = amcattest.create_test_article(text='aap noot mies')
         b = amcattest.create_test_article(text='noot mies wim zus')
         c = amcattest.create_test_article(text='mies bla bla bla wim zus jet')
         s1 = amcattest.create_test_set(articles=[a, b, c])
-        ES().add_articles([a.id, b.id, c.id])
+        ES().flush()
         self.assertEqual(set(ES().query_ids('"mi* wi*"~5', filters=dict(sets=s1.id))), {b.id, c.id})
 
 
@@ -291,7 +290,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         text = "Rutte's Fu\xdf.d66,  50plus, 50+, el ni\xf1o, kanji (\u6f22\u5b57) en Noord-Korea"
         a = amcattest.create_test_article(title="test", text=text)
         s1 = amcattest.create_test_set(articles=[a])
-        ES().add_articles([a.id])
+
         ES().flush()
         self.assertEqual(set(ES().query_ids("kanji", filters=dict(sets=s1.id))), {a.id})
         self.assertEqual(set(ES().query_ids("blablabla", filters=dict(sets=s1.id))), set())
@@ -363,3 +362,24 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(hash, es_article.hash)
         self.assertEqual(hash, article.hash)
         #self.assertEqual(_get_hash(es_article.to_dict()), hash)
+        
+    @amcattest.use_elastic
+    def test_properties(self):
+        """Are properties stored as flat fields and with correct mapping?"""
+        props = dict(
+            proptest = 123,
+            proptest2_url = "http://example.org",
+            proptest3_date = "2001-01-01",
+            proptest4_num = -1)
+
+        self.assertEqual(set(props.keys()) & set(ES().get_mapping().keys()), set())
+
+        a = amcattest.create_test_article(properties=props)
+
+        mapping = ES().get_mapping()
+        for field, ftype in dict(proptest="default", proptest2_url="url",
+                                 proptest3_date="date", proptest4_num="num").items():
+            self.assertEqual(mapping[field], settings.ES_MAPPING_TYPES[ftype])
+            
+        src = ES().get(a.id)
+        self.assertEqual(set(mapping.keys()), set(props.keys()) | ALL_FIELDS)

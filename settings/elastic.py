@@ -36,56 +36,32 @@ ES_PROD_INDEX = "amcat"
 ES_INDEX = os.environ.get('AMCAT_ES_INDEX', ES_TEST_INDEX if TESTING else ES_PROD_INDEX)
 ES_ARTICLE_DOCTYPE = 'article'
 
-ES_MAPPING_STRING_OPTIONS = {
-    "type": "string",
-    "omit_norms": True
-}
-
-ES_MAPPING_SIMPLE_STRING_OPTIONS = {
-    "type": "string",
-    "omit_norms": True,
-    "include_in_all": "false"
-}
-
-#              TODO: possibly interesting global options to consider
-#              "_source" : {"enabled" : false}
-#              "_routing" : {"required" : True, "path" : "mediumid"}
-#              "_timestamp" : {"enabled" : true, "path" : "date"}
+ES_MAPPING_TYPES = {
+    'int': {"type": "long"},
+    'date': {"format": "dateOptionalTime", "type": "date"},
+    'num': {"type": "double"},
+    'url': {"index": "not_analyzed", "type": "string"},
+    'id': {"index": "not_analyzed", "type": "string"},
+    'text': {"type": "string"},
+    'default' : {"type": "string",
+                 "fields": {"raw":   { "type": "string", "index": "not_analyzed" }}}
+    }
 
 ES_MAPPING = {
     "properties": {
-        "id": {"type": "long"},
-        "text": ES_MAPPING_STRING_OPTIONS,
-        "headline": ES_MAPPING_STRING_OPTIONS,
-        "byline": ES_MAPPING_STRING_OPTIONS,
-        "medium": ES_MAPPING_SIMPLE_STRING_OPTIONS,
-        "creator": ES_MAPPING_SIMPLE_STRING_OPTIONS,
-        "section": ES_MAPPING_SIMPLE_STRING_OPTIONS,
-        "uuid": ES_MAPPING_SIMPLE_STRING_OPTIONS,
-        "page": {"type": "long"},
-        "addressee": ES_MAPPING_SIMPLE_STRING_OPTIONS,
-        "url": ES_MAPPING_SIMPLE_STRING_OPTIONS,
-        "metastring": ES_MAPPING_SIMPLE_STRING_OPTIONS,
-        "length": {"type": "long"},
-        "externalid": {"type": "long"},
-        "date": {
-            "type": "date",
-            "format": "dateOptionalTime"
-        },
-        "mediumid": {"type": "long"},
-        "projectid": {"type": "long"},
-        "parentid": {"type": "long"},
-        "sets": {"type": "long"},
-        "hash": {
-            "type": "string",
-            "index": "not_analyzed",
-        },
-        "uuid": {
-            "type": "string",
-            "index": "not_analyzed",
-        },
+        # id / hash / project/set membership
+        "id": ES_MAPPING_TYPES['int'],
+        "sets": ES_MAPPING_TYPES['int'],
+        "hash": ES_MAPPING_TYPES['id'],
+        "parent_hash": ES_MAPPING_TYPES['id'],
+        # article properties
+        "date": ES_MAPPING_TYPES['date'],
+        "title": ES_MAPPING_TYPES['default'],
+        "url": ES_MAPPING_TYPES['url'],
+        "text": ES_MAPPING_TYPES['text'],
     },
 }
+
 ES_SETTINGS = {"analysis": {
         "analyzer": {
             "default": {

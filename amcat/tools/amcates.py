@@ -49,16 +49,18 @@ def _clean(s):
         s = s.isoformat()
     return s
 
-ARTICLE_FIELDS = frozenset({"text", "title", "url", "date"})
+ARTICLE_FIELDS = frozenset({"text", "title", "url", "date", "parent_hash"})
+ALL_FIELDS = frozenset({"id", "sets", "hash"} | ARTICLE_FIELDS)
 
 RE_PROPERTY_NAME = re.compile('[A-Za-z][A-Za-z0-9]*$')
-PROPERTY_TYPES = frozenset({"date", "num", "int", "url"})
+
+_KNOWN_PROPERTIES = None
 
 def _is_valid_property_name(name):
     if isinstance(name, str):
         if "_" in name:
             name, ptype = name.rsplit("_", 1)
-            if not ptype in PROPERTY_TYPES:
+            if not ptype in settings.ES_MAPPING_TYPES:
                 return False
         return RE_PROPERTY_NAME.match(name)
 
@@ -71,7 +73,7 @@ def get_properties(article):
                 raise TypeError("Article properties should be a simple key:value dict")
             if not isinstance(v, (str, int, float, datetime.datetime, datetime.date)):
                 raise TypeError("Article properties should be a simple key:value dict")
-            if k in ARTICLE_FIELDS | {"id", "sets", "hash"}:
+            if k in ALL_FIELDS:
                 raise ValueError("Article properties cannot duplicate built-in properties")
             yield k, _clean(v)
                               
@@ -226,6 +228,7 @@ def delete_test_indices():
     for test_index in test_indices:
         ES(index=test_index).delete_index()
 
+
 class ElasticSearchError(Exception):
     pass
 
@@ -239,6 +242,38 @@ class ES(object):
         if settings.TESTING and index is None:
             self.index += "_{pid}".format(pid=os.getpid())
 
+    def check_properties(self, properties):
+        """
+        Check if all properties are known (e.g. have mappings), and creates mappings as needed
+        """
+        properties = set(properties)
+        if not (properties - self.get_properties()):
+            return
+        to_add = properties - self.get_properties(force_refresh=True)
+        if to_add:
+            self.add_properties(to_add)
+
+    def add_properties(self, to_add):
+        """
+        Add the named properties, setting mapping depending on suffix
+        """
+        mappings = {}
+        for name in to_add:
+            ftype = name.rsplit("_", 1)[1] if "_" in name else 'default'
+            mappings[name] = settings.ES_MAPPING_TYPES[ftype]
+        self.es.indices.put_mapping(index=self.index, doc_type=self.doc_type,
+                                    body={"properties": mappings})
+
+    def get_mapping(self):
+        m = self.es.indices.get_mapping(self.index, self.doc_type)
+        return m[self.index]['mappings'][self.doc_type]['properties']
+        
+    def get_properties(self, force_refresh=False):
+        global _KNOWN_PROPERTIES
+        if force_refresh or (_KNOWN_PROPERTIES is None):
+            _KNOWN_PROPERTIES = set(self.get_mapping().keys())
+        return _KNOWN_PROPERTIES
+            
     def flush(self):
         self.es.indices.flush()
 
@@ -411,6 +446,7 @@ class ES(object):
         Add the given article_ids to the index. This is done in batches, so there
         is no limit on the length of article_ids (which can be a generator).
         """
+        #WvA: remove redundancy with create_articles
         if not article_ids: return
         from amcat.models import Article, ArticleSetArticle
 
@@ -420,7 +456,7 @@ class ES(object):
             all_sets = multidict((aa.article_id, aa.articleset_id)
                                  for aa in ArticleSetArticle.objects.filter(article__in=batch))
             dicts = (get_article_dict(article, list(all_sets.get(article.id, [])))
-                     for article in Article.objects.filter(pk__in=batch))
+                     for article in Article.objects.filter(pk__in=batch))            
             self.bulk_insert(dicts, batch_size=None)
 
     def remove_from_set(self, setid, article_ids, flush=True):
@@ -462,7 +498,13 @@ class ES(object):
         nbatches = len(batches)
         for i, batch in enumerate(batches):
             monitor.update(40/nbatches, "Added batch {iplus}/{nbatches}".format(iplus=i+1, **locals()))
-            body = get_bulk_body({d["id"]: serialize(d) for d in batch})
+            props, articles = set(), {}
+            for d in batch:
+                props |= (set(d.keys()) - ALL_FIELDS)
+                articles[d["id"]] = serialize(d)
+
+            self.check_properties(props)
+            body = get_bulk_body(articles)
             resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
             if resp["errors"]:
                 raise ElasticSearchError(resp)
@@ -657,7 +699,6 @@ class ES(object):
 
         log.debug("es.search(body={body})".format(**locals()))
         result = self.search(body)
-        print(result)
         result = self._parse_aggregate(result["aggregations"], list(group_by), terms, sets)
         return result
 
