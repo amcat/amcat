@@ -47,6 +47,7 @@ def TemporaryFolder(*args, **kargs):
 DecodedFile = collections.namedtuple("File", ["name", "file", "bytes", "encoding", "text"])
 ENCODINGS = ["Autodetect", "ISO-8859-15", "UTF-8", "Latin-1"]
 
+MAX_SAMPLE_SIZE = 2048
 
 class RawFileUploadForm(forms.Form):
     """Helper form to handle uploading a file"""
@@ -75,7 +76,7 @@ class FileUploadForm(RawFileUploadForm):
             return "utf-8", bytes.decode('utf-8')
         except UnicodeDecodeError:
             pass
-        enc = chardet.detect(bytes)["encoding"]
+        enc = chardet.detect(bytes[:MAX_SAMPLE_SIZE])["encoding"]
         if enc:
             try:
                 return enc, bytes.decode(enc)
@@ -122,7 +123,7 @@ def namedtuple_csv_reader(csv_file, encoding='utf-8', **kargs):
     @param kargs: Will be passed to csv.reader, e.g. dialect
     """
     if encoding.lower() in ('', 'autodetect'):
-        encoding = chardet.detect(csv_file.read(1024))["encoding"]
+        encoding = chardet.detect(csv_file.read(MAX_SAMPLE_SIZE))["encoding"]
         log.info("Guessed encoding: {encoding}".format(**locals()))
         csv_file.seek(0)
 
@@ -195,7 +196,8 @@ class CSVUploadForm(FileUploadForm):
         d = self.cleaned_data['dialect'] or "autodetect"
 
         if d == 'autodetect':
-            dialect = csv.Sniffer().sniff(file.readline())
+            sample = file.read(MAX_SAMPLE_SIZE)
+            dialect = csv.Sniffer().sniff(sample)
             file.seek(0)
             if dialect.delimiter not in "\t,;":
                 dialect = csv.get_dialect('excel')
@@ -207,7 +209,7 @@ class CSVUploadForm(FileUploadForm):
 
 class ZipFileUploadForm(FileUploadForm):
     file = forms.FileField(help_text="You can also upload a zip file containing the desired files. Uploading very large files can take a long time. If you encounter timeout problems, consider uploading smaller files")
-        
+
     def get_uploaded_texts(self):
         """
         Returns a list of DecodedFile objects representing the zipped files,
