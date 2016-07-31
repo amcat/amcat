@@ -383,3 +383,17 @@ class TestAmcatES(amcattest.AmCATTestCase):
             
         src = ES().get(a.id)
         self.assertEqual(set(mapping.keys()), set(props.keys()) | ALL_FIELDS)
+
+    def test_used_properties(self):
+        a1 = amcattest.create_test_article(properties={"p1": "test", "p2_date": "2001-01-01"})
+        a2 = amcattest.create_test_article(properties={"p1": "test", "p3_num": 15})
+        a3 = amcattest.create_test_article(properties={"p1": "test", "p4": "test"})
+
+        s1 = amcattest.create_test_set(articles=[a1])
+        s2 = amcattest.create_test_set(articles=[a2])
+        s3 = amcattest.create_test_set(articles=[a1, a3])
+        ES().flush()
+        self.assertEqual(set(ES().get_used_properties(s1)), {"p1", "p2_date"})
+        self.assertEqual(set(ES().get_used_properties(s1.id, s2.id)), {"p1", "p2_date", "p3_num"})
+        self.assertEqual(set(ES().get_used_properties(s3.id)), {"p1", "p2_date", "p4"})
+        
