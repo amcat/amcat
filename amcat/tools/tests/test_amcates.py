@@ -396,4 +396,8 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(set(ES().get_used_properties(s1)), {"p1", "p2_date"})
         self.assertEqual(set(ES().get_used_properties(s1.id, s2.id)), {"p1", "p2_date", "p3_num"})
         self.assertEqual(set(ES().get_used_properties(s3.id)), {"p1", "p2_date", "p4"})
+
+        self.assertEqual(set(ES().get_used_properties2(s1)), {"p1", "p2_date"})
+        self.assertEqual(set(ES().get_used_properties2(s1.id, s2.id)), {"p1", "p2_date", "p3_num"})
+        self.assertEqual(set(ES().get_used_properties2(s3.id)), {"p1", "p2_date", "p4"})
         

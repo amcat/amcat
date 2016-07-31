@@ -455,6 +455,21 @@ class ES(object):
             if n - agg['doc_count']:
                 yield prop
 
+    def get_used_properties2(self, *sets):
+        """
+        Returns a sequency of property names in use in the specified set(s) (or setids)
+        """
+        #WVA: Alternative implementation, need to check performance once we have a largish es 2.3 index
+        #this one seems slower because it does more queries, but the other took 30 seconds on amcat set 2...
+        sets = [s if isinstance(s, int) else s.id for s in sets]
+        for prop in set(self.get_properties(force_refresh=True)) - set(ALL_FIELDS):
+            body = {"query": {"bool": {"must": [
+                {"terms": {"sets": sets}},
+                {"exists": {"field": prop}}]}}}
+            n = self.es.count(index=self.index, doc_type=self.doc_type, body=body)['count']
+            if n:
+                yield prop
+                
     def add_articles(self, article_ids, batch_size=1000):
         """
         Add the given article_ids to the index. This is done in batches, so there
