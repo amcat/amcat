@@ -34,6 +34,7 @@ from amcat.scripts.article_upload.fileupload import RawFileUploadForm
 
 log = logging.getLogger(__name__)
 
+ARTICLE_FIELDS = ("text", "title", "url", "date", "parent_hash")
 
 class ParseError(Exception):
     pass 
@@ -104,15 +105,10 @@ class UploadScript(script.Script):
 
         return ()
 
-    def get_errors(self):
-        """return a list of document index, message pairs that explains encountered errors"""
-
-        for error in self.errors:
-            yield self.explain_error(error)
-
-    def explain_error(self, error):
+    def explain_error(self, error, article=None):
         """Explain the error in the context of unit for the end user"""
-        return "Error in element {i} : {error}".format(**error)
+        index = " {}".format(article) if article is not None else ""
+        return "Error in element{}: {}".format(article, error)
 
     def decode(self, bytes):
         """Decode the bytes using the encoding from the form"""
@@ -136,12 +132,12 @@ class UploadScript(script.Script):
                 "using {self.__class__.__name__}".format(**locals()))
 
     def parse_file(self, file):
-        for unit in self._get_units(file):
+        for i, unit in enumerate(self._get_units(file)):
             try:
                 for a in self._scrape_unit(unit):
                     yield a
             except ParseError as e:
-                self.errors.append(e)
+                self.errors.append(ParseError("{}".format(self.explain_error(e, index=i))))
 
     def run(self, _dummy=None):
         monitor = self.progress_monitor
@@ -164,7 +160,7 @@ class UploadScript(script.Script):
             _set_project(article, self.project)
         
         if self.errors:
-            raise ParseError(" ".join(self.get_errors()))
+            raise ParseError(" ".join(map(str, self.errors)))
         monitor.update(10, "All files parsed, saving {n} articles".format(n=len(articles)))
         Article.create_articles(articles, articlesets=self.articlesets,
                                 monitor=monitor.submonitor(40))

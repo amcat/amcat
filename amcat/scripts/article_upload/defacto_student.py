@@ -80,7 +80,7 @@ def parse_meta(text):
 
      if time:
          date = date + time.replace(".", ":")
-     date = toolkit.readDate(date)
+     date = toolkit.read_date(date)
      m = re.search("Seite:? (\d+)", pagestr)
      if m:
          page = int(m.group(1))

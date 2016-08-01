@@ -400,7 +400,6 @@ def read_date(string, lax=False, rejectPre1970=False, american=False):
             raise
 
 
-readDate = read_date
 
 
 def to_datetime(date):

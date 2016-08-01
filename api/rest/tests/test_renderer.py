@@ -18,7 +18,7 @@
 ###########################################################################
 
 from amcat.tools import amcattest
-from amcat.tools.toolkit import readDate
+from amcat.tools.toolkit import read_date
 
 from api.rest.tablerenderer import TableRenderer
 

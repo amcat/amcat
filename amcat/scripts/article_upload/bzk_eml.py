@@ -26,7 +26,7 @@ import logging
 from datetime import timedelta
 
 from amcat.scripts.article_upload.upload import UploadScript
-from amcat.tools.toolkit import readDate
+from amcat.tools.toolkit import read_date
 from amcat.models.medium import Medium
 from amcat.models.article import Article
 from amcat.scripts.article_upload.bzk_aliases import BZK_ALIASES
@@ -39,7 +39,7 @@ class BZKEML(UploadScript):
     def _scrape_unit(self, _file):
         readlines = _file.readlines()
         file_date_line = [l for l in readlines if l.startswith("Date:")][0]
-        file_date = readDate(file_date_line.split("Date:")[1])
+        file_date = read_date(file_date_line.split("Date:")[1])
 
         lines = []
         mail_header = []
@@ -67,12 +67,12 @@ class BZKEML(UploadScript):
                 if "=" in datestr:  # if this is true, the year is not parsable
                     # we take the year the mail was sent, might fail around december
                     datestr = datestr.split("=")[0] + str(file_date.year)
-                    article.date = readDate(datestr)
+                    article.date = read_date(datestr)
                     if (
                                 article.date - file_date).days > 200:  #likely a misparse, with the mail being sent the next year
                         article.date -= timedelta(years=1)
                 else:
-                    article.date = readDate(datestr)
+                    article.date = read_date(datestr)
                 if data[2] in BZK_ALIASES.keys():
                     medium_str = BZK_ALIASES[data[1]]
                 else:

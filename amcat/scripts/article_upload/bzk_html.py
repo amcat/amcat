@@ -28,7 +28,7 @@ from lxml import html
 from html2text import html2text
 
 from amcat.scripts.article_upload.upload import UploadScript, ParseError
-from amcat.tools.toolkit import readDate
+from amcat.tools.toolkit import read_date
 from amcat.models.medium import Medium
 from amcat.models.article import Article
 
@@ -86,7 +86,7 @@ class BZK(UploadScript):
             date_str = div.cssselect("#articleDate")[0].text_content()
 
             try:
-                article.date = readDate(date_str)
+                article.date = read_date(date_str)
             except ValueError:
                 log.error("parsing date \"{date_str}\" failed".format(**locals()))
             else:
@@ -97,7 +97,7 @@ class BZK(UploadScript):
         title = _html.cssselect("h1")[0]
         if not title.text:
             title = title.cssselect("span")[0]
-        docdate = readDate(title.text.split("-")[1])
+        docdate = read_date(title.text.split("-")[1])
 
         # split body by <hr>
         items = []
@@ -152,10 +152,10 @@ class BZK(UploadScript):
     def parse_dateline(self, text, article):
         bits = text.split()
         if "-" in bits[-1]:
-            article.date = readDate(bits[-1])
+            article.date = read_date(bits[-1])
             article.medium = self.get_medium(" ".join(bits[:-1]))
         elif bits[-1].isdigit() and bits[-3].isdigit():
-            article.date = readDate(" ".join(bits[-3:]))
+            article.date = read_date(" ".join(bits[-3:]))
             article.medium = self.get_medium(" ".join(bits[:-3]))
         else:
             article.medium = self.get_medium(" ".join(bits))

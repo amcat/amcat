@@ -102,7 +102,7 @@ class TestArticleViewSet(APITestCase):
 
         res = self._get_article(aid=res['id'])
         self.assertEqual(res["headline"], a['headline'])
-        self.assertEqual(toolkit.readDate(res["date"]), toolkit.readDate(a['date']))
+        self.assertEqual(toolkit.read_date(res["date"]), toolkit.read_date(a['date']))
         self.assertNotIn("text", res.keys())
         self.assertIsNotNone(res["uuid"])
         

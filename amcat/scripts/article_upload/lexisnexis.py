@@ -194,7 +194,7 @@ def _strip_article(art):
 
 def _is_date(string):
     try:
-        toolkit.readDate(string)
+        toolkit.read_date(string)
     except ValueError:
         return False
 
@@ -456,13 +456,13 @@ def parse_article(art):
         else:
             raise ParseError("Couldn't find date in header: {header!r}\n{art!r}".format(**locals()))
 
-    date = toolkit.readDate(date)
+    date = toolkit.read_date(date)
     if dateline is not None and len(header) > dateline + 1:
         # next line might contain time
         timeline = header[dateline + 1]
         m = re.search(r"\b\d?\d:\d\d\s(PM\b)?", timeline)
         if m and date.time().isoformat() == '00:00:00':
-            date = toolkit.readDate(" ".join([date.isoformat()[:10], m.group(0)]))
+            date = toolkit.read_date(" ".join([date.isoformat()[:10], m.group(0)]))
 
     m = re.match("copyright\s\xa9?\s?(\d{4})?(.*)", source, re.I)
     if m:

@@ -11,10 +11,10 @@ from django.utils.datastructures import MultiValueDict
 from django.views.generic import ListView
 from formtools.wizard.views import SessionWizardView
 
-from amcat.models import AmcatModel, Plugin, OrderedDict
+from amcat.models import Plugin, OrderedDict
 from amcat.scripts.article_upload.fileupload import FileUploadForm
 from amcat.scripts.article_upload.upload import UploadForm
-from amcat.scripts.article_upload.upload_formtools import FieldMapFormSet 
+from amcat.scripts.article_upload.upload_formtools import BaseFieldMapFormSet
 from amcat.tools.caching import cached
 from api.rest.resources import PluginResource
 from navigator.views.articleset_views import ArticleSetListView, UPLOAD_PLUGIN_TYPE
@@ -62,23 +62,8 @@ class ArticleSetUploadScriptHandler(ScriptHandler):
     def serialise_arguments(cls, arguments):
         arguments = super().serialise_arguments(arguments)
         arguments = cls.serialize_files(arguments)
-        arguments = cls.serialize_models(arguments)
         return arguments
-    
-    @classmethod
-    def serialize_models(cls, arguments):
-        args = dict(arguments)
-        data = {}
-        for k, v in args['data'].items():
-            if isinstance(v, AmcatModel):
-                data[k] = v.pk
-            else:
-                try:
-                    data[k] = [item.pk for item in v]
-                except:
-                    pass
-        arguments['data'].update(data)
-        return arguments
+
 
 class DummyOptionsForm(UploadForm):
     pass
@@ -91,38 +76,37 @@ class WizardForm:
     def __repr__(self):
         return "<{}: inner_form: {}>".format(self.__class__.__name__, repr(self.inner_form))
 
-
     def get_inner_form(self, form_kwargs):
-        return self.inner_form(form_kwargs)
+        return self.inner_form(**form_kwargs)
 
 
 class UploadWizardForm(WizardForm):
     """
-    Automatically generated WizardForm for the given upload form.
-    Splits the form into two steps: one step for the fields defined in UploadForm and FileUploadForm, the other step
-    contains all other additional option fields.
+    Automatically generates a WizardForm for the given upload form. Splits the form into two steps: one step for the
+    fields defined in UploadForm and FileUploadForm, the other step contains all other additional option fields.
     If the form does not contain any additional options this second step will be omitted.
     """
     field_blacklist = {"project"}
+
     def __init__(self, inner_form):
         super().__init__()
 
         self.inner_form = inner_form
 
-        form_list = self.get_form_list(inner_form)
+        form_list = self.get_form_list()
         self.form_list = OrderedDict((str(k), v) for k, v in enumerate(form_list))
 
-    def get_form_list(self, inner_form):
-        form_fields = inner_form().fields
+    def get_form_list(self):
+        form_fields = self.inner_form().fields
         field_dicts = [OrderedDict()]
         upload_fields = self.get_upload_step_form().base_fields
         field_dicts[0].update((name, field) for name, field in form_fields.items()
-                         if name in upload_fields and name not in self.field_blacklist)
+                              if name in upload_fields and name not in self.field_blacklist)
         other_fields = OrderedDict((name, field) for name, field in form_fields.items()
                                    if name not in field_dicts[0] and name not in self.field_blacklist)
         if other_fields:
             field_dicts.append(other_fields)
-        return [self.get_partial_form(inner_form, fs) for fs in field_dicts]
+        return [self.get_partial_form(self.inner_form, fs) for fs in field_dicts]
 
     @staticmethod
     def get_partial_form(base_form, fields):
@@ -140,7 +124,7 @@ class UploadWizardForm(WizardForm):
             clean_fn = "clean_{}".format(name)
             if hasattr(base_form, clean_fn):
                 setattr(PartialForm, clean_fn, getattr(base_form, clean_fn))
-
+        if hasattr(base_form, "clean"): setattr(PartialForm, "clean", base_form.clean)
         return PartialForm
 
     class DefaultUploadStepForm(UploadForm, FileUploadForm):
@@ -148,10 +132,15 @@ class UploadWizardForm(WizardForm):
 
     @classmethod
     def get_upload_step_form(cls):
+        """
+        Returns the form that is to be used for the file upload step.
+        """
         return cls.DefaultUploadStepForm
 
+
 class WizardFormView(SessionWizardView):
-    form_list = (DummyOptionsForm,)  # hack: SessionWizardView expects a non-empty form list at init for no reason whatsoever
+    form_list = (
+    DummyOptionsForm,)  # hack: SessionWizardView expects a non-empty form list at init for no reason whatsoever
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -164,7 +153,7 @@ class ArticleSetUploadView(BaseMixin, WizardFormView):
     file_storage = FileSystemStorage(location=mkdtemp(prefix="upload_wiz"))
 
     def dispatch(self, request, *args, **kwargs):
-        self.options_step = next(k for k, v in self.form_list.items() if v is DummyOptionsForm) 
+        self.options_step = next(k for k, v in self.form_list.items() if v is DummyOptionsForm)
         self.wizard_form = self.get_wizard_form(self.script_class)
         self.form_list = self.wizard_form.form_list
         return super(ArticleSetUploadView, self).dispatch(request, *args, **kwargs)
@@ -181,8 +170,8 @@ class ArticleSetUploadView(BaseMixin, WizardFormView):
         kwargs = super().get_form_kwargs(step)
         prev_step = self.get_prev_step(step)
         if prev_step:
-            prev_data = dict(self.get_cleaned_data_for_step(prev_step),project=self.project.id)
-            prev_form =  self.wizard_form.get_upload_step_form()(prev_data, files={'file': prev_data['file']})
+            prev_data = dict(self.get_cleaned_data_for_step(prev_step), project=self.project.id)
+            prev_form = self.wizard_form.get_upload_step_form()(prev_data, files={'file': prev_data['file']})
             prev_form.full_clean()
             if 'file' in prev_form.cleaned_data and hasattr(self.wizard_form, 'get_file_info'):
                 kwargs['file_info'] = self.wizard_form.get_file_info(prev_form)
@@ -191,7 +180,7 @@ class ArticleSetUploadView(BaseMixin, WizardFormView):
     def get_context_data(self, **kwargs):
         context = super(ArticleSetUploadView, self).get_context_data(**kwargs)
         context["script_name"] = self.script_class.__name__
-        context["is_field_mapping_form"] = isinstance(context['form'], FieldMapFormSet)
+        context["is_field_mapping_form"] = isinstance(context['form'], BaseFieldMapFormSet)
         return context
 
     def get_all_raw_data(self, form_dict):
@@ -207,21 +196,25 @@ class ArticleSetUploadView(BaseMixin, WizardFormView):
         return data
 
     def done(self, form_list, form_dict, **kwargs):
-        data = self.get_all_cleaned_data()
+        data = {}
+        form_fields = self.script_class.options_form().fields
+        for k, v in self.get_all_cleaned_data().items():
+            data[k] = form_fields[k].prepare_value(v)
+
+
         data["project"] = self.project.id
 
         arguments = {
             "data": data,
             "files": {}
         }
-        
+
         task = ArticleSetUploadScriptHandler.call(self.script_class,
                                                   user=self.request.user,
                                                   project=self.project,
                                                   arguments=arguments)
 
         return redirect(reverse("navigator:task-details", args=[self.project.id, task.task.id]))
-
 
     def get_wizard_form(self, script_class):
         if hasattr(script_class.options_form, 'as_wizard_form'):

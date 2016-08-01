@@ -31,4 +31,4 @@ class TestSearch(ApiTestCase):
             a = amcattest.create_test_article(date=d)
             amcates.ES().flush()
             res = self.get("/api/v4/search", ids=a.id)
-            self.assertEqual(toolkit.readDate(res['results'][0]['date']), toolkit.readDate(str(d)))
+            self.assertEqual(toolkit.read_date(res['results'][0]['date']), toolkit.read_date(str(d)))

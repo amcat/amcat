@@ -19,7 +19,7 @@
 
 from amcat.tools import amcattest
 from amcat.tools.amcates import ES
-from amcat.tools.toolkit import readDate
+from amcat.tools.toolkit import read_date
 from api.rest.apitestcase import ApiTestCase
 from api.rest.resources import ArticleMetaResource, ProjectResource
 
@@ -49,7 +49,7 @@ class TestSerializer(ApiTestCase):
         actual_results = actual_results[0]
 
         date = actual_results.pop('insert_date')
-        readDate(date)# check valid date, not much more to check here?
+        read_date(date)# check valid date, not much more to check here?
 
         expected_results={u'insert_user': p1.insert_user.id,
                           u'description': 'testdescription',

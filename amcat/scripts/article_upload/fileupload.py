@@ -151,6 +151,47 @@ def namedtuple_xlsx_reader(xlsx_file):
     return namedtuples_from_reader(reader)
 
 
+class CSVFile(File):
+    def __init__(self, *args, dialect=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.dialect_name = dialect
+        self._dialect = None
+
+    @property
+    def dialect(self):
+        if self._dialect is not None:
+            return self._dialect
+
+        d = self.dialect_name or "autodetect"
+
+        if d == 'autodetect':
+            sample = self.file.read(MAX_SAMPLE_SIZE)
+            dialect = csv.Sniffer().sniff(sample)
+            self.file.seek(0)
+            if dialect.delimiter not in "\t,;":
+                dialect = csv.get_dialect('excel')
+        else:
+            dialect = csv.get_dialect(d)
+
+        self._dialect = dialect
+        return dialect
+
+    def __iter__(self):
+        reader = self.get_reader()
+        yield from reader
+
+    def get_reader(self, reader_class=namedtuple_csv_reader):
+        file = self.file
+
+        if file.name.endswith(".xlsx"):
+            if reader_class != namedtuple_csv_reader:
+                raise ValueError("Cannot handle xlsx files with non-default reader, sorry!")
+            return namedtuple_xlsx_reader(file)
+
+
+        return reader_class(file, dialect=self.dialect)
+
+
 def namedtuples_from_reader(reader, encoding=None):
     """
     returns a sequence of namedtuples from a (csv-like) reader which should yield the header followed by value rows
@@ -183,28 +224,9 @@ class CSVUploadForm(FileUploadForm):
                                 help_text="Select the kind of CSV file")
 
     def get_entries(self):
-        return self.get_reader(reader_class=namedtuple_csv_reader)
+        dialect = self.cleaned_data['dialect']
+        return [CSVFile(self.get_uploaded_text(), dialect=dialect)]
 
-    def get_reader(self, reader_class=namedtuple_csv_reader):
-        file = self.decode_file(self.files['file'])
-
-        if file.name.endswith(".xlsx"):
-            if reader_class != namedtuple_csv_reader:
-                raise ValueError("Cannot handle xlsx files with non-default reader, sorry!")
-            return namedtuple_xlsx_reader(file)
-
-        d = self.cleaned_data['dialect'] or "autodetect"
-
-        if d == 'autodetect':
-            sample = file.read(MAX_SAMPLE_SIZE)
-            dialect = csv.Sniffer().sniff(sample)
-            file.seek(0)
-            if dialect.delimiter not in "\t,;":
-                dialect = csv.get_dialect('excel')
-        else:
-            dialect = csv.get_dialect(d)
-
-        return reader_class(file, dialect=dialect)
 
 
 class ZipFileUploadForm(FileUploadForm):

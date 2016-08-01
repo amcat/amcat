@@ -882,7 +882,7 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
         if isinstance(d, list) and len(d) == 1:
             d = d[0]
         if isinstance(d, str):
-            d = toolkit.readDate(d)
+            d = toolkit.read_date(d)
         return d.isoformat()
 
     # Allow singulars as alias for plurals

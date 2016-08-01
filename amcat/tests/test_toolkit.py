@@ -74,9 +74,9 @@ class TestToolkit(amcattest.AmCATTestCase):
         ):
 
             if inspect.isclass(date) and issubclass(date, Exception):
-                self.assertRaises(date, toolkit.readDate, s, lax=False, american=american)
+                self.assertRaises(date, toolkit.read_date, s, lax=False, american=american)
             else:
-                date2 = toolkit.readDate(s, lax=lax, american=american)
+                date2 = toolkit.read_date(s, lax=lax, american=american)
                 self.assertEqual(date2, date)
 
     def test_head(self):

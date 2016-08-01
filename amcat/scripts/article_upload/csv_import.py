@@ -20,76 +20,62 @@
 """
 Plugin for uploading csv files
 """
-import csv
 import datetime
 import json
 
-import itertools
 from django import forms
-from django.db.models.fields import FieldDoesNotExist
+from django.contrib.postgres.forms import JSONField
 
-from amcat.models import Article 
+from amcat.models import Article
 from amcat.scripts.article_upload import fileupload
-from amcat.scripts.article_upload.upload import UploadScript, ParseError
-from amcat.scripts.article_upload.upload_formtools import FieldMapFormSet, FileInfo
-from amcat.tools.toolkit import readDate
+from amcat.scripts.article_upload.upload import UploadScript, ParseError, ARTICLE_FIELDS
+from amcat.scripts.article_upload.upload_formtools import get_form_set, FileInfo
+from amcat.tools.toolkit import read_date
 from navigator.views.articleset_upload_views import UploadWizardForm
 
-
-FIELDS = ("text", "date", "medium", "pagenr", "section", "headline", "byline", "url", "externalid",
-          "author", "addressee", "parent_url", "parent_externalid")
-REQUIRED = {"text", "date"}
-
+REQUIRED = tuple(
+    field.name for field in Article._meta.get_fields() if field.name in ARTICLE_FIELDS and not field.blank)
 
 TYPES = {
     "date": datetime.datetime,
-    "pagenr": int,
-    "externalid": int,
-    "parent_externalid": int,
+    "_default": str
 }
 
 PARSERS = {
-    datetime.datetime: readDate,
+    datetime.datetime: read_date,
     int: int,
     str: str,
-}
-
-HELP_TEXTS = {
-    "parent_url": "Column name for the URL of the parent article, which should be in the same CSV file",
-    "parent_externalid": "Column name for the External ID of the parent article, which should be in the same CSV file",
 }
 
 
 def get_required():
     return REQUIRED
 
+
 def get_fields():
-    return FIELDS 
+    return ARTICLE_FIELDS
+
 
 def get_field_type(field):
-    return TYPES.get(field, str)
+    return TYPES.get(field, TYPES['_default'])
+
 
 def get_parser(field_type):
     return PARSERS.get(field_type, lambda x: x)
 
+
 class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
-    
-    field_map = forms.CharField(max_length=2048, help_text='(JSON) dictionary consisting of "field":{"column":"<column name>"} or "field":{"value":"<value>"} mappings.') 
+    field_map = JSONField(max_length=2048,
+                              help_text='Dictionary consisting of "<field>":{"column":"<column name>"} and/or "<field>":{"value":"<value>"} mappings.')
 
     addressee_from_parent = forms.BooleanField(required=False, initial=False, label="Addressee from parent",
                                                help_text="If set, will set the addressee field to the author of the parent article")
 
-
+    def __init__(self, *args, **kargs):
+        super(CSVForm, self).__init__(*args, **kargs)
 
     def clean_field_map(self):
-        cd = self.cleaned_data
-        if isinstance(self.data['field_map'], dict):
-            data = self.data['field_map']
-        else:
-            try:
-                data = json.loads(cd['field_map'])
-            except:
-                raise forms.ValidationError('Field map should be a json string.')
+        data = self.cleaned_data['field_map']
         errors = []
         for k, v in data.items():
             if not isinstance(v, dict):
@@ -101,21 +87,16 @@ class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
             raise forms.ValidationError(errors)
         return data
 
-    def __init__(self, *args, **kargs):
-        super(CSVForm, self).__init__(*args, **kargs)
-
     @classmethod
     def as_wizard_form(cls):
         return CSVWizardForm
 
-class CSVWizardForm(UploadWizardForm):
-    def __init__(self, inner_form=CSVForm, *args, **kwargs):
-        super().__init__(inner_form)
 
-    def get_form_list(self, inner_form):
-        upload_form = super().get_form_list(inner_form)[0]
-        upload_form.base_fields['dialect'] = inner_form.base_fields['dialect']
-        field_form = FieldMapFormSet
+class CSVWizardForm(UploadWizardForm):
+    def get_form_list(self):
+        upload_form = super().get_form_list()[0]
+        upload_form.base_fields['dialect'] = self.inner_form.base_fields['dialect']
+        field_form = get_form_set(REQUIRED, ARTICLE_FIELDS)
         return [upload_form, field_form]
 
     class CSVUploadStepForm(UploadScript.options_form, fileupload.CSVUploadForm): pass
@@ -124,20 +105,14 @@ class CSVWizardForm(UploadWizardForm):
     def get_upload_step_form(cls):
         return cls.CSVUploadStepForm
 
-
     @classmethod
     def get_file_info(cls, upload_form: fileupload.CSVUploadForm):
-        try:
-            reader = upload_form.get_reader()
-        except csv.Error:
-            raise
-            return None
-        try:
-            firststep = next(reader)
-        except StopIteration:
-            return None
+        file = list(upload_form.get_entries())[0]
+        reader = iter(file)
+        firststep = next(iter(reader))
 
         return FileInfo(upload_form.cleaned_data['file'].name, firststep.column_names)
+
 
 class CSV(UploadScript):
     """
@@ -166,12 +141,18 @@ class CSV(UploadScript):
     """
 
     options_form = CSVForm
-
+    _errors = {
+        "empty_col": 'Expected non-empty value in table column "{}" for required field "{}".',
+        "empty_val": 'Expected non-empty value for required field "{}".',
+        "parse_value": 'Failed to parse value "{}". Expected type: {}.'
+    }
     def run(self, *args, **kargs):
         return super(CSV, self).run(*args, **kargs)
 
-    def parse_document(self, row):
+    def parse_document(self, row, i=None):
+        properties = {}
         article = {}
+
         csvfields = self.options["field_map"]
         for fieldname, csvfield in csvfields.items():
             if 'column' in csvfield:
@@ -179,28 +160,42 @@ class CSV(UploadScript):
                 val = row[colname]
             elif 'value' in csvfield:
                 val = csvfield['value']
-            
-            if not val:
+
+            if not val and fieldname in ARTICLE_FIELDS:
                 article[fieldname] = None
                 continue
-            
+
             field_type = get_field_type(fieldname)
             if not isinstance(val, field_type):
                 try:
                     val = get_parser(field_type)(val)
                 except:
-                    raise ParseError('Failed to parse value "{}". Expected {}.'.format(val, field_type.__name__)) 
-            article[fieldname] = val
+                    raise ParseError(self._errors['parse_value'].format(val, field_type.__name__))
 
+            if fieldname in ARTICLE_FIELDS:
+                article[fieldname] = val
+            else:
+                properties[fieldname] = val
 
+        from logging import getLogger
+        getLogger(__name__).warning(article)
         for field in get_required():
-            if field not in article or not article[field]: 
-                raise ParseError('Missing value for required field "{}".'.format(field))        
+            if field not in article or not article[field]:
+                if 'column' in csvfields[field]:
+                    raise ParseError(self._errors['empty_col'].format(csvfields[field]['column'], field))
 
+        article['properties'] = properties
         return Article(**article)
-    
+
+    def split_file(self, file):
+        for reader in file:
+            yield reader
+
+    def explain_error(self, error, article=None):
+        return "Error in row {}: {}".format(article, error)
+
+
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
 
     cli.run_cli(CSV)
-

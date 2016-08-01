@@ -30,7 +30,7 @@ from amcat.scripts.article_upload.upload import UploadScript
 
 from amcat.models.article import Article
 from amcat.models.medium import Medium
-from amcat.tools.toolkit import readDate
+from amcat.tools.toolkit import read_date
 
 
 class Mediargus(UploadScript):
@@ -56,7 +56,7 @@ class Mediargus(UploadScript):
 
         medium_name, date, pagenr, length = meta[2].split(', ')
         kargs['medium'] = Medium.get_or_create(medium_name)
-        kargs['date'] = readDate(date)
+        kargs['date'] = read_date(date)
         kargs['pagenr'] = int(pagenr.strip('p.'))
         kargs['length']  = int(length.strip('w.'))
         
