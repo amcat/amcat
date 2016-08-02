@@ -21,7 +21,6 @@
 Plugin for uploading csv files
 """
 import datetime
-import json
 
 from django import forms
 from django.contrib.postgres.forms import JSONField
@@ -66,7 +65,7 @@ def get_parser(field_type):
 
 class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
     field_map = JSONField(max_length=2048,
-                              help_text='Dictionary consisting of "<field>":{"column":"<column name>"} and/or "<field>":{"value":"<value>"} mappings.')
+                          help_text='Dictionary consisting of "<field>":{"column":"<column name>"} and/or "<field>":{"value":"<value>"} mappings.')
 
     addressee_from_parent = forms.BooleanField(required=False, initial=False, label="Addressee from parent",
                                                help_text="If set, will set the addressee field to the author of the parent article")
@@ -146,6 +145,7 @@ class CSV(UploadScript):
         "empty_val": 'Expected non-empty value for required field "{}".',
         "parse_value": 'Failed to parse value "{}". Expected type: {}.'
     }
+
     def run(self, *args, **kargs):
         return super(CSV, self).run(*args, **kargs)
 

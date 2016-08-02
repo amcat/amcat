@@ -30,7 +30,6 @@ from amcat.scripts.article_upload.upload import UploadScript, ParseError
 from amcat.scripts.article_upload import fileupload
 from amcat.tools import toolkit
 from amcat.models.article import Article
-from amcat.models.medium import Medium
 
 from io import StringIO
 
@@ -55,6 +54,7 @@ class RES:
     # Copyright notice
     COPYRIGHT = re.compile("^Copyright \d{4}.*")
 
+    VALID_PROPERTY_NAME_PARTS = re.compile("[A-Za-z][A-Za-z0-9]*")
 
 MONTHS = dict(spring=3,
               summer=6,
@@ -85,6 +85,9 @@ BODY_KEYS_MAP = {
     "name": "byline"
 }
 
+def clean_property_key(key):
+    key_parts = RES.VALID_PROPERTY_NAME_PARTS.findall(key)
+    return key_parts[0] + "".join(k.title() for k in key_parts[1:])
 
 def split_header(doc):
     """
@@ -205,7 +208,7 @@ def parse_online_article(art):
     blocks = re.split("\n *\n\s*", _strip_article(art))
     if len(blocks) != 6:
         return
-    medium, url, datestr, headline, nwords, lead = blocks
+    medium, url, datestr, title, nwords, lead = blocks
     if not (url.startswith("http://") or url.startswith("https://")):
         return
     if lead.startswith("Bewaar lees artikel"):
@@ -214,19 +217,19 @@ def parse_online_article(art):
     if not re.match("(\d+) words", nwords):
         return
     date = toolkit.read_date(datestr)
-    return headline.strip(), None, lead.strip(), date, medium, {"length": nwords, "url": url}
+    return title.strip(), None, lead.strip(), date, medium, {"length": nwords, "url": url}
 
 def parse_article(art):
     """
     A lexis nexis article consists of five parts:
     1) a header
-    2) the headline and possibly a byline
+    2) the title and possibly a byline
     3) a block of meta fields
     4) the body
     5) a block of meta fields
 
     The header consists of 'centered' lines, ie starting with a whitespace character
-    The headline (and byline) are left justified non-marked lines before the first meta field
+    The title (and byline) are left justified non-marked lines before the first meta field
     The meta fields are of the form FIELDNAME: value and can contain various field names
     The body starts after either two blank lines, or if a line is not of the meta field form.
     The body ends with a 'load date', which is of form FIELDNAME: DATE ending with a four digit year
@@ -237,7 +240,7 @@ def parse_article(art):
         return online
 
     
-    header, headline, meta, body = [], [], [], []
+    header, title, meta, body = [], [], [], []
 
     header_headline = []
 
@@ -305,7 +308,7 @@ def parse_article(art):
                 yield line
 
     def _get_headline(lines):
-        """Return headline and byline, consuming the lines"""
+        """Return title and byline, consuming the lines"""
         headline, byline = [], []
         target = headline
 
@@ -315,7 +318,7 @@ def parse_article(art):
                 return None, None
             if not line:
                 # they thought of something new again...
-                # headline\n\nbyline\n\nLENGTH:
+                # title\n\nbyline\n\nLENGTH:
                 # so empty line is not always the end
                 if (len(lines) > 4 and (not lines[2]) and lines[1]
                     and RES.BODY_META.match(lines[3]) and (not RES.BODY_META.match(lines[1]))):
@@ -352,12 +355,10 @@ def parse_article(art):
                 key, val = meta_match.groups()
                 key = key.lower()
                 key = BODY_KEYS_MAP.get(key, key)
-
                 # multi-line meta: add following non-blank lines
                 while lines and lines[0].strip():
                     val += " " + lines.pop(0)
                 val = re.sub("\s+", " ", val)
-
                 yield key, val.strip()
 
 
@@ -383,22 +384,22 @@ def parse_article(art):
         return
 
     if header_headline:
-        headline = re.sub("\s+", " ", " ".join(header_headline)).strip()
-        if ";" in headline:
-            headline, byline = [x.strip() for x in headline.split(";", 1)]
+        title = re.sub("\s+", " ", " ".join(header_headline)).strip()
+        if ";" in title:
+            title, byline = [x.strip() for x in title.split(";", 1)]
         else:
             byline = None
-        if re.match("[A-Z]+:", headline):
-            headline = headline.split(":", 1)[1]
+        if re.match("[A-Z]+:", title):
+            title = title.split(":", 1)[1]
     else:
-        headline, byline = _get_headline(lines)
+        title, byline = _get_headline(lines)
 
     meta = _get_meta(lines)
-    if headline is None:
-        if 'headline' in meta:
-            headline = meta.pop('headline')
+    if title is None:
+        if 'title' in meta:
+            title = meta.pop('title')
         elif 'kop' in meta:
-            headline = meta.pop('kop')
+            title = meta.pop('kop')
 
     body = _get_body(lines)
 
@@ -474,30 +475,30 @@ def parse_article(art):
     if 'graphic' in meta and (not text):
         text = meta.pop('graphic')
 
-    if headline is None:
+    if title is None:
         if 'title' in meta:
-            headline = re.sub("\s+", " ", meta.pop('title')).strip()
-            if ";" in headline and not byline:
-                headline, byline = [x.strip() for x in headline.split(";", 1)]
+            title = re.sub("\s+", " ", meta.pop('title')).strip()
+            if ";" in title and not byline:
+                title, byline = [x.strip() for x in title.split(";", 1)]
         else:
-            headline = "No headline found!"
+            title = "No title found!"
 
     if 'byline' in meta:
         if byline:
-            headline += "; %s" % byline
+            title += "; %s" % byline
         byline = meta.pop('byline')
 
-    return headline.strip(), byline, text, date, source, meta
+    return title.strip(), byline, text, date, source, meta
 
 
-def body_to_article(headline, byline, text, date, source, meta):
+def body_to_article(title, byline, text, date, medium, meta):
     """
     Create an Article-object based on given parameters. It raises an
     error (Medium.DoesNotExist) when the given source does not have
     an entry in the database.
 
-    @param headline: headline of new Article-object
-    @type headline: str
+    @param title: headline of new Article-object
+    @type title: str
 
     @param byline: byline for new Article
     @type byline: NoneType, str
@@ -519,26 +520,29 @@ def body_to_article(headline, byline, text, date, source, meta):
     @return Article-object
 
     """
-    log.debug("Creating article object for {headline!r}".format(**locals()))
+    log.debug("Creating article object for {title!r}".format(**locals()))
 
-    art = Article(headline=headline, byline=byline, text=text, date=date)
-
-    art.medium = Medium.get_or_create(source)
+    art = Article(title=title, text=text, date=date)
 
     # Author / Section
     meta = meta.copy()
-    art.author = meta.pop('author', None)
-    art.section = meta.pop('section', None)
-    if 'length' in meta:
-        art.length = int(meta.pop('length').split()[0])
-    else:
-        art.length = art.text.count(" ")
+    meta.pop("title", 0)
+    meta.pop("text", 0)
+    meta.pop("url", 0)
+    meta.update(
+        medium=medium,
+        byline=byline
+    )
     if 'url' in meta:
         art.url = meta.pop('url')
         art.url = re.sub("\s+", "", art.url)
-
-    art.metastring = str(meta)
-
+    if 'length' in meta:
+        meta['length'] = int(meta['length'].split()[0])
+    properties = dict(
+        length=len(art.text.split())
+    )
+    properties.update((clean_property_key(k), v) for k, v in meta.items() if v is not None)
+    art.properties = properties
     return art
 
 

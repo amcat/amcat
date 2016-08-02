@@ -1,5 +1,4 @@
 from django import forms
-from amcat.models import Article
 
 
 class FileInfo:
