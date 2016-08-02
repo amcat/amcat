@@ -92,9 +92,9 @@ def _escape_bytes(b):
 
 def _hash_dict(d):
     c = hash_class()
-    for k, v in d.items():
-        c.update(_escape_bytes(_encode_field(k)))
-        c.update(_escape_bytes(_encode_field(v)))
+    for fn in sorted(d.keys()):
+        c.update(_escape_bytes(_encode_field(fn)))
+        c.update(_escape_bytes(_encode_field(d[fn])))
         c.update(b",")
     return c.hexdigest()
 

@@ -36,6 +36,11 @@ And re-index the elasticsearch index
 import sys
 import logging
 import binascii
+import csv
+import io
+import json
+
+import psycopg2
 
 from django.core.management import BaseCommand
 from django.db import connection
@@ -64,100 +69,104 @@ class Command(BaseCommand):
     help = __doc__
 
     def add_arguments(self, parser):
+        parser.add_argument('articles', help="CSV file containing the articles dump")
+        parser.add_argument('media', help="CSV file containing the media dump")
         parser.add_argument('--no_data', action='store_true', help="Don't copy the date to property fields")
         parser.add_argument('--drop_columns', action='store_true', help="Drop the unneeded columns after migrating")
         
     def handle(self, *args, **options):
-        self.create_fields()
-        if not options['no_data']:
-            self.copy_data()
-        if options['drop_columns']:
-            self.drop_columns()
+        self.drop_old()
+        self.create_article_table()
+        media = dict(self.get_media(options['media']))
+        self.copy_data(options['articles'], media)
+        self.create_constraints()
 
-    def create_fields(self):
-        to_add = NEW_FIELDS.copy()
-        cursor = connection.cursor()
-        cursor.execute("SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' and table_name = 'articles'")
-        for column_name, data_type in cursor.fetchall():
-            if column_name in to_add:
-                target_type = to_add.pop(column_name)
-                if target_type != data_type:
-                    raise ValueError("Error in column {column_name}: existing type {data_type} != target type {target_type}".format(**locals()))
-
-        if not to_add:
-            logging.info("All DB columns already exist")
-        else:
-            logging.info("Creating columns: {to_add!r}".format(**locals()))
-            for col, typ in to_add.items():
-                sql = 'ALTER TABLE "articles" ADD COLUMN "{col}" {typ}'.format(**locals())
-                cursor.execute(sql)
+    def get_media(self, fn):
+        for line in csv.DictReader(open(fn)):
+            yield int(line['medium_id']), line['name']
         
-    def copy_data(self):
-        cursor = connection.cursor()
-        # Add 'old' fields to model so we can easily retrieve them:
-        models.IntegerField().contribute_to_class(Article, 'parent_article_id')
-        models.IntegerField().contribute_to_class(Article, 'medium_id')
-        models.TextField().contribute_to_class(Article, 'headline')
-        for (name, ftype) in PROP_FIELDS.items():
-            ftype().contribute_to_class(Article, name)
-
-        logging.info("Getting medium names")
-        cursor.execute("SELECT medium_id, name FROM media")
-        media = dict(cursor.fetchall())
-            
-        # convert articles and build hashes
-        # parent_hash is part of hash, so need to do it in 'layers'
-        # Do it in batches to prevent memory (and postgres) blowing up
-        max_id = Article.objects.aggregate(models.Max('pk'))['pk__max']
-        batch_size = 1000
-        n = (max_id // batch_size) + 1
-        parents = {} # for articles whose parent hash is not yet known
-        hashes = {} # article : hash_bytes
-        for batch in range(0, n):
-            logging.info("Updating articles, first pass, batch {i} / {n}".format(i=batch+1, **locals()))
-            _from, _to = batch * batch_size, (batch+1)*batch_size
-            articles = list(Article.objects.filter(pk__gt=_from, pk__lte=_to))
-            for a in articles:
-                a.title = a.headline
-                a.properties = {v: getattr(a, v) for v in PROP_FIELDS if getattr(a,v)}
-                a.properties['medium'] = media[a.medium_id]
-                a.properties['uuid'] = str(a.properties['uuid'])
-
-                parent = a.parent_article_id
-                if parent and (parent not in hashes):
-                    # defer to next pass
-                    parents[a.id] = a.parent_article_id
-                else:
-                    if parent: 
-                        a.parent_hash = binascii.hexlify(hashes[parent])
-                    a.hash = amcates.get_article_dict(a)['hash']
-                    hashes[a.id] = binascii.unhexlify(a.hash)
+    def drop_old(self):
+        logging.info("Dropping contraints")
+        with connection.cursor() as c:
+            c.execute("""
+SELECT
+    kcu.table_name, tc.constraint_name
+FROM 
+    information_schema.table_constraints AS tc 
+    JOIN information_schema.key_column_usage AS kcu
+      ON tc.constraint_name = kcu.constraint_name
+    JOIN information_schema.constraint_column_usage AS ccu
+      ON ccu.constraint_name = tc.constraint_name
+WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
+            constraints = list(c.fetchall())
+        for table, constraint in constraints:
+            with connection.cursor() as c:
+                logging.info(constraint)
+                c.execute('ALTER TABLE {table} DROP CONSTRAINT "{constraint}"'.format(**locals()))
+        logging.info("Dropping articles table")
+        with connection.cursor() as c:
+            c.execute("DROP TABLE IF EXISTS articles")
                     
-            bulk_update(articles, update_fields=['title', 'properties', 'hash', 'parent_hash'])
-        del hashes
+    def create_article_table(self):
+        with connection.cursor() as c:
+            c.execute('''
+            CREATE TABLE "articles" ("article_id" serial NOT NULL PRIMARY KEY, "date" timestamp with time zone NOT NULL, "title" text NOT NULL, "url" text NULL, "text" text NOT NULL, "hash" bytea NOT NULL, "parent_hash" bytea NULL, "properties" jsonb NULL, "project_id" integer NOT NULL);''')
         
-        while parents:
-            logging.info("Setting parent hash and computing child hashes, todo={}".format(len(parents)))
-            batch = {aid: parent for (aid, parent) in parents.items() if parent not in parents}
-            articles = Article.objects.only("pk").in_bulk(batch.keys())
-            parent_hashes = dict(Article.objects.filter(pk__in=batch.values()).values_list("pk", "hash"))
-            for aid, parent in batch.items():
-                a = articles[aid]
-                a.parent_hash = parent_hashes[parent]
-                a.hash = amcates.get_article_dict(a)['hash']
-                del parents[aid]
-            bulk_update(list(articles.values()), update_fields=['hash', 'parent_hash'])
+    def copy_data(self, fn, media):
 
-    
-        cursor.execute('ALTER TABLE articles ALTER COLUMN title SET NOT NULL')
-        cursor.execute('ALTER TABLE articles ALTER COLUMN text SET NOT NULL')
-        cursor.execute('ALTER TABLE articles ALTER COLUMN hash SET NOT NULL')
-        cursor.execute('ALTER TABLE articles ADD UNIQUE (hash)')
-        cursor.execute('CREATE INDEX ON articles (parent_hash)')
-        
+        csv.field_size_limit(sys.maxsize)
 
-    def drop_columns(self):
         cursor = connection.cursor()
-        for col in PROP_FIELDS + ('headline', 'medium_id', 'insertscript', 'insertdate', 'parent_article_id'):
-            cursor.execute('ALTER TABLE articles DROP COLUMN IF EXISTS "{col}"'.format(**locals()))
 
+        r = csv.reader(open(fn))
+        header = next(r)
+
+        buffer = []
+        for line in r:
+            buffer.append(line)
+            if len(buffer) > 1000:
+                self.do_copy_data(header, buffer, media)
+                buffer = []
+        if buffer:
+            self.do_copy_data(header, buffer, media)
+        #TODO! Deal with parent_hash
+            
+    def do_copy_data(self, header, data, media):
+        logging.info("Copying {} rows".format(len(data)))
+
+        out = io.StringIO()
+        outw = csv.writer(out, quoting=csv.QUOTE_ALL)
+        
+        index = {col: i for (i, col) in enumerate(header)}
+        for row in data:
+            aid = row[index['article_id']]
+            a = Article(
+                project_id = row[index['project_id']],
+                date = row[index['date']],
+                title = row[index['headline']],
+                url = row[index['url']],
+                text = row[index['text']])
+            if not a.text:
+                a.text = ""
+            
+            a.properties = {v: row[index[v]] for v in PROP_FIELDS if row[index[v]]}
+            a.properties['medium'] = media[int(row[index['medium_id']])]
+            a.properties['uuid'] = str(a.properties['uuid'])
+            
+            hash = amcates.get_article_dict(a)['hash']
+            parent_id = row[index['parent_article_id']]
+
+            # convert hash to postgres binary format
+            hash = binascii.unhexlify(hash)
+            hash = str(psycopg2.Binary(hash))
+            hash = hash[1:-8]
+            outw.writerow([a.project_id, aid, a.date, a.title, a.url, a.text, hash, json.dumps(a.properties)])
+
+        out.seek(0)
+        with connection.cursor() as c:
+            cols = ", ".join(['project_id', 'article_id', 'date', 'title', 'url', 'text', 'hash', 'properties'])
+            sql = "COPY articles ({cols}) FROM STDIN WITH (FORMAT CSV)".format(**locals())
+            c.copy_expert(sql, out)
+      
+    def create_constraints(self):
+        pass
