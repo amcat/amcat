@@ -35,6 +35,7 @@ And re-index the elasticsearch index
 
 import sys
 import logging
+import binascii
 
 from django.core.management import BaseCommand
 from django.db import connection
@@ -44,9 +45,19 @@ from bulk_update.helper import bulk_update
 
 from amcat.tools import amcates
 from amcat.models import Article
+from amcat.tools.model import PostgresNativeUUIDField
 
 NEW_FIELDS = {"hash": "bytea", "parent_hash": "bytea", "properties" : "jsonb", "title": "text"}
-PROP_FIELDS = "section", "pagenr", "byline", "length", "metastring", "externalid", "author", "addressee", "uuid"
+
+PROP_FIELDS = {"section": models.CharField,
+               "pagenr": models.IntegerField,
+               "byline": models.TextField,
+               "length": models.IntegerField,
+               "metastring": models.TextField,
+               "externalid": models.IntegerField,
+               "author": models.TextField,
+               "addressee": models.TextField,
+               "uuid": PostgresNativeUUIDField}
 
 class Command(BaseCommand):
     
@@ -83,37 +94,47 @@ class Command(BaseCommand):
         
     def copy_data(self):
         cursor = connection.cursor()
-        # headline -> title
-        cursor.execute('UPDATE articles SET title=headline')
-        
-        # other fields -> properties
-        fields = ", ".join("'{field}', \"{field}\"".format(**locals()) for field in PROP_FIELDS)
-        fields = "{fields}, 'medium', m.name".format(**locals())
-        sql = '''UPDATE articles a SET properties = json_strip_nulls(json_build_object({fields}))
-                 FROM media m WHERE m.medium_id = a.medium_id'''.format(**locals())
-        cursor.execute(sql)
-        
-        # build hashes
-        # ('hashable' fields should now all be updated, so can use django ORM)
-        # parent_hash is part of hash, so need to do it in 'layers'
+        # Add 'old' fields to model so we can easily retrieve them:
         models.IntegerField().contribute_to_class(Article, 'parent_article_id')
+        models.IntegerField().contribute_to_class(Article, 'medium_id')
+        models.TextField().contribute_to_class(Article, 'headline')
+        for (name, ftype) in PROP_FIELDS.items():
+            ftype().contribute_to_class(Article, name)
 
+        logging.info("Getting medium names")
+        cursor.execute("SELECT medium_id, name FROM media")
+        media = dict(cursor.fetchall())
+            
+        # convert articles and build hashes
+        # parent_hash is part of hash, so need to do it in 'layers'
+        # Do it in batches to prevent memory (and postgres) blowing up
         max_id = Article.objects.aggregate(models.Max('pk'))['pk__max']
         batch_size = 1000
         n = (max_id // batch_size) + 1
-        parents = {}
+        parents = {} # for articles whose parent hash is not yet known
+        hashes = {} # article : hash_bytes
         for batch in range(0, n):
-            to_update = []
-            logging.info("\rHashing articles without parents, batch {i} / {n}".format(i=batch+1, **locals()))
+            logging.info("Updating articles, first pass, batch {i} / {n}".format(i=batch+1, **locals()))
             _from, _to = batch * batch_size, (batch+1)*batch_size
             articles = list(Article.objects.filter(pk__gt=_from, pk__lte=_to))
             for a in articles:
-                if a.parent_article_id:
+                a.title = a.headline
+                a.properties = {v: getattr(a, v) for v in PROP_FIELDS if getattr(a,v)}
+                a.properties['medium'] = media[a.medium_id]
+                a.properties['uuid'] = str(a.properties['uuid'])
+
+                parent = a.parent_article_id
+                if parent and (parent not in hashes):
+                    # defer to next pass
                     parents[a.id] = a.parent_article_id
                 else:
+                    if parent: 
+                        a.parent_hash = binascii.hexlify(hashes[parent])
                     a.hash = amcates.get_article_dict(a)['hash']
-                    to_update.append(a)
-            bulk_update(to_update, update_fields=['hash'])
+                    hashes[a.id] = binascii.unhexlify(a.hash)
+                    
+            bulk_update(articles, update_fields=['title', 'properties', 'hash', 'parent_hash'])
+        del hashes
         
         while parents:
             logging.info("Setting parent hash and computing child hashes, todo={}".format(len(parents)))
@@ -132,7 +153,7 @@ class Command(BaseCommand):
         cursor.execute('ALTER TABLE articles ALTER COLUMN text SET NOT NULL')
         cursor.execute('ALTER TABLE articles ALTER COLUMN hash SET NOT NULL')
         cursor.execute('ALTER TABLE articles ADD UNIQUE (hash)')
-        cursor.execute('ALTER TABLE articles CREATE INDEX ON parent_hash')
+        cursor.execute('CREATE INDEX ON articles (parent_hash)')
         
 
     def drop_columns(self):
