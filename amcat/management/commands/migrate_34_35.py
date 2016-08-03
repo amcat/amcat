@@ -20,17 +20,24 @@
 """
 Migrate db from 3.4 (fixed 'newspaper' fields) to 3.5 ('flexible fields')
 
-The DB migration will be in place:
-- create/rename new fields (properties, hash, title)
-- copy old fields to properties
-- optionally drop old fields (will cause 3.4 to stop working)
+Before migrating, you need to dump the articles and media tables using something like:
 
-Note that this requires django-bulk-update
+psql -c "copy media to 'media.csv' with csv header" amcat
+psql -c "copy articles to 'articles.csv' with csv header" amcat
+
+And provide these csv files as arguments to migrate_34_35
+
+The DB migration will do the following:
+- drop and re-create the articles table
+- copy the data from the csv file (in multiple passes to fix parents)
+- add UNIQUE and FK contraints
+
+As this *will* delete all data, please make sure that you have a backup before running this!
 
 After this, you should probably tell django that the initial migration is done: 
 python -m amcat.manage migrate --fake amcat 0001
 python -m amcat.manage migrate --fake amcat 0002
-And re-index the elasticsearch index
+Now, you can re-index the elasticsearch index
 """
 
 import sys
