@@ -48,6 +48,7 @@ import io
 import json
 import itertools
 from datetime import datetime
+import ctypes
 
 import psycopg2
 
@@ -81,6 +82,7 @@ class Command(BaseCommand):
         parser.add_argument('--dry-run', action='store_true', help="Don't alter the database")
         
     def handle(self, *args, **options):
+        self.n_rows = "?"
         self.dry = options['dry_run']
         if not self.dry:
             self.drop_old()
@@ -130,7 +132,7 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
         outw = csv.writer(out, quoting=csv.QUOTE_ALL)
         for i, row in enumerate(self.get_articles(fn, media)):
             outw.writerow(row)
-            if out.tell() > 10000000:
+            if out.tell() > 100000000:
                 self.do_copy(out, i)
                 out = io.StringIO()
                 outw = csv.writer(out, quoting=csv.QUOTE_ALL)
@@ -139,10 +141,10 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
             self.do_copy(out, i)
 
     def do_copy(self, out, i):
+        logging.info("[{}%] {} copying {} bytes, {i}/{self.n_rows} articles"
+                     .format((i*100)//self.n_rows, "NOT " if self.dry else "", out.tell(),**locals()))        
         if self.dry:
-            logging.info("(NOT) Copying {} bytes to postgres, total {} articles".format(out.tell(), i))
             return
-        logging.info("Copying {} bytes to postgres, total {} articles".format(out.tell(), i))
         out.seek(0)
         with connection.cursor() as c:
             cols = ", ".join(['project_id', 'article_id', 'date', 'title', 'url', 'text', 'hash', 'parent_hash', 'properties'])
@@ -158,27 +160,53 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
                 if not isinstance(hash, str):
                     raise TypeError("Hash should be str, not {}".format(type(hash)))
                 return "\\x" + hash
+
+
+        logging.info("*** Scan input CSV to determine #rows and max(id)")
+        r = csv.reader(open(fn))
+        header = next(r)
+        index = {col: i for (i, col) in enumerate(header)}
+        AID = index['article_id']
+        max_id, self.n_rows = 0, 0
+        for row in r:
+            max_id = max(max_id, int(row[AID]))
+            self.n_rows += 1
+            if not self.n_rows  % 10000000:
+                logging.info(".. scanned {self.n_rows} rows".format(**locals()))
         
-        hashes = {} # id : hash_bytes (bytes to save memory, this will store *all* articles!)
+        logging.info("{self.n_rows} rows, max ID {max_id}, allocating memory for hashes".format(**locals()))
+
+        hashes = ctypes.create_string_buffer(max_id*28)
+        NULL_HASH = b'\x00' * 28
         orphans = "N/A"
+        passno = 1
         
         while orphans:
-            logging.info("*** Next pass, stored {n}, orphans {orphans}".format(n=len(hashes), **locals()))
-
+            logging.info("*** Pass {passno}, #orphans {orphans}".format(**locals()))
+            passno += 1
             orphans = 0
+            
             r = csv.reader(open(fn))
-            header = next(r)
-            index = {col: i for (i, col) in enumerate(header)}
+            next(r) # skip header
 
             for row in r:
-                aid = int(row[index['article_id']])
-                if aid in hashes:
+                aid = int(row[AID])
+                
+                offset = (aid - 1) * 28
+                stored_hash = hashes[offset:offset+28]
+                if stored_hash != NULL_HASH:
                     continue
                 
                 parent_id = _int(row[index['parent_article_id']])
-                if parent_id and parent_id not in hashes:
-                    orphans += 1
-                    continue
+                if parent_id:
+                    poffset = (parent_id - 1) * 28
+                    parent_hash = hashes[poffset:poffset+28]
+                    if parent_hash == NULL_HASH:
+                        orphans += 1
+                        continue
+                    parent_hash = binascii.hexlify(parent_hash).decode("ascii")
+                else:
+                    parent_hash = None
 
                 date = row[index['date']]
                 date = date.split("+")[0]
@@ -190,18 +218,16 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
                     date = date,
                     title = row[index['headline']],
                     url = row[index['url']] or None,
-                    text = row[index['text']])
+                    text = row[index['text']],
+                    parent_hash=parent_hash)
                 
                 a.properties = {v: row[index[v]] for v in PROP_FIELDS if row[index[v]]}
                 a.properties['medium'] = media[int(row[index['medium_id']])]
                 a.properties['uuid'] = str(a.properties['uuid'])
                 props = json.dumps(a.properties)
-                
-                if parent_id:
-                    a.parent_hash = binascii.hexlify(hashes[parent_id]).decode("ascii")
             
                 hash = amcates.get_article_dict(a)['hash']
-                hashes[aid] = binascii.unhexlify(hash)
+                hashes[offset:offset+28] = binascii.unhexlify(hash)
 
                 yield (a.project_id, aid, a.date, a.title, a.url, a.text,
                        hash2binary(hash), hash2binary(a.parent_hash), props)
