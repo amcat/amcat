@@ -39,14 +39,14 @@ import binascii
 import csv
 import io
 import json
+import itertools
+from datetime import datetime
 
 import psycopg2
 
 from django.core.management import BaseCommand
 from django.db import connection
 from django.db import models
-
-from bulk_update.helper import bulk_update
 
 from amcat.tools import amcates
 from amcat.models import Article
@@ -71,15 +71,18 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('articles', help="CSV file containing the articles dump")
         parser.add_argument('media', help="CSV file containing the media dump")
-        parser.add_argument('--no_data', action='store_true', help="Don't copy the date to property fields")
-        parser.add_argument('--drop_columns', action='store_true', help="Drop the unneeded columns after migrating")
+        parser.add_argument('--dry-run', action='store_true', help="Don't alter the database")
         
     def handle(self, *args, **options):
-        self.drop_old()
-        self.create_article_table()
+        self.dry = options['dry_run']
+        if not self.dry:
+            self.drop_old()
+            self.create_article_table()
         media = dict(self.get_media(options['media']))
+        logging.info("Read {} media".format(len(media)))
         self.copy_data(options['articles'], media)
-        self.create_constraints()
+        if not self.dry:
+            self.create_constraints()
 
     def get_media(self, fn):
         for line in csv.DictReader(open(fn)):
@@ -111,62 +114,90 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
         with connection.cursor() as c:
             c.execute('''
             CREATE TABLE "articles" ("article_id" serial NOT NULL PRIMARY KEY, "date" timestamp with time zone NOT NULL, "title" text NOT NULL, "url" text NULL, "text" text NOT NULL, "hash" bytea NOT NULL, "parent_hash" bytea NULL, "properties" jsonb NULL, "project_id" integer NOT NULL);''')
-        
+
+
     def copy_data(self, fn, media):
-
-        csv.field_size_limit(sys.maxsize)
-
         cursor = connection.cursor()
-
-        r = csv.reader(open(fn))
-        header = next(r)
-
-        buffer = []
-        for line in r:
-            buffer.append(line)
-            if len(buffer) > 1000:
-                self.do_copy_data(header, buffer, media)
-                buffer = []
-        if buffer:
-            self.do_copy_data(header, buffer, media)
-        #TODO! Deal with parent_hash
-            
-    def do_copy_data(self, header, data, media):
-        logging.info("Copying {} rows".format(len(data)))
-
+        
         out = io.StringIO()
         outw = csv.writer(out, quoting=csv.QUOTE_ALL)
-        
-        index = {col: i for (i, col) in enumerate(header)}
-        for row in data:
-            aid = row[index['article_id']]
-            a = Article(
-                project_id = row[index['project_id']],
-                date = row[index['date']],
-                title = row[index['headline']],
-                url = row[index['url']],
-                text = row[index['text']])
-            if not a.text:
-                a.text = ""
-            
-            a.properties = {v: row[index[v]] for v in PROP_FIELDS if row[index[v]]}
-            a.properties['medium'] = media[int(row[index['medium_id']])]
-            a.properties['uuid'] = str(a.properties['uuid'])
-            
-            hash = amcates.get_article_dict(a)['hash']
-            parent_id = row[index['parent_article_id']]
+        for i, row in enumerate(self.get_articles(fn, media)):
+            outw.writerow(row)
+            if out.tell() > 10000000:
+                self.do_copy(out, i)
+                out = io.StringIO()
+                outw = csv.writer(out, quoting=csv.QUOTE_ALL)
 
-            # convert hash to postgres binary format
-            hash = binascii.unhexlify(hash)
-            hash = str(psycopg2.Binary(hash))
-            hash = hash[1:-8]
-            outw.writerow([a.project_id, aid, a.date, a.title, a.url, a.text, hash, json.dumps(a.properties)])
+        if out.tell():
+            self.do_copy(out, i)
 
+    def do_copy(self, out, i):
+        if self.dry:
+            logging.info("(NOT) Copying {} bytes to postgres, total {} articles".format(out.tell(), i))
+            return
+        logging.info("Copying {} bytes to postgres, total {} articles".format(out.tell(), i))
         out.seek(0)
         with connection.cursor() as c:
-            cols = ", ".join(['project_id', 'article_id', 'date', 'title', 'url', 'text', 'hash', 'properties'])
-            sql = "COPY articles ({cols}) FROM STDIN WITH (FORMAT CSV)".format(**locals())
+            cols = ", ".join(['project_id', 'article_id', 'date', 'title', 'url', 'text', 'hash', 'parent_hash', 'properties'])
+            sql = "COPY articles ({cols}) FROM STDIN WITH (FORMAT CSV, FORCE_NULL (url, parent_hash))".format(**locals())
             c.copy_expert(sql, out)
-      
+            
+    def get_articles(self, fn,  media):
+        csv.field_size_limit(sys.maxsize)
+        def _int(x):
+            return int(x) if x else None
+        def hash2binary(hash):
+            if hash:
+                if not isinstance(hash, str):
+                    raise TypeError("Hash should be str, not {}".format(type(hash)))
+                return "\\x" + hash
+        
+        hashes = {} # id : hash_bytes (bytes to save memory, this will store *all* articles!)
+        orphans = "N/A"
+        
+        while orphans:
+            logging.info("*** Next pass, stored {n}, orphans {orphans}".format(n=len(hashes), **locals()))
+
+            orphans = 0
+            r = csv.reader(open(fn))
+            header = next(r)
+            index = {col: i for (i, col) in enumerate(header)}
+
+            for row in r:
+                aid = int(row[index['article_id']])
+                if aid in hashes:
+                    continue
+                
+                parent_id = _int(row[index['parent_article_id']])
+                if parent_id and parent_id not in hashes:
+                    orphans += 1
+                    continue
+
+                date = row[index['date']]
+                date = date.split("+")[0]
+                date = datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
+
+                
+                a = Article(
+                    project_id = row[index['project_id']],
+                    date = date,
+                    title = row[index['headline']],
+                    url = row[index['url']] or None,
+                    text = row[index['text']])
+                
+                a.properties = {v: row[index[v]] for v in PROP_FIELDS if row[index[v]]}
+                a.properties['medium'] = media[int(row[index['medium_id']])]
+                a.properties['uuid'] = str(a.properties['uuid'])
+                props = json.dumps(a.properties)
+                
+                if parent_id:
+                    a.parent_hash = binascii.hexlify(hashes[parent_id]).decode("ascii")
+            
+                hash = amcates.get_article_dict(a)['hash']
+                hashes[aid] = binascii.unhexlify(hash)
+
+                yield (a.project_id, aid, a.date, a.title, a.url, a.text,
+                       hash2binary(hash), hash2binary(a.parent_hash), props)
+            
     def create_constraints(self):
         pass
