@@ -72,6 +72,8 @@ PROP_FIELDS = {"section": models.CharField,
                "addressee": models.TextField,
                "uuid": PostgresNativeUUIDField}
 
+SKIP_PARENTS = 108501253, 86389974
+
 class Command(BaseCommand):
     
     help = __doc__
@@ -80,16 +82,21 @@ class Command(BaseCommand):
         parser.add_argument('articles', help="CSV file containing the articles dump")
         parser.add_argument('media', help="CSV file containing the media dump")
         parser.add_argument('--dry-run', action='store_true', help="Don't alter the database")
+        parser.add_argument('--continue', action='store_true', help="Continue an aborted migration")
+        parser.add_argument('--max-id', type=int, help="Manually set highest ID, should be at least the actual max_id")
+
         
     def handle(self, *args, **options):
         self.n_rows = "?"
+        self.maxid = options['max_id']
         self.dry = options['dry_run']
-        if not self.dry:
+        self._continue = options['continue']
+        if not (self.dry or self._continue):
             self.drop_old()
             self.create_article_table()
         media = dict(self.get_media(options['media']))
         logging.info("Read {} media".format(len(media)))
-        self.copy_data(options['articles'], media)
+        self.copy_data(options['articles'], media, _continue=self._continue)
         if not self.dry:
             self.create_constraints()
 
@@ -125,12 +132,12 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
             CREATE TABLE "articles" ("article_id" serial NOT NULL PRIMARY KEY, "date" timestamp with time zone NOT NULL, "title" text NOT NULL, "url" text NULL, "text" text NOT NULL, "hash" bytea NOT NULL, "parent_hash" bytea NULL, "properties" jsonb NULL, "project_id" integer NOT NULL);''')
 
 
-    def copy_data(self, fn, media):
+    def copy_data(self, fn, media, _continue=False):
         cursor = connection.cursor()
         
         out = io.StringIO()
         outw = csv.writer(out, quoting=csv.QUOTE_ALL)
-        for i, row in enumerate(self.get_articles(fn, media)):
+        for i, row in enumerate(self.get_articles(fn, media, _continue=_continue)):
             outw.writerow(row)
             if out.tell() > 100000000:
                 self.do_copy(out, i)
@@ -151,7 +158,7 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
             sql = "COPY articles ({cols}) FROM STDIN WITH (FORMAT CSV, FORCE_NULL (url, parent_hash))".format(**locals())
             c.copy_expert(sql, out)
             
-    def get_articles(self, fn,  media):
+    def get_articles(self, fn,  media, _continue):
         csv.field_size_limit(sys.maxsize)
         def _int(x):
             return int(x) if x else None
@@ -162,24 +169,36 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
                 return "\\x" + hash
 
 
-        logging.info("*** Scan input CSV to determine #rows and max(id)")
         r = csv.reader(open(fn))
         header = next(r)
         index = {col: i for (i, col) in enumerate(header)}
         AID = index['article_id']
-        max_id, self.n_rows = 0, 0
-        for row in r:
-            max_id = max(max_id, int(row[AID]))
-            self.n_rows += 1
-            if not self.n_rows  % 10000000:
-                logging.info(".. scanned {self.n_rows} rows".format(**locals()))
-        
+        if self.maxid:
+            logging.info("*** max(id) set by user: {self.maxid}".format(**locals()))
+            max_id, self.n_rows = self.maxid, self.maxid
+        else:
+            logging.info("*** Scan input CSV to determine #rows and max(id)")
+            for row in r:
+                max_id = max(max_id, int(row[AID]))
+                self.n_rows += 1
+                if not self.n_rows  % 10000000:
+                    logging.info(".. scanned {self.n_rows} rows".format(**locals()))
+                    
         logging.info("{self.n_rows} rows, max ID {max_id}, allocating memory for hashes".format(**locals()))
 
         hashes = ctypes.create_string_buffer(max_id*28)
         NULL_HASH = b'\x00' * 28
         orphans = "N/A"
         passno = 1
+
+        if _continue:
+            with connection.cursor() as c:
+                c.execute("SELECT article_id, hash FROM articles")
+                for i, (aid, hash) in enumerate(c.fetchall()):
+                    offset = (aid - 1) * 28
+                    hashes[offset:offset+28] = hash
+            logging.info("Continuing migration, {} articles already in db".format(i))
+            self.n_rows -= i
         
         while orphans:
             logging.info("*** Pass {passno}, #orphans {orphans}".format(**locals()))
@@ -198,6 +217,8 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
                     continue
                 
                 parent_id = _int(row[index['parent_article_id']])
+                if (parent_id == aid) or (parent_id in SKIP_PARENTS):
+                    parent_id = None
                 if parent_id:
                     poffset = (parent_id - 1) * 28
                     parent_hash = hashes[poffset:poffset+28]
