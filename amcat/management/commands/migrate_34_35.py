@@ -55,6 +55,7 @@ import psycopg2
 from django.core.management import BaseCommand
 from django.db import connection
 from django.db import models
+from django.conf import settings
 
 from amcat.tools import amcates
 from amcat.models import Article
@@ -73,6 +74,15 @@ PROP_FIELDS = {"section": models.CharField,
                "uuid": PostgresNativeUUIDField}
 
 SKIP_PARENTS = 108501253, 86389974
+
+_conn = None
+def conn():
+    global _conn
+    if _conn is None:
+        db = settings.DATABASES['default']
+        logging.info("Connecting to postgres {USER}@{NAME}".format(**db))
+        _conn = psycopg2.connect(database=db['NAME'], user=db['USER'], password=db['PASSWORD'])
+    return _conn
 
 class Command(BaseCommand):
     
@@ -106,7 +116,7 @@ class Command(BaseCommand):
         
     def drop_old(self):
         logging.info("Dropping contraints")
-        with connection.cursor() as c:
+        with conn().cursor() as c:
             c.execute("""
 SELECT
     kcu.table_name, tc.constraint_name
@@ -119,22 +129,21 @@ FROM
 WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
             constraints = list(c.fetchall())
         for table, constraint in constraints:
-            with connection.cursor() as c:
+            with conn().cursor() as c:
                 logging.info(constraint)
                 c.execute('ALTER TABLE {table} DROP CONSTRAINT "{constraint}"'.format(**locals()))
         logging.info("Dropping articles table")
-        with connection.cursor() as c:
+        with conn().cursor() as c:
             c.execute("DROP TABLE IF EXISTS articles")
+        conn().commit()
                     
     def create_article_table(self):
-        with connection.cursor() as c:
+        with conn().cursor() as c:
             c.execute('''
             CREATE TABLE "articles" ("article_id" serial NOT NULL PRIMARY KEY, "date" timestamp with time zone NOT NULL, "title" text NOT NULL, "url" text NULL, "text" text NOT NULL, "hash" bytea NOT NULL, "parent_hash" bytea NULL, "properties" jsonb NULL, "project_id" integer NOT NULL);''')
-
+        conn().commit()
 
     def copy_data(self, fn, media):
-        cursor = connection.cursor()
-        
         out = io.StringIO()
         outw = csv.writer(out, quoting=csv.QUOTE_ALL)
         for i, row in enumerate(self.get_articles(fn, media)):
@@ -153,11 +162,12 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
         if self.dry:
             return
         out.seek(0)
-        with connection.cursor() as c:
+        with conn().cursor() as c:
             cols = ", ".join(['project_id', 'article_id', 'date', 'title', 'url', 'text', 'hash', 'parent_hash', 'properties'])
             sql = "COPY articles ({cols}) FROM STDIN WITH (FORMAT CSV, FORCE_NULL (url, parent_hash))".format(**locals())
             c.copy_expert(sql, out)
-            
+        conn().commit()
+        
     def get_articles(self, fn,  media):
         csv.field_size_limit(sys.maxsize)
         def _int(x):
@@ -193,17 +203,22 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
 
         if self._continue:
             logging.info("Continuing from previous migration, getting state from DB")
-            with connection.cursor() as c:
-                c.execute("SELECT article_id, hash FROM articles")
-                while True:
-                    rows = c.fetchmany(10000)
-                    if not rows:
-                        break
-                    self.n_rows -= len(rows)
-                    for (aid, hash) in rows:
-                        offset = (aid - 1) * 28
-                        hashes[offset:offset+28] = hash
-            logging.info("Continuing migration, {self.n_rows} articles to go".format(**locals()))
+            c = conn().cursor('migration-continue')
+            c.itersize = 10000 # how much records to buffer on a client
+            c.execute("SELECT article_id, hash FROM articles")
+            i = 0
+            while True:
+                rows = c.fetchmany(10000)
+                if not rows:
+                    break
+                i += len(rows)
+                if not i % 1000000:
+                    logging.info("Retrieved {i} rows...")
+                for (aid, hash) in rows:
+                    offset = (aid - 1) * 28
+                    hashes[offset:offset+28] = hash
+            self.n_rows -= i
+            logging.info("Continuing migration, {i} articles retrieved, {self.n_rows} to go".format(**locals()))
         
         while orphans:
             logging.info("*** Pass {passno}, #orphans {orphans}".format(**locals()))
