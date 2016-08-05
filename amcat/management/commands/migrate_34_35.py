@@ -96,7 +96,7 @@ class Command(BaseCommand):
             self.create_article_table()
         media = dict(self.get_media(options['media']))
         logging.info("Read {} media".format(len(media)))
-        self.copy_data(options['articles'], media, _continue=self._continue)
+        self.copy_data(options['articles'], media)
         if not self.dry:
             self.create_constraints()
 
@@ -132,12 +132,12 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
             CREATE TABLE "articles" ("article_id" serial NOT NULL PRIMARY KEY, "date" timestamp with time zone NOT NULL, "title" text NOT NULL, "url" text NULL, "text" text NOT NULL, "hash" bytea NOT NULL, "parent_hash" bytea NULL, "properties" jsonb NULL, "project_id" integer NOT NULL);''')
 
 
-    def copy_data(self, fn, media, _continue=False):
+    def copy_data(self, fn, media):
         cursor = connection.cursor()
         
         out = io.StringIO()
         outw = csv.writer(out, quoting=csv.QUOTE_ALL)
-        for i, row in enumerate(self.get_articles(fn, media, _continue=_continue)):
+        for i, row in enumerate(self.get_articles(fn, media)):
             outw.writerow(row)
             if out.tell() > 100000000:
                 self.do_copy(out, i)
@@ -158,7 +158,7 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
             sql = "COPY articles ({cols}) FROM STDIN WITH (FORMAT CSV, FORCE_NULL (url, parent_hash))".format(**locals())
             c.copy_expert(sql, out)
             
-    def get_articles(self, fn,  media, _continue):
+    def get_articles(self, fn,  media):
         csv.field_size_limit(sys.maxsize)
         def _int(x):
             return int(x) if x else None
@@ -191,14 +191,19 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
         orphans = "N/A"
         passno = 1
 
-        if _continue:
+        if self._continue:
+            logging.info("Continuing from previous migration, getting state from DB")
             with connection.cursor() as c:
                 c.execute("SELECT article_id, hash FROM articles")
-                for i, (aid, hash) in enumerate(c.fetchall()):
-                    offset = (aid - 1) * 28
-                    hashes[offset:offset+28] = hash
-            logging.info("Continuing migration, {} articles already in db".format(i))
-            self.n_rows -= i
+                while True:
+                    rows = c.fetchmany(10000)
+                    if not rows:
+                        break
+                    self.n_rows -= len(rows)
+                    for (aid, hash) in rows:
+                        offset = (aid - 1) * 28
+                        hashes[offset:offset+28] = hash
+            logging.info("Continuing migration, {self.n_rows} articles to go".format(**locals()))
         
         while orphans:
             logging.info("*** Pass {passno}, #orphans {orphans}".format(**locals()))
