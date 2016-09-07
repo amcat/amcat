@@ -44,7 +44,7 @@ ES_MAPPING_TYPES = {
     'id': {"index": "not_analyzed", "type": "string"},
     'text': {"type": "string"},
     'default' : {"type": "string",
-                 "fields": {"raw":   { "type": "string", "index": "not_analyzed" }}}
+                 "fields": {"raw":   { "type": "string", "index": "not_analyzed", "ignore_above": 256}}}
     }
 
 ES_MAPPING = {
@@ -63,23 +63,31 @@ ES_MAPPING = {
 }
 
 ES_SETTINGS = {"analysis": {
-        "analyzer": {
-            "default": {
-                "type": "custom",
-                "tokenizer": "unicode_letters_digits",
-                "filter": [
-                    "icu_folding"
-                    ]
-                }
-            },
-        "tokenizer": {
-            "unicode_letters_digits": {
-                "type": "pattern",
-                "pattern": "[^\\p{L}\\p{M}\\p{N}]",
-                "lowercase": "true"
-                }
+    "analyzer": {
+        "default": {
+            "type": "custom",
+            "tokenizer": "unicode_letters_digits",
+            "filter": [
+                "icu_folding", "lengthfilter"
+            ]
+        }
+    },
+    "tokenizer": {
+        "unicode_letters_digits": {
+            "type": "pattern",
+            "pattern": "[^\\p{L}\\p{M}\\p{N}]",
+            "lowercase": "true"
+        }
+    },
+    # prevent 'immense term' error when people use really long words
+    "filter": {
+        "lengthfilter": {
+            "type" : "length",
+            "min" : 0,
+            "max" : 2000,
             }
         }
-    }
+    },
+}
 
 
