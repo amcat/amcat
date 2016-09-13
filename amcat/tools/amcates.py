@@ -446,22 +446,6 @@ class ES(object):
         Returns a sequency of property names in use in the specified set(s) (or setids)
         """
         sets = [s if isinstance(s, int) else s.id for s in sets]
-        all_props = set(self.get_properties(force_refresh=True)) - set(ALL_FIELDS)
-        aggs = {prop: {"missing": {"field": prop}} for prop in all_props}
-        body = {"query": {"terms": {"sets": sets}}, "aggs": aggs}
-        result = self.search(body, size=0)
-        n = result['hits']['total']
-        for prop, agg in result['aggregations'].items():
-            if n - agg['doc_count']:
-                yield prop
-
-    def get_used_properties2(self, *sets):
-        """
-        Returns a sequency of property names in use in the specified set(s) (or setids)
-        """
-        #WVA: Alternative implementation, need to check performance once we have a largish es 2.3 index
-        #this one seems slower because it does more queries, but the other took 30 seconds on amcat set 2...
-        sets = [s if isinstance(s, int) else s.id for s in sets]
         for prop in set(self.get_properties(force_refresh=True)) - set(ALL_FIELDS):
             body = {"query": {"bool": {"must": [
                 {"terms": {"sets": sets}},
