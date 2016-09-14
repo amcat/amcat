@@ -4,7 +4,7 @@ celery==3.1.18
 chardet==2.3.0
 colorlog==2.6.0
 cssselect==0.9.1
-Django>=1.9
+Django>=1.9,<1.10
 django-jsonfield==0.9.15
 djangorestframework==3.2.2
 elasticsearch==1.6.0
