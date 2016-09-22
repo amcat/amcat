@@ -13,7 +13,7 @@ from amcat.models import Article
 
 def test_article(**kwargs):
     if 'date' not in kwargs: kwargs['date'] = datetime.datetime.now().isoformat()
-    if 'headline' not in kwargs: kwargs['headline'] = 'test headline {}'.format(uuid4())
+    if 'title' not in kwargs: kwargs['title'] = 'test headline {}'.format(uuid4())
     if 'text' not in kwargs: kwargs['text'] = 'test text {}'.format(uuid4())
     if 'medium' not in kwargs: kwargs['medium'] = 'test'
     return kwargs    
@@ -99,28 +99,35 @@ class TestArticleViewSet(APITestCase):
         
         res = self._post_articles(a)
         self.assertEqual(set(res.keys()), {'id'}) # POST should only return IDs
-
+        
         res = self._get_article(aid=res['id'])
-        self.assertEqual(res["headline"], a['headline'])
+        self.assertEqual(res["title"], a['title'])
         self.assertEqual(toolkit.read_date(res["date"]), toolkit.read_date(a['date']))
         self.assertNotIn("text", res.keys())
-        self.assertIsNotNone(res["uuid"])
+        self.assertIsNotNone(res["hash"])
         
         res = self._get_article(aid=res['id'], text=True)
         self.assertEqual(res["text"], a['text'])
 
         res = self._get_articles()["results"]
         self.assertEqual(len(res), 1)
-       
-
-        # can we post explicit UUID?
-        self.setUp_set()
-        a['uuid'] = str(uuid4())
-        self._post_articles(a)
-        res = self._get_articles()["results"]
-        self.assertEqual(res[0]["uuid"], a['uuid'])
 
 
+    @amcattest.use_elastic
+    def test_post_properties(self):
+        a = test_article(foo='bar')
+        res = self._post_articles(a)
+
+        
+        self.assertEqual(set(amcates.ES().query_ids(filters={"foo": "bar"})), {res["id"]})
+
+        doc = amcates.ES().get(id=res['id'])
+        self.assertEqual(doc['foo'], 'bar')
+        
+        db = self._get_article(aid=res['id'])
+        self.assertEqual(db['foo'], 'bar')
+
+        
     @amcattest.use_elastic
     def test_post_multiple(self):
 
@@ -131,15 +138,15 @@ class TestArticleViewSet(APITestCase):
         self.assertEqual(set(result[0].keys()), {'id'}) # POST should only return IDs
 
         arts = self._get_articles()['results']
-        self.assertEqual({a['headline'] for a in arts}, {a1['headline'], a2['headline']})
+        self.assertEqual({a['title'] for a in arts}, {a1['title'], a2['title']})
         self.assertNotIn("text", arts[0].keys())
 
         arts = self._get_articles(text=True)['results']
         self.assertEqual({a['text'] for a in arts}, {a1['text'], a2['text']})
         
         arts = [Article.objects.get(pk=a["id"]) for a in result]
-        self.assertEqual(arts[0].headline, a1['headline'])
-        self.assertEqual(arts[1].headline, a2['headline'])
+        self.assertEqual(arts[0].title, a1['title'])
+        self.assertEqual(arts[1].title, a2['title'])
         
         # Are the articles added to the index?
         amcates.ES().flush()
@@ -148,6 +155,7 @@ class TestArticleViewSet(APITestCase):
     @amcattest.use_elastic
     def test_post_id(self):
         a = amcattest.create_test_article()
+        print(Article.objects.get(pk=a.id))
         result = self._post_articles({"id": a.id})
         self.assertEqual(set(amcates.ES().query_ids(filters={"sets": self.aset.id})), {a.id})
 
@@ -166,18 +174,18 @@ class TestArticleViewSet(APITestCase):
     @amcattest.use_elastic
     def test_dupe(self):
         """Test whether deduplication works"""
-        m = amcattest.create_test_medium()
-        a = test_article(medium=m.name)
+        title = 'testartikel'
+        a = test_article(title=title)
         aid1 = self._post_articles(a)['id']
         self.setUp_set()
         aid2 = self._post_articles(a)['id']
-
+        amcates.ES().flush()
         # are the resulting ids identical?
         self.assertEqual(aid1, aid2)
-        # is it not added (ie we only have one article with this medium)
-        self.assertEqual(set(amcates.ES().query_ids(filters={'mediumid':m.id})), {aid1})
         # is it added to elastic for this set?
         self.assertEqual(set(amcates.ES().query_ids(filters={'sets':self.aset.id})), {aid1})
+        # is it not added (ie we only have one article with this title)
+        self.assertEqual(set(amcates.ES().query_ids(filters={'title': a['title']})), {aid1})
 
         
     @amcattest.use_elastic
