@@ -155,7 +155,6 @@ class TestArticleViewSet(APITestCase):
     @amcattest.use_elastic
     def test_post_id(self):
         a = amcattest.create_test_article()
-        print(Article.objects.get(pk=a.id))
         result = self._post_articles({"id": a.id})
         self.assertEqual(set(amcates.ES().query_ids(filters={"sets": self.aset.id})), {a.id})
 
@@ -201,8 +200,8 @@ class TestArticleViewSet(APITestCase):
 
         arts = [Article.objects.get(pk=a["id"]) for a in result]
 
-        self.assertEqual(arts[0].headline, a1['headline'])
-        self.assertEqual(arts[3].headline, a4['headline'])
+        self.assertEqual(arts[0].title, a1['title'])
+        self.assertEqual(arts[3].title, a4['title'])
 
         self.assertEqual(arts[0].parent, None)
         self.assertEqual(arts[1].parent, arts[0])
@@ -213,28 +212,6 @@ class TestArticleViewSet(APITestCase):
         amcates.ES().flush()
         self.assertEqual(len(set(amcates.ES().query_ids(filters={"sets": self.aset.id}))), 4)
 
-
-    @amcattest.use_elastic
-    def test_post_parent(self):
-        article = amcattest.create_test_article()
-        amcates.ES().flush()
-        
-        result, = self._post_articles([test_article(parent=article.id)])
-        new_article = Article.objects.get(id=result["id"])
-        self.assertEqual(article, new_article.parent)
-
-        # test posting existing uuid
-        result, = self._post_articles([test_article(parent=article.uuid)])
-        new_article = Article.objects.get(id=result["id"])
-        self.assertEqual(article, new_article.parent)
-
-        # test posting article and child with uuid
-        p = test_article(uuid=str(uuid4()))
-        c = test_article(parent=p['uuid'])
-        result = self._post_articles([p,c])
-        pa, ca = [Article.objects.get(pk=a["id"]) for a in result]
-        self.assertEqual(pa, ca.parent)
-        
         
     def test_permissions(self):
         from amcat.models import Role, ProjectRole

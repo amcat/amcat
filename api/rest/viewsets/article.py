@@ -95,30 +95,25 @@ class ArticleListSerializer(serializers.ListSerializer):
             for adict in article_dicts:
                 children = adict.pop("children")
                 if parent is not None:
-                    assert 'parent' not in adict
-                    adict['parent'] = parent
+                    assert 'parent_hash' not in adict
+                    adict['parent_hash'] = parent.compute_hash()
                 article = Article(**adict)
                 yield article
-                for a in _process_children(children, parent=article):
-                    yield a
+                yield from _process_children(children, parent=article)
 
         articleset = self.context["view"].kwargs.get('articleset')
-        if articleset: articleset = ArticleSet.objects.get(pk=articleset)
+        if articleset:
+            articleset = ArticleSet.objects.get(pk=articleset)
 
-        result = []
         to_add = [a['id'] for a in validated_data if "id" in a]
         to_create = [a for a in validated_data if "id" not in a]
         if to_create:
             articles = list(_process_children(to_create))
-            Article.create_articles(articles, articleset=articleset)
-            result += articles
+            yield from Article.create_articles(articles, articleset=articleset)
         if to_add:
             _check_read_access(self.context['request'].user, to_add)
             articleset.add_articles(to_add)
-            result += list(Article.objects.filter(pk__in=to_add).only("pk"))
-            
-        return result
-
+            yield from Article.objects.filter(pk__in=to_add).only("pk")
 
     def to_representation(self, data):
         # check if text attribute is defferred  - is this still needed?
@@ -135,7 +130,6 @@ class ArticleSerializer(AmCATProjectModelSerializer):
     project = ModelChoiceField(queryset=Project.objects.all(), required=True)
 
     def to_internal_value(self, data):
-        print("!", data)
         if isinstance(data, int):
             return {"id": data}
         if 'id' in data:
@@ -153,7 +147,6 @@ class ArticleSerializer(AmCATProjectModelSerializer):
         return super(ArticleSerializer, self).to_internal_value(data)
 
     def create(self, validated_data):
-        print("!!", validated_data)
         articleset = self.context["view"].kwargs.get('articleset')
         if articleset: articleset = ArticleSet.objects.get(pk=articleset)
 
@@ -181,6 +174,7 @@ class ArticleSerializer(AmCATProjectModelSerializer):
         if self.context['request'].method == "POST":
             return {"id": data.id}
         result = super(ArticleSerializer, self).to_representation(data)
+        result.update(result.pop('properties'))
         return result
         
     class Meta:
