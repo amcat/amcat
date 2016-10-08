@@ -109,6 +109,10 @@ class NLPipeLemmataSerializer(serializers.Serializer):
 
     def to_representation(self, aid):
         result = self._cache[aid]
+        renderer = self.context['request'].accepted_renderer
+        if getattr(renderer, "raw_output", False):
+            return [result]
+
         if isinstance(result, list):
             return result
         else:

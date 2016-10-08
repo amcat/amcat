@@ -32,6 +32,7 @@ import logging
 
 from cStringIO import StringIO
 import csv
+import zipfile
 
 class TableRenderer(BaseRenderer):
     """
@@ -318,8 +319,21 @@ class RdaRenderer(BaseRenderer):
             logging.exception("Error on rendering to rda")
             raise
         
+class RawRenderer(BaseRenderer):
+    """Export raw nlpipe results as a zip file"""
+    media_type = 'application/zip'
+    format = 'raw'
+    extension = 'zip'
+    raw_output = True
+    
+    def render(self, data, media_type=None, renderer_context=None):
+        buffer = StringIO()
+        with zipfile.ZipFile(buffer, 'w') as zf:
+            for doc in data['results']:
+                zf.writestr(str(doc.id), doc.text.encode("utf-8"))
+        return buffer.getvalue()
         
-EXPORTERS = [CSVRenderer, XLSXRenderer, SPSSRenderer, XHTMLRenderer, RdaRenderer]
+EXPORTERS = [CSVRenderer, XLSXRenderer, SPSSRenderer, XHTMLRenderer, RdaRenderer, RawRenderer]
 
 def set_response_content(response):
     """
