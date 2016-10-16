@@ -108,7 +108,6 @@ class SplitArticleForm(forms.Form):
 
 class UserForm(forms.ModelForm):
     role = forms.ModelChoiceField(queryset=Role.objects.filter(projectlevel=False))
-    language = forms.ModelChoiceField(queryset=Language.objects.all(), initial="en")
 
     def __init__(self, request, editing=True, *args, **kwargs):
         super(UserForm, self).__init__(*args, **kwargs)
@@ -123,8 +122,6 @@ class UserForm(forms.ModelForm):
 
             # Set initial values for this user
             self.fields['role'].initial = uprofile.role if not editing else kwargs['instance'].userprofile.role
-            self.fields['language'].initial = uprofile.language
-            self.fields['theme'].initial = uprofile.theme
         else:
             # Only show roles appropriate for anonymous users
             self.fields['role'].queryset = Role.objects.filter(
@@ -141,15 +138,13 @@ class UserForm(forms.ModelForm):
 
         up = u.userprofile
         up.role = self.cleaned_data['role']
-        up.language = self.cleaned_data['language']
-        up.theme = self.cleaned_data['theme']
         up.save()
 
         return u
 
     class Meta:
         model = User
-        fields = ("role", "language")
+        fields = ("role",)
 
 class UserDetailsForm(UserForm):
     def __init__(self, request, *args, **kwargs):
