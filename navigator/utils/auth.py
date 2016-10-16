@@ -65,8 +65,8 @@ def create_user(username, first_name, last_name, email,  password=None):
     u = _create_user(username, first_name, last_name, email, password=password)
 
     log.info("Created new user, sending email...")
-    html = render(get_request(), "welcome_email.html", locals()).content
-    text = render(get_request(), "welcome_email.txt", locals()).content
+    html = render(get_request(), "welcome_email.html", locals()).content.decode()
+    text = render(get_request(), "welcome_email.txt", locals()).content.decode()
     sendmail.sendmail(settings.DEFAULT_FROM_EMAIL, email, 'Welcome to AmCAT!',
                       html, text)
     log.info("Email sent, done!")
