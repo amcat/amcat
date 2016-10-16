@@ -95,7 +95,6 @@ def register(request):
     form = form_class(request, data=request.POST or None)
 
     del form.fields['language']
-    del form.fields['affiliation']
 
     user = None
     if form.is_valid():

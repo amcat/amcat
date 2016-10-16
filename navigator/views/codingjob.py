@@ -18,35 +18,21 @@
 ###########################################################################
 
 """View for viewing all codingjobs (for a user)"""
-
 from django.shortcuts import render
 from api.rest.datatable import Datatable
 
-from navigator.utils.auth import check
-from amcat.models.user import User
-
-CODINGJOB_MENU=None
 from api.rest.resources import CodingJobResource
 
-@check(User, args='coder_id', args_map={'coder_id' : 'id'})
-def index(request, coder=None):
-    """
-    Show unfinished jobs
-    """
-    is_firefox = "Firefox" in request.META["HTTP_USER_AGENT"]
-
-    coder = coder if coder is not None else request.user
-
+def index(request):
+    """Show unfinished jobs"""
     jobs = Datatable(CodingJobResource)
     jobs = jobs.rowlink_reverse("annotator:annotator-codingjob", args=[9999999999])
-    jobs = jobs.filter(coder=coder).hide('coder', 'articleset', 'unitschema', 'articleschema')#.filter(status='unfinished')
+    jobs = jobs.filter(coder=request.user).hide('coder', 'articleset', 'unitschema', 'articleschema')#.filter(status='unfinished')
 
     ctx = locals()
     ctx.update({
-        'menu' : CODINGJOB_MENU,
-        'context' : coder,
-        'selected' : 'unfinished jobs',
-        
+        'context': request.user,
+        'selected': 'unfinished jobs',
     })
 
     return render(request, 'codingjobs.html', locals())

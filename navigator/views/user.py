@@ -16,48 +16,28 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import logging
+
+from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
-from django.db.transaction import atomic
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
 
 from amcat.models.user import User
 from api.rest.datatable import Datatable
-from api.rest.resources import UserResource, ProjectResource
+from api.rest.resources import ProjectResource
 from navigator import forms
-from navigator.utils.auth import check, create_user, check_perm
-from navigator.utils.misc import session_pop
 
-USER_MENU = None
+log = logging.getLogger(__name__)
 
-import smtplib, itertools
-
-from django import db
-from django import http
-
-def _table_view(request, table, selected=None, menu=USER_MENU):
-    return render(request, "user_table.html", locals())
-
-def _list_users(request, selected, **filters):
-    return _table_view(request, Datatable(UserResource).filter(**filters), selected)
-
-@check_perm("view_users_same_affiliation")
-def my_affiliated_active(request):
-    return _list_users(request, "active affiliated users", is_active=True,
-                       userprofile__affiliation=request.user.userprofile.affiliation)
-
-@check_perm("view_users_same_affiliation")
-def my_affiliated_all(request):
-    return _list_users(request, "all affiliated users",
-                       affiliation=request.user.userprofile.affiliation)
-
-@check_perm("view_users")
-def all(request):
-    return _list_users(request, "all users")
-
-@check(User)
-def view(request, user=None, form=None):
-    if user is None:
+def view(request, id=None, form=None):
+    if id is None:
         return redirect(reverse("navigator:user", args=[request.user.id]))
+
+    try:
+        user = User.objects.get(id=id)
+    except User.DoesNotExist:
+        return HttpResponse("User not found", status=404)
 
     ref = request.META.get('HTTP_REFERER', '')
     success = ref.endswith(reverse("navigator:user", args=[user.id])) and not form
@@ -65,93 +45,26 @@ def view(request, user=None, form=None):
 
     # Generate projects-table javascript
     projects = Datatable(ProjectResource).filter(projectrole__user=user)
-    menu = None if user == request.user else USER_MENU
     main_active = "Current User" if user == request.user else "Users"
 
+    return render(request, "user_view.html", {'user': user,
+                                              'form': form,
+                                              'projects': projects,
+                                              'success': success,
+                                              'main_active': main_active})
 
-    return render(request, "user_view.html", {'user' : user,
-                                              'form' : form,
-                                              'projects' : projects,
-                                              'success' : success,
-                                              'main_active' : main_active,
-                                              'menu' : menu})
-
-@check(User, action='update')
 def edit(request, user):
+    try:
+        user = User.objects.get(id=user)
+    except User.DoesNotExist:
+        return HttpResponse('User not found', status=404)
+
+    if not (request.user.is_superuser or request.user.id == user.id):
+        raise PermissionDenied("You cannot edit this user's profile.")
+
     form = forms.UserDetailsForm(request, data=request.POST or None, instance=user)
     if form.is_valid():
         form.save()
         return redirect(reverse("navigator:user", args=[user.id]))
     return view(request, id=user.id, form=form)
 
-@check(User, action='create', args=None)
-def add(request):
-    add_form = forms.AddUserForm(request)
-    add_multiple_form = forms.AddMultipleUsersForm(request)
-
-    message = session_pop(request.session, "users_added")
-    return render(request, "user_add.html", locals())
-
-@atomic
-def _add_multiple_users(request):
-    amf = forms.AddMultipleUsersForm(request, data=request.REQUEST, files=request.FILES)
-
-    if amf.is_valid():
-        props = dict(
-            affiliation=amf.cleaned_data['affiliation'],
-            language=amf.cleaned_data['language'],
-            role=amf.cleaned_data['role']
-        )
-
-        for user in amf.cleaned_data['csv']:
-            create_user(**dict(itertools.chain(props.items(), user.items())))
-
-        request.session['users_added'] = ("Succesfully added {} user(s)"
-                                            .format(len(amf.cleaned_data['csv'])))
-
-        # Users created
-        return redirect(reverse(add))
-
-    return amf, forms.AddUserForm(request)
-
-@atomic
-def _add_one_user(request):
-    af = forms.AddUserForm(request, data=request.REQUEST)
-
-    if af.is_valid():
-        create_user(**af.clean())
-        request.session['users_added'] = "Succesfully added user"
-        return redirect(reverse(add))
-
-    return forms.AddMultipleUsersForm(request), af
-
-
-@check(User, action='create', args=None)
-def add_submit(request):
-    # Determine whether to create one or multiple users
-    func = _add_one_user
-    if request.REQUEST.get('submit-multiple'):
-        func = _add_multiple_users
-
-    # Try to add them
-    try:
-        resp = func(request)
-    except smtplib.SMTPException as e:
-        log.exception()
-        message = ("Could not send e-mail. If this this error "
-                    + "continues to exist, contact your system administrator")
-    except db.utils.DatabaseError as e:
-        # Duplicate users?
-        message = "A database error occured. Try again?"
-    else:
-        if isinstance(resp, http.HttpResponseRedirect):
-            return resp
-
-        # Validation failed.
-        amf, af = resp
-
-    return render(request, "user_add.html", {
-        'error' : locals().get('message'),
-        'add_multiple_form' : amf,
-        'add_form' : af,
-    })

@@ -42,8 +42,6 @@ urlpatterns = patterns(
      # Users
     url(r'^user/(?P<id>[0-9]+)?$', 'navigator.views.user.view', name='user'),
     url(r'^user/edit/(?P<id>[0-9]+)$', 'navigator.views.user.edit', name='user-edit'),
-    url(r'^user/add$', 'navigator.views.user.add', name='user-add'),
-    url(r'^user/add-submit$', 'navigator.views.user.add_submit', name='user-add-submit'),
     url(r'^user/change-password$', password_change, name='user-change-password',
         kwargs=dict(
             template_name="change_password.html",
@@ -55,7 +53,7 @@ urlpatterns = patterns(
         )),
 
 
-    url(r'^codingjobs/(?P<coder_id>\d+)?$' ,'navigator.views.codingjob.index', name='codingjobs'),
+    url(r'^codingjobs/?$' ,'navigator.views.codingjob.index', name='codingjobs'),
 
     # Task actions
     url(r'^projects/(?P<project>[0-9]+)/tasks/clean_ready', clean_ready, name='task-clean-ready'),

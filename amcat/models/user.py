@@ -101,25 +101,6 @@ class UserProfile(AmcatModel):
             return False
         return True
 
-    def can_read(self, user):
-        profile = user.userprofile
-
-        return (self == profile) or \
-               (profile.affiliation == self.affiliation and
-                profile.haspriv("view_users_same_affiliation")) or \
-               (profile.haspriv("view_users"))
-
-    def can_update(self, user):
-        profile = user.userprofile
-
-        return (self == profile) or \
-               (profile.affiliation == self.affiliation and
-                profile.haspriv("manage_users_same_affiliation")) or \
-               (profile.haspriv("manage_users"))
-
-    def can_delete(self, user):
-        return False
-
     def save(self, force_permissions=False, **kwargs):
         if not force_permissions:
             return super(UserProfile, self).save(**kwargs)
