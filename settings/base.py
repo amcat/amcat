@@ -315,3 +315,6 @@ PNOTIFY_DEFAULTS = {
         "nonblock_opacity": .2
     }
 }
+
+# User roles available when signing up
+MAX_SIGNUP_ROLEID = int(os.environ.get("AMCAT_MAX_SIGNUP_ROLEID", 0))  # reader
