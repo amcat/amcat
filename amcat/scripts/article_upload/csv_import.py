@@ -21,6 +21,7 @@
 Plugin for uploading csv files
 """
 import datetime
+import logging
 
 from django import forms
 from django.contrib.postgres.forms import JSONField
@@ -31,6 +32,8 @@ from amcat.scripts.article_upload.upload import UploadScript, ParseError, ARTICL
 from amcat.scripts.article_upload.upload_formtools import get_form_set, FileInfo
 from amcat.tools.toolkit import read_date
 from navigator.views.articleset_upload_views import UploadWizardForm
+
+log = logging.getLogger(__name__)
 
 REQUIRED = tuple(
     field.name for field in Article._meta.get_fields() if field.name in ARTICLE_FIELDS and not field.blank)
@@ -98,7 +101,8 @@ class CSVWizardForm(UploadWizardForm):
         field_form = get_form_set(REQUIRED, ARTICLE_FIELDS)
         return [upload_form, field_form]
 
-    class CSVUploadStepForm(UploadScript.options_form, fileupload.CSVUploadForm): pass
+    class CSVUploadStepForm(UploadScript.options_form, fileupload.CSVUploadForm):
+        pass
 
     @classmethod
     def get_upload_step_form(cls):
@@ -177,8 +181,7 @@ class CSV(UploadScript):
             else:
                 properties[fieldname] = val
 
-        from logging import getLogger
-        getLogger(__name__).warning(article)
+        log.warning(article)
         for field in get_required():
             if field not in article or not article[field]:
                 if 'column' in csvfields[field]:

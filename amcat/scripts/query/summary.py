@@ -69,6 +69,7 @@ def escape_article_result(article):
 class SummaryAction(QueryAction):
     output_types = (("text/html+summary", "HTML"),)
     form_class = SummaryActionForm
+    monitor_steps = 4
 
     def run(self, form):
         form_data = json.dumps(dict(form.data.lists()))
@@ -79,13 +80,13 @@ class SummaryAction(QueryAction):
 
         with Timer() as timer:
             selection = SelectionSearch(form)
-            self.monitor.update(1, "Executing query..")
+            self.monitor.update(message="Executing query..")
             narticles = selection.get_count()
-            self.monitor.update(59, "Fetching articles..".format(**locals()))
+            self.monitor.update(message="Fetching articles..".format(**locals()))
             articles = [escape_article_result(art) for art in selection.get_articles(size=size, offset=offset)]
 
             if show_aggregation:
-                self.monitor.update(69, "Aggregating..".format(**locals()))
+                self.monitor.update(message="Aggregating..".format(**locals()))
                 
                 statistics = selection.get_statistics()
                 try:
@@ -97,7 +98,11 @@ class SummaryAction(QueryAction):
 
                 date_aggr = selection.get_nested_aggregate([IntervalCategory(interval)])
                 date_aggr = fill_zeroes((((date,),(value,)) for date,value in date_aggr), IntervalCategory(interval))
-            self.monitor.update(79, "Rendering results..".format(**locals()))
+            else:
+                # Increase progress without doing anything (because we don't have to aggregate)
+                self.monitor.update()
+
+            self.monitor.update(message="Rendering results..".format(**locals()))
 
         return TEMPLATE.render(Context(dict(locals(), **{
             "project": self.project, "user": self.user

@@ -166,6 +166,7 @@ class QueryAction(object):
     output_types = None
     required_role = ROLE_PROJECT_METAREADER
     ignore_cache_fields = ("output_type",)
+    monitor_steps = None
 
     def __init__(self, user, project, articlesets, codingjobs=None, data=None):
         """
@@ -178,8 +179,12 @@ class QueryAction(object):
         self.articlesets = articlesets
         self.codingjobs = codingjobs
         self.data = data
-        self.monitor = ProgressMonitor()
         self.cache_hit = False
+
+        if self.monitor_steps is None:
+            self.monitor = ProgressMonitor()
+        else:
+            self.monitor = ProgressMonitor(total=self.monitor_steps)
 
         assert(issubclass(self.form_class, SelectionForm))
 
