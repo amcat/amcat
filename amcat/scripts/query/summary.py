@@ -102,8 +102,6 @@ class SummaryAction(QueryAction):
 
             self.monitor.update(message="Rendering results..".format(**locals()))
 
-        print(list(articles)[0])
-
         return TEMPLATE.render(Context(dict(locals(), **{
             "project": self.project, "user": self.user
         })))
