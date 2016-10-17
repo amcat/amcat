@@ -18,21 +18,21 @@
 ###########################################################################
 
 import copy
-import re
+import functools
 import itertools
+import re
+from typing import Container
 
 from django.http import QueryDict
+from django_filters import filters, filterset
 from rest_framework.exceptions import ParseError, NotFound, PermissionDenied
 from rest_framework.fields import CharField, IntegerField, DateTimeField
 from rest_framework.serializers import Serializer
-from django_filters import filters, filterset
 
-from amcat.tools import amcates, keywordsearch
-from api.rest.resources.amcatresource import AmCATResource
-from amcat.tools.caching import cached
 from amcat.models import Project, Article, ROLE_PROJECT_METAREADER
-
-
+from amcat.tools import amcates, keywordsearch
+from amcat.tools.caching import cached
+from api.rest.resources.amcatresource import AmCATResource
 
 # NOTE: Adding 'page' to filter fields introduces ambiguity (article-page vs. API page)
 FILTER_FIELDS = frozenset({"start_date", "end_date", "on_date", "mediumid", "sets", "section"})
@@ -117,7 +117,7 @@ class HighlightField(CharField):
     def field_to_native(self, obj, field_name):
         # use highlighting if available, otherwise fall back to raw text
         source = self.source or field_name
-        target = {'lead' : 'text', 'title' : 'title'}[source]
+        target = {'lead': 'text', 'title': 'title'}[source]
         result = getattr(obj, "highlight", {}).get(target)
         if result:
             return " ... ".join(result)
@@ -184,13 +184,17 @@ class SearchResourceSerialiser(Serializer):
     def __init__(self, *args, **kwargs):
         Serializer.__init__(self, *args, **kwargs)
         ctx = kwargs.get("context", {})
-        columns = ctx.get("columns", [])
+        columns = set(ctx.get("columns", []))
         queries = ctx.get("queries", [])
 
         if ctx.get('minimal'):
             for fn in list(self.fields):
-                if fn != 'id' and fn not in list(columns):
+                if fn != 'id' and fn not in columns:
                     del self.fields[fn]
+
+        for column in columns:
+            if column not in self.fields:
+                self.fields[column] = CharField()
 
         if "hits" in columns and queries:
             for q in queries:
@@ -218,7 +222,7 @@ class SearchResource(AmCATResource):
         super(SearchResource, self).__init__(*args, **kwargs)
         self.project = None
 
-    def _check_text_permission(self, user, project_id):
+    def set_project(self, project_id):
         try:
             self.project = Project.objects.get(id=int(project_id))
         except Project.DoesNotExist:
@@ -226,12 +230,13 @@ class SearchResource(AmCATResource):
         except ValueError:
             raise ParseError("{project_id} is not a valid integer".format(project_id=project_id))
 
+    def _check_text_permission(self):
         role_id = self.project.get_role_id(self.request.user)
         if role_id <= ROLE_PROJECT_METAREADER:
             raise PermissionDenied("You're not allowed to see full texts")
 
-
     def get(self, request, *args, **kwargs):
+        self.set_project(self.params["project"])
         fq = self.filter_queryset(self.get_queryset())
         if not fq.queries and not fq.filters:
             raise ParseError("You need to provide a non-empty query (q-parameter) or other filters")
@@ -239,7 +244,7 @@ class SearchResource(AmCATResource):
         if "text" in self.columns and "project" not in self.params:
             raise ParseError("You need to provide 'project' as a parameter if you need 'text'")
         elif "text" in self.columns:
-            self._check_text_permission(request.user, self.params["project"])
+            self._check_text_permission()
 
         return super(SearchResource, self).get(request, *args, **kwargs)
 
@@ -268,12 +273,31 @@ class SearchResource(AmCATResource):
 
     def get_queryset(self):
         fields = list(self.get_serializer().get_fields().keys())
-        if "text" in self.columns: fields += ["text"]
-        if "lead" in self.columns: fields += ["lead"]
-        if "kwic" in self.columns and "lead" not in fields: fields += ["lead"]
-        hits = "hits" in self.columns
+        fields = self.columns or fields
 
-        return LazyES(self.request.user, self.queries, fields=fields, hits=hits)
+        # lead must be present when kwic is enabled
+        if "kwic" in self.columns and "lead" not in fields:
+            fields += ["lead"]
+
+        return LazyES(self.request.user, self.queries, fields=fields, hits="hits" in self.columns)
+
+    @functools.lru_cache()
+    def get_articlesets(self) -> Container[int]:
+        """Returns queried articlesets for this request."""
+        if self.project is None:
+            raise RuntimeError("This code should be unreachable. This API is not allowed to be used without specifying a project.")
+
+        # Project given (possibly requesting text property of articles, so we need to check if
+        # given sets are in this project OR query all sets if not sets are given). User permission
+        # has already been checked in _check_text_permission.
+        given_set_ids = set(map(int, self.params.getlist("sets")))
+        valid_set_ids = set(self.project.all_articlesets().values_list("id", flat=True))
+        invalid_set_ids = given_set_ids - valid_set_ids
+
+        if invalid_set_ids:
+            raise PermissionDenied("Sets {invalid_set_ids} not in {self.project}".format(**locals()))
+
+        return frozenset(given_set_ids or valid_set_ids)
 
     def filter_queryset(self, queryset):
         # Allow for both 'ids' and 'pk' filtering
@@ -282,23 +306,9 @@ class SearchResource(AmCATResource):
         if ids:
             queryset.filter("ids", ids)
 
-        # Create a shallow, mutable copy of params
-        params = self.params
-
-        # Project given (possibly requesting text property of articles, so we need to check if
-        # given sets are in this project OR query all sets if not sets are given). User permission
-        # has already been checked in _check_text_permission.
-        if self.project is not None:
-            params = copy.copy(self.params)
-            given_set_ids = set(map(int, params.getlist("sets")))
-            valid_set_ids = set(self.project.all_articlesets().values_list("id", flat=True))
-            invalid_set_ids = given_set_ids - valid_set_ids
-
-            if invalid_set_ids:
-                raise PermissionDenied("Sets {invalid_set_ids} not in {self.project}".format(**locals()))
-
-            if not given_set_ids:
-                params.setlist("sets", map(str, valid_set_ids))
+        # Force filtering of correct sets by overriding user values (if necessary)
+        params = copy.copy(self.params)
+        params.setlist("sets", map(str, self.get_articlesets()))
 
         for k in FILTER_FIELDS:
             if k in params:
@@ -313,8 +323,8 @@ class SearchResource(AmCATResource):
     def get_model_name(cls):
         return "search"
 
-    def get_filter_fields(cls):
-        return cls.filter_class().filters.keys()
+    def get_filter_fields(self):
+        return self.filter_class().filters.keys()
 
     class filter_class(filterset.FilterSet):
         sets = filters.NumberFilter()
@@ -340,16 +350,15 @@ class SearchResource(AmCATResource):
                 q = keywordsearch.SearchQuery.from_string(q)
                 if q.query != "*":
                     yield q.label
-        if 'text' in cols:
-            yield 'text'
-        if 'lead' in cols:
-            yield 'lead'
-        if 'projectid' in cols:
-            yield 'projectid'
+
         if 'kwic' in cols:
             yield 'left'
             yield 'keyword'
             yield 'right'
+
+        for col in cols:
+            if col not in ("id", "title", "date", "url"):
+                yield col
 
     @classmethod
     def extra_fields(cls, args):
