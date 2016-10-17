@@ -30,7 +30,7 @@ from amcat.tools import amcates
 import json
 import collections
 
-FIELDS = ["text", "headline", "date", "creator", "medium", "byline", "section", "page", "addressee", "length"]
+FIELDS = ["text", "title", "date", "creator", "medium", "byline", "section", "page", "addressee", "length"]
 
 class DeduplicateSet(Script):
     """
@@ -41,8 +41,8 @@ class DeduplicateSet(Script):
         articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
         skip_text = forms.BooleanField(initial=False, required=False,
                                        help_text="Ignore full text when finding duplicates")
-        skip_headline = forms.BooleanField(initial=False, required=False,
-                                           help_text="Ignore headline when finding duplicates")
+        skip_title = forms.BooleanField(initial=False, required=False,
+                                           help_text="Ignore title when finding duplicates")
         skip_date = forms.BooleanField(initial=False, required=False,
                                        help_text="Ignore date when finding duplicates")
         skip_creator = forms.BooleanField(initial=False, required=False,

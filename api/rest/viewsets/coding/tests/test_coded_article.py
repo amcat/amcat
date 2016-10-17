@@ -24,7 +24,7 @@ class TestCodedArticleSerializer(amcattest.AmCATTestCase):
         ca = c.coded_articles.all()[0]
         s = self._get_serializer(c.coded_articles.all())
 
-        self.assertEqual(a.headline, s.get_headline(ca))
+        self.assertEqual(a.title, s.get_title(ca))
         self.assertEqual(a.date, s.get_date(ca))
         self.assertEqual(a.pagenr, s.get_pagenr(ca))
         self.assertEqual(a.length, s.get_length(ca))
@@ -35,9 +35,9 @@ class TestCodedArticleSerializer(amcattest.AmCATTestCase):
         ca1, ca2, ca3 = c.coded_articles.all()[0:3]
 
         with self.checkMaxQueries(1):
-            s.get_headline(ca1)
-            s.get_headline(ca2)
-            s.get_headline(ca3)
+            s.get_title(ca1)
+            s.get_title(ca2)
+            s.get_title(ca3)
             s.get_date(ca3)
             s.get_pagenr(ca3)
             s.get_length(ca3)

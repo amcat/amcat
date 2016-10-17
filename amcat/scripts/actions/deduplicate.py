@@ -57,18 +57,18 @@ class Deduplicate(Script):
         ignore_page = forms.BooleanField(initial=False, required=False)
         ignore_text = forms.BooleanField(initial=False, required=False)
         ignore_section = forms.BooleanField(initial=False, required=False)
-        ignore_headline = forms.BooleanField(initial=False, required=False)
+        ignore_title = forms.BooleanField(initial=False, required=False)
         ignore_byline = forms.BooleanField(initial=False, required=False)
         ignore_date = forms.BooleanField(initial=False, required=False)
         text_ratio = forms.IntegerField(required=False, initial=0, min_value=0, max_value=100,
                                         help_text="Percentage of (fuzzy) text overlap to be considered duplicate, e.g. 80")
-        headline_ratio = forms.IntegerField(required=False, initial=0, min_value=0, max_value=100,
-                                            help_text="Percentage of (fuzzy) headline overlap to be considered duplicate, e.g. 99")
+        title_ratio = forms.IntegerField(required=False, initial=0, min_value=0, max_value=100,
+                                            help_text="Percentage of (fuzzy) title overlap to be considered duplicate, e.g. 99")
         save_duplicates_to = forms.CharField(initial="", required=False, 
                                              help_text="If not empty, save duplicates to new set with this name.")
 
         dry_run = forms.BooleanField(initial=False, required=False)
-        skip_simple = forms.BooleanField(initial=False, required=False, help_text="Do not use an approximation of levenhstein ratio using article length (if using fuzzy text or headline")
+        skip_simple = forms.BooleanField(initial=False, required=False, help_text="Do not use an approximation of levenhstein ratio using article length (if using fuzzy text or title")
 
 
     def get_matching(self, compare_with, article, ratio, prop):
@@ -92,13 +92,13 @@ class Deduplicate(Script):
             # Fill cache
             self._articles_cache_contains = (medium_id, date)
             self._articles_cache = articleset.articles.filter(date=date, medium__id=medium_id)
-            self._articles_cache = self._articles_cache.only("id", "text", "headline")
+            self._articles_cache = self._articles_cache.only("id", "text", "title")
 
         return self._articles_cache
 
-    def _get_deduplicates(self, articleset_1, articleset_2, text_ratio, headline_ratio, skip_simple, delete_same):
+    def _get_deduplicates(self, articleset_1, articleset_2, text_ratio, title_ratio, skip_simple, delete_same):
         log.warn("Start deduplicating ({articleset_1}, {articleset_2})..".format(**locals()))
-        all_articles = articleset_1.articles.only("id", "date", "medium", "text", "headline")
+        all_articles = articleset_1.articles.only("id", "date", "medium", "text", "title")
         n_articles = all_articles.count()
         articles = all_articles.order_by("medium", "date")
 
@@ -109,7 +109,7 @@ class Deduplicate(Script):
             compare_with = self.get_articles(articleset_2, article, text_ratio)
             if not skip_simple:
                 compare_with = self.get_simple_levenhstein(compare_with, article, text_ratio)
-            compare_with = self.get_matching(compare_with, article, headline_ratio, "headline")
+            compare_with = self.get_matching(compare_with, article, title_ratio, "title")
             compare_with = set(self.get_matching(compare_with, article, text_ratio, "text"))
 
             if not delete_same:
@@ -123,7 +123,7 @@ class Deduplicate(Script):
                 yield (article, compare_with)
 
     def is_fuzzy_dupe(self, a, b):
-        for field in 'headline', 'text':
+        for field in 'title', 'text':
             ratio = self.options[field+'_ratio']
             if ratio:
                 similarity =  Levenshtein.ratio(getattr(a, field), getattr(b, field))
@@ -146,7 +146,7 @@ class Deduplicate(Script):
         Get the fields to retrieve/compare on.
         If ignore_fuzzy, ignore text if text_ratio is given
         """
-        all_fields = ['medium', 'page', 'date', 'section', 'headline', 'byline', 'text']
+        all_fields = ['medium', 'page', 'date', 'section', 'title', 'byline', 'text']
         if not (any(self.options['ignore_'+f] for f in all_fields) or
                 (ignore_fuzzy and any(self.options.get(f+'_ratio') for f in all_fields))):
             yield 'hash'
@@ -168,7 +168,7 @@ class Deduplicate(Script):
 
         for arts in dupes.values():
             if len(arts) > 1:
-                if self.options['headline_ratio'] or self.options['text_ratio']:
+                if self.options['title_ratio'] or self.options['text_ratio']:
                     for a, arts in self.fuzzy_dedup(arts):
                         yield a.id, [b.id for b in arts]
                 else:

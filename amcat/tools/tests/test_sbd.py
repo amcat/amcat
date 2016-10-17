@@ -14,9 +14,9 @@ class TestSBD(amcattest.AmCATTestCase):
             self.assertEqual(result, sentences)
 
     def test_create_sentences(self):
-        hl = "This is the headline"
+        hl = "This is the title"
         text = "A sentence.\n\nAnother sentence. And yet a third"
-        a = amcattest.create_test_article(headline=hl, text=text)
+        a = amcattest.create_test_article(title=hl, text=text)
         create_sentences(a)
         sents = Sentence.objects.filter(article=a.id)
         sents = set((s.parnr, s.sentnr, s.sentence) for s in sents)

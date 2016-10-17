@@ -41,12 +41,12 @@ def article_property(property_name):
 
 
 class CodedArticleSerializer(AmCATModelSerializer):
-    headline = serializers.SerializerMethodField()
+    title = serializers.SerializerMethodField()
     date = serializers.SerializerMethodField()
     pagenr = serializers.SerializerMethodField()
     length = serializers.SerializerMethodField()
     article_id = serializers.SerializerMethodField()
-    get_headline = article_property("headline")
+    get_title = article_property("title")
     get_date = article_property("date")
     get_pagenr = article_property("pagenr")
     get_length = article_property("length")
@@ -59,7 +59,7 @@ class CodedArticleSerializer(AmCATModelSerializer):
     @cached
     def _get_articles(self):
         aids = self._get_coded_articles().values_list("article__id", flat=True)
-        articles = Article.objects.filter(id__in=aids).only("headline", "date", "pagenr", "length")
+        articles = Article.objects.filter(id__in=aids).only("title", "date", "pagenr", "length")
         return {a.id: a for a in articles}
 
     def get_article(self, coded_article):
@@ -86,7 +86,7 @@ class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
     model = CodedArticle
 
     ordering_mapping = {
-        "headline": "article__headline",
+        "title": "article__title",
         "date": "article__date",
         "pagenr": "article__pagenr",
         "length": "article__length",

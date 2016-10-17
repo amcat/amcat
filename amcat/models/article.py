@@ -108,7 +108,7 @@ class Article(AmcatModel):
 
     def highlight(self, query, escape=True, keep_em=True):
         """
-        Highlight headline and text property by inserting HTML tags (em). You won't be able to
+        Highlight title and text property by inserting HTML tags (em). You won't be able to
         call save() after calling this method.
 
         @param query: elastic query used for highlighting
@@ -224,7 +224,7 @@ class Article(AmcatModel):
 
         Duplicates are detected and have .duplicate and .id set (and are added to sets)
 
-        @param articles: a collection of objects with the necessary properties (.headline etc)
+        @param articles: a collection of objects with the necessary properties (.title etc)
         @param articleset(s): articleset object(s), specify either or none
         """
         if articlesets is None:

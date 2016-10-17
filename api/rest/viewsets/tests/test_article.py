@@ -13,7 +13,7 @@ from amcat.models import Article
 
 def test_article(**kwargs):
     if 'date' not in kwargs: kwargs['date'] = datetime.datetime.now().isoformat()
-    if 'title' not in kwargs: kwargs['title'] = 'test headline {}'.format(uuid4())
+    if 'title' not in kwargs: kwargs['title'] = 'test title {}'.format(uuid4())
     if 'text' not in kwargs: kwargs['text'] = 'test text {}'.format(uuid4())
     if 'medium' not in kwargs: kwargs['medium'] = 'test'
     return kwargs    

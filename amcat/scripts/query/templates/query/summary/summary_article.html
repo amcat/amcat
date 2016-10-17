@@ -1,12 +1,12 @@
-<div class="article-headline">
+<div class="article-title">
     {% if a.totalHits %}
         <span class="hit-count">{{a.totalHits}} hits - </span>
     {% endif %}
     <a href="{% url "navigator:project-article-details" project.id a.id %}" target="_blank">
-        {% if a.highlight.headline %}
-            {{ a.highlight.headline|first|safe|default:"[No headline]"}}
+        {% if a.highlight.title %}
+            {{ a.highlight.title|first|safe|default:"[No title]"}}
         {% else %}
-            {{ a.headline|default:"[No headline]"}}
+            {{ a.title|default:"[No title]"}}
         {% endif %}
     </a>
 </div>

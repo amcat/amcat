@@ -80,7 +80,7 @@ _MetaField = collections.namedtuple("MetaField", ["object", "attr", "label"])
 
 _METAFIELDS = [
     _MetaField("article", "id", "Article ID"),
-    _MetaField("article", "headline", "Headline"),
+    _MetaField("article", "title", "Title"),
     _MetaField("article", "byline", "Byline"),
     _MetaField("article", "medium", "Medium"),
     _MetaField("article", "medium_id", "Medium ID"),

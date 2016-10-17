@@ -151,14 +151,14 @@ def create_test_article(create=True, articleset=None, deduplicate=True, **kargs)
     """Create a test article"""
     from amcat.models.article import Article
 
-    if 'headline' in kargs: kargs['title'] = kargs.pop('headline')
+    if 'title' in kargs: kargs['title'] = kargs.pop('title')
     
     if "date" in kargs and isinstance(kargs["date"], str):
         kargs["date"] = read_date(kargs["date"])
 
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "date" not in kargs: kargs["date"] = datetime.date(2000, 1, 1)
-    if 'title' not in kargs: kargs['title'] = 'test headline {} : {}'.format(_get_next_id(), uuid4())
+    if 'title' not in kargs: kargs['title'] = 'test title {} : {}'.format(_get_next_id(), uuid4())
     if 'text' not in kargs: kargs["text"] = 'test text {}'.format(_get_next_id())
 
     a = Article(**kargs)

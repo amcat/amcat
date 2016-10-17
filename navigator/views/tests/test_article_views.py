@@ -174,7 +174,7 @@ class TestArticleViews(amcattest.AmCATTestCase):
         s1 = Sentence.objects.filter(id=amcattest.create_test_sentence().id)
         self.assertRaises(ValueError, _get_articles, article, s1)
 
-        # Should raise an exception if we try to split on headline
+        # Should raise an exception if we try to split on title
         self.assertRaises(ValueError, _get_articles, article, sentences.filter(parnr=1))
 
         # Should return a "copy", with byline in "text" property
@@ -212,7 +212,7 @@ class TestArticleViews(amcattest.AmCATTestCase):
         p2 = amcattest.create_test_project(name="p2", owner=user)
         
         s1  = amcattest.create_test_set(project=p1)
-        a1 = amcattest.create_test_article(project=p1, articleset=s1, text="Dit is de tekst", headline="hoofdlijn")
+        a1 = amcattest.create_test_article(project=p1, articleset=s1, text="Dit is de tekst", title="hoofdlijn")
 
         client = Client()
         client.login(username="fred", password="secret")

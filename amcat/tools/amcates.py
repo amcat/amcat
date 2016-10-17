@@ -113,7 +113,7 @@ HIGHLIGHT_OPTIONS = {
             "number_of_fragments": 3,
             'no_match_size': 100
         },
-        'headline': {
+        'title': {
             'no_match_size': 100 
         }
     }
@@ -283,7 +283,7 @@ class ES(object):
             'highlight': {
                 "fields": {
                     "text": get_highlight_query(query, "text"),
-                    "headline": get_highlight_query(query, "headline"),
+                    "title": get_highlight_query(query, "title"),
                     "byline": get_highlight_query(query, "byline"),
                 }
             }
@@ -489,7 +489,7 @@ class ES(object):
             monitor.update(40/nbatches, "Added batch {iplus}/{nbatches}".format(iplus=i+1, **locals()))
             self.bulk_update(batch, UPDATE_SCRIPT_ADD_TO_SET, params={'set' : setid})
 
-    def term_vector(self, aid, fields=["text", "headline"]):
+    def term_vector(self, aid, fields=["text", "title"]):
 
         # elasticsearch client supports term vectors from version 2.0
         # so we do it 'manually' for now:
@@ -773,7 +773,7 @@ class ES(object):
         Check whether a duplicate of the given article already exists.
         If so, returns the sets that the duplicate is a member of.
         Duplication is checked using de get_hash function, so article
-        should be an object with the appropriate attributes (.headline etc)
+        should be an object with the appropriate attributes (.title etc)
         @return: A (possibly empty) sequence of results with .id and .sets
         """
         hash = get_article_dict(article).hash

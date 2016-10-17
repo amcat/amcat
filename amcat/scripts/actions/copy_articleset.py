@@ -46,7 +46,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-ARTICLE_FIELDS = ["date", "section", "pagenr", "headline", "byline", "length", "metastring", "url",
+ARTICLE_FIELDS = ["date", "section", "pagenr", "title", "byline", "length", "metastring", "url",
                   "externalid", "author", "text", "medium_id", "uuid"]
 
 

@@ -28,11 +28,11 @@ class TestSerializer(ApiTestCase):
     @amcattest.use_elastic
     def test_get_object(self):
         a = amcattest.create_test_article(
-            headline=u'\xba\xa2\u0920\u0903\u0905\u0920\u0940\u1e00\u1e80\u1eb6\u1ef3')
+            title=u'\xba\xa2\u0920\u0903\u0905\u0920\u0940\u1e00\u1e80\u1eb6\u1ef3')
         # (why not test some unicode while we're at it...)
         ES().flush()
         a2 = self.get_object(ArticleMetaResource, a.id)
-        self.assertEqual(a.headline, a2.headline)
+        self.assertEqual(a.title, a2.title)
         self.assertEqual(a.id, a2.id)
 
     def test_echo(self):

@@ -80,7 +80,7 @@ class LazyES(object):
             raise ValueError("Negative indexing not yet implemented.")
 
         query_kargs = {}
-        if self.query and ("lead" in self.fields or "headline" in self.fields):
+        if self.query and ("lead" in self.fields or "title" in self.fields):
             query_kargs["highlight"] = True
         elif "lead" in self.fields:
             query_kargs["lead"] = True
@@ -117,7 +117,7 @@ class HighlightField(CharField):
     def field_to_native(self, obj, field_name):
         # use highlighting if available, otherwise fall back to raw text
         source = self.source or field_name
-        target = {'lead' : 'text', 'headline' : 'headline'}[source]
+        target = {'lead' : 'text', 'title' : 'title'}[source]
         result = getattr(obj, "highlight", {}).get(target)
         if result:
             return " ... ".join(result)
@@ -137,7 +137,7 @@ class KWICField(CharField):
         # use highlighting if available, otherwise fall back to raw text
         if obj is None:
             return None
-        hl = obj.highlight.get('headline')
+        hl = obj.highlight.get('title')
         hl = filter(lambda h: re.search(r"<mark>.*</mark>", h), hl)
         if not hl:
             hl = obj.highlight.get('text')

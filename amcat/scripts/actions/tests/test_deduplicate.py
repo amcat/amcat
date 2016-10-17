@@ -17,17 +17,17 @@ class TestDedup(amcattest.AmCATTestCase):
         s = amcattest.create_test_set()
         self.assertEqual(set(Deduplicate(articleset=s.id).get_fields()), {'hash'})
         self.assertEqual(set(Deduplicate(articleset=s.id, ignore_medium=True).get_fields()),
-                         {'text', 'headline', 'byline', 'section', 'page', 'date'})
-        self.assertEqual(set(Deduplicate(articleset=s.id, headline_ratio=50).get_fields()),
+                         {'text', 'title', 'byline', 'section', 'page', 'date'})
+        self.assertEqual(set(Deduplicate(articleset=s.id, title_ratio=50).get_fields()),
                          {'hash'})
-        self.assertEqual(set(Deduplicate(articleset=s.id, headline_ratio=50, ignore_medium=True)
+        self.assertEqual(set(Deduplicate(articleset=s.id, title_ratio=50, ignore_medium=True)
                              .get_fields()),
-                         {'text', 'headline', 'byline', 'section', 'page', 'date'})
+                         {'text', 'title', 'byline', 'section', 'page', 'date'})
 
-        self.assertEqual(set(Deduplicate(articleset=s.id, headline_ratio=50)
+        self.assertEqual(set(Deduplicate(articleset=s.id, title_ratio=50)
                              .get_fields(ignore_fuzzy=True)),
                          {'text', 'medium', 'byline', 'section', 'page', 'date'})
-        self.assertEqual(set(Deduplicate(articleset=s.id, headline_ratio=50, ignore_medium=True)
+        self.assertEqual(set(Deduplicate(articleset=s.id, title_ratio=50, ignore_medium=True)
                              .get_fields(ignore_fuzzy=True)),
                          {'text', 'byline', 'section', 'page', 'date'})
 
@@ -36,7 +36,7 @@ class TestDedup(amcattest.AmCATTestCase):
     def test_dedup(self):
         s = amcattest.create_test_set()
         m1, m2 = [amcattest.create_test_medium() for _x in range(2)]
-        adict = dict(text="text", headline="headline", articleset=s, deduplicate=False)
+        adict = dict(text="text", title="title", articleset=s, deduplicate=False)
         arts = [
             amcattest.create_test_article(medium=m1, pagenr=1, **adict),
             amcattest.create_test_article(medium=m1, pagenr=2, **adict),
@@ -53,7 +53,7 @@ class TestDedup(amcattest.AmCATTestCase):
     def test_date(self):
         s = amcattest.create_test_set()
         m = amcattest.create_test_medium()
-        adict = dict(text="text", headline="headline", articleset=s, medium=m)
+        adict = dict(text="text", title="title", articleset=s, medium=m)
         arts = [
             amcattest.create_test_article(date="2001-01-01", **adict),
             amcattest.create_test_article(date="2001-01-01 02:00", **adict),
@@ -70,13 +70,13 @@ class TestDedup(amcattest.AmCATTestCase):
         m = amcattest.create_test_medium()
         adict = dict(text="text", articleset=s, medium=m)
         arts = [
-            amcattest.create_test_article(headline="Dit is een test", **adict),
-            amcattest.create_test_article(headline="Dit is ook een test", **adict),
-            amcattest.create_test_article(headline="Dit is ook een tesdt", **adict),
-            amcattest.create_test_article(headline="Is dit een test?", **adict),
+            amcattest.create_test_article(title="Dit is een test", **adict),
+            amcattest.create_test_article(title="Dit is ook een test", **adict),
+            amcattest.create_test_article(title="Dit is ook een tesdt", **adict),
+            amcattest.create_test_article(title="Is dit een test?", **adict),
 
             ]
         self.assertEqual(self.do_test(arts, ignore_medium=True), {1,2,3,4})
-        self.assertEqual(self.do_test(arts, ignore_medium=True, headline_ratio=90), {1,2,4})
-        self.assertEqual(self.do_test(arts, ignore_medium=True, headline_ratio=80), {1,4})
-        self.assertEqual(self.do_test(arts, ignore_medium=True, headline_ratio=50), {1})
+        self.assertEqual(self.do_test(arts, ignore_medium=True, title_ratio=90), {1,2,4})
+        self.assertEqual(self.do_test(arts, ignore_medium=True, title_ratio=80), {1,4})
+        self.assertEqual(self.do_test(arts, ignore_medium=True, title_ratio=50), {1})

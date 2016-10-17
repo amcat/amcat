@@ -115,12 +115,12 @@
             var jqueryElement = $('#article-table-container');
             var url = "{% url "api:project-codingjob-coded_article-list" project.id codingjob.id %}";
             var columns = [], column_order = [
-                "id", "article_id", "headline", "medium", "date", "pagenr",
+                "id", "article_id", "title", "medium", "date", "pagenr",
                 "length", "status", "comments"
             ];
 
             var sortable = [
-                "id", "headline", "comments", "article_id", "medium", "date",
+                "id", "title", "comments", "article_id", "medium", "date",
                 "pagenr", "length", "status"
             ];
 

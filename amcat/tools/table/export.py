@@ -168,7 +168,7 @@ class HTML(TableExporter):
     def to_bytes(self, table, encoding):
         context = Context({
             "articles": table.get_rows(), "encoding": encoding,
-            "non_meta": {"text", "headline", "byline"}
+            "non_meta": {"text", "title", "byline"}
         })
         return get_template().render(context).encode(encoding)
 

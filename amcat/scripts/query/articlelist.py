@@ -53,7 +53,7 @@ class ArticleListActionForm(QueryActionForm):
             ("Calculated", (("hits", "# hits per keyword"), ("kwic", "keyword in context"))),
             ("Properties", [(f, f) for f in COLUMNS])
         ),
-        initial=("id", "date", "mediumid", "medium", "headline")
+        initial=("id", "date", "mediumid", "medium", "title")
     )
 
     def clean_columns(self):

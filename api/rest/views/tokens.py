@@ -79,7 +79,7 @@ def _tokens_from_vectors(vectors, fields, aid):
             yield token
 
 def _termvectors(aids):
-    fields = ["headline", "text"]
+    fields = ["title", "text"]
     for doc in amcates.ES().term_vectors(aids, fields):
         aid = int(doc['_id'])
         yield aid, list(_tokens_from_vectors(doc['term_vectors'], fields, aid))

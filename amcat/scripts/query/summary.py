@@ -17,22 +17,20 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-import json
 import datetime
+import json
+import re
 
 from django.forms import IntegerField, BooleanField
-from django.http import QueryDict
 from django.template import Context
-from django.template.loader import get_template
 from django.template.defaultfilters import escape as escape_filter
+from django.template.loader import get_template
 
 from amcat.forms.forms import order_fields
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools.aggregate_es import IntervalCategory, fill_zeroes
 from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.toolkit import Timer
-
-import re
 
 TEMPLATE = get_template('query/summary/summary.html')
 
@@ -55,8 +53,8 @@ class SummaryActionForm(QueryActionForm):
 def escape_article_result(article):
     if hasattr(article,'highlight'):
         try:
-            article.highlight['headline'][0] = escape_filter(article.highlight['headline'][0])
-            article.highlight['headline'][0] = re.sub(r'&lt;(\/?)mark&gt;',r'<\1mark>',article.highlight['headline'][0])
+            article.highlight['title'][0] = escape_filter(article.highlight['title'][0])
+            article.highlight['title'][0] = re.sub(r'&lt;(\/?)mark&gt;',r'<\1mark>',article.highlight['title'][0])
         except KeyError:
             pass
         try:
@@ -103,6 +101,8 @@ class SummaryAction(QueryAction):
                 self.monitor.update()
 
             self.monitor.update(message="Rendering results..".format(**locals()))
+
+        print(list(articles)[0])
 
         return TEMPLATE.render(Context(dict(locals(), **{
             "project": self.project, "user": self.user

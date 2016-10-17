@@ -56,7 +56,7 @@ class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
     def get_context_data(self, **kwargs):
         context = super(ArticleDetailsView, self).get_context_data(**kwargs)
 
-        # Highlight headline / text
+        # Highlight title / text
         self.highlight()
         context['text'] = self.object.text
         context['title'] = self.object.title
@@ -156,19 +156,19 @@ def get_articles(article, sentences):
     """
     new_article = copy_article(article)
 
-    # Get sentence, skipping the headline
+    # Get sentence, skipping the title
     all_sentences = list(article.sentences.all()[1:])
 
     not_in_article = set(sentences) - set(all_sentences)
     if not_in_article:
         raise ValueError(
-            "Sentences specified as delimters, but not in article: {not_in_article}. Did you try to split on a headline?"
+            "Sentences specified as delimters, but not in article: {not_in_article}. Did you try to split on a title?"
             .format(**locals())
         )
 
     prev_parnr = 1
     for parnr, sentnr in chain(sentences.values_list("parnr", "sentnr"), ((None, None),)):
-        # Skip headline paragraph
+        # Skip title paragraph
         if parnr == 1: continue
 
         while True:
@@ -299,6 +299,6 @@ class ArticleSplitView(ProjectFormView):
         ctx = super(ArticleSplitView, self).get_context_data(**kwargs)
         sentences = sbd.get_or_create_sentences(self.article).only("sentence", "parnr")
         ctx["sentences"] = _get_sentences(sentences)
-        next(ctx["sentences"]) # skip headline
+        next(ctx["sentences"]) # skip title
         return ctx
 

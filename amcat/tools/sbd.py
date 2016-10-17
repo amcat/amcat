@@ -64,7 +64,7 @@ def get_or_create_sentences(article):
 
 
 def _create_sentences(article):
-    pars = [article.headline]
+    pars = [article.title]
     if article.byline: pars += [article.byline]
     pars += re.split(r"\n\s*\n[\s\n]*", article.text.strip())
     for parnr, par in enumerate(pars):
@@ -78,7 +78,7 @@ def create_sentences(article):
     Split the given article object into sentences and save the sentences models
     to the database. Returns a list of the resulting Sentence objects.
 
-    If you can, cache properties headline, byline and text.
+    If you can, cache properties title, byline and text.
     """
     sents = tuple(_create_sentences(article))
     Sentence.objects.bulk_create(sents)
