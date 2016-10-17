@@ -5,14 +5,14 @@ log = logging.getLogger(__name__)
 
 class ProgressMonitor(object):
     def __init__(self, total=100, message="In progress", name=None, log=True):
-        self.total = 100
+        self.total = total
         self.message = message
         self.worked = 0
         self.listeners = []
         self.log = log
         self.name = name
 
-    def update(self, units, message=None):
+    def update(self, units=1, message=None):
         self.worked += units
         if message: self.message = message
         self.do_update()
@@ -41,7 +41,7 @@ class SubMonitor(ProgressMonitor):
         self.super_units = super_units
         super(SubMonitor, self).__init__(*args, log=False, **kargs)
 
-    def update(self, units, message=None):
+    def update(self, units=1, message=None):
         s = int(float(units) / self.total * self.super_units)
         self.super_monitor.update(s, message)
         super(SubMonitor, self).update(units, message)
