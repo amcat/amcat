@@ -393,11 +393,11 @@ class TestAmcatES(amcattest.AmCATTestCase):
         s2 = amcattest.create_test_set(articles=[a2])
         s3 = amcattest.create_test_set(articles=[a1, a3])
         ES().flush()
-        self.assertEqual(set(ES().get_used_properties(s1)), {"p1", "p2_date"})
-        self.assertEqual(set(ES().get_used_properties(s1.id, s2.id)), {"p1", "p2_date", "p3_num"})
-        self.assertEqual(set(ES().get_used_properties(s3.id)), {"p1", "p2_date", "p4"})
+        self.assertEqual(set(ES().get_used_properties([s1])), {"p1", "p2_date"})
+        self.assertEqual(set(ES().get_used_properties([s1.id, s2.id])), {"p1", "p2_date", "p3_num"})
+        self.assertEqual(set(ES().get_used_properties([s3.id])), {"p1", "p2_date", "p4"})
 
-        self.assertEqual(set(ES().get_used_properties2(s1)), {"p1", "p2_date"})
-        self.assertEqual(set(ES().get_used_properties2(s1.id, s2.id)), {"p1", "p2_date", "p3_num"})
-        self.assertEqual(set(ES().get_used_properties2(s3.id)), {"p1", "p2_date", "p4"})
+        self.assertEqual(set(ES().get_used_properties([s1])), {"p1", "p2_date"})
+        self.assertEqual(set(ES().get_used_properties([s1.id, s2.id])), {"p1", "p2_date", "p3_num"})
+        self.assertEqual(set(ES().get_used_properties([s3.id])), {"p1", "p2_date", "p4"})
         

@@ -17,7 +17,6 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-
 import datetime
 import logging
 import os
@@ -27,12 +26,11 @@ from hashlib import sha224 as hash_class
 from json import dumps as serialize
 
 from django.conf import settings
-from elasticsearch import Elasticsearch, ImproperlyConfigured, NotFoundError
+from elasticsearch import Elasticsearch, NotFoundError
 from elasticsearch.helpers import scan, bulk
 
 from amcat.tools import queryparser, toolkit
 from amcat.tools.caching import cached
-from amcat.tools.djangotoolkit import get_model_field
 from amcat.tools.progress import ProgressMonitor
 from amcat.tools.toolkit import multidict, splitlist
 
@@ -441,7 +439,7 @@ class ES(object):
 
         return result
 
-    def get_used_properties(self, *sets):
+    def get_used_properties(self, sets):
         """
         Returns a sequency of property names in use in the specified set(s) (or setids)
         """
