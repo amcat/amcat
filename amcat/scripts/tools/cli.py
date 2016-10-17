@@ -17,15 +17,16 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from django import forms
-from amcat.scripts.script import Script
-
 import argparse
-import sys
-from amcat.tools import  classtools
-import types, chardet
+import logging
 
-import logging; log = logging.getLogger(__name__)
+from django import forms
+from django.core.files import File
+
+from amcat.scripts.script import Script
+from amcat.tools import  classtools
+
+log = logging.getLogger(__name__)
 
 ###############################################################
 ##         Aux method for CLI invocation                     ##
