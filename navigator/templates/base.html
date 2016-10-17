@@ -48,6 +48,31 @@
 
   </head>
   <body>
+  <div id="global-search-modal" class="modal" tabindex="-1" role="dialog">
+
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title">Global search</h4>
+        </div>
+        <form action="{% url 'navigator:to_object' %}">
+        <div class="modal-body">
+          <p>Search for a <i>project</i>, <i>article set</i>, or <i>article</i> by ID or by name to navigate to the identified object. You can prefix an ID with <i>p</i>, <i>s</i>, or <i>a</i> to restrict search to only projects, sets, or articles, respectively. For example, searching on p12 will directly open project 12.</p>
+          <div class="form-group">
+            <label for="global-search-input">Search:</label>
+            <input id="global-search-input" type="text" class="form-control" name="search" autofocus/>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+        </form>
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->
+
     <!-- navbar -->
     <header class="navbar navbar-default navbar-fixed-top" role="navigation">
       <div class="container{% if annotator or request.user.userprofile.fluid %}-fluid{% endif %}">
@@ -64,20 +89,8 @@
 
           <ul class="nav navbar-nav navbar-right">
 {% if user.is_authenticated %}
-<li>
+  <li><a type="button" data-toggle="modal" data-target="#global-search-modal" href="#" id="global-search">Search</a></li>
 
-<form action="{% url 'navigator:to_object' %}" class="navbar-form navbar-right" >
-   <div class="input-group" style="width:12em" >
-       <input type="Search" placeholder="Search" class="form-control" name="search" title="Search for a Project, Article Set, or Article by ID or by name to navigate to the identified object. You can prefix an ID with p, s, or a to restrict search to only projects, sets, or articles, respectively. For example, searching on p12 will directly open project 12"/>
-       <div class="input-group-btn">
-           <button class="btn btn-primary">
-           <span class="glyphicon glyphicon-search"></span>
-           </button>
-       </div>
-   </div>
-</form>
-
-</li>
 {% endif %}
 	    {% if status != 503 %}
 {% if user.is_authenticated %}
@@ -196,5 +209,14 @@
                 hide: false
             });
         });
-</script>
+    </script>
 {% endif %}
+
+<script>
+  // Autofocus elements when opening modal
+  require(["jquery"], function($){
+    $('.modal').on('shown.bs.modal', function() {
+      $(this).find('[autofocus]').focus();
+    });
+  });
+</script>
