@@ -22,30 +22,21 @@ Model module containing the Article class representing documents in the
 articles database table.
 """
 
-
 import logging
-import collections
-import binascii
-
-from django.db import models
-from django.template import Context
-
-from django.core.exceptions import PermissionDenied
-from django.template.defaultfilters import escape as escape_filter
-from django.template.loader import get_template
 
 from django.contrib.postgres.fields import JSONField
-
+from django.core.exceptions import PermissionDenied
+from django.db import models
+from django.template.defaultfilters import escape as escape_filter
 from django_hash_field import HashField
 
+from amcat.models.authorisation import ROLE_PROJECT_READER
 from amcat.models.authorisation import Role
 from amcat.tools import amcates
 from amcat.tools.djangotoolkit import bulk_insert_returning_ids
-from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
+from amcat.tools.model import AmcatModel
 from amcat.tools.progress import ProgressMonitor
 from amcat.tools.toolkit import splitlist
-from amcat.tools.tree import Tree
-from amcat.models.authorisation import ROLE_PROJECT_READER
 
 log = logging.getLogger(__name__)
 
@@ -53,8 +44,7 @@ import re
 
 WORD_RE_STRING = re.compile('[{L}{N}]+')  # {L} --> All letters
 WORD_RE_BYTES = re.compile(b'[{L}{N}]+')  # {L} --> All letters
-# {N} --> All numbers
-
+                                          # {N} --> All numbers
 
 def word_len(txt):
     """Count words in `txt`
