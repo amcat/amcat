@@ -29,13 +29,14 @@ from django.http import QueryDict
 from django.template import Context
 from django.template.loader import get_template
 from amcat.scripts.query import QueryAction, QueryActionForm
+from amcat.tools import amcates
 from amcat.tools.amcates import ARTICLE_FIELDS
 from amcat.tools.keywordsearch import SelectionSearch
 from api.rest.datatable import Datatable
 from api.rest.resources import SearchResource
 
 
-COLUMNS = ["id"] + sorted(set(ARTICLE_FIELDS) | {"medium"})
+COLUMNS = ["id"] + sorted(set(ARTICLE_FIELDS))
 TABLE_TEMPLATE = get_template("query/articlelist.html")
 ARTICLE_ROWLINK = "{}articles/{}"
 
@@ -51,10 +52,18 @@ class ArticleListActionForm(QueryActionForm):
     columns = forms.MultipleChoiceField(
         choices=(
             ("Calculated", (("hits", "# hits per keyword"), ("kwic", "keyword in context"))),
-            ("Properties", [(f, f) for f in COLUMNS])
+            ("Static properties", [(f, f) for f in COLUMNS])
         ),
         initial=("id", "date", "mediumid", "medium", "title")
     )
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(user, *args, **kwargs)
+
+        article_props = list(amcates.ES().get_used_properties(self.articlesets))
+        choices = sorted(self.fields["columns"].choices)
+        choices.append(("Dynamic properties", [(f, f) for f in article_props]))
+        self.fields["columns"].choices = choices
 
     def clean_columns(self):
         columns = self.cleaned_data["columns"]
