@@ -74,6 +74,13 @@ class TestToolkit(amcattest.AmCATTestCase):
                 date2 = toolkit.read_date(s, lax=lax, american=american)
                 self.assertEqual(date2, date)
 
+    def test_random_alphanum(self):
+        self.assertEqual(len(toolkit.random_alphanum(1000)), 1000)
+        self.assertEqual(len(toolkit.random_alphanum(100)), 100)
+        self.assertEqual(len(toolkit.random_alphanum(80)), 80)
+        self.assertEqual(len(toolkit.random_alphanum(60)), 60)
+        self.assertNotEqual(toolkit.random_alphanum(100), toolkit.random_alphanum(100))
+
     def test_head(self):
         it = iter(range(10))
         self.assertEqual(0, toolkit.head(it))
