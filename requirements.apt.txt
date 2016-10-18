@@ -35,3 +35,4 @@ python3-pyinotify
 # Not packaged in 16.04
 pdfminer3k==1.3.0
 splinter
+dateparser
