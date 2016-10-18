@@ -43,7 +43,7 @@ class ProgressMonitor(object):
 
     def get_progress(self):
         my_progress = self.worked / self.total
-        subprogress = sum(s.progress for s in self.sub_monitors) / self.total
+        subprogress = sum(s.progress * s.weight for s in self.sub_monitors) / self.total
         return my_progress + subprogress
 
     def update(self, units: int=1, message: Optional[str]=None):
@@ -72,8 +72,9 @@ class ProgressMonitor(object):
         return monitor
         
 class SubMonitor(ProgressMonitor):
-    def __init__(self, super_monitor, log=False, *args, **kargs):
+    def __init__(self, super_monitor, weight: int=1, log=False, *args, **kargs):
         self.super_monitor = super_monitor
+        self.weight = weight
         super(SubMonitor, self).__init__(*args, log=False, **kargs)
 
     def update(self, units=1, message=None):
@@ -82,7 +83,7 @@ class SubMonitor(ProgressMonitor):
         if self.worked == self.total:
             # We're done. We can deregister ourselves from supermonitor.
             self.super_monitor.sub_monitors.remove(self)
-            self.super_monitor.update(1, message)
+            self.super_monitor.update(self.weight, message)
         else:
             # We're not done; inform super monitor of progress
             self.super_monitor.update(0, message)

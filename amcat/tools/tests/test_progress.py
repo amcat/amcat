@@ -52,3 +52,18 @@ class TestProgressMonitor(unittest.TestCase):
         monitor.update()
 
         self.assertAlmostEqual(monitor.get_progress(), 1)
+
+    def test_weight(self):
+        monitor = ProgressMonitor(total=5)
+
+        sm1 = monitor.submonitor(2, weight=2)
+        sm2 = monitor.submonitor(2, weight=3)
+
+        self.assertAlmostEqual(monitor.get_progress(), 0)
+
+        sm1.update(2)
+        self.assertAlmostEqual(monitor.get_progress(), 2/5)
+
+        sm2.update()
+        self.assertAlmostEqual(monitor.get_progress(), 2/5 + 1/2 * 3 * 1/5)
+
