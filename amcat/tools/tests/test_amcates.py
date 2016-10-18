@@ -18,12 +18,11 @@
 ###########################################################################
 
 import datetime
-from unittest import skip
 from django.conf import settings
-from amcat.models import Article, ArticleSet
+from amcat.models import Article
 from amcat.tools import amcattest
-from amcat.tools.amcates import ES, get_article_dict, ALL_FIELDS
-from amcat.tools.amcattest import create_test_project, create_test_set
+from amcat.tools.amcates import ES, get_article_dict, ALL_FIELDS, get_property_primitive_type
+from amcat.tools.amcattest import create_test_project
 from amcat.tools.keywordsearch import SearchQuery
 
 class TestAmcatES(amcattest.AmCATTestCase):
@@ -39,6 +38,24 @@ class TestAmcatES(amcattest.AmCATTestCase):
         Article.create_articles([a, b, c, d], articleset=s1)
         ES().flush()
         return s1, s2, a, b, c, d, e
+
+    def test_get_property_primitive_type(self):
+        # Special property names
+        self.assertEqual(get_property_primitive_type("sets"), int)
+        self.assertEqual(get_property_primitive_type("text"), str)
+        self.assertEqual(get_property_primitive_type("hash"), str)
+        self.assertEqual(get_property_primitive_type("date"), datetime.datetime)
+        self.assertEqual(get_property_primitive_type("url"), str)
+        self.assertEqual(get_property_primitive_type("title"), str)
+        self.assertEqual(get_property_primitive_type("hash"), str)
+        self.assertEqual(get_property_primitive_type("id"), int)
+
+        # User-defined properties
+        self.assertEqual(get_property_primitive_type("foo_date"), datetime.datetime)
+        self.assertEqual(get_property_primitive_type("foo_num"), float)
+        self.assertEqual(get_property_primitive_type("foo_int"), int)
+        self.assertEqual(get_property_primitive_type("foo_url"), str)
+        self.assertEqual(get_property_primitive_type("foo_id"), str)
 
     @amcattest.use_elastic
     def test_purge_orphans(self):

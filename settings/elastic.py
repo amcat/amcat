@@ -20,6 +20,7 @@
 """
 Configuration options to change how AmCAT uses elastic
 """
+import datetime
 import os
 import sys
 
@@ -36,6 +37,18 @@ ES_PROD_INDEX = "amcat"
 ES_INDEX = os.environ.get('AMCAT_ES_INDEX', ES_TEST_INDEX if TESTING else ES_PROD_INDEX)
 ES_ARTICLE_DOCTYPE = 'article'
 
+
+ES_MAPPING_TYPE_PRIMITIVES = {
+    "int": int,
+    "date": datetime.datetime,
+    "num": float,
+    "url": str,
+    "id": str,
+    "text": str,
+    "default": str
+}
+
+
 ES_MAPPING_TYPES = {
     'int': {"type": "long"},
     'date': {"format": "dateOptionalTime", "type": "date"},
@@ -43,7 +56,7 @@ ES_MAPPING_TYPES = {
     'url': {"index": "not_analyzed", "type": "string"},
     'id': {"index": "not_analyzed", "type": "string"},
     'text': {"type": "string"},
-    'default' : {"type": "string",
+    'default': {"type": "string",
                  "fields": {"raw":   { "type": "string", "index": "not_analyzed", "ignore_above": 256}}}
     }
 

@@ -18,12 +18,14 @@
 ###########################################################################
 
 import datetime
+import functools
 import logging
 import os
 import re
 from collections import namedtuple
 from hashlib import sha224 as hash_class
 from json import dumps as serialize
+from typing import Union
 
 from django.conf import settings
 from elasticsearch import Elasticsearch, NotFoundError
@@ -54,13 +56,33 @@ RE_PROPERTY_NAME = re.compile('[A-Za-z][A-Za-z0-9]*$')
 
 _KNOWN_PROPERTIES = None
 
-def _is_valid_property_name(name):
-    if isinstance(name, str):
-        if "_" in name:
-            name, ptype = name.rsplit("_", 1)
-            if not ptype in settings.ES_MAPPING_TYPES:
-                return False
-        return RE_PROPERTY_NAME.match(name)
+
+@functools.lru_cache()
+def get_property_primitive_type(name) -> Union[int, float, str, datetime.datetime]:
+    """Based on a property name, determine its primitive Python type."""
+    if "_" in name:
+        return settings.ES_MAPPING_TYPE_PRIMITIVES[name[name.rfind("_")+1:]]
+
+    # Return type specified in ES_MAPPING
+    if name in settings.ES_MAPPING["properties"]:
+        for ptype, obj in settings.ES_MAPPING_TYPES.items():
+            if settings.ES_MAPPING["properties"][name] is obj:
+                return settings.ES_MAPPING_TYPE_PRIMITIVES[ptype]
+
+    # No type in name nor a 'special' field
+    return settings.ES_MAPPING_TYPE_PRIMITIVES["default"]
+
+
+def _is_valid_property_name(name: str) -> bool:
+    if not isinstance(name, str):
+        raise ValueError("property name should be a string")
+
+    if "_" in name:
+        name, ptype = name.rsplit("_", 1)
+        if not ptype in settings.ES_MAPPING_TYPES:
+            return False
+    return bool(RE_PROPERTY_NAME.match(name))
+
 
 def get_properties(article):
     if article.properties:
@@ -300,7 +322,7 @@ class ES(object):
         except NotFoundError:
             pass
         except Exception as e:
-            if 'IndexMissingException' in str(error_msg):
+            if 'IndexMissingException' in str(e):
                 return
             raise
 
