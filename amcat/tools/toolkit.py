@@ -46,6 +46,7 @@ import re
 import string
 import time
 import warnings
+from typing import Optional, Sequence
 
 log = logging.getLogger(__name__)
 
@@ -223,8 +224,16 @@ def strip_accents(s):
     return "".join(REV_ACCENTS_MAP.get(c, c) for c in s)
 
 
+# TODO: Should switch to secrets ASAP:
+#  https://docs.python.org/3.5/library/secrets.html
+def crypto_choice(rng: random.SystemRandom, choices: Sequence):
+    return choices[rng.randrange(0, len(choices))]
+
+
 def random_alphanum(size=10):
-    return ''.join([random.choice(string.ascii_letters + string.digits) for i in range(size)])
+    cryptogen = random.SystemRandom()
+    choices = string.ascii_letters + string.digits
+    return ''.join([crypto_choice(cryptogen, choices) for i in range(size)])
 
 
 ###########################################################################
