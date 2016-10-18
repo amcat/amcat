@@ -242,6 +242,9 @@ def random_alphanum(size=10):
 ###########################################################################
 
 def read_date(datestr: str, lax: bool=False, rejectPre1970: bool=False, american: Optional[bool]=None):
+    # String replacements to remain backwards compatible
+    datestr = datestr.replace("Maerz", "März")
+
     # Select month/day order based on american bool
     if american is None:
         # Guess based on language
