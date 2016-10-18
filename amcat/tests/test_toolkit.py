@@ -25,6 +25,7 @@ import datetime
 import inspect
 
 from amcat.tools import toolkit, amcattest
+from amcat.tools.toolkit import wrapped
 
 
 class TestToolkit(amcattest.AmCATTestCase):
@@ -85,7 +86,7 @@ class TestToolkit(amcattest.AmCATTestCase):
         self.assertEqual(1, toolkit.head([1, 2]))
 
     def test_to_list(self):
-        @toolkit.to_list
+        @wrapped(list)
         def gen(n):
             return (i for i in range(n))
 

@@ -37,7 +37,6 @@ this organisation!
 """
 
 
-import base64
 import collections
 import datetime
 import itertools
@@ -107,13 +106,6 @@ def wrapped(wrapper_function, *wrapper_args, **wrapper_kargs):
         return innermost
 
     return inner
-
-
-def to_list(func):
-    """
-    This decorator puts the result of a (generator) function in a list.
-    """
-    return wrapped(list)(func)
 
 
 ###########################################################################
@@ -407,22 +399,6 @@ def to_datetime(date):
     return datetime.datetime(year=date.year, month=date.month, day=date.day)
 
 
-def dateToInterval(date, interval):
-    """returns the interval as string, such as 2002-04.
-    Supported intervals: day, week, month, quarter, year"""
-    if interval == 'day':
-        return date.strftime('%Y-%m-%d')
-    elif interval == 'week':
-        return date.strftime('%Y-%W')
-    elif interval == 'month':
-        return date.strftime('%Y-%m')
-    elif interval == 'quarter':
-        return '%s-%s' % (date.year, (date.month - 1) // 3 + 1)
-    elif interval == 'year':
-        return date.strftime('%Y')
-    raise Exception('invalid interval')
-
-
 ###########################################################################
 ##                         Misc. functions                               ##
 ###########################################################################
@@ -436,12 +412,4 @@ class Timer:
     def __exit__(self, *args):
         self.end = time.clock()
         self.interval = self.end - self.start
-
-def htmlImageObject(bytes, format='png'):
-    """Create embedded html image object"""
-    #does not really belong here?
-    data = base64.b64encode(bytes)
-    return ("<object type='image/%s' data='data:image/%s;base64,%s'></object>"
-            % (format, format, data))
-
 

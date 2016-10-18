@@ -30,8 +30,10 @@ from amcat.scripts.article_upload.upload import UploadScript, ParseError
 from amcat.scripts.article_upload import fileupload
 from amcat.tools import toolkit
 from amcat.models.article import Article
+from amcat.tools.toolkit import wrapped
 
 from io import StringIO
+
 
 log = logging.getLogger(__name__)
 
@@ -296,7 +298,7 @@ def parse_article(art):
         if lines[0].startswith(" "): return True  # indented line
 
 
-    @toolkit.to_list
+    @wrapped(list)
     def _get_header(lines) -> dict:
         """Consume and return all lines that are indented (ie the list is changed in place)"""
         while _in_header(lines):
@@ -362,7 +364,7 @@ def parse_article(art):
                 yield key, val.strip()
 
 
-    @toolkit.to_list
+    @wrapped(list)
     def _get_body(lines):
         """Consume and return all lines until a date line is found"""
 

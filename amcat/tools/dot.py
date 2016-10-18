@@ -122,12 +122,6 @@ class Graph(object):
     def getImage(self, *args, **kargs):
         return dot2img(self.getDot(), *args, **kargs)
 
-    def getHTMLObject(self, *args, **kargs):
-        return dot2object(self.getDot(), *args, **kargs)
-
-    def getHTMLDoc(self):
-        return '<html><body><p>%s</p><pre>%s</pre></body></html>' % (self.getHTMLObject(), self.getDot())
-
     def getHTMLSVG(self, *args, **kargs):
         kargs['format'] = 'svg'
         svg = self.getImage(*args, **kargs)
@@ -317,12 +311,6 @@ def dot2img(dot, format="jpg", layout="dot"):
     p = Popen(cmd, shell=True, stdout=PIPE, stdin=PIPE)
     img, err = p.communicate(dot)
     return img
-
-
-def dot2object(dot, *args, **kargs):
-    kargs['format'] = 'png'
-    png = dot2img(dot, *args, **kargs)
-    return toolkit.htmlImageObject(png)
 
 
 if __name__ == '__main__':
