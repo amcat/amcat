@@ -23,12 +23,17 @@ import datetime
 from collections import OrderedDict
 
 from amcat.models import ArticleSet
+from amcat.tools import amcates
 
 __all__ = (
     "Category",
     "IntervalCategory",
     "ArticlesetCategory",
-    "TermCategory"
+    "TermCategory",
+    "FieldCategory",
+    "IntegerFieldCategory",
+    "NumFieldCategory",
+    "StringFieldCategory"
 )
 
 log = logging.getLogger(__name__)
@@ -81,6 +86,52 @@ class Category(object):
         raise NotImplementedError("get_column_values() should be implemented by subclasses.")
 
 
+class FieldCategory(Category):
+    def __init__(self, field):
+        self.field = field
+
+        if self.__class__ == FieldCategory:
+            raise ValueError("Use FieldCategory.from_fieldname() to instantiate FieldCategory.")
+
+    def get_column_names(self):
+        yield self.field
+
+    def get_column_values(self, obj):
+        yield obj
+
+    @classmethod
+    def from_fieldname(cls, fieldname):
+        """Instantiate the correct type of FieldCategory for a given field."""
+        ptype = amcates.get_property_primitive_type(fieldname)
+        if ptype == datetime.datetime:
+            raise ValueError("Use DateFieldCategory() instead of FieldCategroy.from_fieldname for field: {}".format(fieldname))
+        elif ptype == int:
+            return IntegerFieldCategory(fieldname)
+        elif ptype == float:
+            return NumFieldCategory(fieldname)
+        elif ptype == str:
+            return StringFieldCategory(fieldname)
+        else:
+            raise ValueError("Did not recognize type {} of field {}.".format(ptype, fieldname))
+
+
+class NumFieldCategory(FieldCategory):
+    def postprocess(self, value):
+        return float(value)
+
+
+class IntegerFieldCategory(FieldCategory):
+    def postprocess(self, value):
+        return int(value)
+
+
+class StringFieldCategory(FieldCategory):
+    def get_aggregation(self):
+        aggregation = super(FieldCategory, self).get_aggregation()
+        aggregation[self.field]["terms"]["field"] += ".raw"
+        return aggregation
+
+
 class ModelCategory(Category):
     model = None
 
@@ -102,6 +153,7 @@ class ModelCategory(Category):
 
     def __repr__(self):
         return "<ModelCategory: {}>".format(self.model.__name__)
+
 
 class ArticlesetCategory(ModelCategory):
     model = ArticleSet
@@ -146,18 +198,20 @@ class TermCategory(Category):
     def parse_aggregation_result(self, result):
         return result.items()
 
+    def get_column_names(self):
+        return self.terms.keys()
+
     def __repr__(self):
         return "<TermCategory: {}>".format(self.terms)
 
 
 class IntervalCategory(Category):
-    field = "date"
-
-    def __init__(self, interval):
+    def __init__(self, interval, field="date"):
         if interval not in ELASTIC_TIME_UNITS:
             err_msg = "{} not a valid interval. Choose on of: {}"
             raise ValueError(err_msg.format(interval, ELASTIC_TIME_UNITS))
         self.interval = interval
+        self.field = field
 
     def postprocess(self, value):
         d = datetime.datetime.fromtimestamp(value / 1000)
@@ -181,4 +235,4 @@ class IntervalCategory(Category):
         yield obj.isoformat()
 
     def __repr__(self):
-        return "<IntervalCategory: {}>".format(self.interval)
+        return "<IntervalCategory: {} per {}>".format(self.field, self.interval)

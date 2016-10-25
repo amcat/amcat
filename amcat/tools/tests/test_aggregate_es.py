@@ -21,8 +21,8 @@ import datetime
 from amcat.models import ArticleSet
 from amcat.tools import amcattest
 from amcat.tools.aggregate_es.aggregate import aggregate
-from amcat.tools.aggregate_es.categories import MediumCategory, ArticlesetCategory, IntervalCategory, \
-    TermCategory
+from amcat.tools.aggregate_es.categories import ArticlesetCategory, IntervalCategory, \
+    TermCategory, FieldCategory
 from amcat.tools.amcates import ES
 from amcat.tools.keywordsearch import SearchQuery
 
@@ -32,20 +32,20 @@ class TestAggregateES(amcattest.AmCATTestCase):
         self.a1 = amcattest.create_test_article()
         self.a1.text = "aap noot mies"
         self.a1.date = datetime.datetime(2010, 1, 1)
+        self.a1.properties = {"author": "De Bas", "length_int": 5}
         self.a1.save()
-        self.m1 = self.a1.medium
 
         self.a2 = amcattest.create_test_article()
         self.a2.text = "aap noot geit"
         self.a2.date = datetime.datetime(2010, 1, 1)
+        self.a2.properties = {"author": "Het Martijn", "length_int": 5}
         self.a2.save()
-        self.m2 = self.a2.medium
 
         self.a3 = amcattest.create_test_article()
         self.a3.text = "lamp"
         self.a3.date = datetime.datetime(2010, 1, 2)
+        self.a3.properties = {"author": "Het Martijn", "length_int": 15}
         self.a3.save()
-        self.m3 = self.a3.medium
 
         self.aset1 = amcattest.create_test_set()
         self.aset1.add_articles([self.a1, self.a2])
@@ -63,15 +63,35 @@ class TestAggregateES(amcattest.AmCATTestCase):
         return set(aggregate(**aggr_args))
 
     @amcattest.use_elastic
-    def test_medium_category(self):
+    def test_field_category(self):
         self.set_up()
 
-        result = set(aggregate(categories=[MediumCategory()]))
-        self.assertEqual(result, {
-            (self.m1, 1),
-            (self.m2, 1),
-            (self.m3, 1),
-        })
+        all_articlesets = ArticleSet.objects.filter(id__in=(self.aset1.id, self.aset2.id))
+
+        self.assertEqual(
+            self.aggregate(categories=[ArticlesetCategory(all_articlesets)]),
+            {(self.aset1, 2), (self.aset2, 1)}
+        )
+
+        self.assertEqual(
+            self.aggregate(categories=[FieldCategory.from_fieldname("author")]),
+            {("Het Martijn", 2), ("De Bas", 1)}
+        )
+
+        self.assertEqual(
+            self.aggregate(categories=[FieldCategory.from_fieldname("length_int")]),
+            {(5, 2),(15, 1)}
+        )
+
+        self.assertEqual(
+            self.aggregate(categories=[FieldCategory.from_fieldname("author"), FieldCategory.from_fieldname("length_int")]),
+            {('De Bas', 5, 1), ('Het Martijn', 5, 1), ('Het Martijn', 15, 1)}
+        )
+
+        self.assertRaises(ValueError, lambda: FieldCategory.from_fieldname("date"))
+        self.assertRaises(ValueError, lambda: FieldCategory("abc"))
+
+
 
     @amcattest.use_elastic
     def test_articleset_category(self):
