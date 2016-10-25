@@ -222,7 +222,12 @@ class SearchResource(AmCATResource):
         super(SearchResource, self).__init__(*args, **kwargs)
         self.project = None
 
-    def set_project(self, project_id):
+    def set_project(self):
+        project_id = self.params.get("project")
+
+        if project_id is None:
+            raise ValueError("You have to supply a project or sets parameter")
+
         try:
             self.project = Project.objects.get(id=int(project_id))
         except Project.DoesNotExist:
@@ -236,7 +241,7 @@ class SearchResource(AmCATResource):
             raise PermissionDenied("You're not allowed to see full texts")
 
     def get(self, request, *args, **kwargs):
-        self.set_project(self.params["project"])
+        self.set_project()
         fq = self.filter_queryset(self.get_queryset())
         if not fq.queries and not fq.filters:
             raise ParseError("You need to provide a non-empty query (q-parameter) or other filters")

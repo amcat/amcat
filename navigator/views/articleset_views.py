@@ -115,7 +115,6 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
             sets = ArticleSet.objects.filter(Q(projects_set=self.project) | Q(project=self.project))
             sets = sets.filter(codingjob_set__isnull=True)
             sets = sets.exclude(id__in=self.project.favourite_articlesets.all())
-
             sets = list(sets.values_list("pk", flat=True))
             table = table.filter(pk__in=sets)
 
@@ -198,7 +197,7 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
         return {"checkboxes": True}
 
     def filter_table(self, table):
-        return table.filter(sets=self.object.id)
+        return table.filter(sets=self.object.id, project=self.project.id)
 
     def get_context_data(self, **kwargs):
         context = super(ArticleSetDetailsView, self).get_context_data(**kwargs)
@@ -208,8 +207,6 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
             raise Http404("ArticleSet {self.object.id}:{self.object} does not exist in project {self.project.id}: {self.project}"
                           .format(**locals()))
 
-
-            
         star = self.request.GET.get("star")
         starred = self.project.favourite_articlesets.filter(pk=self.object.id).exists()
         if star is not None:
