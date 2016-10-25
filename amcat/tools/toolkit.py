@@ -113,10 +113,6 @@ def wrapped(wrapper_function, *wrapper_args, **wrapper_kargs):
 ###########################################################################
 ##                     Sequence functions                                ##
 ###########################################################################
-def head(seq):
-    """Return the first element in seq"""
-    return next(iter(seq))
-
 def grouper(iterable, n, fillvalue=None):
     """Collect data into fixed-length chunks or blocks."""
     if n < 1:

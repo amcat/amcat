@@ -20,7 +20,11 @@ from amcat.models import Language
 from amcat.scripts.actions.export_codebook import ExportCodebook
 from amcat.tools import amcattest
 from amcat.tools.amcattest import AmCATTestCase
-from amcat.tools.toolkit import head
+
+
+def head(seq):
+    """Return the first element in seq"""
+    return next(iter(seq))
 
 
 class TestExportCodebook(AmCATTestCase):
