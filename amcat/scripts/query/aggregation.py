@@ -17,17 +17,18 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import logging
+import io
+
+from typing import Iterable, Tuple
 
 from amcat.scripts.query.queryaction import NotInCacheError
+from amcat.tools import amcates
+from amcat.tools.amcates import get_property_primitive_type, ARTICLE_FIELDS
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
 
 import csv
 import json
-from datetime import datetime
+import datetime
 from itertools import chain, repeat
 
 from django.core.exceptions import ValidationError
@@ -36,7 +37,7 @@ from django.forms import ChoiceField, BooleanField
 from amcat.models import ArticleSet, CodingSchemaField, Code, CodingJob
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools import aggregate_es
-from amcat.tools.aggregate_es.categories import ELASTIC_TIME_UNITS, IntervalCategory
+from amcat.tools.aggregate_es.categories import ELASTIC_TIME_UNITS, IntervalCategory, FieldCategory
 from amcat.tools.aggregate_orm import CountArticlesValue
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery, to_sortable_tuple
 
@@ -45,13 +46,6 @@ log = logging.getLogger(__name__)
 AGGREGATION_FIELDS = (
     ("articleset", "Articleset"),
     ("term", "Term"),
-    ("Interval", (
-        ("year", "Year"),
-        ("quarter", "Quarter"),
-        ("month", "Month"),
-        ("week", "Week"),
-        ("day", "Day")
-    ))
 )
 
 EMPTY_MATRIX = {
@@ -104,7 +98,7 @@ def aggregation_to_matrix(aggregation, categories):
 def aggregation_to_csv(aggregation, categories, values):
     aggregation = map(chain.from_iterable, aggregation)
 
-    csvio = StringIO()
+    csvio = io.StringIO()
     csvf = csv.writer(csvio)
 
     catvals = repeat(list(chain(categories, values)))
@@ -120,7 +114,7 @@ def aggregation_to_csv(aggregation, categories, values):
 
 class AggregationEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, datetime):
+        if isinstance(obj, datetime.datetime):
             return obj.isoformat()
         if isinstance(obj, (ArticleSet, CodingJob)):
             return {"id": obj.id, "label": obj.name}
@@ -131,28 +125,81 @@ class AggregationEncoder(json.JSONEncoder):
         return super(AggregationEncoder, self).default(obj)
 
 
+HUMAN_READABLE_TYPES = {
+    str: "string",
+    int: "integer",
+    float: "number"
+}
+
+INTERVALS = (
+    "year",
+    "quarter",
+    "month",
+    "week",
+    "day"
+)
+
+
+def get_property_basename(property):
+    if "_" in property:
+        return property[:property.find("_")]
+    return property
+
+
+def get_aggregation_choice(property: str) -> Tuple:
+    basename = get_property_basename(property)
+    ptype = get_property_primitive_type(property)
+
+    if ptype is str:
+        return (property + "_str", basename)
+    elif ptype in (int, float):
+        value = "{}_{}".format(property, ptype.__name__)
+        label = "{} ({})".format(basename, HUMAN_READABLE_TYPES[ptype])
+        return (value, label)
+    elif ptype is datetime.datetime:
+        return ("{} (date)".format(basename), (
+            ("{}_year".format(property), "Year"),
+            ("{}_quarter".format(property), "Quarter"),
+            ("{}_month".format(property), "Month"),
+            ("{}_week".format(property), "Week"),
+            ("{}_day".format(property), "Day")
+        ))
+    else:
+        raise ValueError("Primitive type {} not recognized".format(ptype))
+
+
+def get_aggregation_choices(properties: Iterable[str]) -> Iterable[Tuple]:
+    choices = list(map(get_aggregation_choice, properties))
+    normal_choices = sorted(c for c in choices if not c[0].endswith(" (date)"))
+    date_choices = sorted(c for c in choices if c[0].endswith(" (date)"))
+    return (("Article fields", tuple(normal_choices)),) + tuple(date_choices)
+
+
 class AggregationActionForm(QueryActionForm):
-    primary = ChoiceField(label="Primary aggregation", choices=AGGREGATION_FIELDS)
-    secondary = ChoiceField(label="Secondary aggregation", choices=(("", "------"),) + AGGREGATION_FIELDS, required=False)
+    primary = ChoiceField(label="Primary aggregation", choices=())
+    secondary = ChoiceField(label="Secondary aggregation", choices=(), required=False)
 
     value1 = ChoiceField(label="First value", initial="count(articles)", choices=[("count(articles)", "Article count")])
     value2 = ChoiceField(label="Second value", required=False, initial="", choices=())
 
     fill_zeroes = BooleanField(label="Show empty dates as 0 (if interval selected)", required=False, initial=True)
-    #relative_to = CharField(widget=Select, required=False)
 
     def __init__(self, *args, **kwargs):
         super(AggregationActionForm, self).__init__(*args, **kwargs)
         assert not self.codingjobs
+
+        properties = set(amcates.ES().get_used_properties(self.articlesets))
+        properties |= ARTICLE_FIELDS - {"parent_hash"}
+        aggregation_choices = (("Meta fields", AGGREGATION_FIELDS),) + tuple(get_aggregation_choices(properties))
+
+        self.fields["primary"].choices = aggregation_choices
+        self.fields["secondary"].choices = (("", "------"),) + aggregation_choices
 
     def _clean_aggregation(self, field_name):
         field_value = self.cleaned_data[field_name]
 
         if not field_value:
             return None
-
-        if field_value in ELASTIC_TIME_UNITS:
-            return aggregate_es.IntervalCategory(field_value)
 
         if field_value == "articleset":
             return aggregate_es.ArticlesetCategory(self.articlesets)
@@ -161,7 +208,15 @@ class AggregationActionForm(QueryActionForm):
             terms = SelectionSearch(self).get_queries()
             return aggregate_es.TermCategory(terms)
 
-        raise ValidationError("Not a valid value: %s" % field_value)
+        if field_value.endswith(INTERVALS):
+            fieldname, interval = field_value.rsplit("_", 1)
+            return aggregate_es.IntervalCategory(field=fieldname, interval=interval)
+
+        if field_value.endswith("_str"):
+            # _str is added to disambiguate between fields and intervals
+            field_value, _ = field_value.rsplit("_", 1)
+
+        return FieldCategory.from_fieldname(field_value)
 
     def clean_primary(self):
         return self._clean_aggregation("primary")
@@ -183,6 +238,7 @@ class AggregationAction(QueryAction):
         ("text/csv", "CSV (Download)"),
     )
     form_class = AggregationActionForm
+    monitor_steps = 4
 
     def run(self, form):
         selection = SelectionSearch(form)
@@ -191,9 +247,9 @@ class AggregationAction(QueryAction):
             # Try to retrieve cache values
             primary, secondary, categories, aggregation = self.get_cache()
         except NotInCacheError:
-            self.monitor.update(1, "Executing query..")
+            self.monitor.update(message="Executing query..")
             narticles = selection.get_count()
-            self.monitor.update(10, "Found {narticles} articles. Aggregating..".format(**locals()))
+            self.monitor.update(message="Found {narticles} articles. Aggregating..".format(**locals()))
 
             # Get aggregation
             primary = form.cleaned_data["primary"]
@@ -203,10 +259,14 @@ class AggregationAction(QueryAction):
 
             self.set_cache([primary, secondary, categories, aggregation])
         else:
-            self.monitor.update(11, "Found in cache, rendering..")
+            self.monitor.update(2)
 
         if form.cleaned_data.get("fill_zeroes") and type(primary) is IntervalCategory:
+            self.monitor.update(message="Filling zeroes..")
             aggregation = list(aggregate_es.fill_zeroes(aggregation, primary, secondary))
+        else:
+            self.monitor.update()
+
 
         # Matrices are very annoying to construct in javascript due to missing hashtables. If
         # the user requests a table, we thus first convert it to a different format which should
@@ -217,5 +277,5 @@ class AggregationAction(QueryAction):
         if form.cleaned_data["output_type"] == "text/csv":
             return aggregation_to_csv(aggregation, categories, [CountArticlesValue()])
 
-        self.monitor.update(60, "Serialising..".format(**locals()))
+        self.monitor.update(message="Serialising..".format(**locals()))
         return json.dumps(aggregation, cls=AggregationEncoder, check_circular=False)
