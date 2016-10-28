@@ -1,11 +1,13 @@
+local({r <- getOption("repos")
+       r["CRAN"] <- "http://cran.r-project.org" 
+       options(repos=r)
+})
+
 if(!'rjson' %in% installed.packages()) install.packages('rjson')
 library(rjson)
 
 djangoFieldList <- function(fieldtype, ...){
-  field = list()
-  args = list(...)
-  field[[fieldtype]] = args[!is.na(args)]
-  field
+  list(type=fieldtype, arguments=list(...))
 }
 
 #' Create a json string for django form fields
@@ -29,43 +31,34 @@ djangoFormFields <- function(...){
 #' Use to create field objects for R plugins in AmCAT. See djangoFormFields().
 #' 
 #' @export
-BooleanField <- function(label=NA, initial=F, required=T, help_text=NA){
-  djangoFieldList('BooleanField', label=label, initial=initial, required=required, help_text=help_text)
-}
+BooleanField <- function(...) djangoFieldList('BooleanField', ...)
 
 #' Create a Django Form Field
 #'
 #' Use to create field objects for R plugins in AmCAT. See djangoFormFields().
 #'
 #' @export
-CharField <- function(label=NA, initial='', required=T, min_length=NA, max_length=NA, help_text=NA){
-  djangoFieldList('CharField', label=label, initial=initial, required=required, help_text=help_text)
-}
+CharField <- function(...) djangoFieldList('CharField', ...)
 
 #' Create a Django Form Field
 #'
 #' Use to create field objects for R plugins in AmCAT. See djangoFormFields().
 #'
 #' @export
-IntegerField <- function(label=NA, initial=0, required=T, min_value=NA, max_value=NA, help_text=NA){
-  djangoFieldList('IntegerField', label=label, initial=initial, required=required, help_text=help_text)
-}
+IntegerField <- function(...) djangoFieldList('IntegerField', ...)
 
 #' Create a Django Form Field
 #'
 #' Use to create field objects for R plugins in AmCAT. See djangoFormFields().
 #'
 #' @export
-DecimalField <- function(label=NA, initial=0.0, required=T){
-  djangoFieldList('DecimalField', label=label, initial=initial, required=required)
-}
+DecimalField <- function(...) djangoFieldList('DecimalField', ...)
 
 #' Create a Django Form Field
 #'
 #' Use to create field objects for R plugins in AmCAT. See djangoFormFields().
 #'
 #' @export
-ChoiceField <- function(label=NA, choices, required=T, help_text=NA){
-  ChoiceField('ChoiceField', label=label, choices=choices, required=required, help_text=help_text)
-}
+ChoiceField <- function(...) ChoiceField('ChoiceField', ...)
+
 

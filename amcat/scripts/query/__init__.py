@@ -11,3 +11,5 @@ from .appendtoset import AppendToSetAction
 from .querystatistics import StatisticsAction
 from .codings_aggregation import CodingAggregationAction
 from .savequerytocodebook import SaveQueryToCodebookAction
+
+from .test import TestAction
