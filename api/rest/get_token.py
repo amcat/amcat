@@ -55,12 +55,14 @@ class ObtainAuthToken(APIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-        token, created = Token.objects.get_or_create(user=user)
-        if not created:
-            token.created = datetime.datetime.now()
-            token.save()
+        token = get_token(user)
         return Response({'token': token.key, 'version':__version__})
 
+def get_token(user):
+    token, created = Token.objects.get_or_create(user=user)
+    if not created:
+        token.created = datetime.datetime.now()
+        token.save()
+    return token
 
 obtain_auth_token = ObtainAuthToken.as_view()
