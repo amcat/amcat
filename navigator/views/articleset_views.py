@@ -248,9 +248,13 @@ class ArticleSetImportView(ProjectScriptView):
             qs = qs.exclude(pk=self.project.id)
             form.fields['target_project'].queryset = qs
             form.fields['target_project'].help_text = "Only showing your favourite projects that do not use this set already"
-
+            form.fields['articleset'].queryset = ArticleSet.objects.filter(pk=self.kwargs['articleset'])
         return form
 
+    def get_initial(self):
+        initial = super().get_initial()
+        initial['articleset'] = self.kwargs['articleset']
+        return initial
 
 class ArticleSetSampleView(ProjectScriptView):
     parent = ArticleSetDetailsView
