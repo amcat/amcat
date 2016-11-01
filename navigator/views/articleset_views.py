@@ -252,7 +252,7 @@ class ArticleSetImportView(ProjectScriptView):
         return form
 
     def get_initial(self):
-        initial = super().get_initial()
+        initial = super(ArticleSetImportView, self).get_initial()
         initial['articleset'] = self.kwargs['articleset']
         return initial
 
