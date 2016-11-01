@@ -22,9 +22,10 @@
 import logging; log = logging.getLogger(__name__)
 
 from django import forms
+from amcat.forms.widgets import BootstrapMultipleSelect
 from amcat.scripts.script import Script
 from amcat.models import ArticleSet, Project
-from amcat.forms.widgets import BootstrapMultipleSelect 
+
 class ImportSet(Script):
     """
     Import this set into another project so you can use the set there as well.
@@ -44,5 +45,5 @@ class ImportSet(Script):
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     result = cli.run_cli()
-    #print result.output()
+    #print(result.output())
 
