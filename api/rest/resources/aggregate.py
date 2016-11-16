@@ -79,7 +79,7 @@ class AggregateES(object):
 
         filters = self.filters.copy()
         filters.update(extra_filters)
-        return self.es.aggregate_query(query, filters, axis, interval)
+        return self.es.aggregate_query(query, filters, axis, date_interval=interval)
 
     @property
     @cached

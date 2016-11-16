@@ -685,7 +685,6 @@ class ES(object):
             "query": {"constant_score": filters},
             "aggregations": aggregations
         }
-
         log.debug("es.search(body={body})".format(**locals()))
         result = self.search(body)
         result = self._parse_aggregate(result["aggregations"], list(group_by), terms, sets)
