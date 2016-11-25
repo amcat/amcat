@@ -44,6 +44,7 @@ urlpatterns = format_suffix_patterns(patterns('',
     url(r'^get_token', 'api.rest.get_token.obtain_auth_token'),
     url(r'^status/$', StatusView.as_view(), name="status"),
     url(r'^projects/(?P<project_id>[0-9]+)/articlesets/(?P<articleset_id>[0-9]+)/meta/?$', ArticleMetaView.as_view(), name="meta"),
+    url(r'^meta/?$', ArticleMetaView.as_view(), name="meta"),
     url(r'^projects/(?P<project_id>[0-9]+)/articlesets/(?P<articleset_id>[0-9]+)/tokens/?$', TokensView.as_view(), name="tokens"),
 
 
