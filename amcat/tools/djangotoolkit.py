@@ -25,47 +25,15 @@ import collections
 import json
 import re
 import time
-from contextlib import contextmanager
-from datetime import datetime
-from urllib.parse import urlencode
 
-import django
-from django.conf import settings
+from contextlib import contextmanager
+
 from django.db import connections
 from django.db import models, connection
 from django.db.models import sql
-from django.db.models.fields.related import ForeignKey, OneToOneField, ManyToManyField
-from django.dispatch import Signal
-from django.http import QueryDict
 
 from amcat.tools.table.table3 import ObjectTable, SortedTable
 
-
-def parse_date(date):
-    """Parse date according to DATE_INPUT_FORMATS in settings"""
-    for format in settings.DATE_INPUT_FORMATS:
-        try:
-            return datetime.strptime(date, format).date()
-        except (ValueError, TypeError):
-            continue
-
-    raise ValueError("Not a valid date found for {date}. Tried: {settings.DATE_INPUT_FORMATS}.".format(**locals()))
-
-def to_querydict(d, mutable=False):
-    """Convert a normal dictionary to a querydict. The dictionary can have lists as values,
-    which are interpreted as multiple arguments for one url-parameter."""
-    # querydict cannot handle unicode, so utf-8 encode unicode content first
-    # TODO: this stinks
-    def encode(s):
-        if isinstance(s, list):
-            return list(map(encode, s))
-        elif isinstance(s, str):
-            return s.encode("utf-8")
-        else:
-            return s
-            
-    d = {k: encode(v) for (k,v) in d.items()}
-    return QueryDict(urlencode(d, True), mutable=mutable)
 
 def db_supports_distinct_on(db='default'):
     """
@@ -91,7 +59,8 @@ def bulk_insert_returning_ids(new_objects, fields=None):
         query.insert_values(model._meta.fields[1:], new_objects)
         raw_sql, params = query.sql_with_params()[0]
         fields = ", ".join([model._meta.pk.db_column] + (fields if fields else []))
-        new_objects = list(model.objects.raw("{raw_sql} RETURNING {fields}".format(**locals()), params))
+        new_objects = list(
+            model.objects.raw("{raw_sql} RETURNING {fields}".format(**locals()), params))
     else:
         # Do naive O(n) approach
         for new_obj in new_objects:
@@ -108,22 +77,6 @@ def distinct_args(*fields):
     """
     return fields if db_supports_distinct_on() else []
 
-def get_related(appmodel):
-    """Get a sequence of model classes related to the given model class"""
-    # from modelviz.py:222 vv
-    for field in appmodel._meta.fields:
-        if isinstance(field, (ForeignKey, OneToOneField)):
-            yield field.related.parent_model
-    if appmodel._meta.many_to_many:
-        for field in appmodel._meta.many_to_many:
-            if isinstance(field, ManyToManyField) and getattr(field, 'creates_table', False):
-                yield field.related.parent_model
-
-def get_all_related(modelclasses):
-    """Get all related model classes from the given model classes"""
-    for m in modelclasses:
-        for m2 in get_related(m):
-            yield m2
 
 def get_or_create(model_class, **attributes):
     """Retrieve the instance of model_class identified by the given attributes,
@@ -160,7 +113,8 @@ def list_queries(dest=None, output=False, printtime=False, outputopts=None):
             query_list_to_table(dest, output=output, **outputopts)
 
 
-def query_list_to_table(queries, maxqlen=120, output=False, normalise_numbers=True, **outputoptions):
+def query_list_to_table(queries, maxqlen=120, output=False, normalise_numbers=True,
+                        **outputoptions):
     """Convert a django query list (list of dict with keys time and sql) into a table3
     If output is non-False, output the table with the given options
     Specify print, "print", or a stream for output to be printed immediately
@@ -170,7 +124,7 @@ def query_list_to_table(queries, maxqlen=120, output=False, normalise_numbers=Tr
         query = q["sql"]
         if normalise_numbers:
             query = re.sub(r"\d+", "#", query)
-        #print(query)
+        # print(query)
         time[query].append(float(q["time"]))
     t = ObjectTable(rows=time.items())
     t.add_column(lambda kv: len(kv[1]), "N")
@@ -190,69 +144,23 @@ def query_list_to_table(queries, maxqlen=120, output=False, normalise_numbers=Tr
         t.output(**outputoptions)
     return t
 
-def get_model_field(obj, field_name):
-    """Given a nested fieldname, retrieve value. For example:
-
-    >>> article = Article.objects.get(id=1)
-    >>> get_model_field(article, "medium__name")
-    "The Guardian"
-    """
-    fields = field_name.split("__")
-
-    while fields:
-        field = fields.pop(0)
-        obj = getattr(obj, field)
-
-    return obj
-
-def get_ids(objects):
-    """Convert the given object(s) to integers by asking for their .pk.
-    Safe to call on integer objects"""
-    for obj in objects:
-        if not isinstance(obj, int):
-            obj = obj.pk
-        yield obj
-
-
-def receiver(signal, sender=None, **kwargs):
-    """
-    A decorator for connecting receivers to signals. Used by passing in the
-    signal and keyword arguments to connect::
-
-        @receiver(post_save, sender=MyModel)
-        def signal_receiver(sender, **kwargs):
-            ...
-
-    """
-    def _decorator(func):
-        if isinstance(signal, Signal):
-            signals = [signal]
-        else:
-            signals = signal
-        if sender is None or isinstance(sender, type):
-            senders = [sender]
-        else:
-            senders = sender
-        for sig in signals:
-            for sen in senders:
-                sig.connect(func, sen, **kwargs)
-        return func
-    return _decorator
-
 
 class JsonField(models.Field):
     __metaclass__ = models.SubfieldBase
     serialize_to_string = True
+
     def get_internal_type(self):
         return "TextField"
+
     def value_to_string(self, obj):
         return self.get_prep_value(self._get_val_from_obj(obj))
+
     def get_prep_value(self, value):
         if value:
             return json.dumps(value)
         return None
+
     def to_python(self, value):
         if isinstance(value, str):
             return json.loads(value)
         return value
-
