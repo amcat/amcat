@@ -26,7 +26,6 @@ to a specific codingjob set.
 
 from django.db import transaction
 
-from amcat.tools.toolkit import deprecated
 
 from django.db import models
 
