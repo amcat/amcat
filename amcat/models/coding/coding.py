@@ -26,7 +26,6 @@ to a specific codingjob set.
 
 from django.db import transaction
 
-from amcat.tools.toolkit import deprecated
 
 from django.db import models
 
@@ -138,7 +137,6 @@ class Coding(AmcatModel):
     codingjob = coded_article_property("codingjob")
     codingjob_id = coded_article_property("codingjob_id")
 
-    @deprecated
     def set_status(self, status):
         return self.coded_article.set_status(status)
 

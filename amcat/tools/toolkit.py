@@ -51,64 +51,6 @@ from typing import Optional, Sequence
 
 log = logging.getLogger(__name__)
 
-###########################################################################
-##                               Decorators                              ##
-###########################################################################
-
-
-def _deprecationwarning(msg):
-    warnings.warn(DeprecationWarning(msg))
-
-
-def deprecated(func, msg='Call to deprecated function %(funcname)s.'):
-    """
-    Decorate a function to mark deprecated
-
-    This is a decorator which can be used to mark functions
-    as deprecated. It will result in a warning being emitted
-    when the function is used.
-
-    U{http://wiki.python.org/moin/PythonDecoratorLibrary}
-    """
-
-    def new_func(*args, **kwargs):
-        """Print a warning and then call the original function"""
-        warnings.warn(DeprecationWarning(msg % dict(funcname=func.__name__)),
-                      stacklevel=2)
-        return func(*args, **kwargs)
-
-    new_func.__name__ = func.__name__
-    new_func.__doc__ = ("B{Deprecated: %s}" %
-                        (msg % dict(funcname=func.__name__))
-                        + (func.__doc__ or "").replace("@", "\@").replace("L{", "l{"))
-    new_func.__dict__.update(func.__dict__)
-    return new_func
-
-
-def wrapped(wrapper_function, *wrapper_args, **wrapper_kargs):
-    """
-    Decorator to wrap the inner function with an arbitrary function
-    """
-
-    def inner(func):
-        def innermost(*args, **kargs):
-            try:
-                result = func(*args, **kargs)
-            except Exception:
-                log.exception("Error on calling wrapped {func.__name__}(args={args!r}, kargs={kargs!r})"
-                              .format(**locals()))
-                raise
-            try:
-                return wrapper_function(result, *wrapper_args, **wrapper_kargs)
-            except Exception:
-                log.exception("Error on calling wrapper function {wrapper_function.__name__}"
-                              "({result!r}, *{wrapper_args}, **{wrapper_kargs!r})".format(**locals()))
-                raise
-
-        return innermost
-
-    return inner
-
 
 ###########################################################################
 ##                     Sequence functions                                ##
@@ -218,13 +160,8 @@ def strip_accents(s):
     @param s: the string to strip accents from.
     @return: a str string containing the translated input
     """
+    # [WvA] this can probably be replaced by unidecode?
     return "".join(REV_ACCENTS_MAP.get(c, c) for c in s)
-
-
-# TODO: Should switch to secrets ASAP:
-#  https://docs.python.org/3.5/library/secrets.html
-def crypto_choice(rng: random.SystemRandom, choices: Sequence):
-    return choices[rng.randrange(0, len(choices))]
 
 
 def random_alphanum(size=10):
@@ -237,32 +174,14 @@ def random_alphanum(size=10):
 ##                     Date(time) functions                              ##
 ###########################################################################
 
-def read_date(datestr: str, lax: bool=False, rejectPre1970: bool=False, american: Optional[bool]=None):
-    # String replacements to remain backwards compatible
-    datestr = datestr.replace("Maerz", "März")
-
-    # Select month/day order based on american bool
-    if american is None:
-        # Guess based on language
-        settings = {}
-    elif american:
-        settings = {'DATE_ORDER': 'MDY'}
-    else:
-        settings = {'DATE_ORDER': 'DMY'}
-
-    date = dateparser.parse(datestr, settings=settings)
-    if date is None and lax:
-        return date
-    elif date is None:
-        raise ValueError("Could not parse datestr: {}".format(datestr))
-    else:
-        if rejectPre1970 and date.year < 1970:
-            if lax:
-                return None
-            else:
-                raise ValueError("Rejecting datestr (before 1970): {}".format(datestr))
-
-    # Finally :)
+def read_date(datestr: str):
+    # [WvA] You probably might as well just call dateparser directly, keeping this
+    # for backwards compatability only!
+    datestr = datestr.replace("Maerz", "März")     # Needed in LN parser?
+    settings = {'DATE_ORDER': 'DMY'}      # MDY is studid!
+    date = dateparser.parse(datestr, settings = settings)
+    if date is None:
+        raise ValueError("Could not parse datestr: {datestr!r}".format(**locals()))
     return date
 
 

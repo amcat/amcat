@@ -106,7 +106,7 @@ class UploadScript(script.Script):
 
         return ()
 
-    def explain_error(self, error, article=None):
+    def explain_error(self, error, article=None, index=None):
         """Explain the error in the context of unit for the end user"""
         index = " {}".format(article) if article is not None else ""
         return "Error in element{}: {}".format(article, error)
