@@ -102,7 +102,13 @@ class CSV(UploadScript):
         return super(CSV, self).run(*args, **kargs)
 
     def parse_file(self, file):
-        raise NotImplementedError("not implemented yet :(")
+        file_name = file.name
+        reader = csv.DictReader(TextIOWrapper(file.file, encoding="utf8"))
+        for unmapped_dict in reader:
+            art_dict = self.map_article(unmapped_dict)
+            article_fields = {"properties": {}, **{k: art_dict[k] for k in ARTICLE_FIELDS if k in art_dict}}
+            article_fields["properties"].update((k, v) for k, v in art_dict.items() if k not in ARTICLE_FIELDS)
+            yield Article(**article_fields)
 
     def parse_document(self, row, i=None):
         properties = {}
@@ -153,6 +159,10 @@ class CSV(UploadScript):
         reader = csv.DictReader(TextIOWrapper(file.file, encoding="utf-8"))
         known_fields = ARTICLE_FIELDS
         return {k: k if k in known_fields else None for k in reader.fieldnames}
+
+    def map_article(self, art_dict):
+        raise NotImplementedError
+
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
