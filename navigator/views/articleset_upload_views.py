@@ -114,7 +114,8 @@ class ArticleSetUploadView(BaseMixin, FormView):
                               "filename": file.name,
                               "file_path": file_path,
                               "articleset": articleset.id,
-                              "articleset_name": articleset_name}
+                              "articleset_name": articleset_name,
+                              "size": file.size}
         ses['uploads'] = uploads
 
     def form_valid(self, form):
@@ -138,8 +139,8 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
         kwargs = super().get_form_kwargs()
         kwargs.setdefault("initial", {})
         kwargs["initial"]["upload_id"] = self.get_upload_id()
-        fields, suggestions = self.get_script().get_fields(self.get_uploaded_file(upload), upload['encoding'])
-        kwargs["initial"]["field_map"] = {k: suggestions.get(k, "") for k in fields}
+        fields = self.get_script().get_fields(self.get_uploaded_file(upload), upload['encoding'])
+        kwargs["initial"]["field_map"] = fields
         return kwargs
 
     def get_upload(self):
@@ -157,7 +158,7 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
         return UploadedFile(
             name=filename,
             file=open(upload['file_path'], "rb"),
-            size=3883
+            size=upload["size"]
         )
 
     def get_script_form_kwargs(self, upload, form):
