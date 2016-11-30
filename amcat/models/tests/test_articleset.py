@@ -45,20 +45,14 @@ class TestArticleSet(amcattest.AmCATTestCase):
         s.add_articles(arts)
         self.assertEqual(set(arts), set(s.articles.all()))
 
-
-        # Are mediums cached?
-        s.refresh_index()
-        self.assertEqual(set(s.get_mediums()), {a.medium for a in arts})
-
     @amcattest.use_elastic
     def test_add_many(self):
         """Can we add a large number of articles from one set to another?"""
         s = amcattest.create_test_set()
         s2 = amcattest.create_test_set()
-        m = amcattest.create_test_medium()
         p = amcattest.create_test_project()
 
-        arts = [amcattest.create_test_article(project=p, medium=m, create=False) for _x in range(1213)]
+        arts = [amcattest.create_test_article(project=p, create=False) for _x in range(1213)]
         Article.create_articles(arts, s)
         ES().flush()
         self.assertEqual(len(arts), s.get_count())
@@ -79,17 +73,6 @@ class TestArticleSet(amcattest.AmCATTestCase):
         cj.articleset.add_articles([a1])
         self.assertEqual(4, cj.articleset.articles.all().count())
         self.assertEqual(4, CodedArticle.objects.filter(codingjob=cj).count())
-
-    @amcattest.use_elastic
-    def test_get_mediums(self):
-        aset = amcattest.create_test_set(0)
-        media = [amcattest.create_test_medium(name="Test__"+str(i)) for i in range(10)]
-        for m in media:
-            aset.add(amcattest.create_test_article(medium=m))
-        aset.refresh_index()
-
-        # Test if medium really added
-        self.assertEqual(set(aset.get_mediums()), set(media))
 
     @amcattest.use_elastic
     def test_get_article_ids(self):
