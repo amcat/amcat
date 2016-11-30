@@ -47,3 +47,4 @@ rpy2
 django-formtools
 django-hash-field
 
+actionform

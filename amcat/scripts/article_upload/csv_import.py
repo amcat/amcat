@@ -20,18 +20,18 @@
 """
 Plugin for uploading csv files
 """
+import csv
 import datetime
 import logging
+from io import TextIOWrapper
 
 from django import forms
 from django.contrib.postgres.forms import JSONField
 
 from amcat.models import Article
-from amcat.scripts.article_upload import fileupload
 from amcat.scripts.article_upload.upload import UploadScript, ParseError, ARTICLE_FIELDS
 from amcat.scripts.article_upload.upload_formtools import get_form_set, FileInfo
 from amcat.tools.toolkit import read_date
-from navigator.views.articleset_upload_views import UploadWizardForm
 
 log = logging.getLogger(__name__)
 
@@ -66,57 +66,6 @@ def get_parser(field_type):
     return PARSERS.get(field_type, lambda x: x)
 
 
-class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
-    field_map = JSONField(max_length=2048,
-                          help_text='Dictionary consisting of "<field>":{"column":"<column name>"} and/or "<field>":{"value":"<value>"} mappings.')
-
-    addressee_from_parent = forms.BooleanField(required=False, initial=False, label="Addressee from parent",
-                                               help_text="If set, will set the addressee field to the author of the parent article")
-
-    def __init__(self, *args, **kargs):
-        super(CSVForm, self).__init__(*args, **kargs)
-
-    def clean_field_map(self):
-        data = self.cleaned_data['field_map']
-        errors = []
-        for k, v in data.items():
-            if not isinstance(v, dict):
-                errors.append(forms.ValidationError("Invalid field {}.".format(k)))
-            if ('column' in v) == ('value' in v):
-                errors.append(forms.ValidationError("Fill in exactly one of 'column' or 'value'."))
-
-        if errors:
-            raise forms.ValidationError(errors)
-        return data
-
-    @classmethod
-    def as_wizard_form(cls):
-        return CSVWizardForm
-
-
-class CSVWizardForm(UploadWizardForm):
-    def get_form_list(self):
-        upload_form = super().get_form_list()[0]
-        upload_form.base_fields['dialect'] = self.inner_form.base_fields['dialect']
-        field_form = get_form_set(REQUIRED, ARTICLE_FIELDS)
-        return [upload_form, field_form]
-
-    class CSVUploadStepForm(UploadScript.options_form, fileupload.CSVUploadForm):
-        pass
-
-    @classmethod
-    def get_upload_step_form(cls):
-        return cls.CSVUploadStepForm
-
-    @classmethod
-    def get_file_info(cls, upload_form: fileupload.CSVUploadForm):
-        file = list(upload_form.get_entries())[0]
-        reader = iter(file)
-        firststep = next(iter(reader))
-
-        return FileInfo(upload_form.cleaned_data['file'].name, firststep.column_names)
-
-
 class CSV(UploadScript):
     """
     Upload CSV files to AmCAT.
@@ -143,7 +92,6 @@ class CSV(UploadScript):
     is to upload it to dropbox or a file sharing website and paste the link into the issue.
     """
 
-    options_form = CSVForm
     _errors = {
         "empty_col": 'Expected non-empty value in table column "{}" for required field "{}".',
         "empty_val": 'Expected non-empty value for required field "{}".',
@@ -152,6 +100,9 @@ class CSV(UploadScript):
 
     def run(self, *args, **kargs):
         return super(CSV, self).run(*args, **kargs)
+
+    def parse_file(self, file):
+        raise NotImplementedError("not implemented yet :(")
 
     def parse_document(self, row, i=None):
         properties = {}
@@ -197,6 +148,11 @@ class CSV(UploadScript):
     def explain_error(self, error, article=None):
         return "Error in row {}: {}".format(article, error)
 
+    @classmethod
+    def get_fields(cls, file, encoding):
+        reader = csv.DictReader(TextIOWrapper(file.file, encoding="utf-8"))
+        known_fields = ARTICLE_FIELDS
+        return {k: k if k in known_fields else None for k in reader.fieldnames}
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli

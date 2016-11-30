@@ -26,6 +26,7 @@ import os.path
 from typing import Tuple
 
 from django import forms
+from django.contrib.postgres.fields import JSONField
 from django.forms.widgets import HiddenInput
 
 from amcat.models import Article, Project, ArticleSet
@@ -56,6 +57,9 @@ class UploadForm(forms.Form):
         max_length=ArticleSet._meta.get_field_by_name('name')[0].max_length,
         required=False)
 
+    encoding = forms.ChoiceField(choices=[(x,x) for x in ["Autodetect", "ISO-8859-15", "UTF-8", "Latin-1"]])
+    field_map = JSONField()
+
     def clean_articleset_name(self):
         """If articleset name not specified, use file base name instead"""
         if 'articleset' in self.errors:
@@ -79,6 +83,11 @@ class UploadForm(forms.Form):
             f.fields['articlesets'].queryset = ArticleSet.objects.filter(project=project)
         return f
 
+    def get_files(self):
+        yield self.cleaned_data['file']
+
+    def validate(self):
+        return self.is_valid()
 class UploadScript(ActionForm):
     """Base class for Upload Scripts, which are scraper scripts driven by the
     the script input.
@@ -91,16 +100,17 @@ class UploadScript(ActionForm):
     @classmethod
     def get_fields(cls, file, encoding):
         """
-        Returns a tuple, containing a list of fields or columns found in a file, and a suggested mapping.
+        Returns a dict, containing at least all fields as keys, and a suggested mapping or None as values.
         """
-        return (), {}
+        return {}
     
     def parse_file(self, file):
         raise NotImplementedError()
     
     def __init__(self, *args, **kargs):
         super().__init__(*args, **kargs)
-        self.project = self.options['project']
+        self.options = self.form.cleaned_data
+        self.project = self.form.cleaned_data['project']
         self.errors = []
 
     def get_or_create_articleset(self):
@@ -149,7 +159,7 @@ class UploadScript(ActionForm):
         if self.errors:
             raise ParseError(" ".join(map(str, self.errors)))
         monitor.update(10, "All files parsed, saving {n} articles".format(n=len(articles)))
-        Article.create_articles(articles, articlesets=[self.get_or_create_articleset(),
+        Article.create_articles(articles, articlesets=self.get_or_create_articleset(),
                                 monitor=monitor.submonitor(40))
 
         if not articles:
@@ -169,8 +179,7 @@ class UploadScript(ActionForm):
         return [a.id for a in self.articlesets]
 
     def _get_files(self):
-        return self.bound_form.get_entries()
-
+        return self.form.get_files()
 
 
 def _set_project(art, project):

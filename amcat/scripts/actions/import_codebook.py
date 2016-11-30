@@ -21,6 +21,11 @@
 
 import logging
 
+import collections
+
+import chardet
+from django.core.files import File
+
 log = logging.getLogger(__name__)
 
 import csv
@@ -32,9 +37,127 @@ from amcat.scripts.script import Script
 from django.db import transaction
 from amcat.models import Code, Codebook, Language, Project
 
-from amcat.scripts.article_upload.fileupload import CSVUploadForm
 
 LABEL_PREFIX = "label"
+MAX_SAMPLE_SIZE = 1024
+DIALECTS = [("autodetect", "Autodetect"),
+            ("excel", "CSV, comma-separated"),
+            ("excel-semicolon", "CSV, semicolon-separated (Europe)"),
+            ]
+
+
+class excel_semicolon(csv.excel):
+    delimiter = ';'
+
+
+csv.register_dialect("excel-semicolon", excel_semicolon)
+
+
+def namedtuple_csv_reader(csv_file, encoding='utf-8', **kargs):
+    """
+    Wraps around a csv.reader object to yield namedtuples for the rows.
+    Expects the first line to be the header.
+    @params encoding: This encoding will be used to decode all values. If None, will yield raw bytes
+     If encoding is an empty string or  'Autodetect', use chardet to guess the encoding
+    @params object_name: The class name for the namedtuple
+    @param kargs: Will be passed to csv.reader, e.g. dialect
+    """
+    if encoding.lower() in ('', 'autodetect'):
+        encoding = chardet.detect(csv_file.read(MAX_SAMPLE_SIZE))["encoding"]
+        log.info("Guessed encoding: {encoding}".format(**locals()))
+        csv_file.seek(0)
+
+    r = csv.reader(csv_file, **kargs)
+    return namedtuples_from_reader(r, encoding=encoding)
+
+
+def _xlsx_as_csv(file):
+    """
+    Supply a csv reader-like interface to an xlsx file
+    """
+    from openpyxl import load_workbook
+    wb = load_workbook(file)
+    ws = wb.get_sheet_by_name(wb.get_sheet_names()[0])
+    for row in ws.rows:
+        row = [c.value for c in row]
+        yield row
+
+
+def namedtuple_xlsx_reader(xlsx_file):
+    """
+    Uses openpyxl to read an xslx file and provide a named-tuple interface to it
+    """
+    reader = _xlsx_as_csv(xlsx_file)
+    return namedtuples_from_reader(reader)
+
+
+class CSVFile(File):
+    def __init__(self, *args, dialect=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.dialect_name = dialect
+        self._dialect = None
+
+    @property
+    def dialect(self):
+        if self._dialect is not None:
+            return self._dialect
+
+        d = self.dialect_name or "autodetect"
+
+        if d == 'autodetect':
+            sample = self.file.read(MAX_SAMPLE_SIZE)
+            dialect = csv.Sniffer().sniff(sample)
+            self.file.seek(0)
+            if dialect.delimiter not in "\t,;":
+                dialect = csv.get_dialect('excel')
+        else:
+            dialect = csv.get_dialect(d)
+
+        self._dialect = dialect
+        return dialect
+
+    def __iter__(self):
+        reader = self.get_reader()
+        yield from reader
+
+    def get_reader(self, reader_class=namedtuple_csv_reader):
+        file = self.file
+
+        if file.name.endswith(".xlsx"):
+            if reader_class != namedtuple_csv_reader:
+                raise ValueError("Cannot handle xlsx files with non-default reader, sorry!")
+            return namedtuple_xlsx_reader(file)
+
+
+        return reader_class(file, dialect=self.dialect)
+
+
+def namedtuples_from_reader(reader, encoding=None):
+    """
+    returns a sequence of namedtuples from a (csv-like) reader which should yield the header followed by value rows
+    """
+
+    header = next(iter(reader))
+
+    class Row(collections.namedtuple("Row", header, rename=True)):
+        column_names = header
+
+        def __getitem__(self, key):
+            if not isinstance(key, int):
+                # look up key in self.header
+                key = self.column_names.index(key)
+            return super(Row, self).__getitem__(key)
+
+        def items(self):
+            return zip(self.column_names, self)
+
+    for values in reader:
+        if encoding is not None:
+            values = [x.decode(encoding) if isinstance(x, bytes) else x for x in values]
+        if len(values) < len(header):
+            values += [None] * (len(header) - len(values))
+        yield Row(*values)
+
 
 
 class ImportCodebook(Script):
@@ -70,7 +193,12 @@ class ImportCodebook(Script):
     
     """
 
-    class options_form(CSVUploadForm):
+    class options_form(forms.Form):
+        file = forms.FileField(
+            help_text="Uploading very large files can take a long time. If you encounter timeout problems, consider uploading smaller files")
+
+        dialect = forms.ChoiceField(choices=DIALECTS, initial="autodetect", required=False,
+                                    help_text="Select the kind of CSV file")
         project = forms.ModelChoiceField(queryset=Project.objects.all())
         codebook_name = forms.CharField(required=False)
         codebook = forms.ModelChoiceField(queryset=Codebook.objects.all(),
@@ -85,6 +213,10 @@ class ImportCodebook(Script):
             if fn:
                 return fn
             return self.cleaned_data.get('codebook_name')
+
+        def get_entries(self):
+            dialect = self.cleaned_data['dialect']
+            return [CSVFile(self.get_uploaded_text(), dialect=dialect)]
 
     @transaction.atomic
     def _run(self, file, project, codebook_name, codebook, **kargs):

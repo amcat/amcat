@@ -1,5 +1,7 @@
 {% extends "project/base.html" %}
+{% block javascript %}
 
+{% endblock %}
 {% block content %}
 
     {% if scraper_main_error %}
@@ -44,24 +46,6 @@
         {% endfor %}
         <table>
             {{ form.as_table }}
-        </table>
-        <table>
-            <thead>
-            <tr>
-                {% for field in fieldmap.forms.0.fields %}
-                    <th>{{ field|title }}</th>
-                {% endfor %}
-            </tr>
-            </thead>
-            <tbody>
-            {% for formpart in fieldmap.forms %}
-                <tr>
-                    {% for field in formpart %}
-                        <td> {{ field }} </td>
-                    {% endfor %}
-                </tr>
-            {% endfor %}
-            </tbody>
         </table>
         <div class="form-actions">
             <input class="btn btn-primary" type="submit" value="Upload">

@@ -1,5 +1,4 @@
 import base64
-import json
 import logging
 import os
 from tempfile import mkdtemp
@@ -7,7 +6,7 @@ from uuid import uuid4, UUID
 
 from django import forms
 from django.contrib.postgres.forms import JSONField
-from django.core.files.uploadedfile import UploadedFile, SimpleUploadedFile
+from django.core.files.uploadedfile import UploadedFile
 from django.core.urlresolvers import reverse
 from django.http import QueryDict
 from django.shortcuts import redirect
@@ -15,12 +14,11 @@ from django.utils.datastructures import MultiValueDict
 from django.views.generic import FormView
 
 from amcat.models import Plugin, ArticleSet
-from amcat.scripts.article_upload.fileupload import ZipFileUploadForm
-from amcat.tools.djangotoolkit import JsonField
-from navigator.views.articleset_views import ArticleSetListView
+
+from amcat.scripts.article_upload import upload
 from navigator.views.project_views import ProjectDetailsView
 from navigator.views.projectview import BaseMixin
-from navigator.views.scriptview import ScriptHandler, get_temporary_file_dict, ScriptView
+from navigator.views.scriptview import ScriptHandler, get_temporary_file_dict
 
 log = logging.getLogger(__name__)
 STORAGE_DIR = mkdtemp(prefix="amcat_upload")
@@ -57,27 +55,20 @@ class ArticleSetUploadScriptHandler(ScriptHandler):
         return arguments
 
 
-class UploadForm(ZipFileUploadForm):
-    script = forms.ModelChoiceField(queryset=Plugin.objects.filter())
-    articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.filter(), required=False)
+    def get_script(self):
+        script_cls = self.task.get_class()
+        kwargs = self.get_form_kwargs()
+        form = script_cls.form_class(**kwargs)
+        return script_cls(form)
 
-    articleset_name = forms.CharField(
-        max_length=ArticleSet._meta.get_field_by_name('name')[0].max_length,
-        required=False)
 
-    def clean_articleset_name(self):
-        """If articleset name not specified, use file base name instead"""
-        if 'articleset' in self.errors:
-            # skip check if error in articlesets: cleaned_data['articlesets'] does not exist
-            return
-        if self.files.get('file') and not (
-                    self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
-            fn = os.path.basename(self.files['file'].name)
-            return fn
-        name = self.cleaned_data['articleset_name']
-        if not bool(name) ^ bool(self.cleaned_data['articleset']):
-            raise forms.ValidationError("Please specify either articleset or articleset_name")
-        return name
+class ArticleSetUploadForm(upload.UploadForm):
+    script = forms.ModelChoiceField(queryset=Plugin.objects.all())
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in list(self.fields):
+            if field not in ("file", "articleset", "articleset_name", "encoding", "script"):
+                self.fields.pop(field)
 
 
 class ArticleSetUploadOptionsForm(forms.Form):
@@ -92,7 +83,7 @@ class ArticleSetUploadOptionsForm(forms.Form):
 
 
 class ArticleSetUploadView(BaseMixin, FormView):
-    form_class = UploadForm
+    form_class = ArticleSetUploadForm
     parent = ProjectDetailsView
     view_name = "articleset-upload"
     url_fragment = "upload"
@@ -184,18 +175,17 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
 
     def form_valid(self, form):
         upload = self.get_upload()
-        script = self.get_script()
         args = self.get_script_form_kwargs(upload, form)
         args = self.clean_script_args(args)
-        task = ArticleSetUploadScriptHandler.call(target_class=self.get_script(), arguments=args,
+        handler = ArticleSetUploadScriptHandler.call(target_class=self.get_script(), arguments=args,
                             project=self.project, user=self.request.user)
-        return
+        return redirect(reverse("navigator:task-details", args=(self.project.id, handler.task.id)))
 
     def get_form_class(self):
         class Form(ArticleSetUploadOptionsForm):
             pass
         for name, field in self.get_script().form_class.base_fields.items():
-            if name not in UploadForm.base_fields and name not in ArticleSetUploadOptionsForm.base_fields and name != "project":
+            if name not in ArticleSetUploadForm().fields and name not in ArticleSetUploadOptionsForm.base_fields and name != "project":
                 Form.base_fields[name] = field
         return Form
 
