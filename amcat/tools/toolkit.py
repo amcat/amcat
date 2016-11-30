@@ -1,4 +1,4 @@
-###########################################################################
+M###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -50,64 +50,6 @@ import dateparser
 from typing import Optional, Sequence
 
 log = logging.getLogger(__name__)
-
-###########################################################################
-##                               Decorators                              ##
-###########################################################################
-
-
-def _deprecationwarning(msg):
-    warnings.warn(DeprecationWarning(msg))
-
-
-def deprecated(func, msg='Call to deprecated function %(funcname)s.'):
-    """
-    Decorate a function to mark deprecated
-
-    This is a decorator which can be used to mark functions
-    as deprecated. It will result in a warning being emitted
-    when the function is used.
-
-    U{http://wiki.python.org/moin/PythonDecoratorLibrary}
-    """
-
-    def new_func(*args, **kwargs):
-        """Print a warning and then call the original function"""
-        warnings.warn(DeprecationWarning(msg % dict(funcname=func.__name__)),
-                      stacklevel=2)
-        return func(*args, **kwargs)
-
-    new_func.__name__ = func.__name__
-    new_func.__doc__ = ("B{Deprecated: %s}" %
-                        (msg % dict(funcname=func.__name__))
-                        + (func.__doc__ or "").replace("@", "\@").replace("L{", "l{"))
-    new_func.__dict__.update(func.__dict__)
-    return new_func
-
-
-def wrapped(wrapper_function, *wrapper_args, **wrapper_kargs):
-    """
-    Decorator to wrap the inner function with an arbitrary function
-    """
-
-    def inner(func):
-        def innermost(*args, **kargs):
-            try:
-                result = func(*args, **kargs)
-            except Exception:
-                log.exception("Error on calling wrapped {func.__name__}(args={args!r}, kargs={kargs!r})"
-                              .format(**locals()))
-                raise
-            try:
-                return wrapper_function(result, *wrapper_args, **wrapper_kargs)
-            except Exception:
-                log.exception("Error on calling wrapper function {wrapper_function.__name__}"
-                              "({result!r}, *{wrapper_args}, **{wrapper_kargs!r})".format(**locals()))
-                raise
-
-        return innermost
-
-    return inner
 
 
 ###########################################################################
@@ -218,13 +160,8 @@ def strip_accents(s):
     @param s: the string to strip accents from.
     @return: a str string containing the translated input
     """
+    # [WvA] this can probably be replaced by unidecode?
     return "".join(REV_ACCENTS_MAP.get(c, c) for c in s)
-
-
-# TODO: Should switch to secrets ASAP:
-#  https://docs.python.org/3.5/library/secrets.html
-def crypto_choice(rng: random.SystemRandom, choices: Sequence):
-    return choices[rng.randrange(0, len(choices))]
 
 
 def random_alphanum(size=10):

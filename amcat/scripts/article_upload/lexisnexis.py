@@ -30,7 +30,6 @@ from amcat.scripts.article_upload.upload import UploadScript, ParseError
 from amcat.scripts.article_upload import fileupload
 from amcat.tools import toolkit
 from amcat.models.article import Article
-from amcat.tools.toolkit import wrapped
 
 from io import StringIO
 
@@ -302,7 +301,6 @@ def parse_article(art):
         if lines[0].startswith(" "): return True  # indented line
 
 
-    @wrapped(list)
     def _get_header(lines) -> dict:
         """Consume and return all lines that are indented (ie the list is changed in place)"""
         while _in_header(lines):
@@ -340,7 +338,6 @@ def parse_article(art):
         return (re.sub("\s+", " ", " ".join(x)) if x else None
                 for x in (headline, byline))
 
-    @toolkit.wrapped(dict)
     def _get_meta(lines) -> dict:
         """
         Return meta key-value pairs. Stop if body start criterion is found
@@ -368,7 +365,6 @@ def parse_article(art):
                 yield key, val.strip()
 
 
-    @wrapped(list)
     def _get_body(lines):
         """Consume and return all lines until a date line is found"""
 
@@ -384,7 +380,7 @@ def parse_article(art):
 
 
     
-    header = _get_header(lines)
+    header = list(_get_header(lines))
     if not lines:
         # Something is wrong with this article, skip it
         return
@@ -400,16 +396,16 @@ def parse_article(art):
     else:
         title, byline = _get_headline(lines)
 
-    meta = _get_meta(lines)
+    meta = dict(_get_meta(lines))
     if title is None:
         if 'title' in meta:
             title = meta.pop('title')
         elif 'kop' in meta:
             title = meta.pop('kop')
 
-    body = _get_body(lines)
+    body = list(_get_body(lines))
 
-    meta.update(_get_meta(lines))
+    meta.update(dict(_get_meta(lines)))
 
 
     def _get_source(lines, i):
