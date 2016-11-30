@@ -71,19 +71,23 @@ WELL_KNOWN_BODY_KEYS = ["AUTOR", "RUBRIK", "L\xc4NGE", "UPDATE", "SPRACHE",
 
 BODY_KEYS_MAP = {
     # LexisNexis --> Article model
+    "author": "author",
     "autor": "author",
+    "auteur": "author",
+
+    "section": "section",
+    "rubrique": "section",
     "rubrik": "section",
     "l\xe4nge": "length",
     "sprache": "language",
-    "auteur": "author",
-    "rubrique": "section",
     "langue": "language",
+    "language": "language",
+
     "longueur": "length",
     "length": "length",
-    "language": "language",
-    "section": "section",
-    "author": "author",
+    
     "titre": "title",
+    
     "name": "byline"
 }
 
@@ -453,7 +457,6 @@ def parse_article(art):
                 meta['issue'] = issuematch.group(0)
 
         elif [x.strip() for x in header] in (["India Today"], ["Business Today"]):
-            print(meta)
             date = meta.pop("load-date")
             source = header[0]
         else:

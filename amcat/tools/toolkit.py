@@ -237,32 +237,14 @@ def random_alphanum(size=10):
 ##                     Date(time) functions                              ##
 ###########################################################################
 
-def read_date(datestr: str, lax: bool=False, rejectPre1970: bool=False, american: Optional[bool]=None):
-    # String replacements to remain backwards compatible
-    datestr = datestr.replace("Maerz", "März")
-
-    # Select month/day order based on american bool
-    if american is None:
-        # Guess based on language
-        settings = {}
-    elif american:
-        settings = {'DATE_ORDER': 'MDY'}
-    else:
-        settings = {'DATE_ORDER': 'DMY'}
-
-    date = dateparser.parse(datestr, settings=settings)
-    if date is None and lax:
-        return date
-    elif date is None:
-        raise ValueError("Could not parse datestr: {}".format(datestr))
-    else:
-        if rejectPre1970 and date.year < 1970:
-            if lax:
-                return None
-            else:
-                raise ValueError("Rejecting datestr (before 1970): {}".format(datestr))
-
-    # Finally :)
+def read_date(datestr: str):
+    # [WvA] You probably might as well just call dateparser directly, keeping this
+    # for backwards compatability only!
+    datestr = datestr.replace("Maerz", "März")     # Needed in LN parser?
+    settings = {'DATE_ORDER': 'DMY'}      # MDY is studid!
+    date = dateparser.parse(datestr, settings = settings)
+    if date is None:
+        raise ValueError("Could not parse datestr: {datestr!r}".format(**locals()))
     return date
 
 
