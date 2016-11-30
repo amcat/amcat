@@ -23,6 +23,7 @@ Base module for article upload scripts
 import datetime
 import logging
 import os.path
+from typing import Tuple
 
 from django import forms
 from django.forms.widgets import HiddenInput
@@ -43,7 +44,7 @@ class ParseError(Exception):
 class UploadForm(RawFileUploadForm):
     project = forms.ModelChoiceField(queryset=Project.objects.all())
 
-    articlesets = forms.ModelMultipleChoiceField(
+    articleset = forms.ModelChoiceField(
         queryset=ArticleSet.objects.all(), required=False,
         help_text="If you choose an existing articleset, the articles will be "
                   "appended to that set. If you leave this empty, a new articleset will be "
@@ -55,7 +56,7 @@ class UploadForm(RawFileUploadForm):
 
     def clean_articleset_name(self):
         """If articleset name not specified, use file base name instead"""
-        if 'articlesets' in self.errors:
+        if 'articleset' in self.errors:
             #skip check if error in articlesets: cleaned_data['articlesets'] does not exist
             return
         if self.files.get('file') and not (
@@ -63,7 +64,7 @@ class UploadForm(RawFileUploadForm):
             fn = os.path.basename(self.files['file'].name)
             return fn
         name = self.cleaned_data['articleset_name']
-        if not bool(name) ^ bool(self.cleaned_data['articlesets']):
+        if not bool(name) ^ bool(self.cleaned_data['articleset']):
             raise forms.ValidationError("Please specify either articleset or articleset_name")
         return name
     
@@ -95,12 +96,12 @@ class UploadScript(script.Script):
 
     @property
     def articlesets(self):
-        if self.options['articlesets']:
-            return self.options['articlesets']
+        if self.options['articleset']:
+            return self.options['articleset']
 
         if self.options['articleset_name']:
             aset = create_new_articleset(self.options['articleset_name'], self.project)
-            self.options['articlesets'] = (aset,)
+            self.options['articleset'] = (aset,)
             return (aset,)
 
         return ()
@@ -220,6 +221,14 @@ class UploadScript(script.Script):
         @return: a sequence of objects (e.g. strings) to pass to parse_documents
         """
         return [file]
+
+
+    @classmethod
+    def get_fields(cls, file, encoding):
+        """
+        Returns a tuple, containing a list of fields or columns found in a file, and a suggested mapping.
+        """
+        return (), {}
 
 
 def _set_project(art, project):

@@ -10,7 +10,7 @@
 {% block actions %}
     <button class="btn btn-primary" data-toggle="dropdown"><i class="glyphicon glyphicon-plus"></i> Add article set <span class="caret"></span></button>
     <ul class="dropdown-menu">
-        <li><a href="{% url 'navigator:articleset-upload-list' project.id %}" ><i class="glyphicon glyphicon-upload"></i> Upload articles</a></li>
+        <li><a href="{% url 'navigator:articleset-upload' project.id %}" ><i class="glyphicon glyphicon-upload"></i> Upload articles</a></li>
         <li><a href="{% url 'navigator:articleset-create' project.id %}"><i class="glyphicon glyphicon-file"></i> New Empty Set</a></li>
     </ul>
 {% endblock %}

@@ -20,7 +20,7 @@
 from django.conf.urls import patterns, url
 from django.contrib.auth.views import password_change, password_change_done
 
-from navigator.views.articleset_upload_views import ArticleSetUploadView, ArticleSetUploadListView
+from navigator.views.articleset_upload_views import * # noqa
 from navigator.views.articleset_views import *  # noqa
 from navigator.views.article_views import *  # noqa
 from navigator.views.query import *  # noqa
@@ -65,7 +65,7 @@ urlpatterns = patterns(
 _views = [
     ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView, ArticleSetCreateView,
     ArticleSetArticleDetailsView, ProjectArticleDetailsView, ArticleRemoveFromSetView,
-    ArticleSetUploadView, ArticleSetUploadListView, ClearQueryCacheView, QueryView, SavedQueryRedirectView, ArticleSetSampleView,
+    ArticleSetUploadView, ArticlesetUploadOptionsView, ClearQueryCacheView, QueryView, SavedQueryRedirectView, ArticleSetSampleView,
     ArticleSetEditView, ArticleSetImportView, ArticleSetRefreshView,
     ArticleSetDeleteView, ArticleSetUnlinkView, ArticleSetDeduplicateView, 
     ArticleSplitView,
