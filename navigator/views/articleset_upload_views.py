@@ -194,7 +194,7 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
     def get_form_class(self):
         class Form(ArticleSetUploadOptionsForm):
             pass
-        for name, field in self.get_script().options_form.base_fields.items():
+        for name, field in self.get_script().form_class.base_fields.items():
             if name not in UploadForm.base_fields and name not in ArticleSetUploadOptionsForm.base_fields and name != "project":
                 Form.base_fields[name] = field
         return Form

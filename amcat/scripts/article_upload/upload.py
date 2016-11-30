@@ -30,8 +30,8 @@ from django.forms.widgets import HiddenInput
 
 from amcat.models import Article, Project, ArticleSet
 from amcat.models.articleset import create_new_articleset
-from amcat.scripts import script
-from amcat.scripts.article_upload.fileupload import RawFileUploadForm
+
+from actionform import ActionForm
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +41,9 @@ class ParseError(Exception):
     pass 
 
 
-class UploadForm(RawFileUploadForm):
+class UploadForm(forms.Form):
+    file = forms.FileField(help_text="Uploading very large files can take a long time. If you encounter timeout problems, consider uploading smaller files")
+    
     project = forms.ModelChoiceField(queryset=Project.objects.all())
 
     articleset = forms.ModelChoiceField(
@@ -77,25 +79,31 @@ class UploadForm(RawFileUploadForm):
             f.fields['articlesets'].queryset = ArticleSet.objects.filter(project=project)
         return f
 
-
-class UploadScript(script.Script):
+class UploadScript(ActionForm):
     """Base class for Upload Scripts, which are scraper scripts driven by the
     the script input.
 
-    For legacy reasons, parse_document and split_text may be used instead of the standard
-    get_units and scrape_unit.
+    Implementing classes should implement get_fields and parse_file,
+    and may provide additional fields in the form_class
     """
+    form_class = UploadForm
 
-    input_type = None
-    options_form = UploadForm
-
+    @classmethod
+    def get_fields(cls, file, encoding):
+        """
+        Returns a tuple, containing a list of fields or columns found in a file, and a suggested mapping.
+        """
+        return (), {}
+    
+    def parse_file(self, file):
+        raise NotImplementedError()
+    
     def __init__(self, *args, **kargs):
-        super(UploadScript, self).__init__(*args, **kargs)
+        super().__init__(*args, **kargs)
         self.project = self.options['project']
         self.errors = []
 
-    @property
-    def articlesets(self):
+    def get_or_create_articleset(self):
         if self.options['articleset']:
             return self.options['articleset']
 
@@ -111,20 +119,6 @@ class UploadScript(script.Script):
         index = " {}".format(article) if article is not None else ""
         return "Error in element{}: {}".format(article, error)
 
-    def decode(self, bytes):
-        """Decode the bytes using the encoding from the form"""
-        enc, text = self.bound_form.decode(bytes)
-        return text
-
-    @property
-    def uploaded_texts(self):
-        """A cached sequence of UploadedFile objects"""
-        try:
-            return self._input_texts
-        except AttributeError:
-            self._input_texts = self.bound_form.get_uploaded_texts()
-            return self._input_texts
-
     def get_provenance(self, file, articles):
         n = len(articles)
         filename = file and file.name
@@ -132,15 +126,7 @@ class UploadScript(script.Script):
         return ("[{timestamp}] Uploaded {n} articles from file {filename!r} "
                 "using {self.__class__.__name__}".format(**locals()))
 
-    def parse_file(self, file):
-        for i, unit in enumerate(self._get_units(file)):
-            try:
-                for a in self._scrape_unit(unit):
-                    yield a
-            except ParseError as e:
-                self.errors.append(ParseError("{}".format(self.explain_error(e, index=i))))
-
-    def run(self, _dummy=None):
+    def run(self):
         monitor = self.progress_monitor
 
         file = self.options['file']
@@ -163,14 +149,13 @@ class UploadScript(script.Script):
         if self.errors:
             raise ParseError(" ".join(map(str, self.errors)))
         monitor.update(10, "All files parsed, saving {n} articles".format(n=len(articles)))
-        Article.create_articles(articles, articlesets=self.articlesets,
+        Article.create_articles(articles, articlesets=[self.get_or_create_articleset(),
                                 monitor=monitor.submonitor(40))
 
         if not articles:
             raise Exception("No articles were imported")
 
         monitor.update(10, "Uploaded {n} articles, post-processing".format(n=len(articles)))
-        self.postprocess(articles)
 
         for aset in self.articlesets:
             new_provenance = self.get_provenance(file, articles)
@@ -183,52 +168,9 @@ class UploadScript(script.Script):
         monitor.update(10, "Done! Uploaded articles".format(n=len(articles)))
         return [a.id for a in self.articlesets]
 
-    def postprocess(self, articles):
-        """
-        Optional postprocessing of articles. Removing aricles from the list will exclude them from the
-        articleset (if needed, list should be changed in place)
-        """
-        pass
-
     def _get_files(self):
         return self.bound_form.get_entries()
 
-    def _get_units(self, file):
-        return self.split_file(file)
-
-    def _scrape_unit(self, document):
-        result = self.parse_document(document)
-        if isinstance(result, Article):
-            result = [result]
-        for art in result:
-            yield art
-
-    def parse_document(self, document):
-        """
-        Parse the document as one or more articles, provided for legacy purposes
-
-        @param document: object received from split_text, e.g. a string fragment
-        @return: None, an Article or a sequence of Article(s)
-        """
-        raise NotImplementedError()
-
-    def split_file(self, file):
-        """
-        Split the file into one or more fragments representing individual documents.
-        Default implementation returns a single fragment containing the unicode text.
-
-        @type file: file like object
-        @return: a sequence of objects (e.g. strings) to pass to parse_documents
-        """
-        return [file]
-
-
-    @classmethod
-    def get_fields(cls, file, encoding):
-        """
-        Returns a tuple, containing a list of fields or columns found in a file, and a suggested mapping.
-        """
-        return (), {}
 
 
 def _set_project(art, project):
