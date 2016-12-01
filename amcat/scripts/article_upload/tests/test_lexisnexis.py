@@ -1,7 +1,6 @@
 
 import datetime
-import os.path
-from amcat.models import Medium, ArticleSet
+from amcat.models import ArticleSet
 from amcat.scripts.article_upload.lexisnexis import split_header, split_body, parse_header, \
     parse_article, body_to_article, get_query, LexisNexis
 from amcat.tools import amcattest
@@ -69,15 +68,6 @@ class TestLexisNexis(amcattest.AmCATTestCase):
         for i, art in enumerate(self.test_body_sols):
             self.assertEquals(art, arts[i])
 
-    def _create_medium(self, source):
-        from amcat.models import Language
-
-        try:
-            Medium.objects.get(name__iexact=source)
-        except Medium.DoesNotExist:
-            l = Language.objects.get(id=1)
-            Medium(name=source, abbrev=source[0:5], circulation=1, language=l).save()
-
     def test_meta(self):
 
         a = list(split_body(self.split()[1]))[0]
@@ -113,7 +103,6 @@ class TestLexisNexis(amcattest.AmCATTestCase):
         # Test remaining articles
         for art in articles[1:]:
             if art is None: continue
-            self._create_medium(art[4])
 
             p = body_to_article(*art)
             p.project = dp
