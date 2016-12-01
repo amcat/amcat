@@ -291,6 +291,7 @@ class ES(object):
     def get_properties(self, force_refresh=False):
         global _KNOWN_PROPERTIES
         if force_refresh or (_KNOWN_PROPERTIES is None):
+            self.check_index()
             _KNOWN_PROPERTIES = set(self.get_mapping().keys())
         return _KNOWN_PROPERTIES
             
