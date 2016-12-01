@@ -23,6 +23,7 @@ articles database table.
 """
 
 import logging
+from typing import Dict, Any
 
 from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import PermissionDenied
@@ -95,6 +96,20 @@ class Article(AmcatModel):
         db_table = 'articles'
         app_label = 'amcat'
 
+    @classmethod
+    def fromdict(cls, properties: Dict[str, Any]):
+        """Construct an Article object from a dictionary."""
+        properties = properties.copy()
+        article = cls(properties=properties)
+        article_fields = {f.name for f in cls._meta.fields}
+        for field_name, value in list(properties.items()):
+            if field_name in ("hash", "id"):
+                raise ValueError("You cannot set {}.{}".format(cls.__name__, field_name))
+            elif field_name in article_fields:
+                setattr(article, field_name, value)
+                properties.pop(field_name)
+        article.compute_hash()
+        return article
 
     def highlight(self, query, escape=True, keep_em=True):
         """
