@@ -317,6 +317,8 @@ class ES(object):
         self.es.indices.clear_cache()
 
     def delete_index(self):
+        global _KNOWN_PROPERTIES
+        _KNOWN_PROPERTIES=None
         try:
             self.es.indices.delete(self.index)
         except NotFoundError:
@@ -535,7 +537,6 @@ class ES(object):
             for d in batch:
                 props |= (set(d.keys()) - ALL_FIELDS)
                 articles[d["id"]] = serialize(d)
-
             self.check_properties(props)
             body = get_bulk_body(articles)
             resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
