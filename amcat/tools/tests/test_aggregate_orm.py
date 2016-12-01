@@ -20,12 +20,13 @@ import datetime
 import shutil
 import unittest
 
+from amcat.tools.aggregate_orm.categories import ArticleFieldCategory
 from amcat.tools.table.table2spss import get_pspp_version, PSPPVersion
 from django.test import TransactionTestCase
 
-from amcat.models import Coding, create_coded_articles
+from amcat.models import Coding
 from amcat.tools import amcattest, aggregate_orm
-from amcat.tools.aggregate_orm import MediumCategory, CountArticlesValue, TermCategory, ArticleSetCategory, \
+from amcat.tools.aggregate_orm import CountArticlesValue, TermCategory, ArticleSetCategory, \
     IntervalCategory
 from amcat.tools.aggregate_orm import SchemafieldCategory, AverageValue
 from amcat.tools.sbd import get_or_create_sentences
@@ -37,22 +38,24 @@ class TestAggregateORM(TransactionTestCase):
     def setUp(self):
         self.s1 = amcattest.create_test_set(5)
         self.a1, self.a2, self.a3, self.a4, self.a5 = self.s1.articles.all()
-        self.m1 = self.a1.medium
-        self.m2 = self.a2.medium
-        self.m3 = self.a3.medium
-        self.m4 = self.a4.medium
-        self.a3.medium = self.m2
-        self.a3.save()
+        self.m1 = "Telegraaf"
+        self.m2 = "NRC"
+        self.m3 = "AD"
+        self.a1.set_property("medium", self.m1)
+        self.a2.set_property("medium", self.m2)
+        self.a3.set_property("medium", self.m2)
+        self.a4.set_property("medium", self.m3)
+        self.a5.set_property("medium", self.m3)
 
         self.a1.text = "aap."
         self.a2.text = "aap. noot."
         self.a3.text = "aap. noot. mies."
 
-        self.a1.date = datetime.datetime(2015, 0o1, 0o1)
-        self.a2.date = datetime.datetime(2015, 0o1, 0o1)
-        self.a3.date = datetime.datetime(2015, 0o2, 0o1)
-        self.a4.date = datetime.datetime(2016, 0o1, 0o1)
-        self.a5.date = datetime.datetime(2016, 0o1, 0o1)
+        self.a1.date = datetime.datetime(2015, 1, 1)
+        self.a2.date = datetime.datetime(2015, 1, 1)
+        self.a3.date = datetime.datetime(2015, 2, 1)
+        self.a4.date = datetime.datetime(2016, 1, 1)
+        self.a5.date = datetime.datetime(2016, 1, 1)
         self.a1.save()
         self.a2.save()
         self.a3.save()
@@ -112,6 +115,19 @@ class TestAggregateORM(TransactionTestCase):
         kwargs['threaded'] = False
         return aggregate_orm.ORMAggregate.from_articles(article_ids, codingjob_ids, **kwargs)
 
+    def test_article_field_category(self):
+        aggr = self._get_aggr(flat=True)
+        result = set(aggr.get_aggregate(
+            [ArticleFieldCategory.from_field_name("medium")],
+            [CountArticlesValue()]
+        ))
+
+        self.assertEqual(result, {
+            ('Telegraaf', 1),
+            ('AD', 1),
+            ('NRC', 2)
+        })
+
     def test_one_coding(self):
         aggr = aggregate_orm.ORMAggregate(Coding.objects.filter(id__in=(self.c1.id,)), flat=True)
 
@@ -120,11 +136,11 @@ class TestAggregateORM(TransactionTestCase):
 
     def test_interval_category(self):
         aggr = self._get_aggr(flat=True)
-        result = set(aggr.get_aggregate([IntervalCategory("day")], [CountArticlesValue()]))
+        result = set(aggr.get_aggregate([ArticleFieldCategory.from_field_name("date", interval="day")], [CountArticlesValue()]))
         self.assertEqual(result, {
-            (datetime.datetime(2015, 0o1, 0o1), 2),
-            (datetime.datetime(2015, 0o2, 0o1), 1),
-            (datetime.datetime(2016, 0o1, 0o1), 1),
+            (datetime.datetime(2015, 1, 1), 2),
+            (datetime.datetime(2015, 2, 1), 1),
+            (datetime.datetime(2016, 1, 1), 1),
         })
 
     def test_mixed_article_sentence_aggregation(self):
@@ -171,7 +187,7 @@ class TestAggregateORM(TransactionTestCase):
 
     def test_incorrect_inputs(self):
         # You need at least one value
-        self.assertRaises(ValueError, self._get_aggr().get_aggregate, categories=MediumCategory())
+        self.assertRaises(ValueError, self._get_aggr().get_aggregate, categories=ArticleSetCategory())
 
     def test_codebook_avg(self):
         aggr = self._get_aggr(flat=True)
@@ -210,9 +226,6 @@ class TestAggregateORM(TransactionTestCase):
         result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [AverageValue(self.intf)]))
         self.assertEqual(result, {(self.code_A, 3.0), (self.code_B, 1.0), (self.code_A1, 1.0)})
 
-        result = set(aggr.get_aggregate([MediumCategory()], [AverageValue(self.intf)]))
-        self.assertEqual(result, {(self.m1, 4.0), (self.m2, 1.5), (self.m4, 1.0)})
-
     def test_quality_field(self):
         aggr = self._get_aggr(flat=True)
         result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [AverageValue(self.qualf)]))
@@ -235,7 +248,7 @@ class TestAggregateORM(TransactionTestCase):
 
         # Two categories + count
         result = set(aggr.get_aggregate(
-            categories=[MediumCategory(), SchemafieldCategory(self.codef)],
+            categories=[ArticleFieldCategory.from_field_name("medium"), SchemafieldCategory(self.codef)],
             values=[CountArticlesValue()]
         ))
         
@@ -243,12 +256,12 @@ class TestAggregateORM(TransactionTestCase):
             ((self.m1, self.code_A), 1),
             ((self.m2, self.code_A), 1),
             ((self.m2, self.code_B), 1),
-            ((self.m4, self.code_A1), 1)
+            ((self.m3, self.code_A1), 1)
         })
 
         # Two categories + average
         result = set(aggr.get_aggregate(
-            categories=[MediumCategory(), SchemafieldCategory(self.codef)],
+            categories=[ArticleFieldCategory.from_field_name("medium"), SchemafieldCategory(self.codef)],
             values=[AverageValue(self.intf)]
         ))
 
@@ -256,7 +269,7 @@ class TestAggregateORM(TransactionTestCase):
             ((self.m1, self.code_A), 4.0),
             ((self.m2, self.code_A), 2.0),
             ((self.m2, self.code_B), 1.0),
-            ((self.m4, self.code_A1), 1.0)
+            ((self.m3, self.code_A1), 1.0)
         })
 
         # Two categories + 2 values
@@ -269,7 +282,7 @@ class TestAggregateORM(TransactionTestCase):
             ((self.m1, self.code_A), (4.0, 1)),
             ((self.m2, self.code_A), (2.0, 1)),
             ((self.m2, self.code_B), (1.0, 1)),
-            ((self.m4, self.code_A1), (1.0, 1))
+            ((self.m3, self.code_A1), (1.0, 1))
         })
 
     def test_empty(self):
@@ -309,7 +322,6 @@ class TestAggregateORM(TransactionTestCase):
         aggr = aggregate_orm.ORMAggregate(Coding.objects.none(), threaded=False)
         self.assertEqual(set(aggr.get_aggregate(values=[CountArticlesValue()])), set())
 
-    
     @unittest.skipUnless(shutil.which("pspp"), "PSPP not installed")
     def test_get_pspp_version(self):
         self.assertGreaterEqual(PSPPVersion(8, 5, 0), get_pspp_version())

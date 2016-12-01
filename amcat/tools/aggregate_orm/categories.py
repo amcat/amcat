@@ -16,16 +16,15 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-
+import datetime
 import logging
 
 from collections import OrderedDict, defaultdict
 from operator import itemgetter
 
-from django.db.models import Q
-
-from amcat.models import ArticleSet, Code
+from amcat.models import ArticleSet, Code, Article
 from amcat.tools.aggregate_orm.sqlobj import SQLObject, JOINS
+from amcat.tools.amcates import get_property_primitive_type
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +44,8 @@ POSTGRES_DATE_TRUNC_VALUES = [
     "millennium"
 ]
 
-DATE_TRUNC_SQL = 'date_trunc(\'{interval}\', T_articles.date)'
+DATE_TRUNC_SQL = 'date_trunc(\'{interval}\', T_articles.{field_name})'
+DATE_TRUNC_JSON_SQL = 'date_trunc(\'{interval}\', T_articles.properties->>\'{field_name}\')'
 
 __all__ = (
     "Category",
@@ -54,6 +54,7 @@ __all__ = (
     "TermCategory",
     "SchemafieldCategory"
 )
+
 
 class Category(SQLObject):
     def aggregate(self, categories, value, rows):
@@ -81,6 +82,78 @@ class Category(SQLObject):
         raise NotImplementedError("get_column_values() should be implemented by subclasses.")
 
 
+class ArticleFieldCategory(Category):
+    joins_needed = ("codings", "coded_articles", "articles")
+
+    def __init__(self, is_json_field: bool, field_name: str, **kwargs):
+        super().__init__(**kwargs)
+        self.is_json_field = is_json_field
+        self.field_name = field_name
+
+    def get_selects(self):
+        if self.is_json_field:
+            yield "T_articles.properties->>\'{}\'".format(self.field_name)
+        else:
+            yield "T_articles.{}".format(self.field_name)
+
+    @classmethod
+    def from_field_name(cls, field_name: str, **kwargs):
+        """Construct a category object corresponding to the field_name's type. For example,
+        the field 'date' would map to a IntervalCategory, while author would map to
+        TextCategory.
+
+        @param kwargs: additional parameters passed to corresponding Category"""
+        is_json_field = field_name not in Article.get_static_fields()
+        field_type = get_property_primitive_type(field_name)
+
+        if field_type in (int, str, float):
+            return ArticleFieldCategory(is_json_field=is_json_field, field_name=field_name, **kwargs)
+        elif field_type == datetime.datetime:
+            return IntervalCategory(is_json_field=is_json_field, field_name=field_name, **kwargs)
+        else:
+            raise ValueError("Did not recognize primitive field type: {} (on {})".format(field_type, field_name))
+
+    def get_column_names(self):
+        yield self.field_name
+
+    def get_column_values(self, obj):
+        """@type obj: int, float, str"""
+        yield str(obj)
+
+
+class IntervalCategory(ArticleFieldCategory):
+
+    def __init__(self, interval, field_name="date", **kwargs):
+        super().__init__(field_name=field_name, **kwargs)
+
+        if interval not in POSTGRES_DATE_TRUNC_VALUES:
+            err_msg = "{} not a valid interval. Choose on of: {}"
+            raise ValueError(err_msg.format(interval, POSTGRES_DATE_TRUNC_VALUES))
+
+        self.interval = interval
+
+    def get_selects(self):
+        if self.is_json_field:
+            return [DATE_TRUNC_JSON_SQL.format(interval=self.interval, field_name=self.field_name)]
+        else:
+            return [DATE_TRUNC_SQL.format(interval=self.interval, field_name=self.field_name)]
+
+    def get_column_values(self, obj):
+        """@type obj: datetime.datetime"""
+        yield obj.isoformat()
+
+    def __repr__(self):
+        return "<IntervalCategory: %s>" % self.interval
+
+
+class DuplicateLabelError(ValueError):
+    pass
+
+
+class InvalidReferenceError(ValueError):
+    pass
+
+
 class ModelCategory(Category):
     model = None
 
@@ -99,37 +172,6 @@ class ModelCategory(Category):
 
     def __repr__(self):
         return "<ModelCategory: {}>".format(self.model.__name__)
-
-class IntervalCategory(Category):
-    joins_needed = ("codings", "coded_articles", "articles")
-
-    def __init__(self, interval, **kwargs):
-        super(IntervalCategory, self).__init__(**kwargs)
-
-        if interval not in POSTGRES_DATE_TRUNC_VALUES:
-            err_msg = "{} not a valid interval. Choose on of: {}"
-            raise ValueError(err_msg.format(interval, POSTGRES_DATE_TRUNC_VALUES))
-
-        self.interval = interval
-
-    def get_selects(self):
-        return [DATE_TRUNC_SQL.format(interval=self.interval)]
-
-    def get_column_names(self):
-        yield "date"
-
-    def get_column_values(self, obj):
-        """@type obj: datetime.datetime"""
-        yield obj.isoformat()
-
-    def __repr__(self):
-        return "<IntervalCategory: %s>" % self.interval
-
-class DuplicateLabelError(ValueError):
-    pass
-
-class InvalidReferenceError(ValueError):
-    pass
 
 
 class ArticleSetCategory(ModelCategory):
@@ -234,7 +276,7 @@ class SchemafieldCategory(ModelCategory):
         # Create a mapping from key -> rownrs which need to be aggregated
         to_aggregate = defaultdict(list)
         for n, row in enumerate(rows):
-            key = row[:self_index] + [self.aggregation_map[row[self_index]]] + row[self_index+1:num_categories]
+            key = row[:self_index] + [self.aggregation_map[row[self_index]]] + row[self_index + 1:num_categories]
             to_aggregate[tuple(key)].append(n)
 
         for key, rownrs in to_aggregate.items():
@@ -255,3 +297,4 @@ class SchemafieldCategory(ModelCategory):
 
     def __repr__(self):
         return "<SchemafieldCategory: %s>" % self.field
+

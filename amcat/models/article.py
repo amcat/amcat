@@ -22,9 +22,12 @@ Model module containing the Article class representing documents in the
 articles database table.
 """
 
+import re
 import logging
+
 from typing import Dict, Any
 
+import functools
 from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import PermissionDenied
 from django.db import models
@@ -41,7 +44,6 @@ from amcat.tools.toolkit import splitlist
 
 log = logging.getLogger(__name__)
 
-import re
 
 WORD_RE_STRING = re.compile('[{L}{N}]+')  # {L} --> All letters
 WORD_RE_BYTES = re.compile(b'[{L}{N}]+')  # {L} --> All letters
@@ -95,6 +97,21 @@ class Article(AmcatModel):
     class Meta():
         db_table = 'articles'
         app_label = 'amcat'
+
+    def get_properties(self) -> Dict[str, Any]:
+        """Return an (empty) dict """
+        if self.properties is None:
+            self.properties = {}
+        return self.properties
+
+    def set_property(self, key: str, value: Any):
+        properties = self.get_properties()
+        properties[key] = value
+
+    @classmethod
+    @functools.lru_cache()
+    def get_static_fields(cls):
+        return frozenset(f.name for f in cls._meta.fields)
 
     @classmethod
     def fromdict(cls, properties: Dict[str, Any]):
