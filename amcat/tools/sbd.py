@@ -21,33 +21,34 @@
 Simple regex-based sentence boundary detection
 """
 
+import functools
 import collections
 import re
+
+from amcat.models import Article
+from amcat.models.sentence import Sentence
 
 abbrevs = ["ir", "mr", "dr", "dhr", "ing", "drs", "mrs", "sen", "sens", "gov", "st",
            "jr", "rev", "vs", "gen", "adm", "sr", "lt", "sept"]
 months = ["Jan", "Feb", "Mar", "Apr", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
-from amcat.models.sentence import Sentence
+
+PARAGRAPH_RE = re.compile(r"\n\s*\n[\s\n]*")
 
 
+@functools.lru_cache()
 def get_split_regex():
-    global _split_regex
-    try:
-        return _split_regex
-    except NameError:
-        lenmap = collections.defaultdict(list)
-        for a in abbrevs + months:
-            lenmap[len(a)].append(a)
-            lenmap[len(a)].append(a.title())
-        expr = r"(?<!\b[A-Za-z])"
-        for x in lenmap.values():
-            expr += r"(?<!\b(?:%s))" % "|".join(x)
-            #expr += r"(?<Nov(?=. \d))"
-        expr += r"[\.?!](?!\.\.)(?<!\.\.)(?!\w|,)(?!\s[a-z])|\n\n"
-        expr += r"|(?<=%s)\. (?=[^\d])" % "|".join(months)
-        _split_regex = re.compile(expr)
-        return _split_regex
+    # [Martijn] Documentation??
+    lenmap = collections.defaultdict(list)
+    for a in abbrevs + months:
+        lenmap[len(a)].append(a)
+        lenmap[len(a)].append(a.title())
+    expr = r"(?<!\b[A-Za-z])"
+    for x in lenmap.values():
+        expr += r"(?<!\b(?:%s))" % "|".join(x)
+    expr += r"[\.?!](?!\.\.)(?<!\.\.)(?!\w|,)(?!\s[a-z])|\n\n"
+    expr += r"|(?<=%s)\. (?=[^\d])" % "|".join(months)
+    return re.compile(expr)
 
 
 def get_or_create_sentences(article):
@@ -63,14 +64,23 @@ def get_or_create_sentences(article):
     return article.sentences.all()
 
 
-def _create_sentences(article):
-    pars = [article.title]
-    if article.byline: pars += [article.byline]
-    pars += re.split(r"\n\s*\n[\s\n]*", article.text.strip())
-    for parnr, par in enumerate(pars):
+def _get_paragraphs(article: Article):
+    # Title
+    yield article.title
+
+    # Byline
+    properties = article.get_properties()
+    if "byline" in properties:
+        yield properties["byline"]
+
+    # Text splitted on white lines
+    yield from iter(PARAGRAPH_RE.split(article.text.strip()))
+
+
+def _create_sentences(article: Article):
+    for parnr, par in enumerate(_get_paragraphs(article)):
         for sentnr, sent in enumerate(split(par)):
-            yield Sentence(parnr=parnr + 1, sentnr=sentnr + 1,
-                           article=article, sentence=sent)
+            yield Sentence(parnr=parnr + 1, sentnr=sentnr + 1, article=article, sentence=sent)
 
 
 def create_sentences(article):
@@ -92,6 +102,8 @@ def split(text):
     text = re.sub("\n\n+", "\n\n", text)
     text = text.replace(".'", "'.")
 
-    return (re.sub('\s+', ' ', sent.strip())
-            for sent in get_split_regex().split(text)
-            if sent.strip())
+    sentences = get_split_regex().split(text)
+    sentences = (s.strip() for s in sentences)
+    sentences = (s for s in sentences if s)
+    sentences = (re.sub("\s+", " ", s) for s in sentences)
+    return sentences
