@@ -104,7 +104,7 @@ class ArticleSetUploadView(BaseMixin, FormView):
                               "script": script.id,
                               "filename": file.name,
                               "file_path": file_path,
-                              "articleset": articleset.id,
+                              "articleset": articleset and articleset.id,
                               "articleset_name": articleset_name,
                               "size": file.size}
         ses['uploads'] = uploads
@@ -182,6 +182,7 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
         return redirect(reverse("navigator:task-details", args=(self.project.id, handler.task.id)))
 
     def get_form_class(self):
+        # Add fields from upload script form that are not in base uploadform
         class Form(ArticleSetUploadOptionsForm):
             pass
         for name, field in self.get_script().form_class.base_fields.items():
