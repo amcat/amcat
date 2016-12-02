@@ -77,22 +77,6 @@ class TestProject(amcattest.AmCATTestCase):
         self.assertEqual(len(p2.get_codingschemas().filter(pk=cs.id)), 1)
         self.assertEqual(len(p3.get_codingschemas().filter(pk=cs.id)), 0)
 
-    @amcattest.use_elastic
-    def test_get_mediums(self):
-        set1 = amcattest.create_test_set(2)
-        set2 = amcattest.create_test_set(2, project=set1.project)
-        set3 = amcattest.create_test_set(2)
-        [s.refresh_index() for s in [set1, set2, set3]]
-
-        media = set(set1.project.get_mediums())
-        self.assertEqual(
-            set(set1.project.get_mediums()),
-            { a.medium for a in set1.articles.all() } | { a.medium for a in set2.articles.all() }
-        )
-
-        # can we get_mediums on an empty project?
-        self.assertEqual(list(amcattest.create_test_project().get_mediums()), [])
-
 
 class TestRecentProjects(amcattest.AmCATTestCase):
     def setUp(self):
