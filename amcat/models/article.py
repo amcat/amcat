@@ -240,7 +240,7 @@ class Article(AmcatModel):
 
     @classmethod
     def create_articles(cls, articles, articleset=None, articlesets=None, deduplicate=True,
-                        monitor=ProgressMonitor()):
+                        monitor=None):
         """
         Add the given articles to the database, the index, and the given set
 
@@ -249,6 +249,8 @@ class Article(AmcatModel):
         @param articles: a collection of objects with the necessary properties (.title etc)
         @param articleset(s): articleset object(s), specify either or none
         """
+        monitor = (monitor or ProgressMonitor(total=1)).submonitor(total=5)
+
         if articlesets is None:
             articlesets = [articleset] if articleset else []
             
@@ -268,29 +270,47 @@ class Article(AmcatModel):
 
         # check dupes based on hash
         if hashes:
+            monitor.update(message="Checking duplicates based on hash..")
             results = Article.objects.filter(hash__in=hashes.keys()).only("hash")
             for orig in results:
                 dupe = hashes[orig.hash]
                 dupe.duplicate = orig
                 dupe.id = orig.id
+        else:
+            monitor.update()
 
         # now we can save the articles and set id
         to_insert = [a for a in articles if not a.duplicate]
+        monitor.update(message="Inserting {} articles into database..".format(len(to_insert)))
         if to_insert:
             result = bulk_insert_returning_ids(to_insert)
             for a, inserted in zip(to_insert, result):
                 a.id = inserted.id
             dicts = [a.get_article_dict(sets=[aset.id for aset in articlesets]) for a in to_insert]
-            amcates.ES().bulk_insert(dicts, batch_size=100)
+            amcates.ES().bulk_insert(dicts, batch_size=100, monitor=monitor)
+        else:
+            monitor.update()
+
+        if not articlesets:
+            monitor.update(2)
+            return articles
 
         # add new articles and duplicates to articlesets
+        monitor.update(message="Adding articles to {} articlesets..".format(len(articlesets)))
         new_ids = {a.id for a in to_insert}
         dupes = {a.duplicate.id for a in articles if a.duplicate} - new_ids
+        submon = monitor.submonitor(len(articlesets) * 2)
         for aset in articlesets:
             if new_ids:
-                aset.add_articles(new_ids, add_to_index=False)
+                aset.add_articles(new_ids, add_to_index=False, monitor=submon)
+            else:
+                submon.update()
+
             if dupes:
-                aset.add_articles(dupes, add_to_index=True)
+                aset.add_articles(dupes, add_to_index=True, monitor=submon)
+            else:
+                submon.update()
+
         return articles
 
 

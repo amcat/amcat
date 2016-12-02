@@ -75,7 +75,7 @@ class ArticleSet(AmcatModel):
         from amcat.tools.amcates import ES
         return ES().count(filters={"sets": self.id})
 
-    def add_articles(self, articles, add_to_index=True, monitor=ProgressMonitor()):
+    def add_articles(self, article_ids, add_to_index=True, monitor=None):
         """
         Add the given articles to this articleset. Implementation is exists of three parts:
 
@@ -83,30 +83,35 @@ class ArticleSet(AmcatModel):
           2. Adding CodedArticle objects
           3. Updating index
 
-        @param articles: articles to be removed
-        @type articles: iterable with indexing of integers or Article objects
+        @param article_ids: articles to be removed
+        @type article_ids: iterable with indexing of integers or Article objects
 
         @param add_to_index: notify elasticsearch of changes
         @type add_to_index: bool
         """
-        articles = {(art if type(art) is int else art.id) for art in articles}
-        to_add = articles - self.get_article_ids()
+        monitor = (monitor or ProgressMonitor(total=1)).submonitor(total=4)
+
+        article_ids = {(art if type(art) is int else art.id) for art in article_ids}
+
         # Only use articles that exist
+        to_add = article_ids - self.get_article_ids()
         to_add = list(Article.exists(to_add))
 
-        monitor.update(10, "{n} articles need to be added".format(n=len(to_add)))
+        monitor.update(message="Adding {n} articles to {aset}..".format(n=len(to_add), aset=self))
         ArticleSetArticle.objects.bulk_create(
             [ArticleSetArticle(articleset=self, article_id=artid) for artid in to_add],
             batch_size=100,
         )
 
-        monitor.update(20, "{n} articleset articles added to database, adding to codingjobs".format(n=len(to_add)))
+        monitor.update(message="{n} articleset articles added to database, adding to codingjobs..".format(n=len(to_add)))
         cjarts = [CodedArticle(codingjob=c, article_id=a) for c, a in itertools.product(self.codingjob_set.all(), to_add)]
         CodedArticle.objects.bulk_create(cjarts)
 
-        monitor.update(30, "{n} articles added to codingjobs, adding to index".format(n=len(cjarts)))
         if add_to_index:
+            monitor.update(message="{n} articles added to codingjobs, adding to index".format(n=len(cjarts)))
             amcates.ES().add_to_set(self.id, to_add, monitor=monitor)
+        else:
+            monitor.update(2)
 
     def add(self, *articles):
         """add(*a) is an alias for add_articles(a)"""

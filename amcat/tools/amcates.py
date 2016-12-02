@@ -502,14 +502,21 @@ class ES(object):
         for batch in splitlist(article_ids, itemsperbatch=1000):
             self.bulk_update(batch, UPDATE_SCRIPT_REMOVE_FROM_SET, params={'set': setid})
 
-    def add_to_set(self, setid, article_ids, monitor=ProgressMonitor()):
+    def add_to_set(self, setid, article_ids, monitor=None):
         """Add the given articles to the given set. This is done in batches, so there
         is no limit on the length of article_ids (which can be a generator)."""
-        if not article_ids: return
+
+        if not article_ids:
+            if monitor:
+                monitor.update()
+            return
+
         batches = list(splitlist(article_ids, itemsperbatch=1000))
+        monitor = (monitor or ProgressMonitor(total=1)).submonitor(total=len(batches))
+
         nbatches = len(batches)
         for i, batch in enumerate(batches):
-            monitor.update(40/nbatches, "Added batch {iplus}/{nbatches}".format(iplus=i+1, **locals()))
+            monitor.update(message="Adding batch {iplus}/{nbatches}..".format(iplus=i+1, nbatches=nbatches))
             self.bulk_update(batch, UPDATE_SCRIPT_ADD_TO_SET, params={'set' : setid})
 
     def term_vector(self, aid, fields=["text", "title"]):
@@ -523,17 +530,15 @@ class ES(object):
         _, data = self.es.transport.perform_request('GET', url, params={"fields": fields})
         return data
             
-    def bulk_insert(self, dicts, batch_size=1000, monitor=ProgressMonitor()):
+    def bulk_insert(self, dicts, batch_size=1000, monitor=None):
         """
         Bulk insert the given articles in batches of batch_size
         """
-        if batch_size:
-            batches = list(toolkit.splitlist(dicts, itemsperbatch=batch_size))
-        else:
-            batches = [dicts]
+        batches = list(toolkit.splitlist(dicts, itemsperbatch=batch_size)) if batch_size else [dicts]
+        monitor = (monitor or ProgressMonitor(total=1)).submonitor(total=len(batches))
         nbatches = len(batches)
         for i, batch in enumerate(batches):
-            monitor.update(40/nbatches, "Added batch {iplus}/{nbatches}".format(iplus=i+1, **locals()))
+            monitor.update(1, "Adding batch {iplus}/{nbatches}".format(iplus=i+1, **locals()))
             props, articles = set(), {}
             for d in batch:
                 props |= (set(d.keys()) - ALL_FIELDS)

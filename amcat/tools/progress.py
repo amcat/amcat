@@ -23,10 +23,10 @@ from typing import Optional
 
 log = logging.getLogger(__name__)
 
-LOG_FORMAT = "[{name}{percent}%] {self.worked} / {self.total} {self.message!r}"
+LOG_FORMAT = "[{name}{percent:0.1f}%] {self.message}"
 
 class ProgressMonitor(object):
-    def __init__(self, total=100, message="In progress", name=None, log=True):
+    def __init__(self, total, message="In progress", name=None, log=True):
         self.total = total
         self.message = message
         self.worked = 0

@@ -56,7 +56,7 @@ class TestArticleSet(amcattest.AmCATTestCase):
         Article.create_articles(arts, s)
         ES().flush()
         self.assertEqual(len(arts), s.get_count())
-        s2.add_articles(arts, monitor=ProgressMonitor())
+        s2.add_articles(arts))
         ES().flush()
         self.assertEqual(len(arts), s2.get_count())
         print(s2.get_count())
