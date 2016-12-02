@@ -110,8 +110,7 @@ class CodingAggregationActionForm(QueryActionForm):
             return None
 
         if field_value in POSTGRES_DATE_TRUNC_VALUES:
-            return aggregate_orm.IntervalCategory(field_value, prefix=prefix)
-
+            return aggregate_orm.IntervalCategory(interval=field_value, prefix=prefix)
 
         if field_value == "articleset":
             return aggregate_orm.ArticleSetCategory(prefix=prefix)

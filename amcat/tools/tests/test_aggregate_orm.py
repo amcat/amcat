@@ -274,7 +274,7 @@ class TestAggregateORM(TransactionTestCase):
 
         # Two categories + 2 values
         result = set(aggr.get_aggregate(
-            categories=[MediumCategory(), SchemafieldCategory(self.codef)],
+            categories=[ArticleFieldCategory.from_field_name("medium"), SchemafieldCategory(self.codef)],
             values=[AverageValue(self.intf), CountArticlesValue()]
         ))
 
