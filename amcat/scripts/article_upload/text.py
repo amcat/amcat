@@ -31,44 +31,14 @@ import os.path, tempfile, subprocess
 from django import forms
 from django.contrib.postgres.forms import JSONField
 
-from amcat.scripts.article_upload.upload import UploadScript
-from amcat.scripts.article_upload import fileupload
+from amcat.scripts.article_upload.upload import UploadScript, UploadForm
 
 from amcat.models.article import Article
 from amcat.tools import toolkit
 from django.core.exceptions import ValidationError
 
 from PyPDF2 import PdfFileReader
-
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
-
-class TextForm(UploadScript.options_form, fileupload.ZipFileUploadForm):
-    file = forms.FileField(
-        help_text="You can also upload a zip file containing the desired files. Uploading very large files can take a long time. If you encounter timeout problems, consider uploading smaller files",
-        required=False)
-
-    title = forms.CharField(required=False,
-                               help_text='If left blank, use filename (without extension and optional date prefix) as title')
-    date = forms.DateField(required=False,
-                           help_text='If left blank, use date from filename, which should be of form "yyyy-mm-dd_name"')
-    text = forms.CharField(widget=forms.Textarea, required=False)
-    properties = JSONField(required=False, help_text='Enter additional properties as a valid json string')
-    
-    def get_entries(self):
-        if 'file' in self.files:
-            return super(TextForm, self).get_entries()
-        return [None]
-
-    def clean_text(self):
-        text = self.cleaned_data.get("text")
-        if not (text and text.strip()):
-            if 'file' not in self.files:
-                raise ValidationError("Please either upload a file or provide the text")
-        return text
-
+from io import StringIO
 
 def _convert_docx(file):
     text, err = toolkit.execute("docx2txt", file.bytes)
@@ -85,10 +55,6 @@ def _convert_doc(file):
     if not text.strip():
         raise Exception("No text from {antiword?}")
     return text.decode("utf-8")
-
-
-
-
 
 def _convert_pdf(file):
     _file = StringIO()
@@ -123,14 +89,16 @@ class Text(UploadScript):
 
     Files in .docx, .doc, or .pdf format will be automatically converted to plain text.
     """
-    options_form = TextForm
 
+    class form_class(UploadForm):
+         date = forms.DateField(required=False)
+    
     def get_headline_from_file(self):
         hl = self.options['file'].name
         if hl.endswith(".txt"): hl = hl[:-len(".txt")]
         return hl
 
-    def parse_document(self, file):
+    def parse_file(self, file):
         if file:
             dirname, filename = os.path.split(file.name)
             filename, ext = os.path.splitext(filename)

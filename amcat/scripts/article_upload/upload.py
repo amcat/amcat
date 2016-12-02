@@ -88,6 +88,7 @@ class UploadForm(forms.Form):
 
     def validate(self):
         return self.is_valid()
+    
 class UploadScript(ActionForm):
     """Base class for Upload Scripts, which are scraper scripts driven by the
     the script input.
