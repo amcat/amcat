@@ -1,5 +1,5 @@
 import datetime
-from amcat.models import Language, Medium
+from amcat.models import Language
 from amcat.scripts.forms.selection import DAY_DELTA, SelectionForm
 from amcat.tools import amcattest
 from amcat.tools.toolkit import to_datetime
