@@ -109,6 +109,11 @@ class Article(AmcatModel):
 
         self._highlighted = False
 
+    def __setattr__(self, key, value):
+        if not key.startswith("_") and key not in self.get_static_fields():
+            raise ValueError("You are setting Article.{} = {}. This is probably not what you want. Please use Article.set_property.".format(key, value))
+        super(Article, self).__setattr__(key, value)
+
     class Meta():
         db_table = 'articles'
         app_label = 'amcat'
@@ -126,7 +131,7 @@ class Article(AmcatModel):
     @classmethod
     @functools.lru_cache()
     def get_static_fields(cls):
-        return frozenset(f.name for f in cls._meta.fields)
+        return frozenset(f.name for f in cls._meta.fields) | frozenset(["project_id"])
 
     @classmethod
     def fromdict(cls, properties: Dict[str, Any]):
@@ -259,7 +264,7 @@ class Article(AmcatModel):
         """
         Add the given articles to the database, the index, and the given set
 
-        Duplicates are detected and have .duplicate and .id set (and are added to sets)
+        Duplicates are detected and have ._duplicate and .id set (and are added to sets)
 
         @param articles: a collection of objects with the necessary properties (.title etc)
         @param articleset(s): articleset object(s), specify either or none
@@ -269,33 +274,33 @@ class Article(AmcatModel):
         if articlesets is None:
             articlesets = [articleset] if articleset else []
             
-        # Iterate over articles, mark duplicates within addendum and build hashes dictionaries
+        # Iterate over articles, mark _duplicates within addendum and build hashes dictionaries
         hashes = {} # {hash: article}
         for a in articles:
             if a.id:
                 raise ValueError("Specifying explicit article ID in save not allowed")
             a.compute_hash()
-            a.duplicate = None # innocent until proven guilty
+            a._duplicate = None # innocent until proven guilty
             if not deduplicate:
                 continue
             if a.hash in hashes:
-                a.duplicate = hashes[a.hash]
+                a._duplicate = hashes[a.hash]
             else:
                 hashes[a.hash] = a
 
         # check dupes based on hash
         if hashes:
-            monitor.update(message="Checking duplicates based on hash..")
+            monitor.update(message="Checking _duplicates based on hash..")
             results = Article.objects.filter(hash__in=hashes.keys()).only("hash")
             for orig in results:
                 dupe = hashes[orig.hash]
-                dupe.duplicate = orig
+                dupe._duplicate = orig
                 dupe.id = orig.id
         else:
             monitor.update()
 
         # now we can save the articles and set id
-        to_insert = [a for a in articles if not a.duplicate]
+        to_insert = [a for a in articles if not a._duplicate]
         monitor.update(message="Inserting {} articles into database..".format(len(to_insert)))
         if to_insert:
             result = bulk_insert_returning_ids(to_insert)
@@ -310,10 +315,10 @@ class Article(AmcatModel):
             monitor.update(2)
             return articles
 
-        # add new articles and duplicates to articlesets
+        # add new articles and _duplicates to articlesets
         monitor.update(message="Adding articles to {} articlesets..".format(len(articlesets)))
         new_ids = {a.id for a in to_insert}
-        dupes = {a.duplicate.id for a in articles if a.duplicate} - new_ids
+        dupes = {a._duplicate.id for a in articles if a._duplicate} - new_ids
         submon = monitor.submonitor(len(articlesets) * 2)
         for aset in articlesets:
             if new_ids:
