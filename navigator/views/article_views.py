@@ -241,10 +241,7 @@ def handle_split(form, project, article, sentences):
 def copy_article(article):
     new = Article.objects.get(id=article.id)
     new.id = None
-    new.uuid = None
     new.text = ""
-    new.length = None
-    new.byline = None
     return new
 
 def _get_sentences(sentences, prev_parnr=1):
