@@ -125,8 +125,15 @@ class Article(AmcatModel):
         return self.properties
 
     def set_property(self, key: str, value: Any):
-        properties = self.get_properties()
-        properties[key] = value
+        """
+        Set property on this article regardless of whether it is a 'real' property or a 'fake'
+        one stored in Article.properties.
+        """
+        if key in self.get_static_fields():
+            setattr(self, key, value)
+        else:
+            properties = self.get_properties()
+            properties[key] = value
 
     @classmethod
     @functools.lru_cache()
