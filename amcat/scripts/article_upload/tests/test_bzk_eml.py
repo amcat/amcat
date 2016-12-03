@@ -3,7 +3,7 @@ from amcat.scripts.article_upload.bzk_eml import BZKEML
 from amcat.tools import amcattest
 
 
-class TestBZK(amcattest.AmCATTestCase):
+class TestBZKEML(amcattest.AmCATTestCase):
     def setUp(self):
         from django.core.files import File
         import os.path

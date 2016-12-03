@@ -27,7 +27,6 @@ from datetime import timedelta
 
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.tools.toolkit import read_date
-from amcat.models.medium import Medium
 from amcat.models.article import Article
 from amcat.scripts.article_upload.bzk_aliases import BZK_ALIASES
 
@@ -55,8 +54,8 @@ class BZKEML(UploadScript):
 
         while True:  #loop through lines up to and including headline
             line = lines.pop(0)
-            if line.isupper():  #headline
-                article.headline = line
+            if line.isupper():
+                article.title = line
                 break
             elif line:  #first non-empty line, contains metadata
                 data = line.split(", ")
@@ -77,8 +76,8 @@ class BZKEML(UploadScript):
                     medium_str = BZK_ALIASES[data[1]]
                 else:
                     medium_str = data[2]
-                article.medium = Medium.get_or_create(medium_str)
-                article.section = data[1]
+                article.set_property("medium", medium_str)
+                article.set_property("section", data[1])
 
         paragraphs = []
         paragraph = ""
