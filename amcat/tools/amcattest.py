@@ -39,6 +39,7 @@ from functools import wraps
 from urllib.parse import urljoin
 from uuid import uuid4
 
+import dateparser
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import TestCase
 from splinter import Browser
@@ -154,7 +155,7 @@ def create_test_article(create=True, articleset=None, deduplicate=True, **kargs)
     if 'title' in kargs: kargs['title'] = kargs.pop('title')
     
     if "date" in kargs and isinstance(kargs["date"], str):
-        kargs["date"] = read_date(kargs["date"])
+        kargs["date"] = dateparser.parse(kargs["date"], date_formats=['%Y-%m-%d', '%d-%m-%Y'], settings={'STRICT_PARSING': True})
 
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "date" not in kargs: kargs["date"] = datetime.date(2000, 1, 1)
