@@ -91,7 +91,22 @@ class Article(AmcatModel):
     properties = JSONField(null=True, blank=True)
     
     def __init__(self, *args, **kwargs):
+        if args and kwargs:
+            raise ValueError("Specify either non-keyword args or keyword args.")
+
+        properties = None
+        if kwargs:
+            properties = {}
+            static_fields = self.__class__.get_static_fields()
+            for field in list(kwargs):
+                if field not in static_fields:
+                    properties[field] = kwargs.pop(field)
+
         super(Article, self).__init__(*args, **kwargs)
+
+        if properties:
+            self.get_properties().update(properties)
+
         self._highlighted = False
 
     class Meta():
