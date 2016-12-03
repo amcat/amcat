@@ -38,6 +38,7 @@ except ImportError:
     # Removed in Django 1.9
     MergeDict = dict
 
+
 class Script(object):
     """
     'Abstract' class representing a modular piece of
@@ -53,7 +54,7 @@ class Script(object):
     input_type = None
     options_form = None
 
-    def __init__(self, options=None, monitor=ProgressMonitor(), **kargs):
+    def __init__(self, options=None, monitor=None, **kargs):
         """Default __init__ validates and stores the options form"""
         if self.options_form is None:
             self.options = self.options_raw = None
@@ -61,7 +62,7 @@ class Script(object):
             self.bound_form = self._bind_form(options, **kargs)
             self._validate_form()
             self.options = self.bound_form.cleaned_data
-        self.progress_monitor = monitor
+        self.progress_monitor = monitor or ProgressMonitor()
 
 
     def run(self, input=None):
