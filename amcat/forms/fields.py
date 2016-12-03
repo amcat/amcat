@@ -28,27 +28,11 @@ from amcat.models.user import User
 from django import forms
 from django.db import models
 from django.core.exceptions import ValidationError
-
 import logging
 
 log = logging.getLogger(__name__)
 
-__all__ = ['JSONField', 'UserField', 'CSVField']
-
-
-class JSONField(models.TextField):
-    __metaclass__ = models.SubfieldBase
-
-    def __init__(self, *args, **kwargs):
-        if 'default' not in kwargs:
-            kwargs['default'] = {}
-        super(JSONField, self).__init__(*args, **kwargs)
-
-    def from_db_value(self, value, *args, **kwargs):
-        return json.loads(value)
-
-    def get_prep_value(self, value):
-        return json.dumps(value)
+__all__ = ['UserField', 'CSVField']
 
 
 class UserField(forms.SlugField):

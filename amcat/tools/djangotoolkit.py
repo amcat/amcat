@@ -22,7 +22,6 @@ Useful functions for dealing with django (models)x
 """
 
 import collections
-import json
 import re
 import time
 
@@ -145,22 +144,3 @@ def query_list_to_table(queries, maxqlen=120, output=False, normalise_numbers=Tr
     return t
 
 
-class JsonField(models.Field):
-    __metaclass__ = models.SubfieldBase
-    serialize_to_string = True
-
-    def get_internal_type(self):
-        return "TextField"
-
-    def value_to_string(self, obj):
-        return self.get_prep_value(self._get_val_from_obj(obj))
-
-    def get_prep_value(self, value):
-        if value:
-            return json.dumps(value)
-        return None
-
-    def to_python(self, value):
-        if isinstance(value, str):
-            return json.loads(value)
-        return value

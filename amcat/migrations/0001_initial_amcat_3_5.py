@@ -310,7 +310,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(db_column='query_id', primary_key=True, serialize=False)),
                 ('name', models.TextField()),
-                ('parameters', amcat.forms.fields.JSONField(default={})),
+                ('parameters', django.contrib.postgres.fields.jsonb.JSONField(blank=True, null=True)),
                 ('last_saved', models.DateTimeField(auto_now=True, db_index=True)),
                 ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='amcat.Project')),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
@@ -344,24 +344,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='Scraper',
-            fields=[
-                ('id', models.AutoField(db_column='scraper_id', primary_key=True, serialize=False)),
-                ('module', models.CharField(max_length=100)),
-                ('class_name', models.CharField(max_length=100)),
-                ('label', models.CharField(max_length=100)),
-                ('username', models.CharField(max_length=50, null=True)),
-                ('password', models.CharField(max_length=25, null=True)),
-                ('run_daily', models.BooleanField(default=False)),
-                ('active', models.BooleanField(default=True)),
-                ('statistics', amcat.tools.djangotoolkit.JsonField(null=True)),
-                ('articleset', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='amcat.ArticleSet')),
-            ],
-            options={
-                'db_table': 'scrapers',
-            },
-        ),
-        migrations.CreateModel(
             name='Sentence',
             fields=[
                 ('id', models.AutoField(db_column='sentence_id', primary_key=True, serialize=False)),
@@ -382,7 +364,7 @@ class Migration(migrations.Migration):
                 ('uuid', amcat.tools.model.PostgresNativeUUIDField(blank=True, db_index=True, editable=False, unique=True)),
                 ('handler_class_name', models.TextField()),
                 ('class_name', models.TextField()),
-                ('arguments', amcat.forms.fields.JSONField(default={})),
+                ('arguments', django.contrib.postgres.fields.jsonb.JSONField(default={})),
                 ('issued_at', models.DateTimeField(auto_now_add=True)),
                 ('persistent', models.BooleanField(default=False)),
                 ('project', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='amcat.Project')),

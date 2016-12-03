@@ -27,13 +27,12 @@ import datetime
 
 from django.contrib.auth.models import User
 from celery.result import AsyncResult
-
+from django.contrib.postgres.fields import JSONField
 from django.db import models
 from amcat.models import Project
 from amcat.tools import classtools
 from amcat.tools.caching import cached
 from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
-from amcat.forms.fields import JSONField
 from amcat.amcatcelery import app
 from amcat.tools.usage import log_usage
 

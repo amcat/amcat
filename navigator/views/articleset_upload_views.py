@@ -58,6 +58,11 @@ class ArticleSetUploadScriptHandler(ScriptHandler):
     def get_script(self):
         script_cls = self.task.get_class()
         kwargs = self.get_form_kwargs()
+        print("SCRIPT_CLASS:", script_cls.__name__)
+        print("FROM_CLASS:", script_cls.form_class)
+        print("BASE", script_cls.form_class().base_fields)
+        print("VIS", [field.name for field in script_cls.form_class().visible_fields()])
+        print("HANDLER:", kwargs)
         form = script_cls.form_class(**kwargs)
         return script_cls(form)
 

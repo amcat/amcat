@@ -39,6 +39,3 @@ from amcat.models.coding.code import *
 from amcat.models.coding.codebook import *
 from amcat.models.coding.codedarticle import *
 from amcat.models.coding.codingrule import *
-
-from amcat.models.scraper import *
-

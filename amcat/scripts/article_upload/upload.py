@@ -26,7 +26,7 @@ import os.path
 from typing import Tuple
 
 from django import forms
-from django.contrib.postgres.fields import JSONField
+from django.contrib.postgres.forms import JSONField
 from django.forms.widgets import HiddenInput
 
 from amcat.models import Article, Project, ArticleSet

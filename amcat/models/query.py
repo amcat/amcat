@@ -21,7 +21,7 @@
 
 from django.contrib.auth.models import User
 from django.db import models
-from amcat.forms.fields import JSONField
+from django.contrib.postgres.fields import JSONField
 from amcat.models.articleset import ArticleSet
 from amcat.models.coding.codingjob import CodingJob
 from amcat.tools.model import AmcatModel

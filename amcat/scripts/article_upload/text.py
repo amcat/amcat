@@ -99,6 +99,7 @@ class Text(UploadScript):
         return hl
 
     def parse_file(self, file):
+        print( self.options.items())
         if file:
             dirname, filename = os.path.split(file.name)
             filename, ext = os.path.splitext(filename)
