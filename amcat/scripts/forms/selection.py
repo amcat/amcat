@@ -147,7 +147,7 @@ class SelectionForm(forms.Form):
         @param project: project to generate this form for
         @type project: amcat.models.Project
 
-        @param articlesets: determines limitation of mediums / articlesets
+        @param articlesets: determines limitation of articlesets
         @type articlesets: django.db.QuerySet
         """
         super(SelectionForm, self).__init__(data, *args, **kwargs)

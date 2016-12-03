@@ -21,11 +21,9 @@ class TestSelectionForm(amcattest.AmCATTestCase):
         aset1 = amcattest.create_test_set(2)
         aset2 = amcattest.create_test_set(2, project=aset1.project)
         project = aset1.project
-        medium = aset1.get_mediums()[0]
         _, _, form1 = self.get_form(
             project=project,
             articlesets=[aset1.id, aset2.id],
-            mediums=[medium.id],
             article_ids="1\n2\n3",
             query="abc\ndefg"
         )
@@ -33,7 +31,6 @@ class TestSelectionForm(amcattest.AmCATTestCase):
         _, _, form2 = self.get_form(
             project=project,
             articlesets=[aset2.id, aset1.id],
-            mediums=[medium.id],
             article_ids="1\n3\n2",
             query="abc\ndifferent\nquery"
         )
@@ -87,26 +84,6 @@ class TestSelectionForm(amcattest.AmCATTestCase):
             raise self.failureException(msg)
 
     @amcattest.use_elastic
-    def test_defaults(self):
-        from django.core.cache import cache
-
-        cache.clear()
-
-        set1 = amcattest.create_test_set(1)
-        # should not have any media
-        p, c, form = self.get_form()
-        form.full_clean()
-        self.assertEqual(set(p.get_mediums()), set(form.cleaned_data['mediums']))
-
-        a = amcattest.create_test_article()
-        set1.add(a)
-        set1.refresh_index()
-        # should now have a.medium
-        p, c, form = self.get_form()
-        form.full_clean()
-        self.assertEqual(set(p.get_mediums()), set(form.cleaned_data["mediums"]))
-
-    @amcattest.use_elastic
     def test_clean_article_ids(self):
         p, _, form = self.get_form()
         aset = amcattest.create_test_set(1)
@@ -129,7 +106,7 @@ class TestSelectionForm(amcattest.AmCATTestCase):
         *_clean methods on form."""
         orders = (
             ("start_date", "end_date", "datetype", "on_date"),
-            ("include_all", "articlesets", "mediums", "query"),
+            ("include_all", "articlesets", "query"),
             ("codebook_replacement_language", "codebook_label_language", "codebook"),
             ("articlesets", "article_ids")
         )
