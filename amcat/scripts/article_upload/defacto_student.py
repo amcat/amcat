@@ -27,18 +27,11 @@ import io
 import re
 
 from lxml import etree
-from six import BytesIO
 
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.models.article import Article
-from amcat.models.medium import Medium
-from amcat.tools.djangotoolkit import get_or_create
 from amcat.tools import toolkit
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
 
 class DeFactoStudent(UploadScript):
     def split_file(self, f):
@@ -48,19 +41,21 @@ class DeFactoStudent(UploadScript):
     def _scrape_unit(self, element):
         yield get_article(element)
 
+
 def to_buffer(file):
     if hasattr(file, "read"):
         return file.read()
     return file
 
+
 def get_article(e):
-    headline = get_headline(e)
+    title = get_title(e)
     body = get_body(e)
     medium, date, page = get_meta(e)
     section = get_section(e)
-    medium = get_or_create(Medium, name=medium)
 
-    return Article(headline=headline, text=body, date=date, pagenr=page, section=section, medium=medium)
+    return Article(title=title, text=body, date=date, pagenr=page, section=section,
+                   medium=medium)
 
 
 def parse_ressort(text):
@@ -70,52 +65,53 @@ def parse_ressort(text):
     else:
         raise ValueError("Cannot parse ressort string {text!r}".format(**locals()))
 
+
 def parse_meta(text):
-     m = re.match(r"(.*?)\s*(Nr. \d+)? vom (\d\d\.\d\d\.\d\d\d\d)( \d\d[.:]\d\d\b)?(.*)", text)
-     if not m:
-         raise ValueError("Cannot parse meta string {text!r}".format(**locals()))
-     medium, nr, date, time, pagestr= m.groups()
-     if medium.startswith('"') and medium.endswith('"'):
-         medium = medium[1:-1]
+    m = re.match(r"(.*?)\s*(Nr. \d+)? vom (\d\d\.\d\d\.\d\d\d\d)( \d\d[.:]\d\d\b)?(.*)", text)
+    if not m:
+        raise ValueError("Cannot parse meta string {text!r}".format(**locals()))
+    medium, nr, date, time, pagestr = m.groups()
+    if medium.startswith('"') and medium.endswith('"'):
+        medium = medium[1:-1]
 
-     if time:
-         date = date + time.replace(".", ":")
-     date = toolkit.read_date(date)
-     m = re.search("Seite:? (\d+)", pagestr)
-     if m:
-         page = int(m.group(1))
-     else:
-         page = None
+    if time:
+        date = date + time.replace(".", ":")
+    date = toolkit.read_date(date)
+    m = re.search("Seite:? (\d+)", pagestr)
+    if m:
+        page = int(m.group(1))
+    else:
+        page = None
 
-     return medium, date, page
+    return medium, date, page
 
 
 def get_html(html_bytes):
     parser = etree.HTMLParser()
     return etree.parse(io.BytesIO(html_bytes), parser)
 
+
 def split_html(html):
     return html.xpath("//div[@class='eintrag']")
+
 
 def get_meta(div):
     return parse_meta(div.find("pre").text)
 
 
-def get_headline(div):
+def get_title(div):
     return div.find("h3").text.strip()
+
 
 def get_section(div):
     try:
         return parse_ressort(div.find("pre").text)
     except ValueError:
-        return # no ressort?
+        return  # no ressort?
+
 
 def get_body(div):
     return "\n\n".join(stringify_children(p).strip() for p in div.findall("p")).strip()
-
-if __name__ == '__main__':
-    from amcat.scripts.tools.cli import run_cli
-    run_cli(handle_output=False)
 
 
 def stringify_children(node):
@@ -123,8 +119,14 @@ def stringify_children(node):
     from lxml.etree import tostring
     from itertools import chain
     parts = ([node.text] +
-            list(chain(*([c.text, tostring(c, encoding="utf-8").decode('utf-8'), c.tail] for c in node.getchildren()))) +
-            [node.tail])
+             list(chain(*([c.text, tostring(c, encoding="utf-8").decode('utf-8'), c.tail] for c in
+                          node.getchildren()))) +
+             [node.tail])
     # filter removes possible Nones in texts and tails
     return ''.join(filter(None, parts))
 
+
+if __name__ == '__main__':
+    from amcat.scripts.tools.cli import run_cli
+
+    run_cli(handle_output=False)

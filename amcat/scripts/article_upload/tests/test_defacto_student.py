@@ -1,11 +1,11 @@
 import datetime
 import os
 from amcat.scripts.article_upload.defacto_student import get_html, split_html, get_article, \
-    get_meta, get_headline, get_section, get_body
+    get_meta, get_title, get_section, get_body
 from amcat.tools import amcattest
 
 
-class TestUploadText(amcattest.AmCATTestCase):
+class TestDeFactoStudent(amcattest.AmCATTestCase):
     def setUp(self):
         self.test_dir = os.path.join(os.path.dirname(__file__), 'test_files', 'defacto')
         self.test1 = os.path.join(self.test_dir, 'DeFacto-Campus - Ausdruck1.htm')
@@ -20,7 +20,7 @@ class TestUploadText(amcattest.AmCATTestCase):
     def test_articles(self):
         arts = [get_article(x) for x in split_html(self.test1_html)]
         arts2 = [get_article(x) for x in split_html(self.test2_html)]
-        self.assertEqual(arts2[-1].headline, 'Cafe Puls News 08:00 (08:00) - Peter Kaiser wird angelobt')
+        self.assertEqual(arts2[-1].title, 'Cafe Puls News 08:00 (08:00) - Peter Kaiser wird angelobt')
         self.assertEqual(arts2[-1].date, datetime.datetime(2013,4,2,8,0))
 
 
@@ -29,7 +29,7 @@ class TestUploadText(amcattest.AmCATTestCase):
         elems = split_html(self.test1_html)
 
         self.assertEqual(get_meta(elems[0]), ("Der Standard", datetime.datetime(2013,4,2), 1))
-        self.assertEqual(get_headline(elems[0]), u'SP und VP k\xf6nnten dritte Partei f\xfcr Koalition brauchen')
+        self.assertEqual(get_title(elems[0]), u'SP und VP k\xf6nnten dritte Partei f\xfcr Koalition brauchen')
         self.assertEqual(get_section(elems[0]), u'SEITE 1')
         body = get_body(elems[0])
         self.assertTrue(body.startswith(u'Wien - SP\xd6 und \xd6VP'))
@@ -37,7 +37,7 @@ class TestUploadText(amcattest.AmCATTestCase):
         self.assertEqual(len(body.split("\n\n")), 3) # no of paragraphs
 
         self.assertEqual(get_meta(elems[1]), ("Wiener Zeitung", datetime.datetime(2013,4,2), 3))
-        self.assertEqual(get_headline(elems[1]), u'Politique autrichienne als Vorbild')
+        self.assertEqual(get_title(elems[1]), u'Politique autrichienne als Vorbild')
         self.assertEqual(get_section(elems[1]), 'Europa@welt')
         body = get_body(elems[1])
         self.assertTrue(body.startswith(u'Frankreichs Botschafter'))
