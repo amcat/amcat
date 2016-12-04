@@ -38,6 +38,19 @@ log = logging.getLogger(__name__)
 
 ARTICLE_FIELDS = ("text", "title", "url", "date", "parent_hash")
 
+class ArticleField(object):
+    """
+    Simple 'struct' to hold information about fields in uploaded files
+    in order to build the 'upload options' page
+    """
+    def __init__(self, label, destination=None, values=None, possible_types=None, suggested_type=None):
+        self.label = label  # name in uploaded file
+        self.suggested_destination = destination  # suggested destination model field
+        self.values = values  # top X values  
+        self.possible_types = possible_types  # allowed article property types (text, date, number, integer)
+        self.suggested_type = suggested_type  # suggested article property type
+        
+
 class ParseError(Exception):
     pass 
 
@@ -101,9 +114,9 @@ class UploadScript(ActionForm):
     @classmethod
     def get_fields(cls, file, encoding):
         """
-        Returns a dict, containing at least all fields as keys, and a suggested mapping or None as values.
+        Return a sequence of ArticleField objects listing the fields in the uploaded file(s)
         """
-        return {}
+        return []
     
     def parse_file(self, file):
         raise NotImplementedError()
