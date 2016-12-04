@@ -43,6 +43,7 @@ pytz
 KafNafParserPy
 nlpipe
 rpy2
+iso8601
 
 django-formtools
 django-hash-field

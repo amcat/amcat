@@ -21,18 +21,22 @@
 Model module containing the Article class representing documents in the
 articles database table.
 """
-
+import iso8601
+import json
 import re
 import logging
 
-from typing import Dict, Any
+from typing import Dict, Any, Union
 
 import functools
+
+import datetime
 from django.contrib.postgres.fields import JSONField
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
 from django.template.defaultfilters import escape as escape_filter
 from django_hash_field import HashField
+from psycopg2._json import Json
 
 from amcat.models.authorisation import ROLE_PROJECT_READER
 from amcat.models.authorisation import Role
@@ -41,6 +45,8 @@ from amcat.tools.djangotoolkit import bulk_insert_returning_ids
 from amcat.tools.model import AmcatModel
 from amcat.tools.progress import ProgressMonitor
 from amcat.tools.toolkit import splitlist
+
+from amcat.tools.amcates import get_property_primitive_type
 
 log = logging.getLogger(__name__)
 
@@ -68,6 +74,102 @@ def unescape_em(txt):
             .replace("&lt;/em&gt;", "</em>"))
 
 
+EMPTY = object()
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    """Datetime aware JSON encoder. Credits: http://stackoverflow.com/a/27058505/478503"""
+    def default(self, o):
+        if isinstance(o, datetime.datetime):
+            return o.isoformat()
+        return json.JSONEncoder.default(self, o)
+
+
+class PropertyMapping(dict):
+    """
+    A dictionary where each key is guaranteed to be of type str and each value has a
+    type corresponding to the key based on amcates "get_property_primitive_type" rules.
+    """
+    def __init__(self, E=None, **F):
+        super().__init__()
+        self.update(E, **F)
+
+    def __setitem__(self, key: str, value: Union[str, int, float, datetime.datetime]):
+        # Check for key type
+        if not isinstance(key, str):
+            raise ValueError("{} is not of type str, but is {} instead.".format(key, type(key)))
+
+        # None does not make sense in this context. The caller should use __delitem__ instead.
+        if value is None:
+            raise ValueError("Value can not be None. Delete it instead!")
+
+        # Property types are determined by their name. As a result, we expect that type.
+        expected_type = get_property_primitive_type(key)
+        if not isinstance(value, expected_type):
+            raise ValueError("Expected type {} for key {}. Got {} with type {} instead.".format(
+                expected_type, key, value, type(value)
+            ))
+
+        super().__setitem__(key, value)
+
+    def __repr__(self):
+        return "<{}(props={})>".format(self.__class__.__name__, super(PropertyMapping, self).__repr__())
+
+    def update(self, E=None, **F):
+        """If update() fails, no guarantees are made about the resulting state of the mapping"""
+        if E:
+            for key, value in E.items():
+                self[key] = value
+
+        for key, value in F.items():
+            self[key] = value
+
+    @classmethod
+    def fromdb(cls, d):
+        new = PropertyMapping()
+        for key, value in d.items():
+            expected_type = get_property_primitive_type(key)
+            if expected_type == datetime.datetime:
+                new[key] = iso8601.parse_date(value)
+            else:
+                new[key] = expected_type(value)
+        return new
+
+
+class PropertyField(JSONField):
+    """JSON field specifically made for Article.properties. It knows about the types stored
+    and will convert between them automatically."""
+    empty_strings_allowed = False
+    description = 'A JSON object'
+    default_error_messages = {
+        'invalid': "Value must be a PropertyMapping.",
+    }
+
+    def get_prep_value(self, value):
+        if value is not None:
+            return Json(value, dumps=functools.partial(json.dumps, cls=DateTimeEncoder))
+        return None
+
+    def validate(self, value, model_instance):
+        if value is None:
+            return
+
+        if not isinstance(value, PropertyMapping):
+            raise ValueError("value must be a PropertyMapping")
+
+    def get_default(self):
+        return PropertyMapping()
+
+    def to_python(self, value: PropertyMapping):
+        if not isinstance(value, PropertyMapping):
+            raise ValidationError("Always supply a PropertyMapping when setting Article.properties.")
+        super(PropertyField, self).to_python(value)
+
+    @classmethod
+    def from_db_value(cls, value, expression, connection, context):
+        return PropertyMapping.fromdb(value)
+
+
 class Article(AmcatModel):
     """
     Class representing a newspaper article
@@ -88,15 +190,15 @@ class Article(AmcatModel):
     parent_hash = HashField(null=True, blank=True, max_length=64)
 
     # flexible properties, should be flat str:primitive (json) dict 
-    properties = JSONField(null=True, blank=True)
+    properties = PropertyField(null=False, blank=False)
     
     def __init__(self, *args, **kwargs):
         if args and kwargs:
             raise ValueError("Specify either non-keyword args or keyword args.")
 
-        properties = None
+        # Collect properties (non-static fields)
+        properties = {}
         if kwargs:
-            properties = {}
             static_fields = self.__class__.get_static_fields()
             for field in list(kwargs):
                 if field not in static_fields:
@@ -104,10 +206,11 @@ class Article(AmcatModel):
 
         super(Article, self).__init__(*args, **kwargs)
 
-        if properties:
-            self.get_properties().update(properties)
-
+        self.properties.update(properties)
         self._highlighted = False
+
+    def __getattribute__(self, item):
+        return super(Article, self).__getattribute__(item)
 
     def __setattr__(self, key, value):
         if not key.startswith("_") and key not in self.get_static_fields():
@@ -118,11 +221,21 @@ class Article(AmcatModel):
         db_table = 'articles'
         app_label = 'amcat'
 
-    def get_properties(self) -> Dict[str, Any]:
-        """Return an (empty) dict """
-        if self.properties is None:
-            self.properties = {}
+    def get_properties(self):
         return self.properties
+
+    def get_property(self, name, default=EMPTY):
+        """Get article property regardsless whether or not it is defined as a 'real' property
+        or stored in Article.properties."""
+        if name in self.get_static_fields():
+            return getattr(self, name)
+
+        properties = self.get_properties()
+        if name not in properties:
+            if default is EMPTY:
+                raise KeyError("Field {} does not exist on article {}".format(name, self.id))
+            return default
+        return properties[name]
 
     def set_property(self, key: str, value: Any):
         """

@@ -16,13 +16,15 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from iso8601.iso8601 import UTC
+
 from amcat.models import Article, word_len
+from amcat.models import PropertyMapping
 from amcat.tools import amcattest
 from amcat.tools import amcates
-from amcat.tools.amcattest import create_test_article, create_test_set
+from amcat.tools.amcattest import create_test_article
 
 import datetime
-import uuid
 import random
 
 def _setup_highlighting():
@@ -31,6 +33,69 @@ def _setup_highlighting():
     article = create_test_article(text="<p>foo</p>", title="<p>bar</p>")
     ES().flush()
     return article
+
+
+class TestProperties(amcattest.AmCATTestCase):
+    def test_default(self):
+        self.assertEqual(PropertyMapping, type(Article().properties))
+
+    def test_save(self):
+        a = create_test_article()
+
+        now = datetime.datetime.now(tz=UTC)
+        a.properties["now_date"] = now
+        a.properties["progress_num"] = 3.6
+        a.properties["length_int"] = 3
+        a.save()
+
+        a = Article.objects.first()
+
+        self.assertEqual(a.get_property("now_date"), now)
+        self.assertEqual(a.get_property("progress_num"), 3.6)
+        self.assertEqual(a.get_property("length_int"), 3)
+
+        self.assertEqual(a.properties["now_date"], now)
+        self.assertEqual(a.properties["progress_num"], 3.6)
+        self.assertEqual(a.properties["length_int"], 3)
+
+    def test_illegal_assignments(self):
+        a = create_test_article()
+
+        # Test datetype
+        self.assertRaises(ValueError, a.set_property, "now_date", "a")
+        self.assertRaises(ValueError, a.set_property, "now_date", 3)
+        self.assertRaises(ValueError, a.set_property, "now_date", 3.5)
+        a.set_property("now_date", datetime.datetime.now())
+
+        # Test float
+        self.assertRaises(ValueError, a.set_property, "now_num", "a")
+        self.assertRaises(ValueError, a.set_property, "now_num", 3)
+        self.assertRaises(ValueError, a.set_property, "now_num", datetime.datetime.now())
+        a.set_property("now_num", .35)
+
+        # Test default
+        self.assertRaises(ValueError, a.set_property, "now", .305)
+        self.assertRaises(ValueError, a.set_property, "now", 3)
+        self.assertRaises(ValueError, a.set_property, "now", datetime.datetime.now())
+        a.set_property("now", "test")
+
+    def test_update(self):
+        args = {
+            "test_num": 3.6,
+            "test_int": 3,
+            "test": "abc",
+            "date": datetime.datetime.now(tz=UTC)
+        }
+
+        a = create_test_article()
+        a.properties.update(args)
+        a.save()
+
+        self.assertEqual(dict(Article.objects.first().properties), args)
+
+    def test_illegal_update(self):
+        a = create_test_article()
+        self.assertRaises(ValueError, a.properties.update, {"date": 3})
 
 
 class TestArticleHighlighting(amcattest.AmCATTestCase):
