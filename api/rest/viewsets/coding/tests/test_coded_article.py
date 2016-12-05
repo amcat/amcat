@@ -1,4 +1,3 @@
-from amcat.models import CodedArticle
 from amcat.tools import amcattest
 from api.rest.viewsets import CodedArticleSerializer
 
@@ -21,13 +20,15 @@ class TestCodedArticleSerializer(amcattest.AmCATTestCase):
     def test_fields(self):
         c = amcattest.create_test_job()
         a = c.articleset.articles.all()[0]
+
+        a.set_property("length", 3)
+
         ca = c.coded_articles.all()[0]
         s = self._get_serializer(c.coded_articles.all())
 
         self.assertEqual(a.title, s.get_title(ca))
         self.assertEqual(a.date, s.get_date(ca))
         self.assertEqual(a.pagenr, s.get_pagenr(ca))
-        self.assertEqual(a.length, s.get_length(ca))
 
     def test_n_queries(self):
         c = amcattest.create_test_job(10)
@@ -40,4 +41,3 @@ class TestCodedArticleSerializer(amcattest.AmCATTestCase):
             s.get_title(ca3)
             s.get_date(ca3)
             s.get_pagenr(ca3)
-            s.get_length(ca3)

@@ -29,14 +29,15 @@ from api.rest.viewsets.coding.codingjob import CodingJobViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin, ProjectPermission
 from api.rest.viewsets.sentence import SentenceSerializer, SentenceViewSetMixin
 
-
 __all__ = (
     "CodedArticleSerializer", "CodedArticleViewSetMixin", "CodedArticleViewSet",
     "CodedArticleSentenceViewSet")
 
+
 def article_property(property_name):
     def inner(self, coded_article):
-        return getattr(self.get_article(coded_article), property_name)
+        return self.get_article(coded_article).get_property(property_name, default=None)
+
     return inner
 
 
@@ -46,6 +47,7 @@ class CodedArticleSerializer(AmCATModelSerializer):
     pagenr = serializers.SerializerMethodField()
     length = serializers.SerializerMethodField()
     article_id = serializers.SerializerMethodField()
+
     get_title = article_property("title")
     get_date = article_property("date")
     get_pagenr = article_property("pagenr")
@@ -59,15 +61,15 @@ class CodedArticleSerializer(AmCATModelSerializer):
     @cached
     def _get_articles(self):
         aids = self._get_coded_articles().values_list("article__id", flat=True)
-        articles = Article.objects.filter(id__in=aids).only("title", "date", "pagenr", "length")
+        articles = Article.objects.filter(id__in=aids).only("id", "title", "date", "properties")
         return {a.id: a for a in articles}
 
     def get_article(self, coded_article):
         return self._get_articles().get(coded_article.article_id)
 
-
     class Meta:
         model = CodedArticle
+
 
 class CodedArticleViewSetMixin(AmCATViewSetMixin):
     queryset = CodedArticle.objects.all()
@@ -78,25 +80,23 @@ class CodedArticleViewSetMixin(AmCATViewSetMixin):
     class Meta:
         model = CodedArticle
 
+
 class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                           CodedArticleViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     serializer_class = CodedArticleSerializer
-    extra_filters = ("article__pagenr",)
     queryset = CodedArticle.objects.all()
     model = CodedArticle
 
     ordering_mapping = {
         "title": "article__title",
         "date": "article__date",
-        "pagenr": "article__pagenr",
-        "length": "article__length",
         "article_id": "article__id",
         "status": "status__id"
     }
 
     ordering_fields = (('id', "article_id")
-                        + tuple(ordering_mapping.keys())
-                        + tuple(ordering_mapping.values()))
+                       + tuple(ordering_mapping.keys())
+                       + tuple(ordering_mapping.values()))
 
     def filter_queryset(self, queryset):
         qs = super(CodedArticleViewSet, self).filter_queryset(queryset)
@@ -121,4 +121,3 @@ class CodedArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
         article = Article.objects.get(id=self.coded_article.article_id)
         sentences = qs.filter(id__in=sbd.get_or_create_sentences(article))
         return sentences
-

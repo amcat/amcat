@@ -105,6 +105,11 @@ class PropertyMapping(dict):
 
         # Property types are determined by their name. As a result, we expect that type.
         expected_type = get_property_primitive_type(key)
+
+        # Implicitly convert ints to floats (but not the other way around)
+        if expected_type is float and isinstance(value, int):
+            value = float(value)
+
         if not isinstance(value, expected_type):
             raise ValueError("Expected type {} for key {}. Got {} with type {} instead.".format(
                 expected_type, key, value, type(value)

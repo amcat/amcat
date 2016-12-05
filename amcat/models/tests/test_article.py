@@ -69,7 +69,6 @@ class TestProperties(amcattest.AmCATTestCase):
 
         # Test float
         self.assertRaises(ValueError, a.set_property, "now_num", "a")
-        self.assertRaises(ValueError, a.set_property, "now_num", 3)
         self.assertRaises(ValueError, a.set_property, "now_num", datetime.datetime.now())
         a.set_property("now_num", .35)
 
@@ -96,6 +95,12 @@ class TestProperties(amcattest.AmCATTestCase):
     def test_illegal_update(self):
         a = create_test_article()
         self.assertRaises(ValueError, a.properties.update, {"date": 3})
+
+    def test_int_float_conversion(self):
+        a = create_test_article()
+        a.set_property("test_num", 3)
+        self.assertEqual(float, type(a.get_property("test_num")))
+
 
 
 class TestArticleHighlighting(amcattest.AmCATTestCase):
