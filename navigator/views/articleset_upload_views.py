@@ -5,10 +5,12 @@ from tempfile import mkdtemp
 from uuid import uuid4, UUID
 import json
 
+from collections import defaultdict
 from django import forms
 from django.contrib.postgres.forms import JSONField
 from django.core.files.uploadedfile import UploadedFile
 from django.core.urlresolvers import reverse
+from django.forms.formsets import ManagementForm
 from django.http import QueryDict
 from django.shortcuts import redirect
 from django.utils.datastructures import MultiValueDict
@@ -26,14 +28,8 @@ STORAGE_DIR = mkdtemp(prefix="amcat_upload")
 
 class ArticleSetUploadScriptHandler(ScriptHandler):
     def get_redirect(self):
-        aset_ids = self.task._get_raw_result()
-
-        if len(aset_ids) == 1:
-            return reverse("navigator:articleset-details", args=[self.task.project.id, aset_ids[0]]), "View set"
-
-        # Multiple articlesets
-        url = reverse("navigator:articleset-multiple", args=[self.task.project.id])
-        return url + "?set=" + "&set=".join(map(str, aset_ids)), "View sets"
+        aset_id = self.task._get_raw_result()
+        return reverse("navigator:articleset-details", args=[self.task.project.id, aset_id]), "View set"
 
     @classmethod
     def serialize_files(cls, arguments):
@@ -110,18 +106,23 @@ class ArticleUploadFieldForm(forms.Form):
     values = forms.CharField(required=False)
     destination = forms.ChoiceField(choices=[("-", "(don't use)"),
                                              ("title", "Title"),
-                                             ("date", "Date)"),
+                                             ("date", "Date"),
                                              ("text", "Text"),
                                              ("custom", "Custom")])
 
-from django.forms import BaseFormSet
-class ArticleUploadFormSet(BaseFormSet):
-    # WvA: Dit lijkt niet te werken, we kunnen het field erin hacken, maar kan vast ook 'net'
-    # (ik wil dus dit field op 'managementform' niveau, niet op form niveau)
-    # overigens haalt ie de upload_id nu gewoon uit de GET params volgens mij, ook bij POST?
-    upload_id = forms.UUIDField(widget=forms.HiddenInput)
-    
-    
+
+class ArticleUploadFormSet(forms.BaseFormSet):
+    management_initial = ()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.management_initial = dict(self.management_initial)
+
+    @property
+    def management_form(self):
+        mf = super().management_form
+        mf.fields["upload_id"] = forms.UUIDField(initial=self.management_initial.get("upload_id"))
+        return mf
+
 class ArticlesetUploadOptionsView(BaseMixin, FormView):
     parent = ProjectDetailsView
     view_name = "articleset-upload-options"
@@ -154,12 +155,14 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
         for f in self.script_fields:
             values = ",".join(abbrev(x, 20) for x in f.values)
             yield {'label': f.label, 'values': values, 'destination': f.suggested_destination}
+
     def get_initial(self):
         return list(self.initial_data())
         
     def get_form_class(self):
-        from django.forms import formset_factory
-        return formset_factory(ArticleUploadFieldForm, formset=ArticleUploadFormSet)
+        formset = forms.formset_factory(ArticleUploadFieldForm, formset=ArticleUploadFormSet)
+        formset.management_initial = {"upload_id": self.upload_id}
+        return formset
 
     @property
     def upload(self):
@@ -199,14 +202,22 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
             args['files'] = dict(args['files'])
         return args
 
-    def form_valid(self, form):
-        fieldmap = {}
-        for field in form:
+    def get_field_map(self, form):
+        field_map = {}
+        literals = {}
+        for i, field in enumerate(form):
             label = field.cleaned_data['label']
             destination = field.cleaned_data['destination']
             if label and destination and destination != "-":
-                fieldmap[label] = destination
-        args = self.get_script_form_kwargs(self.upload, fieldmap)
+                if i < form.initial_form_count():
+                    field_map[label] = destination
+                else:
+                    literals[destination] = label
+        return {"fields": field_map, "literals": literals}
+
+    def form_valid(self, form):
+        field_map = self.get_field_map(form)
+        args = self.get_script_form_kwargs(self.upload, field_map)
         args = self.clean_script_args(args)
         handler = ArticleSetUploadScriptHandler.call(target_class=self.script_class, arguments=args,
                             project=self.project, user=self.request.user)

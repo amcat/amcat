@@ -396,7 +396,7 @@ class Article(AmcatModel):
         @param articles: a collection of objects with the necessary properties (.title etc)
         @param articleset(s): articleset object(s), specify either or none
         """
-        monitor = (monitor or ProgressMonitor(total=1)).submonitor(total=5)
+        monitor = (monitor or ProgressMonitor(total=1)).submonitor(total=4)
 
         if articlesets is None:
             articlesets = [articleset] if articleset else []
@@ -456,20 +456,19 @@ class Article(AmcatModel):
             return articles
 
         # add new articles and _duplicates to articlesets
-        monitor.update(message="Adding articles to {} articlesets..".format(len(articlesets)))
+        monitor.update(message="Adding articles to articleset..")
         new_ids = {a.id for a in to_insert}
         dupes = {a._duplicate.id for a in articles if a._duplicate} - new_ids
-        submon = monitor.submonitor(len(articlesets) * 2)
         for aset in articlesets:
             if new_ids:
-                aset.add_articles(new_ids, add_to_index=False, monitor=submon)
+                aset.add_articles(new_ids, add_to_index=False, monitor=(monitor))
             else:
-                submon.update()
+                monitor.update()
 
             if dupes:
-                aset.add_articles(dupes, add_to_index=True, monitor=submon)
+                aset.add_articles(dupes, add_to_index=True, monitor=(monitor))
             else:
-                submon.update()
+                monitor.update()
 
         return articles
 

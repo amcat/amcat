@@ -27,7 +27,7 @@ import datetime
 
 from django.contrib.auth.models import User
 from celery.result import AsyncResult
-from django.contrib.postgres.fields import JSONField
+from jsonfield import JSONField
 from django.db import models
 from amcat.models import Project
 from amcat.tools import classtools

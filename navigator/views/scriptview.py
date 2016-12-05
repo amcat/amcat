@@ -56,6 +56,8 @@ class ScriptHandler(TaskHandler):
         - 'data' list entries converted into a querydict.
         - 'files' list entries converted to File objects
         """
+        from logging import getLogger
+        log = getLogger(__name__)
         kwargs = self.task.arguments.copy() # don't modify self.task.arguments['data']
         if 'data' in kwargs:
             d = QueryDict('').copy()
@@ -66,8 +68,6 @@ class ScriptHandler(TaskHandler):
                     d[k] = v
             kwargs['data'] = d
 
-        from logging import getLogger
-        log = getLogger(__name__)
         # Convert file dictionaries (as supplied by get_temporary_file_dict) to
         # SimpleUploadedFile objects which Django understands.
         if 'files' in kwargs:

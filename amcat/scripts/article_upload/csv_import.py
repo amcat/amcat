@@ -23,14 +23,11 @@ Plugin for uploading csv files
 import csv
 import datetime
 import logging
+import itertools
 from io import TextIOWrapper
 
-from django import forms
-from django.contrib.postgres.forms import JSONField
-
 from amcat.models import Article
-from amcat.scripts.article_upload.upload import UploadScript, ParseError, ARTICLE_FIELDS
-from amcat.scripts.article_upload.upload_formtools import get_form_set, FileInfo
+from amcat.scripts.article_upload.upload import UploadScript, ParseError, ARTICLE_FIELDS, ArticleField
 from amcat.tools.toolkit import read_date
 
 log = logging.getLogger(__name__)
@@ -110,43 +107,6 @@ class CSV(UploadScript):
             article_fields["properties"].update((k, v) for k, v in art_dict.items() if k not in ARTICLE_FIELDS)
             yield Article(**article_fields)
 
-    def parse_document(self, row, i=None):
-        properties = {}
-        article = {}
-
-        csvfields = self.options["field_map"]
-        for fieldname, csvfield in csvfields.items():
-            if 'column' in csvfield:
-                colname = csvfield['column']
-                val = row[colname]
-            elif 'value' in csvfield:
-                val = csvfield['value']
-
-            if not val and fieldname in ARTICLE_FIELDS:
-                article[fieldname] = None
-                continue
-
-            field_type = get_field_type(fieldname)
-            if not isinstance(val, field_type):
-                try:
-                    val = get_parser(field_type)(val)
-                except:
-                    raise ParseError(self._errors['parse_value'].format(val, field_type.__name__))
-
-            if fieldname in ARTICLE_FIELDS:
-                article[fieldname] = val
-            else:
-                properties[fieldname] = val
-
-        log.warning(article)
-        for field in get_required():
-            if field not in article or not article[field]:
-                if 'column' in csvfields[field]:
-                    raise ParseError(self._errors['empty_col'].format(csvfields[field]['column'], field))
-
-        article['properties'] = properties
-        return Article(**article)
-
     def split_file(self, file):
         for reader in file:
             yield reader
@@ -157,12 +117,31 @@ class CSV(UploadScript):
     @classmethod
     def get_fields(cls, file, encoding):
         reader = csv.DictReader(TextIOWrapper(file.file, encoding="utf-8"))
-        known_fields = ARTICLE_FIELDS
-        return {k: k if k in known_fields else None for k in reader.fieldnames}
+        values = list(itertools.islice(reader, 0, 5))
+        known_articleset_fields = set() #TODO: get these somehow
+        known_fields = set(ARTICLE_FIELDS) | known_articleset_fields
+
+        for column in reader.fieldnames:
+            article_field = ArticleField(column)
+            if column.lower() in known_fields:
+                article_field.suggested_destination = column.lower()
+            article_field.values = [v[column] for v in values]
+
+            yield article_field
 
     def map_article(self, art_dict):
-        raise NotImplementedError
-
+        mapped_dict = {}
+        field_map = self.options['field_map']["fields"]
+        for k, v in art_dict.items():
+            try:
+                dest = field_map[k]
+            except KeyError:
+                pass
+            else:
+                mapped_dict[dest] = v
+        for k, v in self.options['field_map']["literals"].items():
+            mapped_dict[k] = v
+        return mapped_dict
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli

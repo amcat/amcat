@@ -132,8 +132,8 @@ class UploadScript(ActionForm):
 
         if self.options['articleset_name']:
             aset = create_new_articleset(self.options['articleset_name'], self.project)
-            self.options['articleset'] = (aset,)
-            return (aset,)
+            self.options['articleset'] = aset
+            return aset
 
         return ()
 
@@ -172,7 +172,7 @@ class UploadScript(ActionForm):
         if self.errors:
             raise ParseError(" ".join(map(str, self.errors)))
         monitor.update(10, "All files parsed, saving {n} articles".format(n=len(articles)))
-        Article.create_articles(articles, articlesets=self.get_or_create_articleset(),
+        Article.create_articles(articles, articleset=self.get_or_create_articleset(),
                                 monitor=monitor.submonitor(40))
 
         if not articles:
@@ -180,16 +180,17 @@ class UploadScript(ActionForm):
 
         monitor.update(10, "Uploaded {n} articles, post-processing".format(n=len(articles)))
 
-        for aset in self.articlesets:
-            new_provenance = self.get_provenance(file, articles)
-            aset.provenance = ("%s\n%s" % (aset.provenance or "", new_provenance)).strip()
-            aset.save()
+        aset = self.options["articleset"]
+        log.warning(aset)
+        new_provenance = self.get_provenance(file, articles)
+        aset.provenance = ("%s\n%s" % (aset.provenance or "", new_provenance)).strip()
+        aset.save()
 
         if getattr(self, 'task', None):
             self.task.log_usage("articles", "upload", n=len(articles))
 
         monitor.update(10, "Done! Uploaded articles".format(n=len(articles)))
-        return [a.id for a in self.articlesets]
+        return self.options["articleset"]
 
     def _get_files(self):
         return self.form.get_files()
