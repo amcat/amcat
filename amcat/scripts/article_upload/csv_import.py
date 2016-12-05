@@ -24,9 +24,10 @@ import csv
 import datetime
 import logging
 import itertools
+from collections import defaultdict
 from io import TextIOWrapper
 
-from amcat.models import Article
+from amcat.models import Article, get_property_primitive_type
 from amcat.scripts.article_upload.upload import UploadScript, ParseError, ARTICLE_FIELDS, ArticleField
 from amcat.tools.toolkit import read_date
 
@@ -44,6 +45,7 @@ PARSERS = {
     datetime.datetime: read_date,
     int: int,
     str: str,
+    float: float
 }
 
 
@@ -98,8 +100,10 @@ class CSV(UploadScript):
     def run(self, *args, **kargs):
         return super(CSV, self).run(*args, **kargs)
 
-    def parse_value(self, field, value):
-        return value
+    def parse_value(self, property, value):
+        t = get_property_primitive_type(property)
+        parser = PARSERS[t]
+        return parser(value)
 
     def parse_file(self, file):
         file_name = file.name
