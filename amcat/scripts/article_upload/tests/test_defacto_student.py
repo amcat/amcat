@@ -23,8 +23,6 @@ class TestDeFactoStudent(amcattest.AmCATTestCase):
         self.assertEqual(arts2[-1].title, 'Cafe Puls News 08:00 (08:00) - Peter Kaiser wird angelobt')
         self.assertEqual(arts2[-1].date, datetime.datetime(2013,4,2,8,0))
 
-
-
     def test_parse(self):
         elems = split_html(self.test1_html)
 

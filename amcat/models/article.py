@@ -21,18 +21,25 @@
 Model module containing the Article class representing documents in the
 articles database table.
 """
+import collections
+from typing import List
 
+import iso8601
+import json
 import re
 import logging
 
-from typing import Dict, Any
+from typing import Dict, Any, Union
 
 import functools
+
+import datetime
 from django.contrib.postgres.fields import JSONField
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
 from django.template.defaultfilters import escape as escape_filter
 from django_hash_field import HashField
+from psycopg2._json import Json
 
 from amcat.models.authorisation import ROLE_PROJECT_READER
 from amcat.models.authorisation import Role
@@ -41,6 +48,8 @@ from amcat.tools.djangotoolkit import bulk_insert_returning_ids
 from amcat.tools.model import AmcatModel
 from amcat.tools.progress import ProgressMonitor
 from amcat.tools.toolkit import splitlist
+
+from amcat.tools.amcates import get_property_primitive_type
 
 log = logging.getLogger(__name__)
 
@@ -68,6 +77,108 @@ def unescape_em(txt):
             .replace("&lt;/em&gt;", "</em>"))
 
 
+EMPTY = object()
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    """Datetime aware JSON encoder. Credits: http://stackoverflow.com/a/27058505/478503"""
+    def default(self, o):
+        if isinstance(o, datetime.datetime):
+            return o.isoformat()
+        return json.JSONEncoder.default(self, o)
+
+
+class PropertyMapping(dict):
+    """
+    A dictionary where each key is guaranteed to be of type str and each value has a
+    type corresponding to the key based on amcates "get_property_primitive_type" rules.
+    """
+    def __init__(self, E=None, **F):
+        super().__init__()
+        self.update(E, **F)
+
+    def __setitem__(self, key: str, value: Union[str, int, float, datetime.datetime]):
+        # Check for key type
+        if not isinstance(key, str):
+            raise ValueError("{} is not of type str, but is {} instead.".format(key, type(key)))
+
+        # None does not make sense in this context. The caller should use __delitem__ instead.
+        if value is None:
+            raise ValueError("Value can not be None. Delete it instead!")
+
+        # Property types are determined by their name. As a result, we expect that type.
+        expected_type = get_property_primitive_type(key)
+
+        # Implicitly convert ints to floats (but not the other way around)
+        if expected_type is float and isinstance(value, int):
+            value = float(value)
+
+        if not isinstance(value, expected_type):
+            raise ValueError("Expected type {} for key {}. Got {} with type {} instead.".format(
+                expected_type, key, value, type(value)
+            ))
+
+        super().__setitem__(key, value)
+
+    def __repr__(self):
+        return "<{}(props={})>".format(self.__class__.__name__, super(PropertyMapping, self).__repr__())
+
+    def update(self, E=None, **F):
+        """If update() fails, no guarantees are made about the resulting state of the mapping"""
+        if E:
+            for key, value in E.items():
+                self[key] = value
+
+        for key, value in F.items():
+            self[key] = value
+
+    @classmethod
+    def fromdb(cls, d):
+        new = PropertyMapping()
+        for key, value in d.items():
+            expected_type = get_property_primitive_type(key)
+            if expected_type == datetime.datetime:
+                new[key] = iso8601.parse_date(value)
+            else:
+                new[key] = expected_type(value)
+        return new
+
+
+class PropertyField(JSONField):
+    """JSON field specifically made for Article.properties. It knows about the types stored
+    and will convert between them automatically."""
+    empty_strings_allowed = False
+    description = 'A JSON object'
+    default_error_messages = {
+        'invalid': "Value must be a PropertyMapping.",
+    }
+
+    def get_prep_value(self, value):
+        if value is not None:
+            return Json(value, dumps=functools.partial(json.dumps, cls=DateTimeEncoder))
+        return None
+
+    def validate(self, value, model_instance):
+        if value is None:
+            return
+
+        if not isinstance(value, PropertyMapping):
+            raise ValueError("value must be a PropertyMapping")
+
+    def get_default(self):
+        return PropertyMapping()
+
+    def to_python(self, value: PropertyMapping):
+        if not isinstance(value, PropertyMapping):
+            raise ValidationError("Always supply a PropertyMapping or dict when setting Article.properties.")
+
+        return super(PropertyField, self).to_python(value)
+
+    @classmethod
+    def from_db_value(cls, value, expression, connection, context):
+        return PropertyMapping.fromdb(value)
+
+
 class Article(AmcatModel):
     """
     Class representing a newspaper article
@@ -88,41 +199,50 @@ class Article(AmcatModel):
     parent_hash = HashField(null=True, blank=True, max_length=64)
 
     # flexible properties, should be flat str:primitive (json) dict 
-    properties = JSONField(null=True, blank=True)
-    
+    properties = PropertyField(null=False, blank=False)
+
     def __init__(self, *args, **kwargs):
         if args and kwargs:
             raise ValueError("Specify either non-keyword args or keyword args.")
 
-        properties = None
-        if kwargs:
-            properties = {}
-            static_fields = self.__class__.get_static_fields()
-            for field in list(kwargs):
-                if field not in static_fields:
-                    properties[field] = kwargs.pop(field)
+        static_fields = self.get_static_fields()
+        if any(k not in static_fields for k in kwargs):
+            raise ValueError("Do not supply flexible fields to Article constructor. Use either "
+                             "Article.set_property or Article.properties.update() instead after "
+                             "instantiating.")
 
         super(Article, self).__init__(*args, **kwargs)
 
-        if properties:
-            self.get_properties().update(properties)
-
         self._highlighted = False
+
+    def __getattribute__(self, item):
+        return super(Article, self).__getattribute__(item)
 
     def __setattr__(self, key, value):
         if not key.startswith("_") and key not in self.get_static_fields():
-            raise ValueError("You are setting Article.{} = {}. This is probably not what you want. Please use Article.set_property.".format(key, value))
+            raise ValueError("You are setting Article.{} = {}. This is probably not what you "
+                             "want. Please use Article.set_property.".format(key, value))
         super(Article, self).__setattr__(key, value)
 
     class Meta():
         db_table = 'articles'
         app_label = 'amcat'
 
-    def get_properties(self) -> Dict[str, Any]:
-        """Return an (empty) dict """
-        if self.properties is None:
-            self.properties = {}
+    def get_properties(self):
         return self.properties
+
+    def get_property(self, name, default=EMPTY):
+        """Get article property regardsless whether or not it is defined as a 'real' property
+        or stored in Article.properties."""
+        if name in self.get_static_fields():
+            return getattr(self, name)
+
+        properties = self.get_properties()
+        if name not in properties:
+            if default is EMPTY:
+                raise KeyError("Field {} does not exist on article {}".format(name, self.id))
+            return default
+        return properties[name]
 
     def set_property(self, key: str, value: Any):
         """
@@ -138,7 +258,7 @@ class Article(AmcatModel):
     @classmethod
     @functools.lru_cache()
     def get_static_fields(cls):
-        return frozenset(f.name for f in cls._meta.fields) | frozenset(["project_id"])
+        return frozenset(f.name for f in cls._meta.fields) | frozenset(["project_id", "project"])
 
     @classmethod
     def fromdict(cls, properties: Dict[str, Any]):
@@ -204,7 +324,7 @@ class Article(AmcatModel):
                 return Article.objects.get(hash=self.parent_hash)
             except Article.DoesNotExist:
                 pass
-    
+
     def save(self, *args, **kwargs):
         if self._highlighted:
             raise ValueError("Cannot save a highlighted article.")
@@ -255,7 +375,7 @@ class Article(AmcatModel):
             raise ValueError("Incorrect hash specified")
         self.hash = hash
         return hash
-    
+
     @classmethod
     def exists(cls, article_ids, batch_size=500):
         """
@@ -280,33 +400,41 @@ class Article(AmcatModel):
 
         if articlesets is None:
             articlesets = [articleset] if articleset else []
-            
-        # Iterate over articles, mark _duplicates within addendum and build hashes dictionaries
-        hashes = {} # {hash: article}
-        for a in articles:
-            if a.id:
-                raise ValueError("Specifying explicit article ID in save not allowed")
-            a.compute_hash()
-            a._duplicate = None # innocent until proven guilty
-            if not deduplicate:
-                continue
-            if a.hash in hashes:
-                a._duplicate = hashes[a.hash]
-            else:
-                hashes[a.hash] = a
 
-        # check dupes based on hash
-        if hashes:
-            monitor.update(message="Checking _duplicates based on hash..")
-            results = Article.objects.filter(hash__in=hashes.keys()).only("hash")
-            for orig in results:
-                dupe = hashes[orig.hash]
-                dupe._duplicate = orig
-                dupe.id = orig.id
+        # Check for ids
+        for a in articles:
+            if a.id is not None:
+                raise ValueError("Specifying explicit article ID in save not allowed")
+
+        # Compute hashes, mark all articles as non-duplicates
+        for a in articles:
+            a.compute_hash()
+            a._duplicate = None
+
+        # Determine which articles are dupes of each other, *then* query the database
+        # to check if the database has any articles we just got.
+        if deduplicate:
+            hashes = collections.defaultdict(list)  # type: Dict[bytes, List[Article]]
+
+            for a in articles:
+                if a.hash in hashes:
+                    a._duplicate = hashes[a.hash][0]
+                else:
+                    hashes[a.hash].append(a)
+
+            # Check database for duplicates
+            if hashes:
+                monitor.update(message="Checking _duplicates based on hash..")
+                results = Article.objects.filter(hash__in=hashes.keys()).only("hash")
+                for orig in results:
+                    dupes = hashes[orig.hash]
+                    for dupe in dupes:
+                        dupe._duplicate = orig
+                        dupe.id = orig.id
         else:
             monitor.update()
 
-        # now we can save the articles and set id
+        # Save all non-duplicates
         to_insert = [a for a in articles if not a._duplicate]
         monitor.update(message="Inserting {} articles into database..".format(len(to_insert)))
         if to_insert:
@@ -317,6 +445,11 @@ class Article(AmcatModel):
             amcates.ES().bulk_insert(dicts, batch_size=100, monitor=monitor)
         else:
             monitor.update()
+
+        # At this point we can still have internal duplicates. Give them an ID as well.
+        for article in articles:
+            if article.id is None and article._duplicate is not None:
+                article.id = article._duplicate.id
 
         if not articlesets:
             monitor.update(2)
@@ -348,7 +481,7 @@ def _check_read_access(user, aids):
 
     sets = list(ArticleSet.articles.through.objects.filter(article_id__in=aids).values_list("articleset_id", "article_id"))
     setids = {setid for (setid, aid) in sets}
-    
+
     # get project memberships
     ok_sets = set()
     project_cache = {} # pid : True / False
@@ -361,7 +494,7 @@ def _check_read_access(user, aids):
     asets = [ArticleSet.objects.filter(pk__in=setids).values_list("pk", "project_id"),
              Project.articlesets.through.objects.filter(articleset_id__in=setids)
              .values_list("articleset_id", "project_id")]
-    
+
     for aset in asets:
         for sid, pid in aset:
             if project_ok(pid):
@@ -376,6 +509,6 @@ def _check_read_access(user, aids):
     if aids - ok_articles:
         logging.info("Permission denied for {user}, articles {}".format(aids - ok_articles, **locals()))
         raise PermissionDenied("User does not have full read access on (some) of the selected articles")
-    
-    
-    
+
+
+

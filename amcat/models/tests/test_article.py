@@ -16,13 +16,15 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from iso8601.iso8601 import UTC
+
 from amcat.models import Article, word_len
+from amcat.models import PropertyMapping
 from amcat.tools import amcattest
 from amcat.tools import amcates
-from amcat.tools.amcattest import create_test_article, create_test_set
+from amcat.tools.amcattest import create_test_article
 
 import datetime
-import uuid
 import random
 
 def _setup_highlighting():
@@ -31,6 +33,74 @@ def _setup_highlighting():
     article = create_test_article(text="<p>foo</p>", title="<p>bar</p>")
     ES().flush()
     return article
+
+
+class TestProperties(amcattest.AmCATTestCase):
+    def test_default(self):
+        self.assertEqual(PropertyMapping, type(Article().properties))
+
+    def test_save(self):
+        a = create_test_article()
+
+        now = datetime.datetime.now(tz=UTC)
+        a.properties["now_date"] = now
+        a.properties["progress_num"] = 3.6
+        a.properties["length_int"] = 3
+        a.save()
+
+        a = Article.objects.first()
+
+        self.assertEqual(a.get_property("now_date"), now)
+        self.assertEqual(a.get_property("progress_num"), 3.6)
+        self.assertEqual(a.get_property("length_int"), 3)
+
+        self.assertEqual(a.properties["now_date"], now)
+        self.assertEqual(a.properties["progress_num"], 3.6)
+        self.assertEqual(a.properties["length_int"], 3)
+
+    def test_illegal_assignments(self):
+        a = create_test_article()
+
+        # Test datetype
+        self.assertRaises(ValueError, a.set_property, "now_date", "a")
+        self.assertRaises(ValueError, a.set_property, "now_date", 3)
+        self.assertRaises(ValueError, a.set_property, "now_date", 3.5)
+        a.set_property("now_date", datetime.datetime.now())
+
+        # Test float
+        self.assertRaises(ValueError, a.set_property, "now_num", "a")
+        self.assertRaises(ValueError, a.set_property, "now_num", datetime.datetime.now())
+        a.set_property("now_num", .35)
+
+        # Test default
+        self.assertRaises(ValueError, a.set_property, "now", .305)
+        self.assertRaises(ValueError, a.set_property, "now", 3)
+        self.assertRaises(ValueError, a.set_property, "now", datetime.datetime.now())
+        a.set_property("now", "test")
+
+    def test_update(self):
+        args = {
+            "test_num": 3.6,
+            "test_int": 3,
+            "test": "abc",
+            "date": datetime.datetime.now(tz=UTC)
+        }
+
+        a = create_test_article()
+        a.properties.update(args)
+        a.save()
+
+        self.assertEqual(dict(Article.objects.first().properties), args)
+
+    def test_illegal_update(self):
+        a = create_test_article()
+        self.assertRaises(ValueError, a.properties.update, {"date": 3})
+
+    def test_int_float_conversion(self):
+        a = create_test_article()
+        a.set_property("test_num", 3)
+        self.assertEqual(float, type(a.get_property("test_num")))
+
 
 
 class TestArticleHighlighting(amcattest.AmCATTestCase):
@@ -76,8 +146,6 @@ def _q(**filters):
     return set(amcates.ES().query_ids(filters=filters))
     
 class TestArticle(amcattest.AmCATTestCase):
-        
-        
     @amcattest.use_elastic
     def test_create(self):
         """Can we create/store/index an article object?"""
@@ -93,17 +161,6 @@ class TestArticle(amcattest.AmCATTestCase):
         self.assertEqual('2010-12-31T00:00:00', db_a.date.isoformat())
         self.assertEqual('2010-12-31T00:00:00', es_a.date.isoformat())
 
-    @amcattest.use_elastic
-    def test_properties(self):
-        s1 = amcattest.create_test_set()
-        a = amcattest.create_test_article(properties=dict(x=1, foo="bar"), articleset=s1)
-        db_a = s1.articles.get()
-        self.assertEqual(db_a.properties, {"x":1, "foo": "bar"})
-
-        illegal_properties = ([1,2], {"id": 1}, {1: 1}, {"test": [1,2,3]})
-        for p in illegal_properties:
-            self.assertRaises(Exception, amcattest.create_test_article, properties=p)
-        
     @amcattest.use_elastic
     def test_deduplication(self):
         """Does deduplication work as it is supposed to?"""
@@ -123,7 +180,7 @@ class TestArticle(amcattest.AmCATTestCase):
         a2 = amcattest.create_test_article(**art)
         amcates.ES().flush()
         self.assertEqual(a2.id, a1.id)
-        self.assertTrue(a2.duplicate)
+        self.assertTrue(a2._duplicate)
         self.assertEqual(_q(title='deduptest'), {a1.id})
 
         # however, if an articleset is given the 'existing' article
@@ -137,7 +194,7 @@ class TestArticle(amcattest.AmCATTestCase):
         self.assertEqual(_q(sets=s1.id), {a1.id})
 
         # if an existing hash is set, it should be correct
-        art2 = dict(hash = b'hash', **art)
+        art2 = dict(hash=b'hash', **art)
         self.assertRaises(ValueError, amcattest.create_test_article, **art2)
 
         #TODO! Check duplicates within new articles
@@ -147,9 +204,6 @@ class TestArticle(amcattest.AmCATTestCase):
         self.assertEqual(a1.id, a2.id)
         self.assertEqual(len(_q(title='internaldupe')), 1)
 
-        
-
-        
     def test_unicode_word_len(self):
         """Does the word counter eat unicode??"""
         u = u'Kim says: \u07c4\u07d0\u07f0\u07cb\u07f9'
@@ -194,4 +248,3 @@ class TestArticle(amcattest.AmCATTestCase):
         
         self.assertEqual(c1.parent, p)
         self.assertEqual(set(p.children), {c1, c2})
-        
