@@ -89,7 +89,7 @@ class ArticleSet(AmcatModel):
         @param add_to_index: notify elasticsearch of changes
         @type add_to_index: bool
         """
-        monitor = ProgressMonitor() #(monitor or ProgressMonitor(total=1)).submonitor(total=4)
+        (monitor or ProgressMonitor(total=1)).submonitor(total=4)
 
         article_ids = {(art if type(art) is int else art.id) for art in article_ids}
 

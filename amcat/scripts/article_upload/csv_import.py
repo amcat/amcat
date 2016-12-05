@@ -98,14 +98,19 @@ class CSV(UploadScript):
     def run(self, *args, **kargs):
         return super(CSV, self).run(*args, **kargs)
 
+    def parse_value(self, field, value):
+        return value
+
     def parse_file(self, file):
         file_name = file.name
         reader = csv.DictReader(TextIOWrapper(file.file, encoding="utf8"))
         for unmapped_dict in reader:
             art_dict = self.map_article(unmapped_dict)
-            article_fields = {"properties": {}, **{k: art_dict[k] for k in ARTICLE_FIELDS if k in art_dict}}
-            article_fields["properties"].update((k, v) for k, v in art_dict.items() if k not in ARTICLE_FIELDS)
-            yield Article(**article_fields)
+            properties = {}
+            for k, v in art_dict.items():
+                v = self.parse_value(k, v)
+                properties[k] = v
+            yield Article.fromdict(properties)
 
     def split_file(self, file):
         for reader in file:
@@ -116,18 +121,19 @@ class CSV(UploadScript):
 
     @classmethod
     def get_fields(cls, file, encoding):
-        reader = csv.DictReader(TextIOWrapper(file.file, encoding="utf-8"))
-        values = list(itertools.islice(reader, 0, 5))
-        known_articleset_fields = set() #TODO: get these somehow
-        known_fields = set(ARTICLE_FIELDS) | known_articleset_fields
+        for f in UploadScript.unpack_file(file):
+            reader = csv.DictReader(TextIOWrapper(f.file, encoding="utf-8"))
+            values = list(itertools.islice(reader, 0, 5))
+            known_articleset_fields = set() #TODO: get these somehow
+            known_fields = set(ARTICLE_FIELDS) | known_articleset_fields
 
-        for column in reader.fieldnames:
-            article_field = ArticleField(column)
-            if column.lower() in known_fields:
-                article_field.suggested_destination = column.lower()
-            article_field.values = [v[column] for v in values]
+            for column in reader.fieldnames:
+                article_field = ArticleField(column)
+                if column.lower() in known_fields:
+                    article_field.suggested_destination = column.lower()
+                article_field.values = [v[column] for v in values]
 
-            yield article_field
+                yield article_field
 
     def map_article(self, art_dict):
         mapped_dict = {}

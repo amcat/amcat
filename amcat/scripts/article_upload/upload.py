@@ -23,10 +23,11 @@ Base module for article upload scripts
 import datetime
 import logging
 import os.path
-from typing import Tuple
+import zipfile
 
 from django import forms
 from django.contrib.postgres.forms import JSONField
+from django.core.files import File
 from django.forms.widgets import HiddenInput
 
 from amcat.models import Article, Project, ArticleSet
@@ -192,8 +193,25 @@ class UploadScript(ActionForm):
         monitor.update(10, "Done! Uploaded articles".format(n=len(articles)))
         return self.options["articleset"]
 
+    @classmethod
+    def unpack_file(cls, file):
+        """
+        Unpacks zip archives and yields its contents if necessary, otherwise it yields the file itself.
+        """
+        if file.name.endswith(".zip"):
+            zf = zipfile.ZipFile(file)
+            for entry in zf.infolist():
+                if not entry.filename.endswith("/"):
+                    f = File(zf.open(entry, mode="r"), name=entry)
+                    yield f
+        else:
+            yield file
+
     def _get_files(self):
-        return self.form.get_files()
+        files = self.form.get_files()
+        for file in files:
+            return self.unpack_file(file)
+
 
 
 def _set_project(art, project):

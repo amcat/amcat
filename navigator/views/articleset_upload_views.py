@@ -120,7 +120,7 @@ class ArticleUploadFormSet(forms.BaseFormSet):
     @property
     def management_form(self):
         mf = super().management_form
-        mf.fields["upload_id"] = forms.UUIDField(initial=self.management_initial.get("upload_id"))
+        mf.fields["upload_id"] = forms.UUIDField(initial=self.management_initial.get("upload_id"), widget=forms.HiddenInput)
         return mf
 
 class ArticlesetUploadOptionsView(BaseMixin, FormView):
