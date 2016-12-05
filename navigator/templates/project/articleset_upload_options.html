@@ -34,19 +34,29 @@
 
     <legend> Uploading articles using {{ script_name }} </legend>
     <form method="POST" enctype="multipart/form-data" action="">
-
-        {{ wizard.management_form }}
-        {% if is_field_mapping_form %}
-        {{ form.management_form }}
-        {% endif %}
-        {% csrf_token %}
-        {{ form.non_field_errors }}
-        {% for hidden in form.hidden_fields %}
-            {{ hidden }}
-        {% endfor %}
-        <table>
-            {{ form.as_table }}
-        </table>
+      {% csrf_token %}
+      {{ form.management_form }}
+      {% for fieldform in form %} {# form is a formset, each fieldform is a django form #}
+      <div class="form-group row">
+	{% if fieldform.label.value %}
+	<label for="{{fieldform.destination.auto_id}}" class="col-sm-2 col-form-label">{{fieldform.label.value}}</label>
+	<input type="hidden" name="{{fieldform.label.html_name}}" value="{{fieldform.label.value}}">
+	{% else %}
+	<div class="col-sm-2">
+	  <input type="text" name="{{fieldform.label.html_name}}" placeholder="{{fieldform.label.help_text}}">
+	  </div>
+	{% endif %}
+	<label for="{{fieldform.destination.auto_id}}" class="col-sm-2 col-form-label">
+	  {% if fieldform.values.value %}({{fieldform.values.value}}){% endif %}
+	</label>
+	<div class="col-sm-6">
+          {{fieldform.destination}}
+	</div>
+	<div class="col-sm-2">
+	  ERRORS: {{ fieldform.non_field_errors }}
+	  </div>
+      </div>
+	{% endfor %}
         <div class="form-actions">
             <input class="btn btn-primary" type="submit" value="Upload">
             <a href="{{ cancel_url }}" class="btn">Cancel</a>

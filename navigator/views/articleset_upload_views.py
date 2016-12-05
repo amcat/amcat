@@ -3,6 +3,7 @@ import logging
 import os
 from tempfile import mkdtemp
 from uuid import uuid4, UUID
+import json
 
 from django import forms
 from django.contrib.postgres.forms import JSONField
@@ -58,11 +59,6 @@ class ArticleSetUploadScriptHandler(ScriptHandler):
     def get_script(self):
         script_cls = self.task.get_class()
         kwargs = self.get_form_kwargs()
-        print("SCRIPT_CLASS:", script_cls.__name__)
-        print("FROM_CLASS:", script_cls.form_class)
-        print("BASE", script_cls.form_class().base_fields)
-        print("VIS", [field.name for field in script_cls.form_class().visible_fields()])
-        print("HANDLER:", kwargs)
         form = script_cls.form_class(**kwargs)
         return script_cls(form)
 
@@ -74,18 +70,6 @@ class ArticleSetUploadForm(upload.UploadForm):
         for field in list(self.fields):
             if field not in ("file", "articleset", "articleset_name", "encoding", "script"):
                 self.fields.pop(field)
-
-
-class ArticleSetUploadOptionsForm(forms.Form):
-    upload_id = forms.UUIDField(widget=forms.HiddenInput)
-
-    field_map = JSONField()
-
-    def __init__(self, file_fields=None, field_suggestions=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.file_fields = file_fields
-        self.field_suggestions = field_suggestions
-
 
 class ArticleSetUploadView(BaseMixin, FormView):
     form_class = ArticleSetUploadForm
@@ -121,47 +105,84 @@ class ArticleSetUploadView(BaseMixin, FormView):
         return redirect("{}?upload_id={}".format(reverse("navigator:articleset-upload-options", args=(self.project.id,)),
                                         upload_id_urlsafe))
 
+class ArticleUploadFieldForm(forms.Form):
+    label = forms.CharField(required=False, help_text="(Type Constant value)")
+    values = forms.CharField(required=False)
+    destination = forms.ChoiceField(choices=[("-", "(don't use)"),
+                                             ("title", "Title"),
+                                             ("date", "Date)"),
+                                             ("text", "Text"),
+                                             ("custom", "Custom")])
+
+from django.forms import BaseFormSet
+class ArticleUploadFormSet(BaseFormSet):
+    # WvA: Dit lijkt niet te werken, we kunnen het field erin hacken, maar kan vast ook 'net'
+    # (ik wil dus dit field op 'managementform' niveau, niet op form niveau)
+    # overigens haalt ie de upload_id nu gewoon uit de GET params volgens mij, ook bij POST?
+    upload_id = forms.UUIDField(widget=forms.HiddenInput)
+    
+    
 class ArticlesetUploadOptionsView(BaseMixin, FormView):
-    form_class = ArticleSetUploadOptionsForm
     parent = ProjectDetailsView
     view_name = "articleset-upload-options"
     url_fragment = "upload-options"
 
-    def get_upload_id(self):
+    @property
+    def script_fields(self):
+        # We don't want to parse files multiple times, so cache value
+        try: 
+            return self._script_fields
+        except AttributeError:
+            self._script_fields = list(self.script_class.get_fields(
+                self.uploaded_file, self.upload['encoding']))
+            return self._script_fields
+        
+    @property
+    def upload_id(self):
         return UUID(bytes=base64.urlsafe_b64decode(self.request.GET["upload_id"]))
 
-    def get_form_kwargs(self):
-        upload = self.get_upload()
-        kwargs = super().get_form_kwargs()
-        kwargs.setdefault("initial", {})
-        kwargs["initial"]["upload_id"] = self.get_upload_id()
-        fields = self.get_script().get_fields(self.get_uploaded_file(upload), upload['encoding'])
-        kwargs["initial"]["field_map"] = fields
-        return kwargs
+    def get_context_data(self, **kwargs):
+        kwargs['script_name'] = self.script_class.__name__
+        return super().get_context_data(**kwargs)
 
-    def get_upload(self):
-        upload_id = self.get_upload_id()
-        upload = self.request.session['uploads'][str(upload_id)]
-        return upload
+    def initial_data(self):
+        def abbrev(x, maxlen):
+            x = str(x).strip()
+            if len(x) > maxlen: x = x[:maxlen] + "..."
+            return x
+            
+        for f in self.script_fields:
+            values = ",".join(abbrev(x, 20) for x in f.values)
+            yield {'label': f.label, 'values': values, 'destination': f.suggested_destination}
+    def get_initial(self):
+        return list(self.initial_data())
+        
+    def get_form_class(self):
+        from django.forms import formset_factory
+        return formset_factory(ArticleUploadFieldForm, formset=ArticleUploadFormSet)
 
-    def get_script(self):
-        upload = self.get_upload()
-        script = Plugin.objects.get(id=upload['script']).get_class()
+    @property
+    def upload(self):
+        return self.request.session['uploads'][str(self.upload_id)]
+
+    @property
+    def script_class(self):
+        script = Plugin.objects.get(id=self.upload['script']).get_class()
         return script
 
-    def get_uploaded_file(self, upload):
-        filename = upload["filename"]
+    @property
+    def uploaded_file(self):
+        filename = self.upload["filename"]
         return UploadedFile(
             name=filename,
-            file=open(upload['file_path'], "rb"),
-            size=upload["size"]
+            file=open(self.upload['file_path'], "rb"),
+            size=self.upload["size"]
         )
 
-    def get_script_form_kwargs(self, upload, form):
+    def get_script_form_kwargs(self, upload, fieldmap):
         data = {k: upload[k] for k in ("project", "articleset", "articleset_name", "encoding")}
-        for k, v in form.data.items():
-            data[k] = v
-        files = {"file": self.get_uploaded_file(upload)}
+        data['field_map'] = json.dumps(fieldmap)
+        files = {"file": self.uploaded_file}
 
         return {"data": data, "files": files}
 
@@ -179,21 +200,17 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
         return args
 
     def form_valid(self, form):
-        upload = self.get_upload()
-        args = self.get_script_form_kwargs(upload, form)
+        fieldmap = {}
+        for field in form:
+            label = field.cleaned_data['label']
+            destination = field.cleaned_data['destination']
+            if label and destination and destination != "-":
+                fieldmap[label] = destination
+        args = self.get_script_form_kwargs(self.upload, fieldmap)
         args = self.clean_script_args(args)
-        handler = ArticleSetUploadScriptHandler.call(target_class=self.get_script(), arguments=args,
+        handler = ArticleSetUploadScriptHandler.call(target_class=self.script_class, arguments=args,
                             project=self.project, user=self.request.user)
         return redirect(reverse("navigator:task-details", args=(self.project.id, handler.task.id)))
-
-    def get_form_class(self):
-        # Add fields from upload script form that are not in base uploadform
-        class Form(ArticleSetUploadOptionsForm):
-            pass
-        for name, field in self.get_script().form_class.base_fields.items():
-            if name not in ArticleSetUploadForm().fields and name not in ArticleSetUploadOptionsForm.base_fields and name != "project":
-                Form.base_fields[name] = field
-        return Form
 
 def get_or_create_upload_dir(upload_id: str, user_id):
     dir = os.path.join(STORAGE_DIR, str(user_id), upload_id)

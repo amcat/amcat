@@ -31,7 +31,7 @@ import os.path, tempfile, subprocess
 from django import forms
 from django.contrib.postgres.forms import JSONField
 
-from amcat.scripts.article_upload.upload import UploadScript, UploadForm
+from amcat.scripts.article_upload.upload import UploadScript, UploadForm, ArticleField
 
 from amcat.models.article import Article
 from amcat.tools import toolkit
@@ -92,7 +92,19 @@ class Text(UploadScript):
 
     class form_class(UploadForm):
          date = forms.DateField(required=False)
-    
+         
+    @classmethod
+    def get_fields(cls, file, encoding):
+        path, fn = os.path.split(file.name)
+        fn, ext = os.path.splitext(fn)
+        yield ArticleField("Filename", "title", values=[fn])
+        # FIXME encoding, and probably don't read the whole file?
+        yield ArticleField("Text", "text", values=[file.read().decode("ascii")]) 
+        if path: yield ArticleField("path", "section", values=[path])
+        if "_" in fn:
+            for i, elem in enumerate(fn.split("_")):
+                yield ArticleField("Filename part {i}".format(**locals()), values=[elem])
+         
     def get_headline_from_file(self):
         hl = self.options['file'].name
         if hl.endswith(".txt"): hl = hl[:-len(".txt")]

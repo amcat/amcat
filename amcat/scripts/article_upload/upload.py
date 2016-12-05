@@ -49,7 +49,6 @@ class ArticleField(object):
         self.values = values  # top X values  
         self.possible_types = possible_types  # allowed article property types (text, date, number, integer)
         self.suggested_type = suggested_type  # suggested article property type
-        
 
 class ParseError(Exception):
     pass 
