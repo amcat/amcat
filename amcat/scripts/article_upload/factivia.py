@@ -19,18 +19,10 @@
 
 from lxml import html
 
-from amcat.models import Medium, Article
+from amcat.models import Article
 from amcat.scripts.article_upload.upload import UploadScript
-from amcat.tools import toolkit
 
-META = ["headline", "length", "date", "medium", None, "pagenr"]
-
-PROCESSORS = {
-    "length": lambda l: int(l.rstrip("words")),
-    "date": toolkit.read_date,
-    "medium": Medium.get_or_create,
-    "pagenr": lambda p: int(p) if p.strip().isdigit() else None
-}
+META = ["headline", "length_int", "date", "medium", None, "page_int"]
 
 
 class Factivia(UploadScript):
@@ -68,9 +60,18 @@ class Factivia(UploadScript):
             if field_name is None:
                 continue
 
-            processor = PROCESSORS.get(field_name, lambda x: x)
-            text_content = element.text_content().strip()
-            setattr(article, field_name, processor(text_content))
+            value = element.text_content().strip()
+            if field_name == "length":
+                value = int(value.rstrip("words"))
+            elif field_name == "date":
+                raise NotImplemented("Parse date here: do not use toolkit.read_date")
+            elif field_name == "page_int":
+                if p.strip().isdigit():
+                    value = int(p.strip())
+                else:
+                    continue
+
+            article.set_property(field_name, value)
 
         # Fetch text, which is
         paragraphs = [p.text_content() for p in document.cssselect("p")]
