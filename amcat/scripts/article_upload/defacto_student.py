@@ -54,8 +54,18 @@ def get_article(e):
     medium, date, page = get_meta(e)
     section = get_section(e)
 
-    return Article(title=title, text=body, date=date, pagenr=page, section=section,
-                   medium=medium)
+    article = Article(title=title, text=body, date=date)
+
+    if page is not None:
+        article.set_property("page_num", page)
+
+    if section is not None:
+        article.set_property("section", section)
+
+    if medium is not None:
+        article.set_property("medium", medium)
+
+    return article
 
 
 def parse_ressort(text):
