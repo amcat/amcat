@@ -21,6 +21,9 @@
 Model module containing the Article class representing documents in the
 articles database table.
 """
+import collections
+from typing import List
+
 import iso8601
 import json
 import re
@@ -167,8 +170,9 @@ class PropertyField(JSONField):
 
     def to_python(self, value: PropertyMapping):
         if not isinstance(value, PropertyMapping):
-            raise ValidationError("Always supply a PropertyMapping when setting Article.properties.")
-        super(PropertyField, self).to_python(value)
+            raise ValidationError("Always supply a PropertyMapping or dict when setting Article.properties.")
+
+        return super(PropertyField, self).to_python(value)
 
     @classmethod
     def from_db_value(cls, value, expression, connection, context):
@@ -196,22 +200,19 @@ class Article(AmcatModel):
 
     # flexible properties, should be flat str:primitive (json) dict 
     properties = PropertyField(null=False, blank=False)
-    
+
     def __init__(self, *args, **kwargs):
         if args and kwargs:
             raise ValueError("Specify either non-keyword args or keyword args.")
 
-        # Collect properties (non-static fields)
-        properties = {}
-        if kwargs:
-            static_fields = self.__class__.get_static_fields()
-            for field in list(kwargs):
-                if field not in static_fields:
-                    properties[field] = kwargs.pop(field)
+        static_fields = self.get_static_fields()
+        if any(k not in static_fields for k in kwargs):
+            raise ValueError("Do not supply flexible fields to Article constructor. Use either "
+                             "Article.set_property or Article.properties.update() instead after "
+                             "instantiating.")
 
         super(Article, self).__init__(*args, **kwargs)
 
-        self.properties.update(properties)
         self._highlighted = False
 
     def __getattribute__(self, item):
@@ -219,7 +220,8 @@ class Article(AmcatModel):
 
     def __setattr__(self, key, value):
         if not key.startswith("_") and key not in self.get_static_fields():
-            raise ValueError("You are setting Article.{} = {}. This is probably not what you want. Please use Article.set_property.".format(key, value))
+            raise ValueError("You are setting Article.{} = {}. This is probably not what you "
+                             "want. Please use Article.set_property.".format(key, value))
         super(Article, self).__setattr__(key, value)
 
     class Meta():
@@ -256,7 +258,7 @@ class Article(AmcatModel):
     @classmethod
     @functools.lru_cache()
     def get_static_fields(cls):
-        return frozenset(f.name for f in cls._meta.fields) | frozenset(["project_id"])
+        return frozenset(f.name for f in cls._meta.fields) | frozenset(["project_id", "project"])
 
     @classmethod
     def fromdict(cls, properties: Dict[str, Any]):
@@ -322,7 +324,7 @@ class Article(AmcatModel):
                 return Article.objects.get(hash=self.parent_hash)
             except Article.DoesNotExist:
                 pass
-    
+
     def save(self, *args, **kwargs):
         if self._highlighted:
             raise ValueError("Cannot save a highlighted article.")
@@ -373,7 +375,7 @@ class Article(AmcatModel):
             raise ValueError("Incorrect hash specified")
         self.hash = hash
         return hash
-    
+
     @classmethod
     def exists(cls, article_ids, batch_size=500):
         """
@@ -398,33 +400,41 @@ class Article(AmcatModel):
 
         if articlesets is None:
             articlesets = [articleset] if articleset else []
-            
-        # Iterate over articles, mark _duplicates within addendum and build hashes dictionaries
-        hashes = {} # {hash: article}
-        for a in articles:
-            if a.id:
-                raise ValueError("Specifying explicit article ID in save not allowed")
-            a.compute_hash()
-            a._duplicate = None # innocent until proven guilty
-            if not deduplicate:
-                continue
-            if a.hash in hashes:
-                a._duplicate = hashes[a.hash]
-            else:
-                hashes[a.hash] = a
 
-        # check dupes based on hash
-        if hashes:
-            monitor.update(message="Checking _duplicates based on hash..")
-            results = Article.objects.filter(hash__in=hashes.keys()).only("hash")
-            for orig in results:
-                dupe = hashes[orig.hash]
-                dupe._duplicate = orig
-                dupe.id = orig.id
+        # Check for ids
+        for a in articles:
+            if a.id is not None:
+                raise ValueError("Specifying explicit article ID in save not allowed")
+
+        # Compute hashes, mark all articles as non-duplicates
+        for a in articles:
+            a.compute_hash()
+            a._duplicate = None
+
+        # Determine which articles are dupes of each other, *then* query the database
+        # to check if the database has any articles we just got.
+        if deduplicate:
+            hashes = collections.defaultdict(list)  # type: Dict[bytes, List[Article]]
+
+            for a in articles:
+                if a.hash in hashes:
+                    a._duplicate = hashes[a.hash][0]
+                else:
+                    hashes[a.hash].append(a)
+
+            # Check database for duplicates
+            if hashes:
+                monitor.update(message="Checking _duplicates based on hash..")
+                results = Article.objects.filter(hash__in=hashes.keys()).only("hash")
+                for orig in results:
+                    dupes = hashes[orig.hash]
+                    for dupe in dupes:
+                        dupe._duplicate = orig
+                        dupe.id = orig.id
         else:
             monitor.update()
 
-        # now we can save the articles and set id
+        # Save all non-duplicates
         to_insert = [a for a in articles if not a._duplicate]
         monitor.update(message="Inserting {} articles into database..".format(len(to_insert)))
         if to_insert:
@@ -435,6 +445,11 @@ class Article(AmcatModel):
             amcates.ES().bulk_insert(dicts, batch_size=100, monitor=monitor)
         else:
             monitor.update()
+
+        # At this point we can still have internal duplicates. Give them an ID as well.
+        for article in articles:
+            if article.id is None and article._duplicate is not None:
+                article.id = article._duplicate.id
 
         if not articlesets:
             monitor.update(2)
@@ -466,7 +481,7 @@ def _check_read_access(user, aids):
 
     sets = list(ArticleSet.articles.through.objects.filter(article_id__in=aids).values_list("articleset_id", "article_id"))
     setids = {setid for (setid, aid) in sets}
-    
+
     # get project memberships
     ok_sets = set()
     project_cache = {} # pid : True / False
@@ -479,7 +494,7 @@ def _check_read_access(user, aids):
     asets = [ArticleSet.objects.filter(pk__in=setids).values_list("pk", "project_id"),
              Project.articlesets.through.objects.filter(articleset_id__in=setids)
              .values_list("articleset_id", "project_id")]
-    
+
     for aset in asets:
         for sid, pid in aset:
             if project_ok(pid):
@@ -494,6 +509,6 @@ def _check_read_access(user, aids):
     if aids - ok_articles:
         logging.info("Permission denied for {user}, articles {}".format(aids - ok_articles, **locals()))
         raise PermissionDenied("User does not have full read access on (some) of the selected articles")
-    
-    
-    
+
+
+

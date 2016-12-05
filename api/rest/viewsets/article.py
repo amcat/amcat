@@ -44,7 +44,7 @@ from django.forms import ModelChoiceField
 from rest_framework.fields import ModelField, CharField
 from rest_framework.viewsets import ModelViewSet
 
-from amcat.models import Project, ArticleSet
+from amcat.models import Project, ArticleSet, PropertyMapping
 from amcat.models.article import _check_read_access
 from amcat.tools.amcates import ES
 from amcat.tools.caching import cached
@@ -137,7 +137,7 @@ class ArticleSerializer(AmCATProjectModelSerializer):
                 raise ValidationError("When uploading explicit ID, specifying other fields is not allowed")
             return {"id": int(data['id'])}
         if 'properties' not in data:
-            data['properties'] = {}
+            data['properties'] = PropertyMapping()
         if 'children' not in data:
             data['children'] = []
         ARTICLE_FIELDS = set(super(ArticleSerializer, self).get_fields().keys())

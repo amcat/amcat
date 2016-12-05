@@ -384,10 +384,10 @@ class TestAmcatES(amcattest.AmCATTestCase):
     def test_properties(self):
         """Are properties stored as flat fields and with correct mapping?"""
         props = dict(
-            proptest = 123,
-            proptest2_url = "http://example.org",
-            proptest3_date = "2001-01-01",
-            proptest4_num = -1)
+            proptest="123",
+            proptest2_url="http://example.org",
+            proptest3_date="2001-01-01",
+            proptest4_num=-1)
 
         self.assertEqual(set(props.keys()) & set(ES().get_mapping().keys()), set())
 

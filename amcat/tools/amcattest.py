@@ -44,7 +44,7 @@ from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import TestCase
 from splinter import Browser
 
-from amcat.tools.amcates import ES
+from amcat.tools.amcates import ES, get_property_primitive_type
 from amcat.tools.toolkit import read_date
 
 log = logging.getLogger(__name__)
@@ -148,23 +148,39 @@ def get_test_role(**kargs):
     from amcat.tools import djangotoolkit
     return djangotoolkit.get_or_create(Role, label='admin', projectlevel=False)
 
-def create_test_article(create=True, articleset=None, deduplicate=True, **kargs):
+
+def _parse_date(s: str):
+    return dateparser.parse(s, ['%Y-%m-%d', '%d-%m-%Y'], settings={"STRICT_PARSING": True})
+
+
+def create_test_article(create=True, articleset=None, deduplicate=True, properties=None, **kargs):
     """Create a test article"""
     from amcat.models.article import Article
 
-    if 'title' in kargs: kargs['title'] = kargs.pop('title')
-    
-    if "date" in kargs and isinstance(kargs["date"], str):
-        kargs["date"] = dateparser.parse(kargs["date"], date_formats=['%Y-%m-%d', '%d-%m-%Y'], settings={'STRICT_PARSING': True})
+    # Get static properties
+    title = kargs.pop("title", "test title {}: {}".format(_get_next_id(), uuid4()))
+    date = kargs.pop("date", datetime.datetime.now())
+    url = kargs.pop("url", "http://example.com")
+    text = kargs.pop("text", "Lorum Ipsum: {}".format(_get_next_id()))
+    project = kargs.pop("project", create_test_project())
+    parent_hash = kargs.pop("parent_hash", None)
+    hash = kargs.pop("hash", None)
 
-    if "project" not in kargs: kargs["project"] = create_test_project()
-    if "date" not in kargs: kargs["date"] = datetime.date(2000, 1, 1)
-    if 'title' not in kargs: kargs['title'] = 'test title {} : {}'.format(_get_next_id(), uuid4())
-    if 'text' not in kargs: kargs["text"] = 'test text {}'.format(_get_next_id())
+    # Caller is allowed to pas date as string
+    if isinstance(date, str):
+        date = _parse_date(date)
 
-    a = Article(**kargs)
+    a = Article(title=title, date=date, url=url, text=text, project=project, parent_hash=parent_hash, hash=hash)
+
+    if properties:
+        for propname, value in properties.items():
+            if get_property_primitive_type(propname) == datetime.datetime and isinstance(value, str):
+                properties[propname] = _parse_date(value)
+        a.properties.update(properties)
+
     if create:
         Article.create_articles([a], articleset, deduplicate=deduplicate)
+
     return a
 
 def create_test_sentence(**kargs):

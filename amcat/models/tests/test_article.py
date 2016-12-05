@@ -146,8 +146,6 @@ def _q(**filters):
     return set(amcates.ES().query_ids(filters=filters))
     
 class TestArticle(amcattest.AmCATTestCase):
-        
-        
     @amcattest.use_elastic
     def test_create(self):
         """Can we create/store/index an article object?"""
@@ -163,17 +161,6 @@ class TestArticle(amcattest.AmCATTestCase):
         self.assertEqual('2010-12-31T00:00:00', db_a.date.isoformat())
         self.assertEqual('2010-12-31T00:00:00', es_a.date.isoformat())
 
-    @amcattest.use_elastic
-    def test_properties(self):
-        s1 = amcattest.create_test_set()
-        a = amcattest.create_test_article(properties=dict(x=1, foo="bar"), articleset=s1)
-        db_a = s1.articles.get()
-        self.assertEqual(db_a.properties, {"x":1, "foo": "bar"})
-
-        illegal_properties = ([1,2], {"id": 1}, {1: 1}, {"test": [1,2,3]})
-        for p in illegal_properties:
-            self.assertRaises(Exception, amcattest.create_test_article, properties=p)
-        
     @amcattest.use_elastic
     def test_deduplication(self):
         """Does deduplication work as it is supposed to?"""
@@ -193,7 +180,7 @@ class TestArticle(amcattest.AmCATTestCase):
         a2 = amcattest.create_test_article(**art)
         amcates.ES().flush()
         self.assertEqual(a2.id, a1.id)
-        self.assertTrue(a2.duplicate)
+        self.assertTrue(a2._duplicate)
         self.assertEqual(_q(title='deduptest'), {a1.id})
 
         # however, if an articleset is given the 'existing' article
@@ -207,7 +194,7 @@ class TestArticle(amcattest.AmCATTestCase):
         self.assertEqual(_q(sets=s1.id), {a1.id})
 
         # if an existing hash is set, it should be correct
-        art2 = dict(hash = b'hash', **art)
+        art2 = dict(hash=b'hash', **art)
         self.assertRaises(ValueError, amcattest.create_test_article, **art2)
 
         #TODO! Check duplicates within new articles
@@ -217,9 +204,6 @@ class TestArticle(amcattest.AmCATTestCase):
         self.assertEqual(a1.id, a2.id)
         self.assertEqual(len(_q(title='internaldupe')), 1)
 
-        
-
-        
     def test_unicode_word_len(self):
         """Does the word counter eat unicode??"""
         u = u'Kim says: \u07c4\u07d0\u07f0\u07cb\u07f9'
@@ -264,4 +248,3 @@ class TestArticle(amcattest.AmCATTestCase):
         
         self.assertEqual(c1.parent, p)
         self.assertEqual(set(p.children), {c1, c2})
-        
