@@ -46,7 +46,7 @@ from amcat.models.authorisation import Role
 from amcat.tools import amcates
 from amcat.tools.djangotoolkit import bulk_insert_returning_ids
 from amcat.tools.model import AmcatModel
-from amcat.tools.progress import ProgressMonitor
+from amcat.tools.progress import NullMonitor
 from amcat.tools.toolkit import splitlist
 
 from amcat.tools.amcates import get_property_primitive_type, is_valid_property_name
@@ -389,8 +389,7 @@ class Article(AmcatModel):
                 yield aid
 
     @classmethod
-    def create_articles(cls, articles, articleset=None, articlesets=None, deduplicate=True,
-                        monitor=None):
+    def create_articles(cls, articles, articleset=None, articlesets=None, deduplicate=True, monitor=NullMonitor()):
         """
         Add the given articles to the database, the index, and the given set
 
@@ -399,7 +398,7 @@ class Article(AmcatModel):
         @param articles: a collection of objects with the necessary properties (.title etc)
         @param articleset(s): articleset object(s), specify either or none
         """
-        monitor = (monitor or ProgressMonitor(total=1)).submonitor(total=4)
+        monitor = monitor.submonitor(total=4)
 
         if articlesets is None:
             articlesets = [articleset] if articleset else []
@@ -464,12 +463,12 @@ class Article(AmcatModel):
         dupes = {a._duplicate.id for a in articles if a._duplicate} - new_ids
         for aset in articlesets:
             if new_ids:
-                aset.add_articles(new_ids, add_to_index=False, monitor=(monitor))
+                aset.add_articles(new_ids, add_to_index=False, monitor=monitor)
             else:
                 monitor.update()
 
             if dupes:
-                aset.add_articles(dupes, add_to_index=True, monitor=(monitor))
+                aset.add_articles(dupes, add_to_index=True, monitor=monitor)
             else:
                 monitor.update()
 

@@ -70,7 +70,8 @@ class ProgressMonitor(object):
         monitor = SubMonitor(self, *args, total=total, **kargs)
         self.sub_monitors.add(monitor)
         return monitor
-        
+
+
 class SubMonitor(ProgressMonitor):
     def __init__(self, super_monitor, weight: int=1, log=False, *args, **kargs):
         self.super_monitor = super_monitor
@@ -80,6 +81,9 @@ class SubMonitor(ProgressMonitor):
     def update(self, units=1, message=None):
         super(SubMonitor, self).update(units, message)
 
+        if self.worked > self.total:
+            raise ValueError("Steps worked ({}) exceeds total ({}). Did you set the numer of steps correctly?".format(self.worked, self.total))
+
         if self.worked == self.total:
             # We're done. We can deregister ourselves from supermonitor.
             self.super_monitor.sub_monitors.remove(self)
@@ -88,8 +92,14 @@ class SubMonitor(ProgressMonitor):
             # We're not done; inform super monitor of progress
             self.super_monitor.update(0, message)
 
+    def __hash__(self):
+        return hash(id(self))
+
 
 class NullMonitor(ProgressMonitor):
+    def submonitor(self, total, *args, **kargs):
+        return NullMonitor()
+
     def update(self, *args, **kargs):
         pass
 

@@ -27,15 +27,15 @@ import itertools
 import json
 import logging
 
-from django.db import models
 from django.db import connection
+from django.db import models
 
-from amcat.models.coding.codedarticle import CodedArticle
-from amcat.tools.model import AmcatModel
-from amcat.tools import amcates, toolkit
 from amcat.models.article import Article
-from amcat.tools.progress import ProgressMonitor
+from amcat.models.coding.codedarticle import CodedArticle
+from amcat.tools import amcates, toolkit
 from amcat.tools.amcates import ES
+from amcat.tools.model import AmcatModel
+from amcat.tools.progress import NullMonitor
 
 log = logging.getLogger(__name__)
 stats_log = logging.getLogger("statistics:" + __name__)
@@ -75,7 +75,7 @@ class ArticleSet(AmcatModel):
         from amcat.tools.amcates import ES
         return ES().count(filters={"sets": self.id})
 
-    def add_articles(self, article_ids, add_to_index=True, monitor=None):
+    def add_articles(self, article_ids, add_to_index=True, monitor=NullMonitor()):
         """
         Add the given articles to this articleset. Implementation is exists of three parts:
 
@@ -89,7 +89,7 @@ class ArticleSet(AmcatModel):
         @param add_to_index: notify elasticsearch of changes
         @type add_to_index: bool
         """
-        (monitor or ProgressMonitor(total=1)).submonitor(total=4)
+        monitor = monitor.submonitor(total=4)
 
         article_ids = {(art if type(art) is int else art.id) for art in article_ids}
 
