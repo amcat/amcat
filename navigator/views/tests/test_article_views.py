@@ -159,14 +159,14 @@ class TestSplitArticles(amcattest.AmCATTestCase):
 class TestArticleViews(amcattest.AmCATTestCase):
     @amcattest.use_elastic
     def create_test_sentences(self):
-        article = amcattest.create_test_article(byline="foo", text="Dit is. Tekst.\n\n"*3 + "Einde.")
+        article = amcattest.create_test_article(text="foo\n\nDit is. Tekst.\n\n"*3 + "Einde.")
         sbd.create_sentences(article)
         return article, article.sentences.all()
 
     @amcattest.use_elastic
     def test_get_articles(self):
         from amcat.models import Sentence
-        _get_articles = lambda a,s : list(get_articles(a,s))
+        _get_articles = lambda a, s : list(get_articles(a, s))
 
         # Should raise exception if sentences not in article
         article, sentences = self.create_test_sentences()

@@ -68,11 +68,6 @@ def _get_paragraphs(article: Article):
     # Title
     yield article.title
 
-    # Byline
-    properties = article.get_properties()
-    if "byline" in properties:
-        yield properties["byline"]
-
     # Text splitted on white lines
     yield from iter(PARAGRAPH_RE.split(article.text.strip()))
 
@@ -88,7 +83,7 @@ def create_sentences(article):
     Split the given article object into sentences and save the sentences models
     to the database. Returns a list of the resulting Sentence objects.
 
-    If you can, cache properties title, byline and text.
+    If you can, cache properties title, text.
     """
     sents = tuple(_create_sentences(article))
     Sentence.objects.bulk_create(sents)
