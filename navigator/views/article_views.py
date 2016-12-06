@@ -238,10 +238,20 @@ def handle_split(form, project, article, sentences):
 
     return locals()
 
-def copy_article(article):
-    new = Article.objects.get(id=article.id)
-    new.id = None
-    new.text = ""
+
+def copy_article(article: Article):
+    new = Article(
+        project_id=article.project_id,
+        date=article.date,
+        title=article.title,
+        url=article.url,
+        #text=article.text <-- purposely omit text!
+        #hash=article.hash <-- purposely omit hash!
+        parent_hash=article.parent_hash
+    )
+
+    new.properties.update(article.properties)
+
     return new
 
 def _get_sentences(sentences, prev_parnr=1):

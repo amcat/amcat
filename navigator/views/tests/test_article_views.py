@@ -145,8 +145,6 @@ class TestSplitArticles(amcattest.AmCATTestCase):
         self.assertFalse(self.article_in(cj2, aset2, article))
         self.assertTrue(self.article_in(cj3, aset3, article))
 
-
-
     def article_in(self, codingjob, articleset, article):
         from amcat.tools.amcates import ES
         ES().flush()
@@ -159,6 +157,7 @@ class TestSplitArticles(amcattest.AmCATTestCase):
 
 
 class TestArticleViews(amcattest.AmCATTestCase):
+    @amcattest.use_elastic
     def create_test_sentences(self):
         article = amcattest.create_test_article(byline="foo", text="Dit is. Tekst.\n\n"*3 + "Einde.")
         sbd.create_sentences(article)
