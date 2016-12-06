@@ -218,9 +218,6 @@ class Article(AmcatModel):
 
         self._highlighted = False
 
-    def __getattribute__(self, item):
-        return super(Article, self).__getattribute__(item)
-
     def __setattr__(self, key, value):
         if not key.startswith("_") and key not in self.get_static_fields():
             raise ValueError("You are setting Article.{} = {}. This is probably not what you "
