@@ -30,19 +30,18 @@ from django import forms
 from amcat.scripts.script import Script
 from amcat.models import ArticleSet
 
-PLUGINTYPE_PARSER=1
+PLUGINTYPE_PARSER = 1
 
 class RefreshIndex(Script):
     class options_form(forms.Form):
         articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
         full_refresh = forms.BooleanField(initial=False, required=False)
         
-
-                                        
     def _run(self, articleset, full_refresh):
         log.info("Refreshing {articleset}, full_refresh={full_refresh}".format(**locals()))
         articleset.refresh_index(full_refresh=full_refresh)
-        
+
+
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     result = cli.run_cli()

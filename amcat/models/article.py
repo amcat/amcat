@@ -22,7 +22,7 @@ Model module containing the Article class representing documents in the
 articles database table.
 """
 import collections
-from typing import List
+from typing import List, Sequence, Iterable, Container, Set
 
 import iso8601
 import json
@@ -36,7 +36,7 @@ import functools
 import datetime
 from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import models
+from django.db import models, connection
 from django.template.defaultfilters import escape as escape_filter
 from django_hash_field import HashField
 from psycopg2._json import Json
@@ -58,6 +58,8 @@ WORD_RE_STRING = re.compile('[{L}{N}]+')  # {L} --> All letters
 WORD_RE_BYTES = re.compile(b'[{L}{N}]+')  # {L} --> All letters
                                           # {N} --> All numbers
 
+USED_PROPERTY_SQL = "SELECT DISTINCT jsonb_object_keys(properties) FROM articles WHERE article_id in ({});"
+
 def word_len(txt):
     """Count words in `txt`
 
@@ -75,6 +77,22 @@ def unescape_em(txt):
     return (txt
             .replace("&lt;em&gt;", "<em>")
             .replace("&lt;/em&gt;", "</em>"))
+
+
+def get_used_properties(articles: Union[Set[int], Sequence[int]]) -> Set[str]:
+    # Don't accidentally pass strings (SQL injections and all)
+    assert all(isinstance(v, int) for v in articles)
+
+    # No articles given, no properties used :)
+    if not articles:
+        return set()
+
+    # Query postgres for used properties
+    ids = ",".join(map(str, articles))
+    with connection.cursor() as cursor:
+        cursor.execute(USED_PROPERTY_SQL.format(ids))
+        properties = cursor.fetchall()
+    return {row[0] for row in properties}
 
 
 EMPTY = object()
@@ -507,6 +525,3 @@ def _check_read_access(user, aids):
     if aids - ok_articles:
         logging.info("Permission denied for {user}, articles {}".format(aids - ok_articles, **locals()))
         raise PermissionDenied("User does not have full read access on (some) of the selected articles")
-
-
-

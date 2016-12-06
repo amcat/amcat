@@ -26,11 +26,15 @@ codingjobs.
 import itertools
 import json
 import logging
+from typing import Set, Iterable
 
+import django_redis
+import redis
+from django.core.cache import cache
 from django.db import connection
 from django.db import models
 
-from amcat.models.article import Article
+from amcat.models.article import Article, get_used_properties
 from amcat.models.coding.codedarticle import CodedArticle
 from amcat.tools import amcates, toolkit
 from amcat.tools.amcates import ES
@@ -113,11 +117,44 @@ class ArticleSet(AmcatModel):
         else:
             monitor.update(2)
 
+        # Add to property cache
+        self._add_to_property_cache(get_used_properties(to_add))
+
+    def get_used_properties(self) -> Set[str]:
+        cache = django_redis.get_redis_connection()  # type: redis.client.StrictRedis
+        properties = cache.smembers(self._get_property_cache_key())
+
+        if not properties:
+            properties = self._refresh_property_cache()
+
+        return {p.decode() for p in properties if p != b""}
+
+    def _get_property_cache_key(self):
+        return "amcat.articleset.{}.properties".format(self.id)
+
+    def _add_to_property_cache(self, properties: Iterable[str]) -> Set[bytes]:
+        """Add properties to property cache"""
+        properties = {p.encode() for p in properties}
+        cache = django_redis.get_redis_connection()  # type: redis.client.StrictRedis
+        cache.sadd(self._get_property_cache_key(), "", *properties)
+        return properties
+
+    def _reset_property_cache(self):
+        """Completely discard property cache"""
+        cache = django_redis.get_redis_connection()  # type: redis.client.StrictRedis
+        cache.delete(self._get_property_cache_key())
+
+    def _refresh_property_cache(self) -> Set[bytes]:
+        """Discard property cache and recalculate properties"""
+        properties = set(get_used_properties(self.get_article_ids()))
+        self._reset_property_cache()
+        return self._add_to_property_cache(properties)
+
     def add(self, *articles):
         """add(*a) is an alias for add_articles(a)"""
         self.add_articles(articles)
 
-    def remove_articles(self, articles, remove_from_index=True):
+    def remove_articles(self, articles, remove_from_index=True, monitor=NullMonitor()):
         """
         Remove article from this articleset. Also removes CodedArticles (from codingjobs) and updates
         index if `remove_from_index` is True.
@@ -128,14 +165,25 @@ class ArticleSet(AmcatModel):
         @param remove_from_index: notify elasticsearch of changes
         @type remove_from_index: bool
         """
+        monitor = monitor.submonitor(4)
+        to_remove = {(art if type(art) is int else art.id) for art in articles}
+
+        monitor.update(message="Deleting articles from database")
         ArticleSetArticle.objects.filter(articleset=self, article__in=articles).delete()
+
+        monitor.update(message="Deleting coded articles from database")
         CodedArticle.objects.filter(codingjob__articleset=self, article__in=articles).delete()
 
         if remove_from_index:
-            to_remove = {(art if type(art) is int else art.id) for art in articles}
+            monitor.update(message="Deleting from index")
             amcates.ES().remove_from_set(self.id, to_remove)
+        else:
+            monitor.update()
 
-    def get_article_ids(self, use_elastic=False):
+        monitor.update(message="Deleting from cache")
+        self._reset_property_cache()
+
+    def get_article_ids(self, use_elastic=False) -> Set[int]:
         """
         Return the sequence of ids of articles in this set.
         This is an optimized form of 'return [a.id for a in self.articles.all()]'
@@ -169,6 +217,10 @@ class ArticleSet(AmcatModel):
         ES().check_index()
         ES().synchronize_articleset(self, full_refresh=full_refresh)
         self.save()
+
+        # Also make sure property cache checks out
+        self._reset_property_cache()
+        self._refresh_property_cache()
 
     def save(self, *args, **kargs):
         new = not self.pk
