@@ -16,12 +16,14 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import amcat.models
 
 import datetime
 import functools
 import logging
 import os
 import re
+
 from collections import namedtuple
 from hashlib import sha224 as hash_class
 from json import dumps as serialize
@@ -39,15 +41,23 @@ from amcat.tools.toolkit import multidict, splitlist
 log = logging.getLogger(__name__)
 
 _clean_re = re.compile('[\x00-\x08\x0B\x0C\x0E-\x1F]')
+
+
 def _clean(s):
     """Remove non-printable characters and convert dates"""
+    if not isinstance(s, (datetime.date, float, int, str, type(None))):
+        raise ValueError("Cannot convert {} to elastic field: {}".format(type(s), s))
+
     if isinstance(s, str):
-        s = _clean_re.sub(' ', s)
-    if isinstance(s, datetime.date):
-        s = datetime.datetime(s.year, s.month, s.day)
-    if isinstance(s, (datetime.date, datetime.datetime)):
-        s = s.isoformat()
-    return s
+        # Convert non-printable characters to spaces
+        return _clean_re.sub(' ', s)
+    elif isinstance(s, datetime.datetime):
+        return s.isoformat()
+    elif isinstance(s, datetime.date):
+        return datetime.datetime(s.year, s.month, s.day).isoformat()
+    else:
+        return s
+
 
 ARTICLE_FIELDS = frozenset({"text", "title", "url", "date", "parent_hash"})
 ALL_FIELDS = frozenset({"id", "sets", "hash"} | ARTICLE_FIELDS)
@@ -73,7 +83,8 @@ def get_property_primitive_type(name) -> Union[int, float, str, datetime.datetim
     return settings.ES_MAPPING_TYPE_PRIMITIVES["default"]
 
 
-def _is_valid_property_name(name: str) -> bool:
+@functools.lru_cache()
+def is_valid_property_name(name: str) -> bool:
     if not isinstance(name, str):
         raise ValueError("property name should be a string")
 
@@ -84,23 +95,13 @@ def _is_valid_property_name(name: str) -> bool:
     return bool(RE_PROPERTY_NAME.match(name))
 
 
-def get_properties(article):
-    if article.properties:
-        if not isinstance(article.properties, dict):
-            raise TypeError("Article properties should be a simple key:value dict")
-        for k, v in article.properties.items():
-            if not _is_valid_property_name(k):
-                raise TypeError("Article properties should be a simple key:value dict")
-            if not isinstance(v, (str, int, float, datetime.datetime, datetime.date)):
-                raise TypeError("Article properties should be a simple key:value dict")
-            if k in ALL_FIELDS:
-                raise ValueError("Article properties cannot duplicate built-in properties")
-            yield k, _clean(v)
-                              
+def get_properties(article: "amcat.models.Article"):
+    for k, v in article.properties.items():
+        yield k, _clean(v)
+
 
 def get_article_dict(article, sets=None):
-    d = {field_name: _clean(getattr(article, field_name))
-         for field_name in ARTICLE_FIELDS}   
+    d = {field_name: _clean(getattr(article, field_name)) for field_name in ARTICLE_FIELDS}
     d.update(get_properties(article))
     d['hash'] = _hash_dict(d)
     d['id'] = article.id
@@ -424,7 +425,6 @@ class ES(object):
                 return
             yield int(a['_id'])
 
-
     def query(self, query=None, filters={}, highlight=False, lead=False, fields=[], score=True, **kwargs):
         """
         Execute a query for the given fields with the given query and filter
@@ -549,7 +549,6 @@ class ES(object):
             if resp["errors"]:
                 raise ElasticSearchError(resp)
             
-
     def update_values(self, article_id, values):
         """Update properties of existing article.
 
@@ -757,7 +756,6 @@ class ES(object):
             }
         }
 
-
         stats = self.search(body, size=0)['aggregations']['stats']
         result = Result()
         result.n = stats['count']
@@ -767,14 +765,6 @@ class ES(object):
             result.start_date = get_date(stats['min'])
             result.end_date = get_date(stats['max'])
         return result
-
-    def list_media(self, query=None, filters=None):
-        """
-        List a sequence of medium_ids that exist in the selection
-        """
-        from amcat.tools.aggregate_es import aggregate, MediumCategory
-        for medium_id, count in aggregate(query, filters, [MediumCategory()], objects=False, es=self):
-            yield medium_id
 
     def list_dates(self, query=None, filters=None, interval="day"):
         from amcat.tools.aggregate_es import aggregate, IntervalCategory
@@ -868,6 +858,7 @@ class ES(object):
         filter = dict(build_body(filters=filters))['filter']
         body = {"filter": {"bool" : {"must" : [filter, nochild]}}}
         return self.query_ids(body=body, limit=limit)
+
 
 def get_date(timestamp):
     d = datetime.datetime.fromtimestamp(timestamp / 1000)

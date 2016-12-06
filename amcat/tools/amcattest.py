@@ -42,6 +42,7 @@ from uuid import uuid4
 import dateparser
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import TestCase
+from iso8601 import iso8601
 from splinter import Browser
 
 from amcat.tools.amcates import ES, get_property_primitive_type
@@ -150,7 +151,10 @@ def get_test_role(**kargs):
 
 
 def _parse_date(s: str):
-    return dateparser.parse(s, ['%Y-%m-%d', '%d-%m-%Y'], settings={"STRICT_PARSING": True})
+    date = dateparser.parse(s, ['%Y-%m-%d', '%d-%m-%Y'], settings={"STRICT_PARSING": True})
+    if date is None:
+        return iso8601.parse_date(s)
+    return date
 
 
 def create_test_article(create=True, articleset=None, deduplicate=True, properties=None, **kargs):

@@ -18,6 +18,8 @@
 ###########################################################################
 
 import datetime
+
+import iso8601
 from django.conf import settings
 from amcat.models import Article
 from amcat.tools import amcattest
@@ -418,3 +420,19 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(set(ES().get_used_properties([s1.id, s2.id])), {"p1", "p2_date", "p3_num"})
         self.assertEqual(set(ES().get_used_properties([s3.id])), {"p1", "p2_date", "p4"})
         
+    def test_date(self):
+        # Test iso8601 parsing, database parsing, etc.
+        iso8601_date_string = '1992-12-31T23:59:00'
+        date = datetime.datetime(1992, 12, 31, 23, 59, 0)
+        date_parsed = iso8601.parse_date(iso8601_date_string, default_timezone=None)
+        a = amcattest.create_test_article(date=iso8601_date_string)
+        self.assertEqual(date_parsed, date)
+        self.assertEqual(a.date, date)
+
+        ES().flush()
+
+        # Test Elastic date parsing
+        es_date = ES().get(a.id)["date"]
+        self.assertEqual(es_date, '1992-12-31T23:59:00')
+        self.assertEqual(iso8601.parse_date(es_date, None), date)
+
