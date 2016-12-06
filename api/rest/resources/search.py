@@ -137,11 +137,11 @@ class KWICField(CharField):
         # use highlighting if available, otherwise fall back to raw text
         if obj is None:
             return None
+
         hl = obj.highlight.get('title')
         hl = filter(lambda h: re.search(r"<mark>.*</mark>", h), hl)
         if not hl:
             hl = obj.highlight.get('text')
-
 
         if hl:
             # try to get match of first word
@@ -165,8 +165,8 @@ class KWICField(CharField):
                 val = re.sub('<[^<]+?>', '', val)
                 return val
 
-class ScoreField(IntegerField):
 
+class ScoreField(IntegerField):
     def get_attribute(self, instance):
         return instance.hits
 
@@ -178,7 +178,7 @@ class ScoreField(IntegerField):
 class SearchResourceSerialiser(Serializer):
     id = IntegerField()
     title = HighlightField()
-    date = DateTimeField()
+    date = DateTimeField(input_formats=("iso-8601",))
     url = CharField()
 
     def __init__(self, *args, **kwargs):
@@ -199,20 +199,24 @@ class SearchResourceSerialiser(Serializer):
         if "hits" in columns and queries:
             for q in queries:
                 self.fields[q.label] = ScoreField()
+
         if "text" in columns:
             self.fields['text'] = CharField()
+
         if "projectid" in columns:
             self.fields['projectid'] = IntegerField()
+
         if "lead" in columns:
             self.fields['lead'] = HighlightField()
+
         if "kwic" in columns:
             self.fields['left'] = KWICField(kwic='left')
             self.fields['keyword'] = KWICField(kwic='keyword')
             self.fields['right'] = KWICField(kwic='right')
 
-
     class Meta:
         model = Article
+
 
 class SearchResource(AmCATResource):
     model = Article
