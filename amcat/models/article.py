@@ -49,7 +49,7 @@ from amcat.tools.model import AmcatModel
 from amcat.tools.progress import ProgressMonitor
 from amcat.tools.toolkit import splitlist
 
-from amcat.tools.amcates import get_property_primitive_type
+from amcat.tools.amcates import get_property_primitive_type, is_valid_property_name
 
 log = logging.getLogger(__name__)
 
@@ -101,6 +101,9 @@ class PropertyMapping(dict):
         # Check for key type
         if not isinstance(key, str):
             raise ValueError("{} is not of type str, but is {} instead.".format(key, type(key)))
+
+        if not is_valid_property_name(key):
+            raise ValueError("")
 
         # None does not make sense in this context. The caller should use __delitem__ instead.
         if value is None:
