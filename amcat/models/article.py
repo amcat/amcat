@@ -22,16 +22,15 @@ Model module containing the Article class representing documents in the
 articles database table.
 """
 import collections
-from typing import List, Sequence, Iterable, Container, Set
-
+import functools
 import iso8601
 import json
 import re
 import logging
 
 from typing import Dict, Any, Union
+from typing import List, Sequence, Set
 
-import functools
 
 import datetime
 from django.contrib.postgres.fields import JSONField

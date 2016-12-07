@@ -34,39 +34,38 @@ GET requests return the full metadata of the article, not including text (use ar
 POST requests return only the ids of the created articles
 """
 
-#WvA: this is a merger of the article-pload and articles end points, and contains some redundancy
+# WvA: this is a merger of the article-pload and articles end points, and contains some redundancy
 #     but I think we should clean it up once we deal with parents (issue #460)
 
+import logging
 import re
 
 from django.forms import ModelChoiceField
-
-from rest_framework.fields import ModelField, CharField
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.viewsets import ModelViewSet
 
-from amcat.models import Project, ArticleSet, PropertyMapping
+from amcat.models import Article, ArticleSet, ROLE_PROJECT_READER
+from amcat.models import Project, PropertyMapping
 from amcat.models.article import _check_read_access
-from amcat.tools.amcates import ES
 from amcat.tools.caching import cached
 from api.rest.filters import MappingOrderingFilter
 from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATProjectModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.articleset import ArticleSetViewSetMixin
-from api.rest.viewsets.project import ProjectViewSetMixin
-from amcat.models import Article, ArticleSet, ROLE_PROJECT_READER
 from api.rest.viewsets.project import CannotEditLinkedResource, NotFoundInProject
-from django.db.models.query_utils import DeferredAttribute
-from rest_framework.exceptions import ValidationError
+from api.rest.viewsets.project import ProjectViewSetMixin
 
 re_uuid = re.compile("[0-F]{8}-[0-F]{4}-[0-F]{4}-[0-F]{4}-[0-F]{12}", re.I)
+log = logging.getLogger(__name__)
+
+__all__ = ("ArticleSerializer", "ArticleViewSet")
+
 
 def is_uuid(val):
     return isinstance(val, str) and re_uuid.match(val)
-    
-__all__ = ("ArticleSerializer", "ArticleViewSet")
-import logging
-log = logging.getLogger(__name__)
+
 
 class ArticleViewSetMixin(AmCATViewSetMixin):
     queryset = Article.objects.all()
@@ -74,22 +73,20 @@ class ArticleViewSetMixin(AmCATViewSetMixin):
     model = Article
 
 
-from rest_framework import serializers
 class ArticleListSerializer(serializers.ListSerializer):
     def to_internal_value(self, data):
         if not isinstance(data, list):
             raise ValidationError("Article upload content should be a list of dicts!")
+
         def _process_ids(article):
             if isinstance(article, int):
                 article = {"id": article}
             return article
-        
+
         data = [_process_ids(a) for a in data]
-        
+
         return super(ArticleListSerializer, self).to_internal_value(data)
-        
-        
-        
+
     def create(self, validated_data):
         def _process_children(article_dicts, parent=None):
             for adict in article_dicts:
@@ -134,7 +131,8 @@ class ArticleSerializer(AmCATProjectModelSerializer):
             return {"id": data}
         if 'id' in data:
             if set(data.keys()) != {"id"}:
-                raise ValidationError("When uploading explicit ID, specifying other fields is not allowed")
+                raise ValidationError(
+                    "When uploading explicit ID, specifying other fields is not allowed")
             return {"id": int(data['id'])}
         if 'properties' not in data:
             data['properties'] = PropertyMapping()
@@ -169,19 +167,20 @@ class ArticleSerializer(AmCATProjectModelSerializer):
         elif not self.context['view'].text:
             del fields["text"]
         return fields
-        
+
     def to_representation(self, data):
         if self.context['request'].method == "POST":
             return {"id": data.id}
         result = super(ArticleSerializer, self).to_representation(data)
         result.update(result.pop('properties'))
         return result
-        
+
     class Meta:
         model = Article
         read_only_fields = ('id', 'insertdate', 'insertscript')
         list_serializer_class = ArticleListSerializer
-        
+
+
 class SmartParentFilter(MappingOrderingFilter):
     def get_ordering(self, request, queryset, view):
         ordering = super(SmartParentFilter, self).get_ordering(request, queryset, view)
@@ -191,20 +190,20 @@ class SmartParentFilter(MappingOrderingFilter):
 
     def order_parent(self, request, queryset, view):
         ordering = super(SmartParentFilter, self).get_ordering(request, queryset, view)
-        return ordering and  "parent" in ordering
+        return ordering and "parent" in ordering
 
-    
     def filter_queryset(self, request, queryset, view):
         result = super(SmartParentFilter, self).filter_queryset(request, queryset, view)
 
         if self.order_parent(request, queryset, view):
             result = list(result.only("id", "parent"))
             result = list(parents_first_order(result))
-        
+
         return result
 
+
 def parents_first_order(articles):
-    "Reorder articles such that parent comes before children (if parent is present)"
+    """Reorder articles such that parent comes before children (if parent is present)"""
     all_ids = {a.id for a in articles}
     seen = set()
     todo = articles
@@ -221,9 +220,8 @@ def parents_first_order(articles):
         todo = new_todo
 
 
-
-        
-class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMixin, DatatablesMixin, ModelViewSet):
+class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMixin,
+                     DatatablesMixin, ModelViewSet):
     model = Article
     model_key = "article"
     serializer_class = ArticleSerializer
@@ -253,25 +251,23 @@ class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSet
     @property
     def text(self):
         text = self.request.GET.get('text', 'n').upper()
-        return text and (text[0] in ('Y','T','1'))
-        
-    
+        return text and (text[0] in ('Y', 'T', '1'))
+
     def required_role_id(self, request):
         if request.method == "GET" and self.text:
             return ROLE_PROJECT_READER
         return super(ArticleViewSet, self).required_role_id(request)
-        
+
     def filter_queryset(self, queryset):
-        
+
         queryset = queryset.filter(articlesets_set=self.articleset)
         queryset = super(ArticleViewSet, self).filter_queryset(queryset)
         if not self.text:
             queryset = queryset.defer("text")
-        
-        return queryset
 
+        return queryset
 
     def get_serializer(self, *args, **kwargs):
         if ('many' not in kwargs) and ('data' in kwargs):
-           kwargs['many']=isinstance(kwargs['data'], list)
+            kwargs['many'] = isinstance(kwargs['data'], list)
         return super(ArticleViewSet, self).get_serializer(*args, **kwargs)
