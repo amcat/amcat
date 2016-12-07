@@ -490,11 +490,15 @@ class ES(object):
         ]}}}
 
         bodies = (copy.deepcopy(body) for _ in range(len(flexible_properties)))
-        results = ThreadPool().imap(self._get_used_properties, zip(bodies, flexible_properties))
+        pool = ThreadPool()
+        results = pool.imap(self._get_used_properties, zip(bodies, flexible_properties))
 
-        for found, prop in zip(results, flexible_properties):
-            if found:
-                yield prop
+        try:
+            for found, prop in zip(results, flexible_properties):
+                if found:
+                    yield prop
+        finally:
+            pool.close()
 
     def add_articles(self, article_ids, batch_size=1000):
         """

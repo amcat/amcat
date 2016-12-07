@@ -19,7 +19,7 @@
 import tqdm
 import multiprocessing
 
-from multiprocessing.pool import ThreadPool
+from multiprocessing.pool import Pool
 from django.core.management import BaseCommand
 
 from amcat.models import ArticleSet
@@ -37,7 +37,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         threads = options["parallel"]
-        pool = ThreadPool(threads)
         articleset_ids = ArticleSet.objects.values_list("id", flat=True)
-        results = pool.imap_unordered(refresh, articleset_ids)
-        tqdm.tqdm(results, total=len(articleset_ids))
+        results = Pool(threads).imap_unordered(refresh, articleset_ids)
+        list(tqdm.tqdm(results, total=len(articleset_ids)))
