@@ -13,7 +13,7 @@ addons:
 
 services:
  - postgresql
- - memcached
+ - redis-server
  - rabbitmq
 
 virtualenv:
@@ -47,11 +47,11 @@ install:
  - cd ..
 
  # Elasticsearch
- - wget --no-check-certificate https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/deb/elasticsearch/2.1.1/elasticsearch-2.1.1.deb
- - sudo dpkg -i elasticsearch-2.1.1.deb
+ - wget --no-check-certificate https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/deb/elasticsearch/2.3.4/elasticsearch-2.3.4.deb
+ - sudo dpkg -i elasticsearch-2.3.4.deb
  - sudo /usr/share/elasticsearch/bin/plugin install mobz/elasticsearch-head
  - sudo /usr/share/elasticsearch/bin/plugin install analysis-icu
- - sudo /usr/share/elasticsearch/bin/plugin install amcat/hitcount/2.1.1
+ - sudo /usr/share/elasticsearch/bin/plugin install amcat/hitcount/2.3.4
  - "sudo tee -a /etc/elasticsearch/elasticsearch.yml <<< 'index.similarity.default.type: hitcountsimilarity'"
  - "sudo tee -a /etc/elasticsearch/elasticsearch.yml <<< 'script.inline: on'"
  - "sudo tee -a /etc/elasticsearch/elasticsearch.yml <<< 'script.update: on'"
