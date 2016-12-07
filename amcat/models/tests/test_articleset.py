@@ -106,39 +106,23 @@ class TestArticleSet(amcattest.AmCATTestCase):
         self.assertRaises(elasticsearch.NotFoundError, ES().get, arts[0].id)
         self.assertEqual(ES().get(arts[6].id)['id'], arts[6].id)
 
+    @amcattest.use_elastic
     def test_property_cache(self):
         aset = amcattest.create_test_set()
 
         a1 = amcattest.create_test_article(properties={"aap": "noot", "jan": "mies"})
         a2 = amcattest.create_test_article(properties={"vuur": "paal"})
 
-        with self.assertNumQueries(1):
-            # Query 1: get article ids
-            # Query 2 does not need to be executed
-            self.assertEqual(aset.get_used_properties(), set())
+        self.assertEqual(aset.get_used_properties(), set())
 
-        aset.add_articles([a1.id], add_to_index=False)
+        aset.add_articles([a1.id])
+        self.assertEqual(aset.get_used_properties(), {"aap", "jan"})
 
-        with self.assertNumQueries(0):
-            self.assertEqual(aset.get_used_properties(), {"aap", "jan"})
-
-        aset.add_articles([a2.id], add_to_index=False)
-
-        with self.assertNumQueries(0):
-            self.assertEqual(aset.get_used_properties(), {"aap", "jan", "vuur"})
+        aset.add_articles([a2.id])
+        self.assertEqual(aset.get_used_properties(), {"aap", "jan", "vuur"})
 
         aset.remove_articles([a1.id])
-
-        with self.assertNumQueries(2):
-            # Query 1: get article ids
-            # Query 2: determine used properties
-            self.assertEqual(aset.get_used_properties(), {"vuur"})
+        self.assertEqual(aset.get_used_properties(), {"vuur"})
 
         aset.remove_articles([a2.id])
-
-        with self.assertNumQueries(1):
-            self.assertEqual(aset.get_used_properties(), set())
-
-        with self.assertNumQueries(0):
-            # Even empty sets should be cached
-            self.assertEqual(aset.get_used_properties(), set())
+        self.assertEqual(aset.get_used_properties(), set())

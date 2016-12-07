@@ -34,7 +34,7 @@ from django import db
 from django.db import connection
 from django.db import models
 
-from amcat.models.article import Article, get_used_properties
+from amcat.models.article import Article
 from amcat.models.coding.codedarticle import CodedArticle
 from amcat.tools import amcates, toolkit
 from amcat.tools.amcates import ES
@@ -43,6 +43,12 @@ from amcat.tools.progress import NullMonitor
 
 log = logging.getLogger(__name__)
 stats_log = logging.getLogger("statistics:" + __name__)
+
+
+@functools.lru_cache()
+def _get_property_cache_key(id):
+    db_name = db.connections.databases['default']['NAME']
+    return "{}.articleset.{}.properties".format(db_name, id)
 
 
 def create_new_articleset(name, project):
@@ -113,53 +119,55 @@ class ArticleSet(AmcatModel):
 
         if add_to_index:
             monitor.update(message="{n} articles added to codingjobs, adding to index".format(n=len(cjarts)))
-            amcates.ES().add_to_set(self.id, to_add, monitor=monitor)
+            es = ES()
+            es.add_to_set(self.id, to_add, monitor=monitor)
+            es.flush()  # We need to flush, or setting cache will fail
         else:
             monitor.update(2)
 
         # Add to property cache
-        self._add_to_property_cache(get_used_properties(to_add))
+        properties = ES().get_used_properties(article_ids=to_add)
+        self._add_to_property_cache(properties)
 
     def get_used_properties(self) -> Set[str]:
         cache = django_redis.get_redis_connection()  # type: redis.client.StrictRedis
-        properties = cache.smembers(self._get_property_cache_key(self.id))
+        properties = cache.smembers(_get_property_cache_key(self.id))
 
         if not properties:
             properties = self._refresh_property_cache()
+        else:
+            properties = {p.decode() for p in properties}
 
-        return {p.decode() for p in properties if p != b""}
+        return {p for p in properties if p}
 
-    def _add_to_property_cache(self, properties: Iterable[str]) -> Set[bytes]:
+    def _add_to_property_cache(self, properties: Iterable[str]) -> Set[str]:
         """Add properties to property cache"""
         properties = {p.encode() for p in properties}
         cache = django_redis.get_redis_connection()  # type: redis.client.StrictRedis
-        cache.sadd(self._get_property_cache_key(self.id), "", *properties)
-        return properties
+        cache.sadd(_get_property_cache_key(self.id), "", *properties)
+        return {p.decode() for p in properties}
 
     def _reset_property_cache(self):
         """Completely discard property cache"""
         cache = django_redis.get_redis_connection()  # type: redis.client.StrictRedis
-        cache.delete(self._get_property_cache_key(self.id))
+        cache.delete(_get_property_cache_key(self.id))
 
     @classmethod
     def _reset_all_property_caches(cls):
         """Resets all property caches from all articlesets for current database. Use this
         function with care, it runs O(n) with N being the number of keys in Redis."""
         cache = django_redis.get_redis_connection()  # type: redis.client.StrictRedis
-        cache_key = cls._get_property_cache_key("*")
+        cache_key = _get_property_cache_key("*")
         cache_keys = cache.keys(cache_key)
         if cache_keys:
             cache.delete(*cache_keys)
 
-    @staticmethod
-    @functools.lru_cache()
-    def _get_property_cache_key(id):
-        db_name = db.connections.databases['default']['NAME']
-        return "{}.articleset.{}.properties".format(db_name, id)
-
-    def _refresh_property_cache(self) -> Set[bytes]:
+    def _refresh_property_cache(self) -> Set[str]:
         """Discard property cache and recalculate properties"""
-        properties = set(get_used_properties(self.get_article_ids()))
+        from amcat.tools.amcates import ES
+        es = ES()
+        es.flush()
+        properties = es.get_used_properties([self.id])
         self._reset_property_cache()
         return self._add_to_property_cache(properties)
 

@@ -16,6 +16,9 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import copy
+from multiprocessing.pool import ThreadPool
+
 import amcat.models
 
 import datetime
@@ -27,7 +30,7 @@ import re
 from collections import namedtuple
 from hashlib import sha224 as hash_class
 from json import dumps as serialize
-from typing import Union
+from typing import Union, Iterable
 
 from django.conf import settings
 from elasticsearch import Elasticsearch, NotFoundError
@@ -448,7 +451,6 @@ class ES(object):
         if lead or False and query == "" and highlight: 
             body['script_fields'] = LEAD_SCRIPT_FIELD
 
-            
         result = self.search(body, fields=fields, **kwargs)
         return SearchResult(result, fields, score, body, query=query)
 
@@ -464,19 +466,36 @@ class ES(object):
 
         return result
 
-    def get_used_properties(self, sets):
+    def _get_used_properties(self, body__prop):
+        body, prop = body__prop
+        body["query"]["bool"]["must"][1]["exists"]["field"] = prop
+        return bool(self.es.count(index=self.index, doc_type=self.doc_type, body=body)['count'])
+
+    def get_used_properties(self, set_ids=None, article_ids=None, **filters):
         """
         Returns a sequency of property names in use in the specified set(s) (or setids)
         """
-        sets = [s if isinstance(s, int) else s.id for s in sets]
-        for prop in set(self.get_properties(force_refresh=True)) - set(ALL_FIELDS):
-            body = {"query": {"bool": {"must": [
-                {"terms": {"sets": sets}},
-                {"exists": {"field": prop}}]}}}
-            n = self.es.count(index=self.index, doc_type=self.doc_type, body=body)['count']
-            if n:
+        if set_ids is not None:
+            filters["sets"] = set_ids
+
+        if article_ids is not None:
+            filters["ids"] = article_ids
+
+        all_properties = self.get_properties(force_refresh=True)
+        flexible_properties = set(all_properties) - set(ALL_FIELDS)
+
+        body = {"query": {"bool": {"must": [
+            build_filter(**filters),
+            {"exists": {"field": "fakeprop"}}
+        ]}}}
+
+        bodies = (copy.deepcopy(body) for _ in range(len(flexible_properties)))
+        results = ThreadPool().imap(self._get_used_properties, zip(bodies, flexible_properties))
+
+        for found, prop in zip(results, flexible_properties):
+            if found:
                 yield prop
-                
+
     def add_articles(self, article_ids, batch_size=1000):
         """
         Add the given article_ids to the index. This is done in batches, so there

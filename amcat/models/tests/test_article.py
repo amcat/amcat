@@ -18,7 +18,6 @@
 ###########################################################################
 from iso8601.iso8601 import UTC
 
-from amcat.models.article import get_used_properties
 from amcat.models import Article, word_len
 from amcat.models import PropertyMapping
 from amcat.tools import amcattest
@@ -37,14 +36,6 @@ def _setup_highlighting():
 
 
 class TestProperties(amcattest.AmCATTestCase):
-    def test_get_used_properties(self):
-        a1 = amcattest.create_test_article(properties={"aap": "noot", "jan": "mies"})
-        a2 = amcattest.create_test_article(properties={"vuur": "paal"})
-
-        self.assertEqual(set(get_used_properties([a1.id])), {"aap", "jan"})
-        self.assertEqual(set(get_used_properties([a2.id])), {"vuur"})
-        self.assertEqual(set(get_used_properties([a1.id, a2.id])), {"vuur", "aap", "jan"})
-
     def test_default(self):
         self.assertEqual(PropertyMapping, type(Article().properties))
 
