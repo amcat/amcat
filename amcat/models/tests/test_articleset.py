@@ -22,7 +22,6 @@ from amcat.tools import amcattest
 from amcat.tools.amcates import ES
 
 import elasticsearch
-from amcat.tools.progress import ProgressMonitor
 
 
 class TestArticleSet(amcattest.AmCATTestCase):
@@ -113,7 +112,10 @@ class TestArticleSet(amcattest.AmCATTestCase):
         a1 = amcattest.create_test_article(properties={"aap": "noot", "jan": "mies"})
         a2 = amcattest.create_test_article(properties={"vuur": "paal"})
 
-        self.assertEqual(aset.get_used_properties(), set())
+        with self.assertNumQueries(1):
+            # Query 1: get article ids
+            # Query 2 does not need to be executed
+            self.assertEqual(aset.get_used_properties(), set())
 
         aset.add_articles([a1.id], add_to_index=False)
 
@@ -135,4 +137,8 @@ class TestArticleSet(amcattest.AmCATTestCase):
         aset.remove_articles([a2.id])
 
         with self.assertNumQueries(1):
+            self.assertEqual(aset.get_used_properties(), set())
+
+        with self.assertNumQueries(0):
+            # Even empty sets should be cached
             self.assertEqual(aset.get_used_properties(), set())

@@ -45,8 +45,8 @@ from django.test import TestCase
 from iso8601 import iso8601
 from splinter import Browser
 
+from amcat.models import ArticleSet
 from amcat.tools.amcates import ES, get_property_primitive_type
-from amcat.tools.toolkit import read_date
 
 log = logging.getLogger(__name__)
 
@@ -307,6 +307,7 @@ class AmCATTestCase(TestCase):
     def setUpClass(cls):
         ES().check_index()
         ES().flush()
+        ArticleSet._reset_all_property_caches()
         super(AmCATTestCase, cls).setUpClass()
 
 
