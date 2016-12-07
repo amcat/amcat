@@ -1,5 +1,5 @@
 import os.path
-import unittest
+import json
 import zipfile
 from tempfile import NamedTemporaryFile
 
@@ -12,13 +12,9 @@ from amcat.tools import amcattest
 
 class TestUploadText(amcattest.AmCATTestCase):
     @amcattest.use_elastic
-    @unittest.skip("Controller is a complete mess")
     def test_article(self):
         from django.core.files import File
 
-        base = dict(project=amcattest.create_test_project().id,
-                    articleset=amcattest.create_test_set().id,
-                    medium=amcattest.create_test_medium().id)
         from tempfile import NamedTemporaryFile
 
         with NamedTemporaryFile(prefix=u"1999-12-31_\u0409\u0429\u0449\u04c3", suffix=".txt") as f:
@@ -26,17 +22,27 @@ class TestUploadText(amcattest.AmCATTestCase):
             f.write(text.encode('utf-8'))
             f.flush()
 
-            dn, fn = os.path.split(f.name)
-            fn, ext = os.path.splitext(fn)
-            a, = Text(dict(date='2010-01-01', headline='simple testxxx',
-                           file=File(open(f.name)), encoding=0, **base)).run()
-            a = Article.objects.get(pk=a.id)
+            form = dict(project=amcattest.create_test_project().id,
+                        encoding='UTF-8',
+                        file=File(open(f.name)))
+
+            form['articleset'] = amcattest.create_test_set().id
+            form['field_map'] = json.dumps(dict(
+                title={"type": "field", "value": "filename-2"},
+                date={"type": "field", "value": "filename-1"},
+                text={"type": "field", "value": "text"},
+                prop_num={"type": "literal", "value": "3"}))
+            aset = Text(**form).run()
+
+            a, = ArticleSet.objects.get(pk=aset).articles.all()
             self.assertEqual(a.headline, 'simple test')
             self.assertEqual(a.date.isoformat()[:10], '2010-01-01')
             self.assertEqual(a.text, text)
-
+            return
 
             # test autodect headline from filename
+            dn, fn = os.path.split(f.name)
+            fn, ext = os.path.splitext(fn)
             a, = Text(dict(date='2010-01-01',
                            file=File(open(f.name)), encoding=0, **base)).run()
             a = Article.objects.get(pk=a.id)
@@ -46,6 +52,10 @@ class TestUploadText(amcattest.AmCATTestCase):
             self.assertEqual(a.section, dn)
 
             # test autodect date and headline from filename
+            field_map = dict(title={"type": "field", "value": "filename-2"},
+                             date={"type": "field", "value": "filename-1"},
+                             text={"type": "field", "value": "text"},
+                             prop_num={"type": "literal", "value": "3"})
             a, = Text(dict(file=File(open(f.name)), encoding=0, **base)).run()
             a = Article.objects.get(pk=a.id)
             self.assertEqual(a.headline, fn.replace("1999-12-31_", ""))

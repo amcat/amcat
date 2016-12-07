@@ -22,23 +22,22 @@
 Plugin for uploading plain text files
 """
 
-
 import logging
-
-log = logging.getLogger(__name__)
-import os.path, tempfile, subprocess
-
-from django import forms
-from django.contrib.postgres.forms import JSONField
-
-from amcat.scripts.article_upload.upload import UploadScript, UploadForm, ArticleField
-
-from amcat.models.article import Article
-from amcat.tools import toolkit
-from django.core.exceptions import ValidationError
+import os.path
+import subprocess
+import tempfile
+from io import StringIO
 
 from PyPDF2 import PdfFileReader
-from io import StringIO
+from django import forms
+
+from amcat.models.article import Article
+from amcat.scripts.article_upload.upload import UploadScript, UploadForm, ArticleField
+from amcat.tools import toolkit
+
+
+log = logging.getLogger(__name__)
+
 
 def _convert_docx(file):
     text, err = toolkit.execute("docx2txt", file.bytes)
@@ -55,6 +54,7 @@ def _convert_doc(file):
     if not text.strip():
         raise Exception("No text from {antiword?}")
     return text.decode("utf-8")
+
 
 def _convert_pdf(file):
     _file = StringIO()
@@ -91,7 +91,7 @@ class Text(UploadScript):
     """
 
     class form_class(UploadForm):
-         date = forms.DateField(required=False)
+        date = forms.DateField(required=False)
          
     @classmethod
     def get_fields(cls, file, encoding):
@@ -104,19 +104,24 @@ class Text(UploadScript):
         if "_" in fn:
             for i, elem in enumerate(fn.split("_")):
                 yield ArticleField("Filename part {i}".format(**locals()), values=[elem])
-         
+
     def get_headline_from_file(self):
         hl = self.options['file'].name
         if hl.endswith(".txt"): hl = hl[:-len(".txt")]
         return hl
 
     def parse_file(self, file):
-        print( self.options.items())
-        if file:
-            dirname, filename = os.path.split(file.name)
-            filename, ext = os.path.splitext(filename)
-        else:
-            dirname, filename, ext = None, None, None
+        dirname, filename = os.path.split(file.name)
+        filename, ext = os.path.splitext(filename)
+
+        def parse_field(file, type, value):
+            if type == 'literal':
+                return value
+            if value == 'filename':
+                return filename
+            raise ValueError("Can't parse field {value}".format(**locals()))
+
+        metadata = {field: parse_field(file, **setting) for (field, setting) in self.options['field_map'].items()}
 
         metadata = dict((k, v) for (k, v) in self.options.items()
                         if k in ["title", "project", "date", "properties"])

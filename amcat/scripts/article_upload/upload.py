@@ -35,6 +35,8 @@ from amcat.models.articleset import create_new_articleset
 
 from actionform import ActionForm
 
+from amcat.tools.progress import NullMonitor
+
 log = logging.getLogger(__name__)
 
 ARTICLE_FIELDS = ("text", "title", "url", "date", "parent_hash")
@@ -56,7 +58,8 @@ class ParseError(Exception):
 
 
 class UploadForm(forms.Form):
-    file = forms.FileField(help_text="Uploading very large files can take a long time. If you encounter timeout problems, consider uploading smaller files")
+    file = forms.FileField(help_text='Uploading very large files can take a long time. '
+                                     'If you encounter timeout problems, consider uploading smaller files')
     
     project = forms.ModelChoiceField(queryset=Project.objects.all())
 
@@ -71,7 +74,9 @@ class UploadForm(forms.Form):
         required=False)
 
     encoding = forms.ChoiceField(choices=[(x,x) for x in ["Autodetect", "ISO-8859-15", "UTF-8", "Latin-1"]])
-    field_map = JSONField()
+    field_map = JSONField(
+        help_text='json dict with property names (title, date, etc.) as keys, and field settings as values. '
+                   'Field settings should have the form {"type": "field"/"literal", "value": "field_name_or_literal"}')
 
     def clean_articleset_name(self):
         """If articleset name not specified, use file base name instead"""
@@ -101,7 +106,8 @@ class UploadForm(forms.Form):
 
     def validate(self):
         return self.is_valid()
-    
+
+
 class UploadScript(ActionForm):
     """Base class for Upload Scripts, which are scraper scripts driven by the
     the script input.
@@ -121,8 +127,11 @@ class UploadScript(ActionForm):
     def parse_file(self, file):
         raise NotImplementedError()
     
-    def __init__(self, *args, **kargs):
-        super().__init__(*args, **kargs)
+    def __init__(self, form=None, file=None, **kargs):
+        if form is None:
+            form = self.form_class(data=kargs, files={"file": file})
+        super().__init__(form)
+        self.progress_monitor = NullMonitor()
         self.options = self.form.cleaned_data
         self.project = self.form.cleaned_data['project']
         self.errors = []
