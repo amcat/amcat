@@ -188,7 +188,9 @@ class AggregationActionForm(QueryActionForm):
         super(AggregationActionForm, self).__init__(*args, **kwargs)
         assert not self.codingjobs
 
-        properties = set(amcates.ES().get_used_properties(self.articlesets))
+        properties = set()
+        for articleset in self.articlesets:
+            properties |= articleset.get_used_properties()
         properties |= ARTICLE_FIELDS - {"parent_hash"}
         aggregation_choices = (("Meta fields", AGGREGATION_FIELDS),) + tuple(get_aggregation_choices(properties))
 
