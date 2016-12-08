@@ -11,6 +11,7 @@ from amcat.tools import amcates
 from amcat.tools import toolkit
 from amcat.models import Article
 
+
 def test_article(**kwargs):
     if 'date' not in kwargs: kwargs['date'] = datetime.datetime.now().isoformat()
     if 'title' not in kwargs: kwargs['title'] = 'test title {}'.format(uuid4())
@@ -27,7 +28,7 @@ class TestArticleViewSet(APITestCase):
 
     def setUp_set(self):
         self.aset = amcattest.create_test_set(project=self.project)
-        #self.url = reverse("api:article") + "?format=json"
+        # self.url = reverse("api:article") + "?format=json"
 
     def url_set(self, setid=None, projectid=None, text=False):
         if setid is None: setid = self.aset.id
@@ -46,7 +47,6 @@ class TestArticleViewSet(APITestCase):
         if text:
             url += "&text=True"
         return url
-
 
     def _get_articles(self, expected_status=200, as_user="self.user", **url_kwargs):
         if as_user == "self.user": as_user = self.user
@@ -71,7 +71,6 @@ class TestArticleViewSet(APITestCase):
                          "Status code {response.status_code}: {response.content}".format(**locals()))
         return json.loads(response.content.decode(response.charset))
 
-
     def _post_articles(self, data, expected_status=201, as_user="self.user", return_json=None, **url_kwargs):
         if as_user == "self.user": as_user = self.user
         if return_json is None:
@@ -91,14 +90,13 @@ class TestArticleViewSet(APITestCase):
         else:
             return response
 
-
     @amcattest.use_elastic
     def test_post(self):
         """Test whether posting and retrieving an article works correctly"""
         a = test_article()
 
         res = self._post_articles(a)
-        self.assertEqual(set(res.keys()), {'id'}) # POST should only return IDs
+        self.assertEqual(set(res.keys()), {'id'})  # POST should only return IDs
 
         res = self._get_article(aid=res['id'])
         self.assertEqual(res["title"], a['title'])
@@ -112,7 +110,6 @@ class TestArticleViewSet(APITestCase):
         res = self._get_articles()["results"]
         self.assertEqual(len(res), 1)
 
-
     @amcattest.use_elastic
     def test_post_properties(self):
         a = test_article(foo='bar')
@@ -124,17 +121,16 @@ class TestArticleViewSet(APITestCase):
         self.assertEqual(doc['foo'], 'bar')
 
         db = self._get_article(aid=res['id'])
-        self.assertEqual(db['foo'], 'bar')
-
+        self.assertEqual(db['properties']['foo'], 'bar')
 
     @amcattest.use_elastic
     def test_post_multiple(self):
 
-        a1, a2 = [test_article() for _ in [1,2]]
+        a1, a2 = [test_article() for _ in [1, 2]]
 
-        result = self._post_articles([a1,a2])
+        result = self._post_articles([a1, a2])
         self.assertEqual(2, len(result))
-        self.assertEqual(set(result[0].keys()), {'id'}) # POST should only return IDs
+        self.assertEqual(set(result[0].keys()), {'id'})  # POST should only return IDs
 
         arts = self._get_articles()['results']
         self.assertEqual({a['title'] for a in arts}, {a1['title'], a2['title']})
@@ -168,7 +164,6 @@ class TestArticleViewSet(APITestCase):
         result = self._post_articles([a.id, a2.id])
         self.assertEqual(set(amcates.ES().query_ids(filters={"sets": self.aset.id})), {a.id, a2.id})
 
-
     @amcattest.use_elastic
     def test_dupe(self):
         """Test whether deduplication works"""
@@ -181,20 +176,19 @@ class TestArticleViewSet(APITestCase):
         # are the resulting ids identical?
         self.assertEqual(aid1, aid2)
         # is it added to elastic for this set?
-        self.assertEqual(set(amcates.ES().query_ids(filters={'sets':self.aset.id})), {aid1})
+        self.assertEqual(set(amcates.ES().query_ids(filters={'sets': self.aset.id})), {aid1})
         # is it not added (ie we only have one article with this title)
         self.assertEqual(set(amcates.ES().query_ids(filters={'title': a['title']})), {aid1})
-
 
     @amcattest.use_elastic
     def test_post_children(self):
         self.client.login(username=self.user.username, password="test", to_set=True)
 
-        a1, a2, a3, a4 = [test_article() for _ in [1,2,3,4]]
+        a1, a2, a3, a4 = [test_article() for _ in [1, 2, 3, 4]]
         a1['children'] = [a2]
         a2['children'] = [a3]
 
-        result = self._post_articles([a1,a4])
+        result = self._post_articles([a1, a4])
         self.assertEqual(4, len(result))
 
         arts = [Article.objects.get(pk=a["id"]) for a in result]
@@ -211,7 +205,6 @@ class TestArticleViewSet(APITestCase):
         amcates.ES().flush()
         self.assertEqual(len(set(amcates.ES().query_ids(filters={"sets": self.aset.id}))), 4)
 
-
     def test_permissions(self):
         from amcat.models import Role, ProjectRole
         metareader = Role.objects.get(label='metareader', projectlevel=True)
@@ -227,12 +220,10 @@ class TestArticleViewSet(APITestCase):
         p3.articlesets.add(s1)
         s2 = amcattest.create_test_set(project=p2)
 
-
         # anonymous user shoud be able to read articles on p2 and p3
         self._get_articles(projectid=p3.id, setid=s1.id, expected_status=200, as_user=None)
         self._get_articles(projectid=p2.id, setid=s1.id, expected_status=200, as_user=None)
         self._get_articles(projectid=p1.id, setid=s1.id, expected_status=401, as_user=None)
-
 
         # anonymous user shoud be able to read articles on p3 only
         self._get_articles(projectid=p3.id, setid=s1.id, expected_status=200, as_user=None, text=True)
@@ -258,12 +249,11 @@ class TestArticleViewSet(APITestCase):
         self._post_articles(body, projectid=p2.id, setid=s1.id, as_user=u, expected_status=403)
         self._post_articles(body, projectid=p2.id, setid=s1.id, as_user=p2.owner, expected_status=403)
 
-
         # You can only add articles to an articleset if you can (1) modify the set, and (2) read the articles
         a = amcattest.create_test_article(articleset=s1)
 
         self._post_articles(a.id, projectid=p2.id, setid=s2.id, as_user=p2.owner, expected_status=201)
-        self._post_articles(a.id, projectid=p2.id, setid=s2.id, as_user=u, expected_status=403) # cannot write
+        self._post_articles(a.id, projectid=p2.id, setid=s2.id, as_user=u, expected_status=403)  # cannot write
 
         # project owner 4 can read s1 (via p3), so it's ok
         s4 = amcattest.create_test_set(project=p4)
@@ -280,5 +270,3 @@ class TestArticleViewSet(APITestCase):
         # unless he gets read access to project 2
         ProjectRole.objects.create(project=p2, user=p4.owner, role=reader)
         self._post_articles([a1.id, a2.id], projectid=p4.id, setid=s4.id, as_user=p4.owner, expected_status=201)
-
-

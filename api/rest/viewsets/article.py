@@ -27,7 +27,7 @@ POST articles < dict can post a single article
 
 However, it also supports addition POST options:
 POST articles < list-of-dicts can post multiple articles
-POST articles < aid OR {"id": aid}] can add an existing article to a set
+POST articles < aid OR {"id": aid} can add an existing article to a set
 POST articles < [aid, ] OR [{"id": aid}, ] can add multiple existing article to a set
 
 GET requests return the full metadata of the article, not including text (use articles/123/text)
@@ -36,13 +36,15 @@ POST requests return only the ids of the created articles
 
 # WvA: this is a merger of the article-pload and articles end points, and contains some redundancy
 #     but I think we should clean it up once we deal with parents (issue #460)
-
+import datetime
 import logging
 import re
+from typing import List, Dict, Any, Union
 
 from django.forms import ModelChoiceField
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.settings import api_settings
 from rest_framework.viewsets import ModelViewSet
 
 from amcat.models import Article, ArticleSet, ROLE_PROJECT_READER
@@ -63,8 +65,31 @@ log = logging.getLogger(__name__)
 __all__ = ("ArticleSerializer", "ArticleViewSet")
 
 
-def is_uuid(val):
-    return isinstance(val, str) and re_uuid.match(val)
+def json_to_article(article: Dict[str, Any], project: Project) -> Article:
+    # Get properties from a combination of property field and loose flexible fields
+    properties = PropertyMapping.fromdb(article.pop("properties", {}))
+    for prop in list(article.keys()):
+        if prop not in Article.get_static_fields():
+            properties[prop] = article.pop(prop)
+
+    article = Article(**article)
+    article.project = project
+    article.properties.update(properties)
+    article.compute_hash()
+    return article
+
+
+def article_to_json(article: Article) -> Dict[str, Union[str, int, float, datetime.datetime]]:
+    return {
+        "title": article.title,
+        "project_id": article.project_id,
+        "text": article.text,
+        "hash": article.hash,
+        "parent_hash": article.parent_hash,
+        "url": article.url,
+        "date": article.date,
+        "properties": dict(article.get_properties())
+    }
 
 
 class ArticleViewSetMixin(AmCATViewSetMixin):
@@ -74,106 +99,94 @@ class ArticleViewSetMixin(AmCATViewSetMixin):
 
 
 class ArticleListSerializer(serializers.ListSerializer):
-    def to_internal_value(self, data):
-        if not isinstance(data, list):
-            raise ValidationError("Article upload content should be a list of dicts!")
+    """Defines methods to """
+    def to_internal_value(self, articles: List[Dict[Any, Any]]):
+        # Must be supplied a list, or error:
+        if not isinstance(articles, list):
+            message = self.error_messages['not_a_list'].format(input_type=type(articles).__name__)
+            raise ValidationError({api_settings.NON_FIELD_ERRORS_KEY: [message]})
 
-        def _process_ids(article):
-            if isinstance(article, int):
-                article = {"id": article}
-            return article
+        if not articles:
+            return []
 
-        data = [_process_ids(a) for a in data]
+        # If a user supplied a list of ints, we assume a list of article ids
+        if isinstance(articles[0], int):
+            articles = [{"id": id} for id in articles]
 
-        return super(ArticleListSerializer, self).to_internal_value(data)
+        return super(ArticleListSerializer, self).to_internal_value(articles)
 
     def create(self, validated_data):
-        def _process_children(article_dicts, parent=None):
-            for adict in article_dicts:
-                children = adict.pop("children")
-                if parent is not None:
-                    assert 'parent_hash' not in adict
-                    adict['parent_hash'] = parent.compute_hash()
-                article = Article(**adict)
-                yield article
-                yield from _process_children(children, parent=article)
+        # Get articleset object given through URL
+        articleset_id = self.context["view"].kwargs.get('articleset')
+        if articleset_id is not None:
+            articleset = ArticleSet.objects.get(pk=articleset_id)
+            project = articleset.project
+        else:
+            raise ValueError("Missing articleset parameter?")
 
-        articleset = self.context["view"].kwargs.get('articleset')
-        if articleset:
-            articleset = ArticleSet.objects.get(pk=articleset)
+        # Create articles not yet in database
+        new_articles = [a for a in validated_data if "id" not in a]
+        if new_articles:
+            new_articles = [json_to_article(article, project) for article in new_articles]
+            yield from Article.create_articles(new_articles, articleset=articleset)
 
+        # Add existing articles to this set
         to_add = [a['id'] for a in validated_data if "id" in a]
-        to_create = [a for a in validated_data if "id" not in a]
-        if to_create:
-            articles = list(_process_children(to_create))
-            yield from Article.create_articles(articles, articleset=articleset)
         if to_add:
             _check_read_access(self.context['request'].user, to_add)
             articleset.add_articles(to_add)
             yield from Article.objects.filter(pk__in=to_add).only("pk")
 
-    def to_representation(self, data):
-        # check if text attribute is defferred  - is this still needed?
-        if u'RelatedManager' in str(type(data)):
-            data = list(data.all())
-        result = super(ArticleListSerializer, self).to_representation(data)
-        for r in result:
-            if r.get('parent'):
-                r['parent'] = unicode(uuids[r['parent']])
-        return result
-
 
 class ArticleSerializer(AmCATProjectModelSerializer):
     project = ModelChoiceField(queryset=Project.objects.all(), required=True)
 
+    def get_articleset(self):
+        articleset_id = self.context["view"].kwargs.get('articleset')
+        if articleset_id is not None:
+            return ArticleSet.objects.get(pk=articleset_id)
+        raise ValueError("Missing articleset parameter?")
+
     def to_internal_value(self, data):
+        # Get articleset object given through URL
+        articleset = self.get_articleset()
+
+        # Check if user supplied single article id
         if isinstance(data, int):
             return {"id": data}
+
+        # Check if user supplied a dictionary with a single id
         if 'id' in data:
-            if set(data.keys()) != {"id"}:
-                raise ValidationError(
-                    "When uploading explicit ID, specifying other fields is not allowed")
+            if len(data.keys()) > 1:
+                raise ValidationError("When uploading explicit ID, specifying other fields is not allowed")
             return {"id": int(data['id'])}
-        if 'properties' not in data:
-            data['properties'] = PropertyMapping()
-        if 'children' not in data:
-            data['children'] = []
-        ARTICLE_FIELDS = set(super(ArticleSerializer, self).get_fields().keys())
-        # add all other fields to properties
-        for field in data.keys() - (ARTICLE_FIELDS | {"children"}):
-            data['properties'][field] = data.pop(field)
-        return super(ArticleSerializer, self).to_internal_value(data)
+
+        # User supplied a new article
+        return article_to_json(json_to_article(data, articleset.project))
 
     def create(self, validated_data):
-        articleset = self.context["view"].kwargs.get('articleset')
-        if articleset: articleset = ArticleSet.objects.get(pk=articleset)
+        articleset = self.get_articleset()
 
         if 'id' in validated_data:
             _check_read_access(self.context['request'].user, [validated_data['id']])
-            art = Article.objects.get(pk=validated_data['id'])
-            if articleset:
-                articleset.add_articles([art])
-
+            article = Article.objects.get(pk=validated_data['id'])
+            articleset.add_articles([article])
         else:
-            validated_data.pop('children')
-            art = Article(**validated_data)
-            Article.create_articles([art], articleset=articleset)
-        return art
+            article = json_to_article(validated_data, articleset.project)
+            Article.create_articles([article], articleset=articleset)
+
+        return article
 
     def get_fields(self):
         fields = super(ArticleSerializer, self).get_fields()
-        if self.context['request'].method == "POST":
-            fields["children"] = ArticleSerializer(many=True)
-        elif not self.context['view'].text:
+        if not self.context['view'].text:
             del fields["text"]
         return fields
 
     def to_representation(self, data):
         if self.context['request'].method == "POST":
             return {"id": data.id}
-        result = super(ArticleSerializer, self).to_representation(data)
-        result.update(result.pop('properties'))
-        return result
+        return super(ArticleSerializer, self).to_representation(data)
 
     class Meta:
         model = Article
