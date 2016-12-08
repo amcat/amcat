@@ -56,6 +56,13 @@ def create_new_articleset(name, project):
     name=ArticleSet.get_unique_name(project, name)
     return ArticleSet.objects.create(project=project, name=name)
 
+
+def get_used_properties_by_articlesets(articlesets: Iterable["ArticleSet"]) -> Iterable[str]:
+    """Returns properties used in given articlesets. May contain duplicates."""
+    for articleset in articlesets:
+        yield from articleset.get_used_properties()
+
+
 class ArticleSet(AmcatModel):
     """
     Model for the sets table. A set is part of a project and contains articles.

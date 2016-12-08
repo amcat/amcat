@@ -28,8 +28,9 @@ from django.core.urlresolvers import reverse
 from django.http import QueryDict
 from django.template import Context
 from django.template.loader import get_template
+
+from amcat.models import get_used_properties_by_articlesets
 from amcat.scripts.query import QueryAction, QueryActionForm
-from amcat.tools import amcates
 from amcat.tools.amcates import ARTICLE_FIELDS
 from amcat.tools.keywordsearch import SelectionSearch
 from api.rest.datatable import Datatable
@@ -60,7 +61,7 @@ class ArticleListActionForm(QueryActionForm):
     def __init__(self, user, *args, **kwargs):
         super().__init__(user, *args, **kwargs)
 
-        article_props = list(amcates.ES().get_used_properties(self.articlesets))
+        article_props = set(get_used_properties_by_articlesets(self.articlesets))
         choices = sorted(self.fields["columns"].choices)
         choices.append(("Dynamic properties", [(f, f) for f in article_props]))
         self.fields["columns"].choices = choices

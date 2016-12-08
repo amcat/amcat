@@ -21,8 +21,8 @@ import io
 
 from typing import Iterable, Tuple
 
+from amcat.models import get_used_properties_by_articlesets
 from amcat.scripts.query.queryaction import NotInCacheError
-from amcat.tools import amcates
 from amcat.tools.amcates import get_property_primitive_type, ARTICLE_FIELDS
 
 
@@ -31,13 +31,12 @@ import json
 import datetime
 from itertools import chain, repeat
 
-from django.core.exceptions import ValidationError
 from django.forms import ChoiceField, BooleanField
 
 from amcat.models import ArticleSet, CodingSchemaField, Code, CodingJob
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools import aggregate_es
-from amcat.tools.aggregate_es.categories import ELASTIC_TIME_UNITS, IntervalCategory, FieldCategory
+from amcat.tools.aggregate_es.categories import IntervalCategory, FieldCategory
 from amcat.tools.aggregate_orm import CountArticlesValue
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery, to_sortable_tuple
 
@@ -188,9 +187,7 @@ class AggregationActionForm(QueryActionForm):
         super(AggregationActionForm, self).__init__(*args, **kwargs)
         assert not self.codingjobs
 
-        properties = set()
-        for articleset in self.articlesets:
-            properties |= articleset.get_used_properties()
+        properties = set(get_used_properties_by_articlesets(self.articlesets))
         properties |= ARTICLE_FIELDS - {"parent_hash"}
         aggregation_choices = (("Meta fields", AGGREGATION_FIELDS),) + tuple(get_aggregation_choices(properties))
 
