@@ -204,7 +204,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         s = amcattest.create_test_set()
         a = amcattest.create_test_article()
 
-        s.add(a)
+        s.add_articles([a.id], add_to_index=False)
         self.assertEqual(set(), set(ES().query_ids(filters=dict(sets=s.id))))
         s.refresh_index()
         self.assertEqual({a.id}, set(ES().query_ids(filters=dict(sets=s.id))))
@@ -412,11 +412,11 @@ class TestAmcatES(amcattest.AmCATTestCase):
         s2 = amcattest.create_test_set(articles=[a2])
         s3 = amcattest.create_test_set(articles=[a1, a3])
         ES().flush()
-        self.assertEqual(set(ES().get_used_properties([s1])), {"p1", "p2_date"})
+        self.assertEqual(set(ES().get_used_properties([s1.id])), {"p1", "p2_date"})
         self.assertEqual(set(ES().get_used_properties([s1.id, s2.id])), {"p1", "p2_date", "p3_num"})
         self.assertEqual(set(ES().get_used_properties([s3.id])), {"p1", "p2_date", "p4"})
 
-        self.assertEqual(set(ES().get_used_properties([s1])), {"p1", "p2_date"})
+        self.assertEqual(set(ES().get_used_properties([s1.id])), {"p1", "p2_date"})
         self.assertEqual(set(ES().get_used_properties([s1.id, s2.id])), {"p1", "p2_date", "p3_num"})
         self.assertEqual(set(ES().get_used_properties([s3.id])), {"p1", "p2_date", "p4"})
         

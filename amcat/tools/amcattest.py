@@ -202,7 +202,8 @@ def create_test_sentence(**kargs):
     if "id" not in kargs: kargs["id"] = _get_next_id()
     return Sentence.objects.create(**kargs)
 
-def create_test_set(articles=0, **kargs):
+
+def create_test_set(articles=0, **kargs) -> ArticleSet:
     """Create a test (Article) set"""
     from amcat.models.articleset import ArticleSet, Article
     if "name" not in kargs: kargs["name"] = "testset_%i" % len(ArticleSet.objects.all())
