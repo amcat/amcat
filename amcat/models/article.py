@@ -224,15 +224,13 @@ class Article(AmcatModel):
     properties = PropertyField(null=False, blank=False)
 
     def __init__(self, *args, **kwargs):
-        if args and kwargs:
-            raise ValueError("Specify either non-keyword args or keyword args.")
-
-        static_fields = self.get_static_fields()
-        if any(k not in static_fields for k in kwargs):
-            raise ValueError("Do not supply flexible fields to Article constructor. Use either "
-                             "Article.set_property or Article.properties.update() instead after "
-                             "instantiating.")
-
+        if kwargs:
+            if args:
+                raise ValueError("Specify either non-keyword args or keyword args.")
+            static_fields = self.get_static_fields()
+            properties = kwargs.pop("properties", {})
+            properties.update({k: kwargs.pop(k) for k in set(kwargs) if k not in static_fields})
+            kwargs['properties'] = properties
         super(Article, self).__init__(*args, **kwargs)
 
         self._highlighted = False
