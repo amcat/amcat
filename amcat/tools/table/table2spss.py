@@ -44,7 +44,7 @@ PSPP_TYPES = {
 PSPP_SERIALIZERS = {
     type(None): lambda n: "",
     str: lambda s: s.replace('\n', ". ").replace("\r", "").replace("\t", " ")[:MAX_STRING_LENGTH],
-    datetime.datetime: lambda d: d.strftime("%d-%b-%Y-%H:%M:%S").upper()
+    datetime.datetime: lambda d: d.strftime("%d-%m-%Y-%H:%M:%S").upper()
 }
 
 PSPP_COMMANDS = r"""

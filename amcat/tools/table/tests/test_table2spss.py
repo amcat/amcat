@@ -22,14 +22,14 @@ import subprocess
 from amcat.tools import amcattest
 from amcat.tools.table import table3, table2spss
 
-
 """
 DATA LIST FREE
 """
 
+
 class TestTable2SPSS(amcattest.AmCATTestCase):
     def setUp(self):
-        test_date_1 = datetime.datetime(2020, 9, 8)
+        test_date_1 = datetime.datetime(2020, 12, 31)
         test_date_2 = datetime.datetime(2015, 7, 6)
         test_date_3 = datetime.datetime(2010, 5, 4)
 
@@ -86,7 +86,6 @@ class TestTable2SPSS(amcattest.AmCATTestCase):
         stdout, stderr = pspp.communicate(input=input)
         self.assertIn(b"07-SEP-2020 16:53:55", stdout)
 
-
     def test_unicode_with_nones(self):
         file = table2spss.table2sav(self.unicode_with_none_table)
 
@@ -100,8 +99,6 @@ class TestTable2SPSS(amcattest.AmCATTestCase):
         input = self.get_pspp_command(file)
         stdout, stderr = pspp.communicate(input=input, timeout=30)
         self.assertIn(b"N is 4.", stdout)
-
-
 
     def test_asciitable2sav(self):
         file = table2spss.table2sav(self.ascii_table)
@@ -119,7 +116,6 @@ class TestTable2SPSS(amcattest.AmCATTestCase):
         self.assertIn(b"74321", stdout)
         # Testing dates isn't really possible due to strange formatting due to long lines..
 
-
     def test_unitable2sav(self):
         file = table2spss.table2sav(self.unicode_table)
 
@@ -132,16 +128,14 @@ class TestTable2SPSS(amcattest.AmCATTestCase):
 
         input = self.get_pspp_command(file)
         stdout, stderr = pspp.communicate(input=input, timeout=30)
-        print(stdout)
         self.assertIn(b"N is 4.", stdout)
-        self.assertIn(b"08-SEP-2020 00:00:00", stdout)
+        self.assertIn(b"31-DEC-2020 00:00:00", stdout)
         self.assertIn(b"06-JUL-2015 00:00:00", stdout)
         self.assertIn(b"04-MAY-2010 00:00:00", stdout)
         self.assertIn(b"74321", stdout)
         self.assertIn("♜".encode("utf-8"), stdout)
         self.assertIn("♝".encode("utf-8"), stdout)
         self.assertIn("✄".encode("utf-8"), stdout)
-
 
     def get_pspp_command(self, file: str) -> bytes:
         input = "get file='{0}'.\nlist.\nshow n.\n".format(file)
