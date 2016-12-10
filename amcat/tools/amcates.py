@@ -125,6 +125,8 @@ def _hash_dict(d):
 def _encode_field(object, encoding="utf-8"):
     if isinstance(object, datetime.datetime):
         return object.isoformat().encode(encoding)
+    elif isinstance(object, datetime.date):
+        return datetime.datetime(object.year, object.month, object.day).isoformat().encode(encoding)
     return str(object).encode(encoding)
 
 

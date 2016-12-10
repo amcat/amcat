@@ -102,6 +102,8 @@ class DateTimeEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, datetime.datetime):
             return o.isoformat()
+        elif isinstance(o, datetime.date):
+            return datetime.datetime(o.year, o.month, o.day).isoformat()
         return json.JSONEncoder.default(self, o)
 
 
@@ -120,7 +122,7 @@ class PropertyMapping(dict):
             raise ValueError("{} is not of type str, but is {} instead.".format(key, type(key)))
 
         if not is_valid_property_name(key):
-            raise ValueError("")
+            raise ValueError("This property name is not valid: {}".format(key))
 
         # None does not make sense in this context. The caller should use __delitem__ instead.
         if value is None:
