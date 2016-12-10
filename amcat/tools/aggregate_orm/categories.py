@@ -103,7 +103,7 @@ class ArticleFieldCategory(Category):
         TextCategory.
 
         @param kwargs: additional parameters passed to corresponding Category"""
-        is_json_field = field_name not in Article.get_static_fields()
+        is_json_field = field_name not in Article.static_fields()
         field_type = get_property_primitive_type(field_name)
 
         if field_type in (int, str, float):

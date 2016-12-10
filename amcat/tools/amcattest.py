@@ -58,26 +58,25 @@ def _get_next_id():
     ID += 1
     return ID
 
+
 def skip_slow_tests():
     """Should we skip the slow tests, e.g. Solr, Alpino etc"""
     return os.environ.get('AMCAT_SKIP_SLOW_TESTS') in ("1","Y", "ON")
 
+
 def create_test_query(**kargs):
     from amcat.models import Query
-
     if "name" not in kargs:
         kargs["name"] = "Test query"
-
     if "parameters" not in kargs:
         kargs["parameters"] = [1,2,3]
 
     if "project" not in kargs:
         kargs["project"] = create_test_project()
-
     if "user" not in kargs:
         kargs["user"] = create_test_user()
-
     return Query.objects.create(**kargs)
+
 
 def create_test_user(**kargs):
     """Create a user to be used in unit testing"""
@@ -92,9 +91,8 @@ def create_test_user(**kargs):
         kargs['last_name'] = kargs['username']
     if 'password' not in kargs:
         kargs['password'] =  'test'
-    #if "id" not in kargs: kargs["id"] = _get_next_id()
     return create_user(**kargs)
-    #return User.create_user(**kargs)
+
 
 def create_test_project(**kargs):
     """Create a project to be used in unit testing"""
@@ -107,6 +105,7 @@ def create_test_project(**kargs):
     ProjectRole.objects.create(project=p, user=p.owner, role_id=ROLE_PROJECT_ADMIN)
     return p
 
+
 def create_test_schema(**kargs):
     """Create a test schema to be used in unit testing"""
     from amcat.models.coding.codingschema import CodingSchema
@@ -114,6 +113,7 @@ def create_test_schema(**kargs):
     if "id" not in kargs: kargs["id"] = _get_next_id()
     if 'name' not in kargs: kargs['name'] = "testschema_%i" % CodingSchema.objects.count()
     return CodingSchema.objects.create(**kargs)
+
 
 def create_test_schema_with_fields(codebook=None, **kargs):
     """Set up a simple codingschema with fields to use for testing
@@ -139,10 +139,12 @@ def create_test_schema_with_fields(codebook=None, **kargs):
 
     return (schema, codebook) + tuple(fields)
 
+
 def get_test_language(**kargs):
     from amcat.models.language import Language
     from amcat.tools import djangotoolkit
     return djangotoolkit.get_or_create(Language, label='en')
+
 
 def get_test_role(**kargs):
     from amcat.models import Role
@@ -186,6 +188,7 @@ def create_test_article(create=True, articleset=None, deduplicate=True, properti
         Article.create_articles([a], articleset, deduplicate=deduplicate)
 
     return a
+
 
 def create_test_sentence(**kargs):
     """Create a test sentence"""

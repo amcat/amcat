@@ -180,30 +180,6 @@ class TestArticleViewSet(APITestCase):
         # is it not added (ie we only have one article with this title)
         self.assertEqual(set(amcates.ES().query_ids(filters={'title': a['title']})), {aid1})
 
-    @amcattest.use_elastic
-    def test_post_children(self):
-        self.client.login(username=self.user.username, password="test", to_set=True)
-
-        a1, a2, a3, a4 = [test_article() for _ in [1, 2, 3, 4]]
-        a1['children'] = [a2]
-        a2['children'] = [a3]
-
-        result = self._post_articles([a1, a4])
-        self.assertEqual(4, len(result))
-
-        arts = [Article.objects.get(pk=a["id"]) for a in result]
-
-        self.assertEqual(arts[0].title, a1['title'])
-        self.assertEqual(arts[3].title, a4['title'])
-
-        self.assertEqual(arts[0].parent, None)
-        self.assertEqual(arts[1].parent, arts[0])
-        self.assertEqual(arts[2].parent, arts[1])
-        self.assertEqual(arts[3].parent, None)
-
-        # Are the articles added to the index?
-        amcates.ES().flush()
-        self.assertEqual(len(set(amcates.ES().query_ids(filters={"sets": self.aset.id}))), 4)
 
     def test_permissions(self):
         from amcat.models import Role, ProjectRole

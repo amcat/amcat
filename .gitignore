@@ -54,3 +54,5 @@ env
 
 # R package library
 amcat/scripts/query/r_plugins/package_library
+
+.cache

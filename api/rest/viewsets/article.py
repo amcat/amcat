@@ -66,15 +66,7 @@ __all__ = ("ArticleSerializer", "ArticleViewSet")
 
 
 def json_to_article(article: Dict[str, Any], project: Project) -> Article:
-    # Get properties from a combination of property field and loose flexible fields
-    properties = PropertyMapping.fromdb(article.pop("properties", {}))
-    for prop in list(article.keys()):
-        if prop not in Article.get_static_fields():
-            properties[prop] = article.pop(prop)
-
-    article = Article(**article)
-    article.project = project
-    article.properties.update(properties)
+    article = Article(project=project, **article)
     article.compute_hash()
     return article
 
@@ -82,7 +74,6 @@ def json_to_article(article: Dict[str, Any], project: Project) -> Article:
 def article_to_json(article: Article) -> Dict[str, Union[str, int, float, datetime.datetime]]:
     return {
         "title": article.title,
-        "project_id": article.project_id,
         "text": article.text,
         "hash": article.hash,
         "parent_hash": article.parent_hash,

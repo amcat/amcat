@@ -227,16 +227,15 @@ class Article(AmcatModel):
         if kwargs:
             if args:
                 raise ValueError("Specify either non-keyword args or keyword args.")
-            static_fields = self.get_static_fields()
-            properties = kwargs.pop("properties", {})
-            properties.update({k: kwargs.pop(k) for k in set(kwargs) if k not in static_fields})
-            kwargs['properties'] = properties
+            props = {k: kwargs.pop(k) for k in set(kwargs) if k not in self.static_fields()}
+            if props:
+                kwargs['properties'] = PropertyMapping(**kwargs.get("properties", {}), **props)
         super(Article, self).__init__(*args, **kwargs)
 
         self._highlighted = False
 
     def __setattr__(self, key, value):
-        if not key.startswith("_") and key not in self.get_static_fields():
+        if not key.startswith("_") and key not in self.static_fields():
             raise ValueError("You are setting Article.{} = {}. This is probably not what you "
                              "want. Please use Article.set_property.".format(key, value))
         super(Article, self).__setattr__(key, value)
@@ -251,7 +250,7 @@ class Article(AmcatModel):
     def get_property(self, name, default=EMPTY):
         """Get article property regardsless whether or not it is defined as a 'real' property
         or stored in Article.properties."""
-        if name in self.get_static_fields():
+        if name in self.static_fields():
             return getattr(self, name)
 
         properties = self.get_properties()
@@ -266,7 +265,7 @@ class Article(AmcatModel):
         Set property on this article regardless of whether it is a 'real' property or a 'fake'
         one stored in Article.properties.
         """
-        if key in self.get_static_fields():
+        if key in self.static_fields():
             setattr(self, key, value)
         else:
             properties = self.get_properties()
@@ -274,7 +273,7 @@ class Article(AmcatModel):
 
     @classmethod
     @functools.lru_cache()
-    def get_static_fields(cls):
+    def static_fields(cls):
         return frozenset(f.name for f in cls._meta.fields) | frozenset(["project_id", "project"])
 
     @classmethod
