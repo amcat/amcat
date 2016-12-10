@@ -1,66 +1,58 @@
-import os.path
 import json
+import os.path
 import zipfile
 from tempfile import NamedTemporaryFile
 
 from django.core.files import File
 
-from amcat.models import Article, ArticleSet
+from amcat.models import ArticleSet
 from amcat.scripts.article_upload.text import Text
 from amcat.tools import amcattest
+
+
+def _test(field_map, text="test_text", fn_prefix=None):
+    """Run Text uploader with given argumens and return 'uploaded' articles"""
+    with NamedTemporaryFile(prefix=fn_prefix, suffix=".txt") as f:
+        f.write(text.encode('utf-8'))
+        f.flush()
+        aset = amcattest.create_test_set().id
+        form = dict(project=amcattest.create_test_project().id,
+                    file=File(open(f.name)),
+                    encoding='UTF-8',
+                    field_map=json.dumps(field_map),
+                    articleset=aset)
+        Text(**form).run()
+        fn = os.path.splitext(os.path.basename(f.name))[0]
+    return fn, ArticleSet.objects.get(pk=aset).articles.all()
 
 
 class TestUploadText(amcattest.AmCATTestCase):
     @amcattest.use_elastic
     def test_article(self):
-        from django.core.files import File
+        field_map = dict(title={"type": "field", "value": "filename"},
+                         date={"type": "literal", "value": "2016-01-01"},
+                         text={"type": "field", "value": "text"},
+                         custom={"type": "literal", "value": "test"})
+        fn, (a,) = _test(field_map, text="test")
+        self.assertEqual(a.title, fn)
+        self.assertEqual(a.date.isoformat()[:10], '2016-01-01')
+        self.assertEqual(a.text, "test")
+        self.assertEqual(dict(a.properties), {"custom": "test"})
 
-        from tempfile import NamedTemporaryFile
+    @amcattest.use_elastic
+    def test_fieldname_parts(self):
+        text = u'H. C. Andersens for\xe6ldre tilh\xf8rte samfundets laveste lag.'
+        date = "1999-12-31"
+        name = "\u0409\u0429\u0449\u04c3"
 
-        with NamedTemporaryFile(prefix=u"1999-12-31_\u0409\u0429\u0449\u04c3", suffix=".txt") as f:
-            text = u'H. C. Andersens for\xe6ldre tilh\xf8rte samfundets laveste lag.'
-            f.write(text.encode('utf-8'))
-            f.flush()
+        field_map = dict(title={"type": "field", "value": "filename-2"},
+                         date={"type": "field", "value": "filename-1"},
+                         text={"type": "field", "value": "text"})
+        _, (a,) = _test(field_map, text, prefix="{date}_{fn}_".format(**locals()))
+        self.assertEqual(a.title, name)
+        self.assertEqual(a.date.isoformat()[:10], date)
+        self.assertEqual(a.text, text)
 
-            form = dict(project=amcattest.create_test_project().id,
-                        encoding='UTF-8',
-                        file=File(open(f.name)))
-
-            form['articleset'] = amcattest.create_test_set().id
-            form['field_map'] = json.dumps(dict(
-                title={"type": "field", "value": "filename-2"},
-                date={"type": "field", "value": "filename-1"},
-                text={"type": "field", "value": "text"},
-                prop_num={"type": "literal", "value": "3"}))
-            aset = Text(**form).run()
-
-            a, = ArticleSet.objects.get(pk=aset).articles.all()
-            self.assertEqual(a.headline, 'simple test')
-            self.assertEqual(a.date.isoformat()[:10], '2010-01-01')
-            self.assertEqual(a.text, text)
-            return
-
-            # test autodect headline from filename
-            dn, fn = os.path.split(f.name)
-            fn, ext = os.path.splitext(fn)
-            a, = Text(dict(date='2010-01-01',
-                           file=File(open(f.name)), encoding=0, **base)).run()
-            a = Article.objects.get(pk=a.id)
-            self.assertEqual(a.headline, fn)
-            self.assertEqual(a.date.isoformat()[:10], '2010-01-01')
-            self.assertEqual(a.text, text)
-            self.assertEqual(a.section, dn)
-
-            # test autodect date and headline from filename
-            field_map = dict(title={"type": "field", "value": "filename-2"},
-                             date={"type": "field", "value": "filename-1"},
-                             text={"type": "field", "value": "text"},
-                             prop_num={"type": "literal", "value": "3"})
-            a, = Text(dict(file=File(open(f.name)), encoding=0, **base)).run()
-            a = Article.objects.get(pk=a.id)
-            self.assertEqual(a.headline, fn.replace("1999-12-31_", ""))
-            self.assertEqual(a.date.isoformat()[:10], '1999-12-31')
-            self.assertEqual(a.text, text)
 
     @amcattest.use_elastic
     def test_zip(self):

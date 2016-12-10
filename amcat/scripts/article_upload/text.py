@@ -35,7 +35,6 @@ from amcat.models.article import Article
 from amcat.scripts.article_upload.upload import UploadScript, UploadForm, ArticleField
 from amcat.tools import toolkit
 
-
 log = logging.getLogger(__name__)
 
 
@@ -119,37 +118,15 @@ class Text(UploadScript):
                 return value
             if value == 'filename':
                 return filename
+            if value == 'text':
+                return file.read()
+            if value.startswith('filename-'):
+                n = int(value.split("-")[-1])
+                return filename.split("_")[n-1]  # filename-n is 1 based index
             raise ValueError("Can't parse field {value}".format(**locals()))
 
-        metadata = {field: parse_field(file, **setting) for (field, setting) in self.options['field_map'].items()}
-
-        metadata = dict((k, v) for (k, v) in self.options.items()
-                        if k in ["title", "project", "date", "properties"])
-
-        if not metadata["date"]:
-            datestring, filename = filename.split("_", 1)
-            metadata["date"] = toolkit.read_date(datestring)
-
-        if not metadata["title"].strip():
-            metadata["title"] = filename
-
-        if file:
-            convertors = None
-            if ext.lower() == ".docx":
-                convertors = [_convert_docx, _convert_doc]
-            elif ext.lower() == ".doc":
-                convertors = [_convert_doc, _convert_docx]
-            elif ext.lower() == ".pdf":
-                convertors = [_convert_pdf]
-
-            if convertors:
-                text = _convert_multiple(file, convertors)
-            else:
-                text = "\n".join(file.readlines())
-        else:
-            text = self.options['text']
-
-        return Article(text=text, **metadata)
+        fields = {field: parse_field(file, **setting) for (field, setting) in self.options['field_map'].items()}
+        return [Article(**fields)]
 
     def explain_error(self, error):
         """Explain the error in the context of unit for the end user"""
