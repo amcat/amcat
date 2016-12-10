@@ -40,6 +40,7 @@ from urllib.parse import urljoin
 from uuid import uuid4
 
 import dateparser
+import shutil
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import TestCase
 from iso8601 import iso8601
@@ -346,6 +347,8 @@ class AmCATLiveServerTestCase(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super(AmCATLiveServerTestCase, cls).setUpClass()
+        if not shutil.which("geckodriver"):  # try/except gives warning from selenium destructor
+            raise unittest.SkipTest("geckodriver needs to be in PATH for LiveServerTestCase")
         cls.browser = Browser(driver_name=os.environ.get("AMCAT_WEBDRIVER", "firefox"))
 
     def setUp(self):
