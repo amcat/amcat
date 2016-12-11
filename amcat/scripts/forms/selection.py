@@ -293,8 +293,6 @@ class SelectionForm(forms.Form):
         return None
 
     def clean_articlesets(self):
-        print(self.cleaned_data)
-
         if not self.cleaned_data["articlesets"]:
             return self.project.all_articlesets()
         return self.cleaned_data["articlesets"]

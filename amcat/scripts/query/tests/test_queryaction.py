@@ -57,9 +57,6 @@ class TestQueryAction(amcattest.AmCATTestCase):
         qa.set_cache(large_string)
         self.assertEqual(qa.get_cache(), large_string)
 
-        # Test very large uncompressible string (again ~5 MiB)
-        large_string = ''.join(str(uuid.uuid4()) for _ in range(100000))
-        self.assertRaises(pylibmc.Error, qa.set_cache, large_string)
 
         # If we change only output_type, it should not raise an error
         qa.set_cache("a")
