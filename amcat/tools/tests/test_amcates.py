@@ -371,10 +371,10 @@ class TestAmcatES(amcattest.AmCATTestCase):
         })
 
         hash = get_article_dict(article)['hash']
-        Article.create_articles([article])
+        Article.create_articles([article], articleset=amcattest.create_test_set())
         ES().flush()
-        
         es_articles = ES().query_all(filters={"ids": [article.id]}, fields=["hash"])
+        es_articles = list(es_articles)
         es_article = list(es_articles)[0]
 
         self.assertEqual(article.id, es_article.id)
