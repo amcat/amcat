@@ -191,7 +191,6 @@ class UploadScript(ActionForm):
         monitor.update(10, "Uploaded {n} articles, post-processing".format(n=len(articles)))
 
         aset = self.options["articleset"]
-        log.warning(aset)
         new_provenance = self.get_provenance(file, articles)
         aset.provenance = ("%s\n%s" % (aset.provenance or "", new_provenance)).strip()
         aset.save()
