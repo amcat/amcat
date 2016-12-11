@@ -46,13 +46,12 @@ class TestImportCodebook(amcattest.AmCATTestCase):
         self.assertEqual(self._standardize_cb(_run_test(b)), u"root:None;sub1:root;sub1a:sub1")
 
     def test_unicode(self):
-        from amcat.scripts.article_upload.fileupload import ENCODINGS
         test1, test2 = u'code_\xe9', u'c\xd8de'
         c = [("c1","label - test"),
              (test1, test2)]
         for encoding in ('UTF-8', 'Latin-1'):
             b = _csv_bytes(c, encoding=encoding)
-            cb = _run_test(b, encoding=ENCODINGS.index(encoding))
+            cb = _run_test(b, encoding=encoding)
             h = list(cb.get_hierarchy())
             self.assertEqual(len(h), 1)
             code, parent = h[0]

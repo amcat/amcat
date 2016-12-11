@@ -19,9 +19,13 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+# WvA: FIXME: This now contains copypasta from the old fileupload class,
+#             and might need cleanup or merging (again) with csv uploader
+
 import logging
 
 import collections
+from io import TextIOWrapper
 
 import chardet
 from django.core.files import File
@@ -49,7 +53,6 @@ DIALECTS = [("autodetect", "Autodetect"),
 class excel_semicolon(csv.excel):
     delimiter = ';'
 
-
 csv.register_dialect("excel-semicolon", excel_semicolon)
 
 
@@ -62,13 +65,8 @@ def namedtuple_csv_reader(csv_file, encoding='utf-8', **kargs):
     @params object_name: The class name for the namedtuple
     @param kargs: Will be passed to csv.reader, e.g. dialect
     """
-    if encoding.lower() in ('', 'autodetect'):
-        encoding = chardet.detect(csv_file.read(MAX_SAMPLE_SIZE))["encoding"]
-        log.info("Guessed encoding: {encoding}".format(**locals()))
-        csv_file.seek(0)
-
     r = csv.reader(csv_file, **kargs)
-    return namedtuples_from_reader(r, encoding=encoding)
+    return namedtuples_from_reader(r)
 
 
 def _xlsx_as_csv(file):
@@ -91,52 +89,10 @@ def namedtuple_xlsx_reader(xlsx_file):
     return namedtuples_from_reader(reader)
 
 
-class CSVFile(File):
-    def __init__(self, *args, dialect=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.dialect_name = dialect
-        self._dialect = None
-
-    @property
-    def dialect(self):
-        if self._dialect is not None:
-            return self._dialect
-
-        d = self.dialect_name or "autodetect"
-
-        if d == 'autodetect':
-            sample = self.file.read(MAX_SAMPLE_SIZE)
-            dialect = csv.Sniffer().sniff(sample)
-            self.file.seek(0)
-            if dialect.delimiter not in "\t,;":
-                dialect = csv.get_dialect('excel')
-        else:
-            dialect = csv.get_dialect(d)
-
-        self._dialect = dialect
-        return dialect
-
-    def __iter__(self):
-        reader = self.get_reader()
-        yield from reader
-
-    def get_reader(self, reader_class=namedtuple_csv_reader):
-        file = self.file
-
-        if file.name.endswith(".xlsx"):
-            if reader_class != namedtuple_csv_reader:
-                raise ValueError("Cannot handle xlsx files with non-default reader, sorry!")
-            return namedtuple_xlsx_reader(file)
-
-
-        return reader_class(file, dialect=self.dialect)
-
-
-def namedtuples_from_reader(reader, encoding=None):
+def namedtuples_from_reader(reader):
     """
     returns a sequence of namedtuples from a (csv-like) reader which should yield the header followed by value rows
     """
-
     header = next(iter(reader))
 
     class Row(collections.namedtuple("Row", header, rename=True)):
@@ -152,13 +108,11 @@ def namedtuples_from_reader(reader, encoding=None):
             return zip(self.column_names, self)
 
     for values in reader:
-        if encoding is not None:
-            values = [x.decode(encoding) if isinstance(x, bytes) else x for x in values]
         if len(values) < len(header):
             values += [None] * (len(header) - len(values))
         yield Row(*values)
 
-
+_ENCODINGS = [(k, k) for k in ["Autodetect", "ISO-8859-15", "UTF-8", "Latin-1"]]
 
 class ImportCodebook(Script):
     """
@@ -187,10 +141,7 @@ class ImportCodebook(Script):
     We have added experimental support for .xlsx files (note: only use .xlsx, not the older .xls file type).
     This will hopefully alleviate some of the problems with reading Excel-generated csv file. Only the
     first sheet will be used, and please make sure that the data in that sheet has a header row. Please let
-    us know if you encounter any difficulties at github.com/amcat/amcat/issues. Since you can only attach
-    pictures there, the best way to share the file that you are having difficulty with (if it is not private)
-    is to upload it to dropbox or a file sharing website and paste the link into the issue.
-    
+    us know if you encounter any difficulties at github.com/amcat/amcat/issues.
     """
 
     class options_form(forms.Form):
@@ -204,6 +155,8 @@ class ImportCodebook(Script):
         codebook = forms.ModelChoiceField(queryset=Codebook.objects.all(),
                                           help_text="Update existing codebook",
                                           required=False)
+        encoding = forms.ChoiceField(choices=_ENCODINGS, initial=0, required=False,
+                                     help_text="Try to change this value when character issues arise.", )
 
         def clean_codebook_name(self):
             """If codebook name is not specified, use file base name instead"""
@@ -214,9 +167,30 @@ class ImportCodebook(Script):
                 return fn
             return self.cleaned_data.get('codebook_name')
 
-        def get_entries(self):
-            dialect = self.cleaned_data['dialect']
-            return [CSVFile(self.get_uploaded_text(), dialect=dialect)]
+        def get_reader(self):
+            f = self.files['file']
+
+            if f.name.endswith(".xlsx"):
+                return namedtuple_xlsx_reader(f)
+
+            enc = self.cleaned_data['encoding']
+            if enc.lower() in ('', 'autodetect'):
+                enc = chardet.detect(f.read(1024))["encoding"]
+                log.info("Guessed encoding: {enc}".format(**locals()))
+                f.seek(0)
+
+            f = TextIOWrapper(f.file, encoding=enc)
+
+            d = self.cleaned_data['dialect'] or 'autodetect'
+            if d == 'autodetect':
+                dialect = csv.Sniffer().sniff(f.readline())
+                f.seek(0)
+                if dialect.delimiter not in "\t,;":
+                    dialect = csv.get_dialect('excel')
+            else:
+                dialect = csv.get_dialect(d)
+
+            return namedtuple_csv_reader(f, dialect=dialect)
 
     @transaction.atomic
     def _run(self, file, project, codebook_name, codebook, **kargs):
