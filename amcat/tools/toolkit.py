@@ -36,18 +36,18 @@ this organisation!
  - misc functions
 """
 
-
 import collections
 import datetime
 import itertools
+import locale
 import logging
 import random
 import string
 import time
-import warnings
-import dateparser
+from contextlib import contextmanager
+from typing import Sequence
 
-from typing import Optional, Sequence
+import dateparser
 
 log = logging.getLogger(__name__)
 
@@ -177,12 +177,23 @@ def random_alphanum(size=10):
 ##                     Date(time) functions                              ##
 ###########################################################################
 
+@contextmanager
+def temp_locale(category, loc=(None, None)):
+    _old = locale.getlocale(category)
+    try:
+        locale.setlocale(category, loc)
+        yield
+    finally:
+        locale.setlocale(category, _old)
+
+
 def read_date(datestr: str):
     # [WvA] You probably might as well just call dateparser directly, keeping this
-    # for backwards compatability only!
+    # for backwards compatability only!?
     datestr = datestr.replace("Maerz", "März")     # Needed in LN parser?
     settings = {'DATE_ORDER': 'DMY'}      # MDY is studid!
-    date = dateparser.parse(datestr, settings = settings)
+    with temp_locale(locale.LC_TIME):
+        date = dateparser.parse(datestr, settings=settings)
     if date is None:
         raise ValueError("Could not parse datestr: {datestr!r}".format(**locals()))
     return date
