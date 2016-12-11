@@ -411,8 +411,7 @@ class Article(AmcatModel):
         @param articles: a collection of objects with the necessary properties (.title etc)
         @param articleset(s): articleset object(s), specify either or none
         """
-        monitor = monitor.submonitor(total=4)
-
+        monitor = monitor.submonitor(total=6)
         if articlesets is None:
             articlesets = [articleset] if articleset else []
 
@@ -438,8 +437,8 @@ class Article(AmcatModel):
                     hashes[a.hash].append(a)
 
             # Check database for duplicates
+            monitor.update(message="Checking _duplicates based on hash..")
             if hashes:
-                monitor.update(message="Checking _duplicates based on hash..")
                 results = Article.objects.filter(hash__in=hashes.keys()).only("hash")
                 for orig in results:
                     dupes = hashes[orig.hash]
@@ -467,7 +466,7 @@ class Article(AmcatModel):
                 article.id = article._duplicate.id
 
         if not articlesets:
-            monitor.update(2)
+            monitor.update(3)
             return articles
 
         # add new articles and _duplicates to articlesets

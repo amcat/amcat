@@ -79,7 +79,6 @@ class ScriptHandler(TaskHandler):
                         fdict = dict(fdict)
                         fdict["content"] = open(fdict["path"], "rb").read()
                         filedict_list[i] = SimpleUploadedFile.from_dict(fdict)
-                        log.warn(fdict)
                 files.setlist(key, filedict_list)
             kwargs['files'] = files
         return kwargs

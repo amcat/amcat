@@ -153,7 +153,8 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
             return x
             
         for f in self.script_fields:
-            values = ",".join(abbrev(x, 20) for x in f.values)
+            values = ",".join(abbrev(x, 20) for x in f.values) if f.values else None
+
             yield {'label': f.label, 'values': values, 'destination': f.suggested_destination}
 
     def get_initial(self):
@@ -203,20 +204,17 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
         return args
 
     def get_field_map(self, form):
-        field_map = {}
-        literals = {}
         for i, field in enumerate(form):
             label = field.cleaned_data['label']
             destination = field.cleaned_data['destination']
             if label and destination and destination != "-":
                 if i < form.initial_form_count():
-                    field_map[label] = destination
+                    yield destination, {"type": "field", "value": label}
                 else:
-                    literals[destination] = label
-        return {"fields": field_map, "literals": literals}
+                    yield destination, {"type": "literal", "value": label}
 
     def form_valid(self, form):
-        field_map = self.get_field_map(form)
+        field_map = dict(self.get_field_map(form))
         args = self.get_script_form_kwargs(self.upload, field_map)
         args = self.clean_script_args(args)
         handler = ArticleSetUploadScriptHandler.call(target_class=self.script_class, arguments=args,

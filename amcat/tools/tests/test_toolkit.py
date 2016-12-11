@@ -49,7 +49,6 @@ class TestToolkit(amcattest.AmCATTestCase):
         self.assertEqual(toolkit.strip_accents(test_string), "ss abc ca")
 
     def test_readdate(self):
-        import locale; print("!", locale.getlocale(locale.LC_TIME))
         for s, date in (
             ("22 maart 1980" , datetime.datetime(1980, 3, 22,0,0,0)),
             ("22 mrt 1980" , datetime.datetime(1980, 3, 22,0,0,0)),
