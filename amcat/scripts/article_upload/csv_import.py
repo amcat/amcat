@@ -36,11 +36,6 @@ log = logging.getLogger(__name__)
 REQUIRED = tuple(
     field.name for field in Article._meta.get_fields() if field.name in ARTICLE_FIELDS and not field.blank)
 
-TYPES = {
-    "date": datetime.datetime,
-    "_default": str
-}
-
 PARSERS = {
     datetime.datetime: read_date,
     int: int,
@@ -55,10 +50,6 @@ def get_required():
 
 def get_fields():
     return ARTICLE_FIELDS
-
-
-def get_field_type(field):
-    return TYPES.get(field, TYPES['_default'])
 
 
 def get_parser(field_type):
