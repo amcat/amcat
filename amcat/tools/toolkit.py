@@ -188,10 +188,10 @@ def temp_locale(category, loc=(None, None)):
 
 
 def read_date(datestr: str):
-    # [WvA] You probably might as well just call dateparser directly, keeping this
-    # for backwards compatability only!?
-    datestr = datestr.replace("Maerz", "März")     # Needed in LN parser?
-    settings = {'DATE_ORDER': 'DMY'}      # MDY is studid!
+    datestr = datestr.replace("Maerz", "März")  # Needed in LN parser?
+    settings = {'PREFER_DAY_OF_MONTH': 'first'}
+    if "/" in datestr:
+        settings['DATE_ORDER'] = 'DMY'  # MDY is studid!
     with temp_locale(locale.LC_TIME):
         date = dateparser.parse(datestr, settings=settings)
     if date is None:

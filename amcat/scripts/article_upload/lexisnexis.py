@@ -26,8 +26,7 @@ import re
 import collections
 import logging
 
-from amcat.scripts.article_upload.upload import UploadScript, ParseError
-from amcat.scripts.article_upload import fileupload
+from amcat.scripts.article_upload.upload import UploadScript, ParseError, ArticleField
 from amcat.tools import toolkit
 from amcat.models.article import Article
 
@@ -77,13 +76,13 @@ BODY_KEYS_MAP = {
     "section": "section",
     "rubrique": "section",
     "rubrik": "section",
-    "l\xe4nge": "length",
+    "l\xe4nge": "length_num",
     "sprache": "language",
     "langue": "language",
     "language": "language",
 
-    "longueur": "length",
-    "length": "length",
+    "longueur": "length_num",
+    "length": "length_num",
     
     "titre": "title",
     
@@ -218,11 +217,14 @@ def parse_online_article(art):
         return
     if lead.startswith("Bewaar lees artikel"):
         lead = lead[len("Bewaar lees artikel"):]
-    
-    if not re.match("(\d+) words", nwords):
+
+    m = re.match("(\d+) words", nwords)
+    if not m:
         return
+    nwords = int(m.group(1))
     date = toolkit.read_date(datestr)
-    return title.strip(), None, lead.strip(), date, medium, {"length": nwords, "url": url}
+
+    return dict(title=title.strip(), text=lead.strip(), date=date, medium=medium, length_num=nwords, url=url)
 
 def parse_article(art):
     """
@@ -376,10 +378,6 @@ def parse_article(art):
 
     lines = _strip_article(art).split("\n")
 
-    
-
-
-    
     header = list(_get_header(lines))
     if not lines:
         # Something is wrong with this article, skip it
@@ -420,6 +418,7 @@ def parse_article(art):
             date = line
             dateline = i
             source = _get_source(header, i)
+            break
     if date is None:  # try looking for only month - year notation by preprending a 1
         for i, line in enumerate(header):
             line = "1 {line}".format(**locals())
@@ -464,7 +463,9 @@ def parse_article(art):
         timeline = header[dateline + 1]
         m = re.search(r"\b\d?\d:\d\d\s(PM\b)?", timeline)
         if m and date.time().isoformat() == '00:00:00':
-            date = toolkit.read_date(" ".join([date.isoformat()[:10], m.group(0)]))
+            time = toolkit.read_date("1990-01-01 {}".format(m.group(0)))
+            datestr = " ".join([date.isoformat()[:10], m.group(0)])
+            date = toolkit.read_date(datestr)
 
     m = re.match("copyright\s\xa9?\s?(\d{4})?(.*)", source, re.I)
     if m:
@@ -476,7 +477,10 @@ def parse_article(art):
     if 'graphic' in meta and (not text):
         text = meta.pop('graphic')
 
+
     if title is None:
+        if 'headline' in meta and 'title' not in meta:
+            meta['title'] = meta.pop('headline')
         if 'title' in meta:
             title = re.sub("\s+", " ", meta.pop('title')).strip()
             if ";" in title and not byline:
@@ -489,63 +493,14 @@ def parse_article(art):
             title += "; %s" % byline
         byline = meta.pop('byline')
 
-    return title.strip(), byline, text, date, source, meta
-
-
-def body_to_article(title, byline, text, date, medium, meta):
-    """
-    Create an Article-object based on given parameters. It raises an
-    error (Medium.DoesNotExist) when the given source does not have
-    an entry in the database.
-
-    @param title: headline of new Article-object
-    @type title: str
-
-    @param byline: byline for new Article
-    @type byline: NoneType, str
-
-    @param text: text for new Article
-    @type text: str
-
-    @param date: date(time) for new Article
-    @type date: datetime.date, datetime.datetime
-
-    @param source: medium-label for new Article
-    @type source: str
-
-    @param meta: object containing all sorts of meta-information, most of
-                 it suitable for metastring. However, some information
-                 (author, length) will be extracted.
-    @type meta: dictionary
-
-    @return Article-object
-
-    """
-    log.debug("Creating article object for {title!r}".format(**locals()))
-
-    art = Article(title=title, text=text, date=date)
-
-    # Author / Section
-    meta = meta.copy()
-    meta.pop("title", 0)
-    meta.pop("text", 0)
-    meta.pop("url", 0)
-    meta.update(
-        medium=medium,
-        byline=byline
-    )
-    if 'url' in meta:
-        art.url = meta.pop('url')
-        art.url = re.sub("\s+", "", art.url)
     if 'length' in meta:
-        meta['length'] = int(meta['length'].split()[0])
-    properties = dict(
-        length=len(art.text.split())
-    )
-    properties.update((clean_property_key(k), v) for k, v in meta.items() if v is not None)
-    art.properties = properties
-    return art
+        meta['length_num'] = meta.pop('length')
+    if 'length_num' in meta:
+        meta['length_num'] = int(meta['length_num'].split()[0])
 
+    meta.update(dict(title=title.strip(), byline=byline, text=text, date=date, medium=source))
+    meta = {k: v for (k, v) in meta.items() if v}
+    return meta
 
 def get_query(header):
     header = {k.lower().strip(): v for k, v in header.items()}
@@ -553,6 +508,11 @@ def get_query(header):
         if key in header:
             return header[key]
 
+def split_file(text):
+    header, body = split_header(text)
+    query = get_query(parse_header(header))
+    fragments = list(split_body(body))
+    return query, fragments
 
 class LexisNexis(UploadScript):
     """
@@ -561,17 +521,18 @@ class LexisNexis(UploadScript):
     date etc.) from the file automatically.
     """
 
-    class options_form(UploadScript.options_form, fileupload.ZipFileUploadForm):
-        pass
-
-    name = 'Lexis Nexis'
-
-    def split_file(self, file):
-        text = "".join(file.readlines())
-        header, body = split_header(text)
-        self.ln_query = get_query(parse_header(header))
-        fragments = list(split_body(body))
-        return fragments
+    @classmethod
+    def get_fields(cls, file, encoding):
+        text = cls.textio(file, encoding).read()
+        fields = collections.OrderedDict()
+        query, fragments = split_file(text)
+        for doc in fragments:
+            meta = parse_article(doc)
+            if meta:
+                for k, v in meta.items():
+                    if v:
+                        fields[k] =fields.get(k, []) + [v]
+        return [ArticleField(k, k, values) for (k, values) in fields.items()]
 
     def get_provenance(self, file, articles):
         # FIXME: redundant double reading of file
