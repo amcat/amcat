@@ -25,10 +25,12 @@ import logging
 import os.path
 import zipfile
 
+import chardet
 from django import forms
 from django.contrib.postgres.forms import JSONField
 from django.core.files import File
 from django.forms.widgets import HiddenInput
+from io import TextIOWrapper
 
 from amcat.models import Article, Project, ArticleSet
 from amcat.models.articleset import create_new_articleset
@@ -200,6 +202,14 @@ class UploadScript(ActionForm):
 
         monitor.update(10, "Done! Uploaded articles".format(n=len(articles)))
         return self.options["articleset"]
+
+    @classmethod
+    def textio(cls, file, encoding):
+        if encoding.lower() == 'autodetect':
+            encoding = chardet.detect(file.read(1024))["encoding"]
+            log.info("Guessed encoding: {encoding}".format(**locals()))
+            file.seek(0)
+        return TextIOWrapper(file, encoding=encoding)
 
     @classmethod
     def unpack_file(cls, file):

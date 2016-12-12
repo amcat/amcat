@@ -126,7 +126,7 @@ class CSV(UploadScript):
     @classmethod
     def get_fields(cls, file, encoding):
         for f in UploadScript.unpack_file(file):
-            reader = csv.DictReader(TextIOWrapper(f.file, encoding="utf-8"))
+            reader = csv.DictReader(cls.textio(file, encoding))
             values = list(itertools.islice(reader, 0, 5))
             known_articleset_fields = set() #TODO: get these somehow
             known_fields = set(ARTICLE_FIELDS) | known_articleset_fields
