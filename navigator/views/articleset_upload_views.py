@@ -1,30 +1,51 @@
 import base64
+import json
 import logging
 import os
 from tempfile import mkdtemp
 from uuid import uuid4, UUID
-import json
 
-from collections import defaultdict
 from django import forms
-from django.contrib.postgres.forms import JSONField
+from django.contrib.postgres.forms import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 from django.core.urlresolvers import reverse
-from django.forms.formsets import ManagementForm
 from django.http import QueryDict
 from django.shortcuts import redirect
 from django.utils.datastructures import MultiValueDict
 from django.views.generic import FormView
 
 from amcat.models import Plugin, ArticleSet
-
 from amcat.scripts.article_upload import upload
+from amcat.tools.amcates import is_valid_property_name, ARTICLE_FIELDS
 from navigator.views.project_views import ProjectDetailsView
 from navigator.views.projectview import BaseMixin
 from navigator.views.scriptview import ScriptHandler, get_temporary_file_dict
+from settings import ES_MAPPING_TYPES
 
 log = logging.getLogger(__name__)
+
 STORAGE_DIR = mkdtemp(prefix="amcat_upload")
+
+def get_type_choices():
+    default = 'default'
+    return [(k, k) for k in sorted(ES_MAPPING_TYPES.keys(), key=lambda x: '\0' if x == default else x)]
+
+def get_destination_choices(project=None):
+    core_fields = [(x, x.title()) for x in ARTICLE_FIELDS if x not in ("parent_hash",)]
+    choices = [
+        ("-", "(don't use)"),
+        ("new_field", "New field..."),
+        ("Core fields", core_fields)
+    ]
+
+    if project:
+        properties = sorted(set(property for articleset in project.favourite_articlesets.all()
+                            for property in articleset.get_used_properties()))
+        if properties:
+            choices.append(("Articleset fields", [(x, x.title()) for x in properties]))
+
+    return choices
+
 
 class ArticleSetUploadScriptHandler(ScriptHandler):
     def get_redirect(self):
@@ -61,11 +82,13 @@ class ArticleSetUploadScriptHandler(ScriptHandler):
 
 class ArticleSetUploadForm(upload.UploadForm):
     script = forms.ModelChoiceField(queryset=Plugin.objects.all())
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in list(self.fields):
             if field not in ("file", "articleset", "articleset_name", "encoding", "script"):
                 self.fields.pop(field)
+
 
 class ArticleSetUploadView(BaseMixin, FormView):
     form_class = ArticleSetUploadForm
@@ -101,26 +124,38 @@ class ArticleSetUploadView(BaseMixin, FormView):
         return redirect("{}?upload_id={}".format(reverse("navigator:articleset-upload-options", args=(self.project.id,)),
                                         upload_id_urlsafe))
 
+def validate_property_name(value):
+    if not is_valid_property_name(value):
+        raise ValidationError("Invalid property name: {}".format(value))
+
 class ArticleUploadFieldForm(forms.Form):
     label = forms.CharField(required=False, help_text="(Type Constant value)")
-    values = forms.CharField(required=False)
-    destination = forms.ChoiceField(choices=[("-", "(don't use)"),
-                                             ("title", "Title"),
-                                             ("date", "Date"),
-                                             ("text", "Text"),
-                                             ("custom", "Custom")])
+    #values = forms.CharField(required=False)
+    destination = forms.ChoiceField(choices=get_destination_choices())
+
+    new_name = forms.CharField(validators=[validate_property_name], required=False)
+    type = forms.ChoiceField(required=False, choices=get_type_choices())
+
+    def __init__(self, project=None, *args, **kwargs):
+        values = kwargs.get('initial', {}).pop('values', [])
+        super().__init__(*args, **kwargs)
+        self.values = values
+        self.fields["destination"].choices = get_destination_choices(project)
 
 
 class ArticleUploadFormSet(forms.BaseFormSet):
     management_initial = ()
+    project = None
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.management_initial = dict(self.management_initial)
+        self.form_kwargs['project'] = self.project
 
     @property
     def management_form(self):
         mf = super().management_form
-        mf.fields["upload_id"] = forms.UUIDField(initial=self.management_initial.get("upload_id"), widget=forms.HiddenInput)
+        mf.fields["upload_id"] = forms.UUIDField(initial=self.management_initial.get("upload_id"),
+                                                 widget=forms.HiddenInput)
         return mf
 
 class ArticlesetUploadOptionsView(BaseMixin, FormView):
@@ -147,13 +182,13 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
         return super().get_context_data(**kwargs)
 
     def initial_data(self):
-        def abbrev(x, maxlen):
+        def abbrev_and_quote(x, maxlen):
             x = str(x).strip()
             if len(x) > maxlen: x = x[:maxlen] + "..."
-            return x
+            return '{}'.format(x)
             
         for f in self.script_fields:
-            values = ",".join(abbrev(x, 20) for x in f.values) if f.values else None
+            values = [abbrev_and_quote(x, 20) for x in f.values if x] if f.values else []
 
             yield {'label': f.label, 'values': values, 'destination': f.suggested_destination}
 
@@ -162,6 +197,7 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
         
     def get_form_class(self):
         formset = forms.formset_factory(ArticleUploadFieldForm, formset=ArticleUploadFormSet)
+        formset.project = self.project
         formset.management_initial = {"upload_id": self.upload_id}
         return formset
 
@@ -203,11 +239,23 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
             args['files'] = dict(args['files'])
         return args
 
+    def format_field_name(self, name, type):
+        name = "{}_{}".format(name, type) if type and type != "default" else name
+        if not is_valid_property_name(name):
+            raise Exception("Invalid property name: {}".format(name))
+        return  name
+
     def get_field_map(self, form):
         for i, field in enumerate(form):
             label = field.cleaned_data['label']
             destination = field.cleaned_data['destination']
-            if label and destination and destination != "-":
+            if label and destination == "new_field":
+                new_type = field.cleaned_data['type']
+                new_name = field.cleaned_data['new_name']
+                destination = self.format_field_name(new_name, new_type)
+                yield destination, {"type": "field", "value": label}
+
+            elif label and destination and destination != "-":
                 if i < form.initial_form_count():
                     yield destination, {"type": "field", "value": label}
                 else:

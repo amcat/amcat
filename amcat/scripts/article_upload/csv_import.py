@@ -141,16 +141,13 @@ class CSV(UploadScript):
 
     def map_article(self, art_dict):
         mapped_dict = {}
-        field_map = self.options['field_map']["fields"]
-        for k, v in art_dict.items():
-            try:
-                dest = field_map[k]
-            except KeyError:
-                pass
+        for destination, field in self.options['field_map'].items():
+            if field['type'] == "field":
+                mapped_dict[destination] = art_dict[field["value"]]
+            elif field["type"] == "literal":
+                mapped_dict[destination] = field["value"]
             else:
-                mapped_dict[dest] = v
-        for k, v in self.options['field_map']["literals"].items():
-            mapped_dict[k] = v
+                raise Exception("type should be 'field' or 'literal'")
         return mapped_dict
 
 if __name__ == '__main__':
