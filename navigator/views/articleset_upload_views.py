@@ -14,7 +14,7 @@ from django.shortcuts import redirect
 from django.utils.datastructures import MultiValueDict
 from django.views.generic import FormView
 
-from amcat.models import Plugin, ArticleSet
+from amcat.models import Plugin, ArticleSet, Article
 from amcat.scripts.article_upload import upload
 from amcat.tools.amcates import is_valid_property_name, ARTICLE_FIELDS
 from navigator.views.project_views import ProjectDetailsView
@@ -22,19 +22,25 @@ from navigator.views.projectview import BaseMixin
 from navigator.views.scriptview import ScriptHandler, get_temporary_file_dict
 from settings import ES_MAPPING_TYPES
 
+NEW_FIELD = "new_field"
+
 log = logging.getLogger(__name__)
 
 STORAGE_DIR = mkdtemp(prefix="amcat_upload")
+
+REQUIRED = tuple(
+    field.name for field in Article._meta.get_fields() if field.name in ARTICLE_FIELDS and not field.blank)
+
 
 def get_type_choices():
     default = 'default'
     return [(k, k) for k in sorted(ES_MAPPING_TYPES.keys(), key=lambda x: '\0' if x == default else x)]
 
 def get_destination_choices(project=None):
-    core_fields = [(x, x.title()) for x in ARTICLE_FIELDS if x not in ("parent_hash",)]
+    core_fields = sorted((x, x + (" *" if x in REQUIRED else "")) for x in ARTICLE_FIELDS if x not in ("parent_hash",))
     choices = [
         ("-", "(don't use)"),
-        ("new_field", "New field..."),
+        (NEW_FIELD, "New field..."),
         ("Core fields", core_fields)
     ]
 
@@ -42,7 +48,7 @@ def get_destination_choices(project=None):
         properties = sorted(set(property for articleset in project.favourite_articlesets.all()
                             for property in articleset.get_used_properties()))
         if properties:
-            choices.append(("Articleset fields", [(x, x.title()) for x in properties]))
+            choices.append(("Project fields", [(x, x) for x in properties]))
 
     return choices
 
@@ -124,16 +130,17 @@ class ArticleSetUploadView(BaseMixin, FormView):
         return redirect("{}?upload_id={}".format(reverse("navigator:articleset-upload-options", args=(self.project.id,)),
                                         upload_id_urlsafe))
 
-def validate_property_name(value):
+def validate_property_name(value, type):
+    if type != "default":
+        value = "{}_{}".format(value, type)
     if not is_valid_property_name(value):
         raise ValidationError("Invalid property name: {}".format(value))
 
 class ArticleUploadFieldForm(forms.Form):
     label = forms.CharField(required=False, help_text="(Type Constant value)")
-    #values = forms.CharField(required=False)
     destination = forms.ChoiceField(choices=get_destination_choices())
 
-    new_name = forms.CharField(validators=[validate_property_name], required=False)
+    new_name = forms.CharField(required=False)
     type = forms.ChoiceField(required=False, choices=get_type_choices())
 
     def __init__(self, project=None, *args, **kwargs):
@@ -141,6 +148,14 @@ class ArticleUploadFieldForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.values = values
         self.fields["destination"].choices = get_destination_choices(project)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if (cleaned_data['destination'] == NEW_FIELD) != bool(cleaned_data['new_name']):
+            raise ValidationError("Fieldname required for new field")
+
+        if cleaned_data['new_name']:
+            validate_property_name(cleaned_data['new_name'], cleaned_data['type'])
 
 
 class ArticleUploadFormSet(forms.BaseFormSet):
@@ -188,6 +203,7 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
             return '{}'.format(x)
             
         for f in self.script_fields:
+            #HACK: use initial['values'] to pass values to the respective form.__init__.
             values = [abbrev_and_quote(x, 20) for x in f.values if x] if f.values else []
 
             yield {'label': f.label, 'values': values, 'destination': f.suggested_destination}

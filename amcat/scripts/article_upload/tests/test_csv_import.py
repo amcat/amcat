@@ -1,7 +1,7 @@
 
 import csv
 import unittest
-from amcat.models import Medium, ArticleSet
+from amcat.models import ArticleSet
 from amcat.scripts.article_upload.csv_import import CSV
 from amcat.tools import amcattest
 
@@ -30,33 +30,7 @@ class TestCSV(amcattest.AmCATTestCase):
         self.assertEqual(len(articles), 1)
         self.assertEqual(articles[0].text, "")
 
-    @amcattest.use_elastic
-    def test_medium(self):
-        import functools
 
-        header = ('kop', 'datum', 'tekst', 'med')
-        data = [('kop1', '2001-01-01', '', 'Bla')]
-
-        test = functools.partial(_run_test_csv, header, data, text="tekst", headline="kop", date="datum")
-        articles = test(medium_name=None, medium="med")
-        self.assertEqual(len(articles), 1)
-        self.assertEqual(articles[0].medium.name, "Bla")
-
-        articles = test(medium_existing=Medium.get_or_create("1").id)
-        self.assertEqual(len(articles), 1)
-        self.assertEqual(articles[0].medium.name, "1")
-
-        articles = test(medium_existing=Medium.get_or_create("1").id, medium="med")
-        self.assertEqual(len(articles), 1)
-        self.assertEqual(articles[0].medium.name, "Bla")
-
-        articles = test(medium_name="bla2", medium="med")
-        self.assertEqual(len(articles), 1)
-        self.assertEqual(articles[0].medium.name, "Bla")
-
-        articles = test(medium_name="bla2", medium_existing=Medium.get_or_create("2").id)
-        self.assertEqual(len(articles), 1)
-        self.assertEqual(articles[0].medium.name, "2")
 
     @unittest.skip("Controller is a mess")
     def test_parents(self):
@@ -112,6 +86,9 @@ class TestCSV(amcattest.AmCATTestCase):
             a, = _run_test_csv(header, data, date="date", text="text")
             self.assertEqual(a.date.isoformat()[:10], expected)
 
+def get_field_map(**kwargs):
+    return dict((k, {"value":  v, "type": "field"}) for k, v in kwargs.items())
+
 
 def _run_test_csv(header, rows, **options):
     project = amcattest.create_test_project()
@@ -128,6 +105,6 @@ def _run_test_csv(header, rows, **options):
 
         set = CSV(dict(file=File(open(f.name, "rb")), encoding=0, project=project.id,
                        medium_name=options.pop("medium_name", 'testmedium'),
-                       articlesets=[articleset.id], **options)).run()
+                       articleset=articleset.id, **options)).run()
 
     return ArticleSet.objects.get(id=set[0]).articles.all()
