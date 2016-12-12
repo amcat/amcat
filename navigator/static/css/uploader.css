@@ -1,0 +1,22 @@
+
+#col-field{
+    width: 23em;
+}
+
+#col-known-properties{
+    width: 1em;
+}
+
+#col-new-properties{
+    width: 20em;
+}
+.multiselect{
+    min-width: calc(20em - 30px);
+}
+
+tr.field-row > td > small {
+    white-space: normal;
+}
+tr.field-row > td > small > span {
+    white-space: nowrap;
+}

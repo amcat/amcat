@@ -1,6 +1,13 @@
 {% extends "project/base.html" %}
+{% load staticfiles %}
 {% block javascript %}
+    <script>
+    require(["amcat/uploader"]);
+    </script>
+{% endblock %}
 
+{% block css %}
+    <link rel="stylesheet" href="{% static "css/uploader.css" %}">
 {% endblock %}
 {% block content %}
 
@@ -36,29 +43,74 @@
     <form method="POST" enctype="multipart/form-data" action="">
         {% csrf_token %}
         {{ form.management_form }}
-        {% for fieldform in form %} {# form is a formset, each fieldform is a django form #}
-            <div class="form-group row">
-                {% if fieldform.label.value %}
-                    <label for="{{ fieldform.destination.auto_id }}"
-                           class="col-sm-2 col-form-label">{{ fieldform.label.value }}</label>
-                    <input type="hidden" name="{{ fieldform.label.html_name }}" value="{{ fieldform.label.value }}">
-                {% else %}
-                    <div class="col-sm-2">
-                        <input type="text" name="{{ fieldform.label.html_name }}"
-                               placeholder="{{ fieldform.label.help_text }}">
-                    </div>
-                {% endif %}
-                <label for="{{ fieldform.destination.auto_id }}" class="col-sm-2 col-form-label">
-                    {% if fieldform.values.value %}({{ fieldform.values.value }}){% endif %}
-                </label>
-                <div class="col-sm-6">
-                    {{ fieldform.destination }}
-                </div>
-                <div class="col-sm-2">
-                    ERRORS: {{ fieldform.errors }}
-                </div>
-            </div>
-        {% endfor %}
+        <div class="panel panel-default">
+            <div class="panel-heading">Specify fields:</div>
+            <table class="table">
+                <colgroup>
+                    <col id="col-field">
+                    <col id="col-known-properties">
+                    <col id="col-new-properties">
+                </colgroup>
+                <colgroup>
+                    <col id="col-errors">
+                </colgroup>
+                <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Destination</th>
+                    <th></th>
+                    <th>(errors)</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for fieldform in form %} {# form is a formset, each fieldform is a django form #}
+                    <tr class="field-row">
+                        <td>
+                            {% if fieldform.label.value %}
+                                <label for="{{ fieldform.destination.auto_id }}">{{ fieldform.label.value }}</label>
+                                <input type="hidden" name="{{ fieldform.label.html_name }}"
+                                       value="{{ fieldform.label.value }}">
+                                {% if fieldform.values.value %}
+                                    <br>
+                                    <small>
+                                        e.g.: {{ fieldform.values.value }}
+                                    </small>
+                                {% elif fieldform.values %}
+                                    <br>
+                                    <small>
+                                        <span>'{{ fieldform.values|join:"'</span>, <span>'" }}'</span>
+                                    </small>
+                                {% endif %}
+                            {% else %}
+                                <input type="text" name="{{ fieldform.label.html_name }}"
+                                       placeholder="{{ fieldform.label.help_text }}">
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ fieldform.destination }}
+                        </td>
+                        <td>
+                            <div class="new-property-fields">
+                                {{ fieldform.new_name }}
+                                {{ fieldform.type }}
+                            </div>
+                        </td>
+                        <td>
+                            {{ fieldform.errors }}
+                    </tr>
+                    <tr class="description-row hidden">
+                        <td colspan="3">
+                            {% if fieldform.values.value %}
+                                <small>
+                                    e.g.: {{ fieldform.values.value }}
+                                </small>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
         <div class="form-actions">
             <input class="btn btn-primary" type="submit" value="Upload">
             <a href="{{ cancel_url }}" class="btn">Cancel</a>
