@@ -29,6 +29,7 @@ import chardet
 from django import forms
 from django.contrib.postgres.forms import JSONField
 from django.core.files import File
+from django.core.files.utils import FileProxyMixin
 from django.forms.widgets import HiddenInput
 from io import TextIOWrapper
 
@@ -42,6 +43,13 @@ from amcat.tools.progress import NullMonitor
 log = logging.getLogger(__name__)
 
 ARTICLE_FIELDS = ("text", "title", "url", "date", "parent_hash")
+
+##### HACK: Django's FileProxyMixin misses the readable and writable properties of IOBase, see Django ticket #26646
+##### fixed in Django 1.11+
+if not hasattr(FileProxyMixin, 'readable'):
+    setattr(FileProxyMixin, "readable", property(lambda self: getattr(self.file, 'readable', False)))
+    setattr(FileProxyMixin, "writable", property(lambda self: getattr(self.file, 'writable', False)))
+#####
 
 class ArticleField(object):
     """
@@ -57,6 +65,7 @@ class ArticleField(object):
 
 class ParseError(Exception):
     pass 
+
 
 
 class UploadForm(forms.Form):
