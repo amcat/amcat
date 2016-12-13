@@ -41,11 +41,11 @@ class BZK(UploadScript):
     def get_fields(cls, file, encoding):
         text = cls.textio(file, encoding)
         values = defaultdict(list)
-        for i, art_dict in zip(range(5), cls._scrape_unit(text.read())):
+        for art_dict in cls._scrape_unit(text.read()):
             for k, v in art_dict.items():
                 values[k].append(v)
         for k, v in values.items():
-            yield ArticleField(k, k, v)
+            yield ArticleField(k, k, v[:5])
         
     def parse_file(self, file):
         text = self.textio(file, self.options['encoding'])
