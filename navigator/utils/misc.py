@@ -36,6 +36,7 @@ def gen_random(n=8):
 ALLOWED_HTTP_METHODS = ['GET', 'HEAD', 'PUT', 'POST', 'DELETE', 'OPTIONS', 'PATCH']
 HTTP_HEADER = "HTTP_X_HTTP_METHOD_OVERRIDE"
 
+
 class MethodOverrideMiddleware(object):
     # https://pypi.python.org/pypi/django-method-override/0.1.0
     def process_view(self, request, callback, callback_args, callback_kwargs):
@@ -50,6 +51,7 @@ class MethodOverrideMiddleware(object):
         method = request.META.get(HTTP_HEADER)
         return method and method.upper()
 
+
 def session_pop(session, key, default=None):
     """
     Pops a key from a session object, but does not raise a KeyError when
@@ -62,6 +64,7 @@ def session_pop(session, key, default=None):
         return session.pop(key)
     except KeyError:
         return default
+
 
 def cache_function(length):
     """

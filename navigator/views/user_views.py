@@ -52,6 +52,7 @@ class ProjectRoleForm(forms.ModelForm):
         model = ProjectRole
         exclude = ()
 
+
 class ProjectUserListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = User
     parent = None
@@ -68,7 +69,6 @@ class ProjectUserListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixi
         context = super(ProjectUserListView, self).get_context_data(**kwargs)
         context['add_user'] = ProjectRoleForm(self.project)
         return context
-
 
     def filter_table(self, table):
         return table.filter(project=self.project).hide('project', 'id')

@@ -34,9 +34,7 @@ from amcat.models.coding.codingjob import CodingJob
 from amcat.models.coding.codingschema import CodingSchema
 from amcat.models.language import Language
 from amcat.models.project import Project
-from amcat.models.user import THEMES
 from amcat.tools import toolkit
-from navigator.utils.misc import cache_function
 from settings import MAX_SIGNUP_ROLEID
 
 logger = logging.getLogger(__name__)
@@ -51,23 +49,20 @@ def get_admin_id():
         _ADMIN_ID = Role.objects.get(label="admin", projectlevel=False).id
     return _ADMIN_ID
 
-@cache_function(60)
-def gen_user_choices(project):
-    """This function generates a list of users formatted in such a
-    way it's usable for a Django Choicefield.
-    """
 
-    #TODO! This used to yield affiliation, [users]
-    users = users.filter(projectrole__project=project)
-    yield("-", [(u.id, "%s - %s %s (%s)" % (u.id, u.first_name, u.last_name, u.username)) for u in users])
+def gen_user_choices(project: Project=None):
+    """This function generates a list of users formatted in such a way it's usable for a Django Choicefield."""
+    users = User.objects.all() if (project is None) else project.users
+    users.order_by("first_name", "last_name", "username").only("id", "first_name", "last_name", "username")
+    return [(u.id, "{u.first_name} {u.last_name} ({u.id}: {u.username})".format(u=u)) for u in users]
 
-@cache_function(60)
+
 def gen_roles():
     """Generate choices for UserForm.roles."""
     roles = Role.objects.filter(projectlevel=False)
     return ((r.id, r) for r in roles)
 
-@cache_function(60)
+
 def gen_coding_choices(user, model):
     # Get codebooks based on three
     objects = model.objects.filter(
