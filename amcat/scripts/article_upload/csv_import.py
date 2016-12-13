@@ -22,13 +22,12 @@ Plugin for uploading csv files
 """
 import csv
 import datetime
-import logging
 import itertools
-from collections import defaultdict
+import logging
 from io import TextIOWrapper
 
 from amcat.models import Article, get_property_primitive_type
-from amcat.scripts.article_upload.upload import UploadScript, ParseError, ArticleField
+from amcat.scripts.article_upload.upload import UploadScript, ArticleField
 from amcat.tools.amcates import ARTICLE_FIELDS
 from amcat.tools.toolkit import read_date
 
@@ -131,16 +130,6 @@ class CSV(UploadScript):
 
                 yield article_field
 
-    def map_article(self, art_dict):
-        mapped_dict = {}
-        for destination, field in self.options['field_map'].items():
-            if field['type'] == "field":
-                mapped_dict[destination] = art_dict[field["value"]]
-            elif field["type"] == "literal":
-                mapped_dict[destination] = field["value"]
-            else:
-                raise Exception("type should be 'field' or 'literal'")
-        return mapped_dict
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli

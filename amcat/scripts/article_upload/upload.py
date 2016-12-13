@@ -252,6 +252,16 @@ class UploadScript(ActionForm):
         for file in files:
             return self.unpack_file(file)
 
+    def map_article(self, art_dict):
+        mapped_dict = {}
+        for destination, field in self.options['field_map'].items():
+            if field['type'] == "field":
+                mapped_dict[destination] = art_dict[field["value"]]
+            elif field["type"] == "literal":
+                mapped_dict[destination] = field["value"]
+            else:
+                raise Exception("type should be 'field' or 'literal'")
+        return mapped_dict
 
 
 def _set_project(art, project):

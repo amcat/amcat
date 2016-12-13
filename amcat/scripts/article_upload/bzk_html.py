@@ -21,24 +21,39 @@
 Plugin for uploading html files of a certain markup, provided by BZK
 """
 
-import re
 import logging
+import re
+from collections import defaultdict
 
 from lxml import html
-from html2text import html2text
 
-from amcat.scripts.article_upload.upload import UploadScript, ParseError
-from amcat.tools.toolkit import read_date
-from amcat.models.medium import Medium
 from amcat.models.article import Article
-
+from amcat.scripts.article_upload.upload import UploadScript, ParseError, ArticleField
+from amcat.tools.toolkit import read_date
 
 log = logging.getLogger(__name__)
 from amcat.scripts.article_upload.bzk_aliases import BZK_ALIASES as MEDIUM_ALIASES
 
 
 class BZK(UploadScript):
-    def _scrape_unit(self, _file):
+
+    @classmethod
+    def get_fields(cls, file, encoding):
+        text = cls.textio(file, encoding)
+        values = defaultdict(list)
+        for i, art_dict in zip(range(5), cls._scrape_unit(text.read())):
+            for k, v in art_dict.items():
+                values[k].append(v)
+        for k, v in values.items():
+            yield ArticleField(k, k, v)
+        
+    def parse_file(self, file):
+        text = self.textio(file, self.options['encoding'])
+        for art_dict in self._scrape_unit(text.read()):
+            yield Article.fromdict(self.map_article(art_dict))
+
+    @classmethod
+    def _scrape_unit(cls, _file):
         if isinstance(_file, str):
             # command line
             etree = html.fromstring(_file)
@@ -55,16 +70,17 @@ class BZK(UploadScript):
         if title:
             title_text = title[0].text.lower().strip()
             if "intranet/rss" in title_text or "werkmap" in title_text:
-                for article in self.scrape_1(etree, title_text):
+                for article in cls.scrape_1(etree, title_text):
                     yield article
         elif etree.cssselect("h1"):
-            for article in self.scrape_2(etree):
+            for article in cls.scrape_2(etree):
                 yield article
         else:
-            for article in self.scrape_3(etree):
+            for article in cls.scrape_3(etree):
                 yield article
 
-    def scrape_1(self, _html, t):
+    @classmethod
+    def scrape_1(cls, _html, t):
         """format of mostly 2013"""
         if "werkmap" in t:
             divs = _html.cssselect("#articleTable div")
@@ -74,25 +90,26 @@ class BZK(UploadScript):
             raise ValueError("Neither 'werkmap' nor 'intranet/rss' in html.")
 
         for div in divs:
-            article = Article(metastring=div.text_content())
-            article.headline = div.cssselect("#articleTitle")[0].text_content()
-            article.text = div.cssselect("#articleIntro")[0].text_content()
+            article = {"html": div.text_content()}
+            article["title"] = div.cssselect("#articleTitle")[0].text_content()
+            article["text"] = div.cssselect("#articleIntro")[0].text_content()
             articlepage = div.cssselect("#articlePage")
 
             if articlepage:
-                article.pagenr, article.section = self.get_pagenum(articlepage[0].text_content())
+                article["pagenr"], article["section"] = cls.get_pagenum(articlepage[0].text_content())
 
-            article.medium = self.get_medium(div.cssselect("#sourceTitle")[0].text_content())
+            article["medium"] = cls.get_medium(div.cssselect("#sourceTitle")[0].text_content())
             date_str = div.cssselect("#articleDate")[0].text_content()
 
             try:
-                article.date = read_date(date_str)
+                article["date"] = read_date(date_str)
             except ValueError:
                 log.error("parsing date \"{date_str}\" failed".format(**locals()))
             else:
                 yield article
 
-    def scrape_2(self, _html):
+    @classmethod
+    def scrape_2(cls, _html):
         """New format as of 2014 and a few days before"""
         title = _html.cssselect("h1")[0]
         if not title.text:
@@ -122,12 +139,13 @@ class BZK(UploadScript):
         # first item is the index
         items = items[1:]
         for item in items:
-            article = self.parse_item(item)
-            if not article.date:
-                article.date = docdate
+            article = cls.parse_item(item)
+            if not article["date"]:
+                article["date"] = docdate
             yield article
 
-    def scrape_3(self, _html):
+    @classmethod
+    def scrape_3(cls, _html):
         """Some ugly MS Word format, as of 2014-03-03"""
         # Partition articles
         part = []
@@ -139,62 +157,67 @@ class BZK(UploadScript):
             else:
                 part.append(tag)
         for tags in articles[1:]:
-            article = Article()
+            article = {}
             dateline = tags[1].text_content().strip()
-            article = self.parse_dateline(dateline, article)
-            article.headline = tags[1].text_content().strip()
-            html_str = "".join([html.tostring(t) for t in tags[2:]])
-            article.text = html2text(html_str)
-            article.metastring = {'html': html_str}
+            article = cls.parse_dateline(dateline, article)
+            article["title"] = tags[1].text_content().strip()
+            html_str = "\n".join([html.tostring(t, method="text", encoding='utf8') for t in tags[2:]])
+            article["text"] = html_str
+            article["html"] = html_str
 
             yield article
 
-    def parse_dateline(self, text, article):
+    @classmethod
+    def parse_dateline(cls, text, article):
         bits = text.split()
         if "-" in bits[-1]:
-            article.date = read_date(bits[-1])
-            article.medium = self.get_medium(" ".join(bits[:-1]))
+            article["date"] = read_date(bits[-1])
+            article["medium"] = cls.get_medium(" ".join(bits[:-1]))
         elif bits[-1].isdigit() and bits[-3].isdigit():
-            article.date = read_date(" ".join(bits[-3:]))
-            article.medium = self.get_medium(" ".join(bits[:-3]))
+            article["date"] = read_date(" ".join(bits[-3:]))
+            article["medium"] = cls.get_medium(" ".join(bits[:-3]))
         else:
-            article.medium = self.get_medium(" ".join(bits))
-            article.date = None
+            article["medium"] = cls.get_medium(" ".join(bits))
+            article["date"] = None
         return article
 
-    def _parse_text(self, item):
+    @staticmethod
+    def _parse_text(item):
         paragraphs = (tag for tag in item if tag.tag in ("p", "div"))
-        return "\n".join(html2text(html.tostring(p)) for p in paragraphs)
+        return "\n".join((html.tostring(p, method="text", encoding="utf8").decode()) for p in paragraphs)
 
-    def parse_item(self, item):
+    @classmethod
+    def parse_item(cls, item):
         #item: a list of html tags
-        article = Article()
-        article.text = self._parse_text(item)
+        article = {}
+        article["text"] = cls._parse_text(item)
         headline_found = False
         dateline_found = False
         for tag in item:
             if tag.tag == "h2" and not headline_found:
                 if tag.text:
-                    article.headline = tag.text
+                    article["title"] = tag.text
                 else:
-                    article.headline = tag.cssselect("span")[0].text_content()
+                    article["title"] = tag.cssselect("span")[0].text_content()
                 headline_found = True
             elif tag.tag == "i" or (tag.tag == "p" and tag.cssselect("i")) and not dateline_found:
-                article = self.parse_dateline(tag.text_content(), article)
+                article = cls.parse_dateline(tag.text_content(), article)
                 dateline_found = True
-        if not article.headline:
+        if not article.get("title"):
             raise Exception("Article has no headline")
         return article
 
-    def get_medium(self, text):
+    @staticmethod
+    def get_medium(text):
         if not text:
             text = "unknown"
         if text in MEDIUM_ALIASES.keys():
-            return Medium.get_or_create(MEDIUM_ALIASES[text])
+            return MEDIUM_ALIASES[text]
         else:
-            return Medium.get_or_create(text)
+            return text
 
-    def get_pagenum(self, text):
+    @staticmethod
+    def get_pagenum(text):
         p = re.compile("pagina ([0-9]+)([,\-][0-9]+)?([a-zA-Z0-9 ]+)?")
         m = p.search(text.strip())
         pagenum, otherpage, section = m.groups()
