@@ -28,7 +28,8 @@ from collections import defaultdict
 from io import TextIOWrapper
 
 from amcat.models import Article, get_property_primitive_type
-from amcat.scripts.article_upload.upload import UploadScript, ParseError, ARTICLE_FIELDS, ArticleField
+from amcat.scripts.article_upload.upload import UploadScript, ParseError, ArticleField
+from amcat.tools.amcates import ARTICLE_FIELDS
 from amcat.tools.toolkit import read_date
 
 log = logging.getLogger(__name__)

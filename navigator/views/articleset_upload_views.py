@@ -6,7 +6,6 @@ from tempfile import mkdtemp
 from uuid import uuid4, UUID
 
 from django import forms
-from django.contrib.postgres.forms import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 from django.core.urlresolvers import reverse
 from django.http import QueryDict
@@ -16,6 +15,7 @@ from django.views.generic import FormView
 
 from amcat.models import Plugin, ArticleSet, Article
 from amcat.scripts.article_upload import upload
+from amcat.scripts.article_upload.upload import REQUIRED
 from amcat.tools.amcates import is_valid_property_name, ARTICLE_FIELDS
 from navigator.views.project_views import ProjectDetailsView
 from navigator.views.projectview import BaseMixin
@@ -28,16 +28,13 @@ log = logging.getLogger(__name__)
 
 STORAGE_DIR = mkdtemp(prefix="amcat_upload")
 
-REQUIRED = tuple(
-    field.name for field in Article._meta.get_fields() if field.name in ARTICLE_FIELDS and not field.blank)
-
 
 def get_type_choices():
     default = 'default'
     return [(k, k) for k in sorted(ES_MAPPING_TYPES.keys(), key=lambda x: '\0' if x == default else x)]
 
 def get_destination_choices(project=None):
-    core_fields = sorted((x, x + (" *" if x in REQUIRED else "")) for x in ARTICLE_FIELDS if x not in ("parent_hash",))
+    core_fields = sorted((x, x + (" *" if x in upload.REQUIRED else "")) for x in ARTICLE_FIELDS if x not in ("parent_hash",))
     choices = [
         ("-", "(don't use)"),
         (NEW_FIELD, "New field..."),
@@ -134,7 +131,7 @@ def validate_property_name(value, type):
     if type != "default":
         value = "{}_{}".format(value, type)
     if not is_valid_property_name(value):
-        raise ValidationError("Invalid property name: {}".format(value))
+        raise forms.ValidationError("Invalid property name: {}".format(value))
 
 class ArticleUploadFieldForm(forms.Form):
     label = forms.CharField(required=False, help_text="(Type Constant value)")
@@ -152,11 +149,11 @@ class ArticleUploadFieldForm(forms.Form):
     def clean(self):
         cleaned_data = super().clean()
         if (cleaned_data['destination'] == NEW_FIELD) != bool(cleaned_data['new_name']):
-            raise ValidationError("Fieldname required for new field")
+            raise forms.ValidationError("Fieldname required for new field")
 
         if cleaned_data['new_name']:
             validate_property_name(cleaned_data['new_name'], cleaned_data['type'])
-
+        return cleaned_data
 
 class ArticleUploadFormSet(forms.BaseFormSet):
     management_initial = ()
@@ -172,6 +169,13 @@ class ArticleUploadFormSet(forms.BaseFormSet):
         mf.fields["upload_id"] = forms.UUIDField(initial=self.management_initial.get("upload_id"),
                                                  widget=forms.HiddenInput)
         return mf
+
+    def clean(self):
+        required = set(REQUIRED)
+        for form in self.forms:
+            required.discard(form.cleaned_data['destination'])
+        if required:
+            raise forms.ValidationError("Missing required article field(s): {}".format(", ".join(required)))
 
 class ArticlesetUploadOptionsView(BaseMixin, FormView):
     parent = ProjectDetailsView

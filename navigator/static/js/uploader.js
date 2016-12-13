@@ -21,10 +21,9 @@ define(["jquery", "bootstrap-multiselect"], function($){
     "use strict";
 
     function onDestinationSelect(){
-        console.log(this);
         let destination = this.value;
-        let row = $(this).closest('tr');
-        let newPropertyFields =  row.find('.new-property-fields');
+        let row = $(this).closest("tr");
+        let newPropertyFields =  row.find(".new-property-fields");
         if(destination !== "new_field"){
             newPropertyFields.hide();
             return;
@@ -32,9 +31,27 @@ define(["jquery", "bootstrap-multiselect"], function($){
         newPropertyFields.show();
     }
 
-    let destinations = $('select[name$=-destination]');
+    function expand(){
+        let literal=$(this);
+        let row = literal.closest("tr");
+        let id = literal.attr("name").match(/form-(\d+)-label/)[1] | 0;
+        let old_prefix = "form-" + id;
+        let new_prefix = "form-" + (id + 1);
+        let new_row = row.clone();
+        new_row.html(new_row.html().replace(old_prefix, new_prefix));
+        row.after(new_row);
+        new_row.find("input[name$=-label][type=text]").one("change", expand);
+    }
+
+
+
+    let destinations = $("select[name$=-destination]");
     destinations.change(onDestinationSelect);
     destinations.each((i, destination)=>{
         onDestinationSelect.call(destination);
     });
+
+    let last_literal = $("input[name$=-label][type=text]").last();
+    last_literal.one("change", expand);
+
 });

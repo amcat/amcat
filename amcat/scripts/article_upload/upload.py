@@ -38,11 +38,13 @@ from amcat.models.articleset import create_new_articleset
 
 from actionform import ActionForm
 
+from amcat.tools import amcates
 from amcat.tools.progress import NullMonitor
 
 log = logging.getLogger(__name__)
 
-ARTICLE_FIELDS = ("text", "title", "url", "date", "parent_hash")
+REQUIRED = tuple(
+    field.name for field in Article._meta.get_fields() if field.name in amcates.ARTICLE_FIELDS and not field.blank)
 
 ##### HACK: Django's FileProxyMixin misses the readable and writable properties of IOBase, see Django ticket #26646
 ##### fixed in Django 1.11+
@@ -50,6 +52,20 @@ if not hasattr(FileProxyMixin, 'readable'):
     setattr(FileProxyMixin, "readable", property(lambda self: getattr(self.file, 'readable', False)))
     setattr(FileProxyMixin, "writable", property(lambda self: getattr(self.file, 'writable', False)))
 #####
+
+def validate_field_map(value):
+    required = set(REQUIRED)
+    name_errors = []
+    for k, v in value.items():
+        if v['type'] == "field":
+            name = v['value']
+            required.discard(name)
+            if not amcates.is_valid_property_name(name):
+                name_errors.append(name)
+    if name_errors:
+        raise forms.ValidationError("Invalid property name(s): {}".format(", ".join(name_errors)))
+    if required:
+        raise forms.ValidationError("Missing required article field(s): {}".format(", ".join(required)))
 
 class ArticleField(object):
     """
@@ -65,7 +81,6 @@ class ArticleField(object):
 
 class ParseError(Exception):
     pass 
-
 
 
 class UploadForm(forms.Form):
@@ -85,7 +100,7 @@ class UploadForm(forms.Form):
         required=False)
 
     encoding = forms.ChoiceField(choices=[(x,x) for x in ["Autodetect", "ISO-8859-15", "UTF-8", "Latin-1"]])
-    field_map = JSONField(
+    field_map = JSONField(validators=[validate_field_map],
         help_text='json dict with property names (title, date, etc.) as keys, and field settings as values. '
                    'Field settings should have the form {"type": "field"/"literal", "value": "field_name_or_literal"}')
 

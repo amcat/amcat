@@ -45,6 +45,9 @@
         {{ form.management_form }}
         <div class="panel panel-default">
             <div class="panel-heading">Specify fields:</div>
+            {% if form.non_form_errors %}
+            <div class="panel-body">{{ form.non_form_errors }}</div>
+            {% endif %}
             <table class="table">
                 <colgroup>
                     <col id="col-field">
@@ -59,7 +62,7 @@
                     <th>Field</th>
                     <th>Destination</th>
                     <th></th>
-                    <th>(errors)</th>
+                    <th>{% if form.errors %}Errors{% endif %}</th>
                 </tr>
                 </thead>
                 <tbody>
