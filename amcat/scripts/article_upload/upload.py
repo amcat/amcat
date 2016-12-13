@@ -56,12 +56,10 @@ if not hasattr(FileProxyMixin, 'readable'):
 def validate_field_map(value):
     required = set(REQUIRED)
     name_errors = []
-    for k, v in value.items():
-        if v['type'] == "field":
-            name = v['value']
-            required.discard(name)
-            if not amcates.is_valid_property_name(name):
-                name_errors.append(name)
+    for k in value.keys():
+        required.discard(k)
+        if not amcates.is_valid_property_name(k):
+            name_errors.append(k)
     if name_errors:
         raise forms.ValidationError("Invalid property name(s): {}".format(", ".join(name_errors)))
     if required:

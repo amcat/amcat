@@ -34,13 +34,16 @@ define(["jquery", "bootstrap-multiselect"], function($){
     function expand(){
         let literal=$(this);
         let row = literal.closest("tr");
-        let id = literal.attr("name").match(/form-(\d+)-label/)[1] | 0;
+        let id = +literal.attr("name").match(/form-(\d+)-label/)[1];
         let old_prefix = "form-" + id;
         let new_prefix = "form-" + (id + 1);
         let new_row = row.clone();
-        new_row.html(new_row.html().replace(old_prefix, new_prefix));
+        new_row.html(new_row.html().replace(new RegExp(old_prefix, 'g'), new_prefix));
         row.after(new_row);
         new_row.find("input[name$=-label][type=text]").one("change", expand);
+
+        let total_field = $('input[name=form-TOTAL_FORMS]');
+        total_field.val(+total_field.val() + 1)
     }
 
 

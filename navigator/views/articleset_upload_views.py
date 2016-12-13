@@ -173,7 +173,7 @@ class ArticleUploadFormSet(forms.BaseFormSet):
     def clean(self):
         required = set(REQUIRED)
         for form in self.forms:
-            required.discard(form.cleaned_data['destination'])
+            required.discard(form.cleaned_data.get('destination'))
         if required:
             raise forms.ValidationError("Missing required article field(s): {}".format(", ".join(required)))
 
