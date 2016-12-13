@@ -94,8 +94,6 @@ def register(request):
     form_class = AddUserForm if settings.REGISTER_REQUIRE_VALIDATION else AddUserFormWithPassword
     form = form_class(request, data=request.POST or None)
 
-    del form.fields['language']
-
     user = None
     if form.is_valid():
         user = create_user(
