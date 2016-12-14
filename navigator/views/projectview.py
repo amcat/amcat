@@ -99,9 +99,7 @@ class ProjectViewMixin(object):
             RecentProject.update_visited(self.request.user.userprofile, self.project)
 
         self.check_permission()
-        return super(ProjectViewMixin, self).dispatch(
-            request, *args, **kwargs)
-
+        return super(ProjectViewMixin, self).dispatch(request, *args, **kwargs)
 
     def has_permission(self, perm):
         return self.project.has_role(self.request.user, perm)

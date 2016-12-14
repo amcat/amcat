@@ -84,7 +84,8 @@ class ProjectUserAddView(ProjectViewMixin, HierarchicalViewMixin, RedirectView):
         project = Project.objects.get(id=project)
         role = self.request.POST['role']
         role = None if role == 'None' or role == "" else Role.objects.get(id=role, projectlevel=True)
-        for user in User.objects.filter(id__in=self.request.REQUEST.getlist('user')):
+
+        for user in User.objects.filter(id__in=self.request.POST.getlist('user')):
             try:
                 r = ProjectRole.objects.get(project=project, user=user)
                 if role is None:
