@@ -37,7 +37,6 @@ __all__ = (
 def article_property(property_name):
     def inner(self, coded_article):
         return self.get_article(coded_article).get_property(property_name, default=None)
-
     return inner
 
 
@@ -50,8 +49,8 @@ class CodedArticleSerializer(AmCATModelSerializer):
 
     get_title = article_property("title")
     get_date = article_property("date")
-    get_pagenr = article_property("pagenr")
-    get_length = article_property("length")
+    get_pagenr = article_property("pagenr_int")
+    get_length = article_property("length_int")
     get_article_id = article_property("id")
 
     def _get_coded_articles(self):

@@ -21,14 +21,16 @@ class TestCodedArticleSerializer(amcattest.AmCATTestCase):
         c = amcattest.create_test_job()
         a = c.articleset.articles.all()[0]
 
-        a.set_property("length", 3)
+        a.set_property("length_int", 3)
+        a.set_property("pagenr_int", 3)
+        a.save()
 
         ca = c.coded_articles.all()[0]
         s = self._get_serializer(c.coded_articles.all())
 
         self.assertEqual(a.title, s.get_title(ca))
         self.assertEqual(a.date, s.get_date(ca))
-        self.assertEqual(a.pagenr, s.get_pagenr(ca))
+        self.assertEqual(a.get_property("pagenr_int"), s.get_pagenr(ca))
 
     def test_n_queries(self):
         c = amcattest.create_test_job(10)
