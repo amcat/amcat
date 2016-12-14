@@ -1,11 +1,12 @@
 
 import datetime
+import json
 
 from django.core.files import File
 
 from amcat.models import ArticleSet
 from amcat.scripts.article_upload.lexisnexis import split_header, split_body, parse_header, \
-    parse_article, body_to_article, get_query, LexisNexis
+    parse_article, get_query, LexisNexis
 from amcat.tools import amcattest
 
 
@@ -17,7 +18,8 @@ class TestLexisNexis(amcattest.AmCATTestCase):
 
         self.test_file = os.path.join(self.dir, 'test.txt')
         self.test_text = open(self.test_file, encoding="utf-8").read()
-        self.test_text2 = open(os.path.join(self.dir, 'test2.txt'), encoding="utf-8").read()
+        self.test_file2 = os.path.join(self.dir, 'test2.txt')
+        self.test_text2 = open(self.test_file2, encoding="utf-8").read()
         self.test_text3 = open(os.path.join(self.dir, 'test3.txt'), encoding="utf-8").read()
 
         self.test_body_sols = json.load(open(os.path.join(self.dir, 'test_body_sols.json')))
@@ -88,44 +90,6 @@ class TestLexisNexis(amcattest.AmCATTestCase):
             self.assertEqual(fkeys, akeys)
             self.assertEquals(found, actual)
 
-    def test_meta(self):
-        a = list(split_body(self.split()[1]))[0]
-        meta = parse_article(a)
-        self.assertEqual(meta.pop('length_num').split()[0], "306")
-
-    def skip_test_body_to_article(self):
-        header, body = self.split()
-        articles = split_body(body)
-        articles = [parse_article(a) for a in articles]
-
-        # Only testing the first article. If this contains correct
-        # data, we assume the implementation is correct. However,
-        # we do test the remaining articles with full_clean().
-
-        art = body_to_article(*articles[0])
-        self.assertEquals(art.length, 306)
-        self.assertEquals(art.headline, "This is a headline")
-        self.assertEquals(art.byline, ("with a byline. The article "
-                                       "contains unicode characters."))
-        self.assertEquals(art.text, articles[0][2])
-        self.assertEquals(art.date, datetime.datetime(2011, 8, 31))
-        self.assertEquals(art.medium.name, u"B\u00f6rsen-Zeitung")
-        self.assertEquals(art.author, "MF Tokio")
-        self.assertEquals(eval(art.metastring),
-                          {u'update': u'2. September 2011',
-                           u'language': u'GERMAN; DEUTSCH',
-                           u'publication-type': u'Zeitung'})
-
-        # Setup environment
-        dp = amcattest.create_test_project()
-
-        # Test remaining articles
-        for art in articles[1:]:
-            if art is None: continue
-
-            p = body_to_article(*art)
-            p.project = dp
-            p.full_clean()
 
     def test_get_query(self):
         header, body = split_header(self.test_text)
@@ -150,24 +114,40 @@ class TestLexisNexis(amcattest.AmCATTestCase):
         self.assertEqual(n_found, 1)
 
     @amcattest.use_elastic
-    def test_provenance(self):
+    def test_upload(self):
+        """Test uploading with file map works and provenance is set correctly"""
         import os.path
         from django.core.files import File
 
-        articleset = amcattest.create_test_set()
-        ln = LexisNexis(project=amcattest.create_test_project().id,
-                        file=File(open(os.path.join(self.dir, 'test.txt'), "rb")),
-                        articlesets=[articleset.id])
+        #fields = list(LexisNexis.get_fields(open(self.test_file, 'rb'), "utf-8"))
+        fields = ["date", "title", "length_num" ,"text", "section" ,"medium"]
+        field_map = {f: dict(type='field', value=f) for f in fields}
+        form = dict(project=amcattest.create_test_project().id,
+                    encoding="UTF-8",
+                    field_map=json.dumps(field_map))
 
-        arts = list(ArticleSet.objects.get(id=ln.run()[0]).articles.all())
+        form["articleset_name"] = "test set lexisnexis"
+        aset = LexisNexis(file=File(open(self.test_file, 'rb')), **form).run()
+
+        # form["file"] = File(open(self.test_file)),
+        # aset = LexisNexis(**form).run()
+
+        articleset = ArticleSet.objects.get(pk=aset.id)
+        arts = articleset.articles.all()
+
         self.assertEqual(len(arts), len(self.test_body_sols))
-        self.assertIn("LexisNexis query: '(((Japan OR Fukushima)", ln.articlesets[0].provenance)
+        self.assertIn("LexisNexis query: '(((Japan OR Fukushima)", articleset.provenance)
 
-        articleset = amcattest.create_test_set()
-        ln = LexisNexis(project=amcattest.create_test_project().id,
-                        file=File(open(os.path.join(self.dir, 'test2.txt'), "rb")),
-                        articlesets=[articleset.id])
+        a = self.test_body_sols[1]
+        b = articleset.articles.get(title=a['title'])
 
-        arts = ln.run()
+        self.assertEqual(a['text'], b.text)
+        self.assertEqual(a['date'], str(b.date))
+        self.assertEqual(a['length_num'], b.properties['length_num'])
+        self.assertEqual(a['medium'], b.properties['medium'])
+
+        aset = LexisNexis(file=File(open(self.test_file2, 'rb')), **form).run()
+        articleset = ArticleSet.objects.get(pk=aset.id)
+
         # no query so provenance is the 'standard' message
-        self.assertTrue(ln.articlesets[0].provenance.endswith("test2.txt' using LexisNexis"))
+        self.assertTrue(articleset.provenance.endswith("test2.txt' using LexisNexis"))

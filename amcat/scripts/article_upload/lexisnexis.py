@@ -511,6 +511,7 @@ def get_query(header):
 def split_file(text):
     header, body = split_header(text)
     query = get_query(parse_header(header))
+
     fragments = list(split_body(body))
     return query, fragments
 
@@ -534,26 +535,26 @@ class LexisNexis(UploadScript):
                         fields[k] =fields.get(k, []) + [v]
         return [ArticleField(k, k, values) for (k, values) in fields.items()]
 
+    def parse_file(self, file):
+        # FIXME: redundant double reading of file in get_fields and parse_file
+        #text = file.read()
+        text = self.textio(file, self.options['encoding']).read()
+        self.ln_query, fragments = split_file(text)
+        for doc in fragments:
+            data = parse_article(doc)
+            if not data:
+                continue
+            art = {}
+            for field, setting in self.options['field_map'].items():
+                value, typ = setting['value'], setting['type']
+                val = data.get(value) if typ == 'field' else value
+                if val:
+                    art[field] = val
+            yield Article(**art)
+
     def get_provenance(self, file, articles):
-        # FIXME: redundant double reading of file
-        provenance = super(LexisNexis, self).get_provenance(file, articles)
-
-        if self.ln_query is None:
-            return provenance
-
-        return "{provenance}; LexisNexis query: {self.ln_query!r}".format(**locals())
-
-    def parse_document(self, text):
-        fields = parse_article(text)
-
-        if fields is None:
-            return
-
-        try:
-            a = body_to_article(*fields)
-            a.project = self.options['project']
-            yield a
-        except:
-            log.error("Error on processing fields: {fields}".format(**locals()))
-            raise
+        provenance = super().get_provenance(file, articles)
+        if self.ln_query:
+            provenance = "{provenance}; LexisNexis query: {self.ln_query!r}".format(**locals())
+        return provenance
 
