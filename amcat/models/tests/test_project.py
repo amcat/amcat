@@ -18,9 +18,12 @@
 ###########################################################################
 from datetime import datetime
 
+from django.contrib.auth.models import AnonymousUser
 from django.test import RequestFactory
 
-from amcat.models import RecentProject
+from amcat.models import ROLE_PROJECT_READER, ROLE_PROJECT_METAREADER, Role, ROLE_PROJECT_WRITER, \
+    ROLE_PROJECT_ADMIN
+from amcat.models import RecentProject, User
 from amcat.tools import amcattest
 from django.db.models.query import QuerySet
 
@@ -30,6 +33,52 @@ class TestProject(amcattest.AmCATTestCase):
         """Can we create a project and access its attributes?"""
         p = amcattest.create_test_project(name="Test")
         self.assertEqual(p.name, "Test")
+
+    def test_has_role(self):
+        metareader_role = Role.objects.get(id=ROLE_PROJECT_METAREADER)
+        reader_role = Role.objects.get(id=ROLE_PROJECT_READER)
+        writer_role = Role.objects.get(id=ROLE_PROJECT_WRITER)
+        admin_role = Role.objects.get(id=ROLE_PROJECT_ADMIN)
+
+        project = amcattest.create_test_project(guest_role=reader_role)
+        admin = User.objects.first()
+        anon = AnonymousUser()
+
+        # Anonymous user has project role
+        self.assertTrue(project.has_role(anon, metareader_role))
+        self.assertTrue(project.has_role(anon, metareader_role.id))
+        self.assertTrue(project.has_role(anon, metareader_role.label))
+
+        self.assertTrue(project.has_role(anon, reader_role))
+        self.assertTrue(project.has_role(anon, reader_role.id))
+        self.assertTrue(project.has_role(anon, reader_role.label))
+
+        self.assertFalse(project.has_role(anon, writer_role))
+        self.assertFalse(project.has_role(anon, writer_role.id))
+        self.assertFalse(project.has_role(anon, writer_role.label))
+
+        self.assertFalse(project.has_role(anon, admin_role))
+        self.assertFalse(project.has_role(anon, admin_role.id))
+        self.assertFalse(project.has_role(anon, admin_role.label))
+
+        # I think we tested string/object/id enough at this point :-)
+
+        # Superuser is omnipotent
+        superuser = amcattest.create_test_user()
+        superuser.is_superuser = True
+        superuser.save()
+        self.assertTrue(project.has_role(superuser, metareader_role))
+        self.assertTrue(project.has_role(superuser, reader_role))
+        self.assertTrue(project.has_role(superuser, writer_role))
+        self.assertTrue(project.has_role(superuser, admin_role))
+
+        # Project admin as well
+        self.assertTrue(project.has_role(admin, metareader_role))
+        self.assertTrue(project.has_role(admin, reader_role))
+        self.assertTrue(project.has_role(admin, writer_role))
+        self.assertTrue(project.has_role(admin, admin_role))
+
+
 
     def test_all_articles(self):
         """Does getting all articles work?"""

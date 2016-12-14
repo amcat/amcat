@@ -25,7 +25,9 @@ from datetime import datetime
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
+from typing import Union
 
+import amcat.models
 from amcat.models import ProjectRole
 from amcat.tools.model import AmcatModel
 from amcat.models.coding.codebook import Codebook
@@ -146,29 +148,32 @@ class Project(AmcatModel):
 
         super(Project, self).save(*args, **kargs)
 
-
-
-    def has_role(self, user, role):
+    def has_role(self, user: "amcat.models.User", role: Union[str, int, Role]):
         """
         Returns whether the user has the given role on this project
         If user is site-admin, always return True
         @param role: a role instance, ID, or label
         @param user: a user object
         """
+        if user.is_superuser:
+            return True
+
         if not user.is_anonymous and user.role_id >= ADMIN_ROLE:
             return True
 
         if isinstance(role, str):
-            role = Role.objects.get(label=role).id
-        if isinstance(role, Role):
-            role = role.id
+            role_id = Role.objects.get(label=role, projectlevel=True).id
+        elif isinstance(role, Role):
+            role_id = role.id
+        else:
+            role_id = role
 
         actual_role_id = self.get_role_id(user=user)
 
-        log.info("{user.id}:{user.username} has role {actual_role_id} on project {self}, >=? {role}"
+        log.info("{user.id}:{user.username} has role {actual_role_id} on project {self}, >=? {role_id}"
                  .format(**locals()))
 
-        return actual_role_id is not None and actual_role_id >= role
+        return actual_role_id is not None and actual_role_id >= role_id
         
     def get_role_id(self, user=None):
         """
