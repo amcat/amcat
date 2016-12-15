@@ -42,6 +42,7 @@ from uuid import uuid4
 import dateparser
 import shutil
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+from django.core.cache import cache
 from django.test import TestCase
 from iso8601 import iso8601
 from splinter import Browser
@@ -312,9 +313,14 @@ class AmCATTestCase(TestCase):
     def setUpClass(cls):
         ES().check_index()
         ES().flush()
-        ArticleSet._reset_all_property_caches()
+        cache.clear()
         super(AmCATTestCase, cls).setUpClass()
 
+    def setUp(self):
+        super().setUp()
+        ES().check_index()
+        ES().flush()
+        cache.clear()
 
     @contextmanager
     def checkMaxQueries(self, n=0, action="Query", **outputargs):
@@ -348,6 +354,7 @@ class AmCATLiveServerTestCase(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super(AmCATLiveServerTestCase, cls).setUpClass()
+        from django.core.cache import cache
         if not shutil.which("geckodriver"):  # try/except gives warning from selenium destructor
             raise unittest.SkipTest("geckodriver needs to be in PATH for LiveServerTestCase")
         cls.browser = Browser(driver_name=os.environ.get("AMCAT_WEBDRIVER", "firefox"))
@@ -361,6 +368,7 @@ class AmCATLiveServerTestCase(StaticLiveServerTestCase):
         cls.browser.quit()
         super(AmCATLiveServerTestCase, cls).tearDownClass()
 
+
 def require_postgres(func):
     def run_or_skip(self, *args, **kargs):
         from django.db import connection
@@ -369,12 +377,14 @@ def require_postgres(func):
         return func(self, *args, **kargs)
     return run_or_skip
 
+
 def skip_TODO(reason):
     def inner(func):
         def skip(self, *args, **kargs):
             raise unittest.SkipTest("TODO: {}. Skipping test {}".format(reason, func.__name__))
         return skip
     return inner
+
 
 def use_elastic(func):
     """
@@ -393,3 +403,10 @@ def use_elastic(func):
         return func(*args, **kargs)
     return inner
 
+
+def clear_cache(func):
+    @wraps(func)
+    def inner(*args, **kargs):
+        cache.clear()
+        return func(*args, **kargs)
+    return inner
