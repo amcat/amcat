@@ -175,7 +175,7 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
 
         if form.is_valid():
             form.save()
-            ES().flush()
+            ES().refresh()
             return HttpResponse("OK", status=200)
 
         return HttpResponseBadRequest(str(dict(form.errors)))

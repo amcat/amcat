@@ -53,10 +53,10 @@ class TestArticleSet(amcattest.AmCATTestCase):
 
         arts = [amcattest.create_test_article(project=p, create=False) for _x in range(1213)]
         Article.create_articles(arts, s)
-        ES().flush()
+        ES().refresh()
         self.assertEqual(len(arts), s.get_count())
         s2.add_articles(arts)
-        ES().flush()
+        ES().refresh()
         self.assertEqual(len(arts), s2.get_count())
         print(s2.get_count())
 
@@ -77,7 +77,7 @@ class TestArticleSet(amcattest.AmCATTestCase):
     def test_get_article_ids(self):
         aset = amcattest.create_test_set(10)
 
-        ES().flush()
+        ES().refresh()
 
         self.assertEqual(set(aset.articles.all().values_list("id", flat=True)), aset.get_article_ids())
         self.assertEqual(set(aset.articles.all().values_list("id", flat=True)), aset.get_article_ids(use_elastic=True))
@@ -90,9 +90,9 @@ class TestArticleSet(amcattest.AmCATTestCase):
         arts = [amcattest.create_test_article() for _x in range(10)]
         s.add_articles(arts[:8])
         s2.add_articles(arts[6:])
-        ES().flush()
+        ES().refresh()
         s.delete()
-        ES().flush()
+        ES().refresh()
         # articleset and articles only in that set are deleted
         self.assertRaises(ArticleSet.DoesNotExist, ArticleSet.objects.get, pk=sid)
         self.assertRaises(Article.DoesNotExist, Article.objects.get, pk=arts[0].id)

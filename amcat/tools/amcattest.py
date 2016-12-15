@@ -312,14 +312,14 @@ class AmCATTestCase(TestCase):
     @classmethod
     def setUpClass(cls):
         ES().check_index()
-        ES().flush()
+        ES().refresh()
         cache.clear()
         super(AmCATTestCase, cls).setUpClass()
 
     def setUp(self):
         super().setUp()
         ES().check_index()
-        ES().flush()
+        ES().refresh()
         cache.clear()
 
     @contextmanager

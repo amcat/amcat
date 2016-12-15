@@ -259,24 +259,6 @@ class ElasticSearchError(Exception):
     pass
 
 
-_singletons = {}
-def ES(index=None, doc_type=None, host=None, port=None):
-    if index is None:
-        index = settings.ES_INDEX
-        if settings.TESTING:
-            index += "_{pid}".format(pid=os.getpid())
-    if doc_type is None:
-        doc_type = settings.ES_ARTICLE_DOCTYPE
-    if host is None:
-        host = settings.ES_HOST
-    if port is None:
-        port = settings.ES_PORT if port is None else port
-    key = (index, doc_type, host, port)
-    try:
-        return _singletons[key]
-    except KeyError:
-        _singletons[key] = _ES(*key)
-        return _singletons[key]
 
 
 class _ES(object):
@@ -320,8 +302,8 @@ class _ES(object):
             _KNOWN_PROPERTIES = set(self.get_mapping().keys())
         return _KNOWN_PROPERTIES
             
-    def flush(self):
-        self.es.indices.flush()
+    def refresh(self):
+        self.es.indices.refresh()
 
     def highlight_article(self, aid, query):
         body = {
@@ -659,8 +641,8 @@ class _ES(object):
         self.add_to_set(aset.id, to_add_set)
         log.info("Adding {} articles to index".format(len(to_add_docs)))
         self.add_articles(to_add_docs)
-        log.info("Flushing")
-        self.flush()
+        log.info("Refreshing")
+        self.refresh()
 
     def count(self, query=None, filters=None):
         """
@@ -906,6 +888,26 @@ class _ES(object):
         filter = dict(build_body(filters=filters))['filter']
         body = {"filter": {"bool" : {"must" : [filter, nochild]}}}
         return self.query_ids(body=body, limit=limit)
+
+
+_singletons = {}
+def ES(index:str=None, doc_type:str=None, host:str=None, port:int=None) -> _ES:
+    if index is None:
+        index = settings.ES_INDEX
+        if settings.TESTING:
+            index += "_{pid}".format(pid=os.getpid())
+    if doc_type is None:
+        doc_type = settings.ES_ARTICLE_DOCTYPE
+    if host is None:
+        host = settings.ES_HOST
+    if port is None:
+        port = settings.ES_PORT if port is None else port
+    key = (index, doc_type, host, port)
+    try:
+        return _singletons[key]
+    except KeyError:
+        _singletons[key] = _ES(*key)
+        return _singletons[key]
 
 
 def get_date(timestamp):

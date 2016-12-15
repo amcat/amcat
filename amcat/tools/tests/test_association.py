@@ -34,7 +34,7 @@ class TestAssociation(amcattest.AmCATTestCase):
         self.aap = SearchQuery.from_string("aap")
 
         self.filters = {"sets": [self.aset.id]}
-        amcates.ES().flush()
+        amcates.ES().refresh()
 
         self.ass = Association([self.de, self.het], self.filters)
 

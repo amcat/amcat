@@ -128,7 +128,7 @@ class ArticleSet(AmcatModel):
             monitor.update(message="{n} articles added to codingjobs, adding to index".format(n=len(cjarts)))
             es = ES()
             es.add_to_set(self.id, to_add, monitor=monitor)
-            es.flush()  # We need to flush, or setting cache will fail
+            es.refresh()  # We need to flush, or setting cache will fail
         else:
             monitor.update(2)
 
@@ -173,7 +173,7 @@ class ArticleSet(AmcatModel):
         """Discard property cache and recalculate properties"""
         from amcat.tools.amcates import ES
         es = ES()
-        es.flush()
+        es.refresh()
         properties = es.get_used_properties([self.id])
         self._reset_property_cache()
         return self._add_to_property_cache(properties)
@@ -314,7 +314,7 @@ class ArticleSet(AmcatModel):
             amcates.ES().remove_from_set(self.id, esaids)
 
         if purge_orphans:
-            amcates.ES().flush()
+            amcates.ES().refresh()
             amcates.ES().purge_orphans()
 
         log.warn("Deleting set (and articlesetarticle references)")

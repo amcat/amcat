@@ -38,7 +38,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         e = amcattest.create_test_article(text='aap noot mies', title='m3', articleset=s2)
 
         Article.create_articles([a, b, c, d], articleset=s1)
-        ES().flush()
+        ES().refresh()
         return s1, s2, a, b, c, d, e
 
     def test_get_property_primitive_type(self):
@@ -65,19 +65,19 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
         # Query without deleting
         all_ids = {a.id, b.id, c.id, d.id, e.id}
-        ES().flush()
+        ES().refresh()
         self.assertEqual(all_ids, set(ES().query_ids()))
 
         # Delete but do not purge orphans, query again
         missing_query =  {"query": {"constant_score": {"filter": {"missing": {"field": "sets"}}}}}
         s1.delete(purge_orphans=False)
-        ES().flush()
+        ES().refresh()
         self.assertEqual(all_ids, set(ES().query_ids()))
         self.assertEqual(all_ids - {e.id}, set(ES().query_ids(body=missing_query)))
 
         # Purge orphans, query again
         ES().purge_orphans()
-        ES().flush()
+        ES().refresh()
 
     @amcattest.use_elastic
     def test_aggregate(self):
@@ -132,7 +132,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         arts = [amcattest.create_test_article(create=False) for _ in range(20)]
         s = amcattest.create_test_set()
         Article.create_articles(arts, articleset=s)
-        ES().flush()
+        ES().refresh()
 
         r = ES().query(filters=dict(sets=s.id), size=10)
         self.assertEqual(len(list(r)), 10)
@@ -152,7 +152,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
         s1 = amcattest.create_test_set(articles=[a, b, c])
         s2 = amcattest.create_test_set(articles=[a, b])
-        ES().flush()
+        ES().refresh()
 
         q = lambda **filters: set(ES().query_ids(filters=filters))
 
@@ -174,7 +174,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
     def test_query(self):
         """Do query and query_ids work properly?"""
         a = amcattest.create_test_article(title="bla", text="artikel artikel een", date="2001-01-01")
-        ES().flush()
+        ES().refresh()
         es_a, = ES().query("een", fields=["date", "title"])
         self.assertEqual(es_a.title, "bla")
         self.assertEqual(es_a.id, a.id)
@@ -188,7 +188,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         s1 = amcattest.create_test_set(articles=[a, b, c])
         s2 = amcattest.create_test_set(articles=[b, c])
         s3 = amcattest.create_test_set(articles=[b])
-        ES().flush()
+        ES().refresh()
 
         es_c = ES().get(c.id)
         self.assertEqual(set(es_c['sets']), {s1.id, s2.id})
@@ -280,7 +280,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         b = amcattest.create_test_article(text='noot mies wim zus', title='m2')
         c = amcattest.create_test_article(text='mies bla bla bla wim zus jet', title='m2')
         d = amcattest.create_test_article(text='ik woon in een sociale huurwoning, net als anderen', title='m2')
-        ES().flush()
+        ES().refresh()
 
         self.assertEqual(set(ES().query_ids("no*")), {a.id, b.id})
         self.assertEqual(set(ES().query_ids("no*", filters=dict(title='m2'))), {b.id})
@@ -300,7 +300,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         b = amcattest.create_test_article(text='noot mies wim zus')
         c = amcattest.create_test_article(text='mies bla bla bla wim zus jet')
         s1 = amcattest.create_test_set(articles=[a, b, c])
-        ES().flush()
+        ES().refresh()
         self.assertEqual(set(ES().query_ids('"mi* wi*"~5', filters=dict(sets=s1.id))), {b.id, c.id})
 
 
@@ -310,7 +310,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         a = amcattest.create_test_article(title="test", text=text)
         s1 = amcattest.create_test_set(articles=[a])
 
-        ES().flush()
+        ES().refresh()
         self.assertEqual(set(ES().query_ids("kanji", filters=dict(sets=s1.id))), {a.id})
         self.assertEqual(set(ES().query_ids("blablabla", filters=dict(sets=s1.id))), set())
 
@@ -335,7 +335,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         aset = amcattest.create_test_set()
         amcattest.create_test_article(title="bob", text="eve", articleset=aset)
 
-        ES().flush()
+        ES().refresh()
 
         q = lambda query: set(ES().query_ids(query, filters={"sets": aset.id}))
 
@@ -350,7 +350,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         paul = amcattest.create_test_article(text="paul", articleset=aset)
         adam = amcattest.create_test_article(text="adam", articleset=aset)
 
-        ES().flush()
+        ES().refresh()
 
         q = lambda query: set(ES().query_ids(query, filters={"sets": aset.id}))
 
@@ -372,7 +372,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
         hash = get_article_dict(article)['hash']
         Article.create_articles([article], articleset=amcattest.create_test_set())
-        ES().flush()
+        ES().refresh()
         es_articles = ES().query_all(filters={"ids": [article.id]}, fields=["hash"])
         es_articles = list(es_articles)
         es_article = list(es_articles)[0]
@@ -423,7 +423,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         s1 = amcattest.create_test_set(articles=[a1])
         s2 = amcattest.create_test_set(articles=[a2])
         s3 = amcattest.create_test_set(articles=[a1, a3])
-        ES().flush()
+        ES().refresh()
         self.assertEqual(set(ES().get_used_properties([s1.id])), {"p1", "p2_date"})
         self.assertEqual(set(ES().get_used_properties([s1.id, s2.id])), {"p1", "p2_date", "p3_num"})
         self.assertEqual(set(ES().get_used_properties([s3.id])), {"p1", "p2_date", "p4"})
@@ -441,7 +441,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(date_parsed, date)
         self.assertEqual(a.date, date)
 
-        ES().flush()
+        ES().refresh()
 
         # Test Elastic date parsing
         es_date = ES().get(a.id)["date"]

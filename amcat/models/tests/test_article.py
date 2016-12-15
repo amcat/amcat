@@ -31,7 +31,7 @@ def _setup_highlighting():
     from amcat.tools.amcates import ES
 
     article = create_test_article(text="<p>foo</p>", title="<p>bar</p>")
-    ES().flush()
+    ES().refresh()
     return article
 
 
@@ -142,7 +142,7 @@ class TestArticleHighlighting(amcattest.AmCATTestCase):
 
 
 def _q(**filters):
-    amcates.ES().flush()
+    amcates.ES().refresh()
     return set(amcates.ES().query_ids(filters=filters))
     
 class TestArticle(amcattest.AmCATTestCase):
@@ -152,7 +152,7 @@ class TestArticle(amcattest.AmCATTestCase):
         a = amcattest.create_test_article(create=False, date='2010-12-31', title=u'\ua000abcd\u07b4')
         Article.create_articles([a])
         db_a = Article.objects.get(pk=a.id)
-        amcates.ES().flush()
+        amcates.ES().refresh()
         es_a = list(amcates.ES().query(filters={'ids': [a.id]}, fields=["date", "title", "hash"]))[0]
         self.assertEqual(a.hash, db_a.hash)
         self.assertEqual(a.hash, es_a.hash)
@@ -167,18 +167,18 @@ class TestArticle(amcattest.AmCATTestCase):
 
         # create dummy articles to have something in the db 
         [amcattest.create_test_article() for i in range(10)]
-        amcates.ES().flush()
+        amcates.ES().refresh()
         
         art = dict(project=amcattest.create_test_project(),
                    title="deduptest", text="test", date='2001-01-01')
 
         a1 = amcattest.create_test_article(**art)
-        amcates.ES().flush()
+        amcates.ES().refresh()
         self.assertEqual(_q(title='deduptest'), {a1.id})
 
         # duplicate articles should not be added
         a2 = amcattest.create_test_article(**art)
-        amcates.ES().flush()
+        amcates.ES().refresh()
         self.assertEqual(a2.id, a1.id)
         self.assertTrue(a2._duplicate)
         self.assertEqual(_q(title='deduptest'), {a1.id})
@@ -187,7 +187,7 @@ class TestArticle(amcattest.AmCATTestCase):
         # should be added to that set
         s1 = amcattest.create_test_set()
         a3 = amcattest.create_test_article(articleset=s1, **art)
-        amcates.ES().flush()
+        amcates.ES().refresh()
         self.assertEqual(a3.id, a1.id)
         self.assertEqual(_q(title='deduptest'), {a1.id})
         self.assertEqual(set(s1.get_article_ids()), {a1.id})

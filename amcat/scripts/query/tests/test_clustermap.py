@@ -46,7 +46,7 @@ class TestClustermapAction(amcattest.AmCATTestCase):
         self.a5 = amcattest.create_test_article(text="vuur")
 
         amcattest.create_test_set((self.a1, self.a2, self.a3, self.a4, self.a5), project=self.project)
-        ES().flush()
+        ES().refresh()
 
     def get_query_action(self, output_type="application/json+clustermap", query="aap\nnoot\nmies\nv#vuur", **kwargs):
         return ClusterMapAction(

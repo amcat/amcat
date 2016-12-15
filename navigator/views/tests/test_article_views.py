@@ -147,7 +147,7 @@ class TestSplitArticles(amcattest.AmCATTestCase):
 
     def article_in(self, codingjob, articleset, article):
         from amcat.tools.amcates import ES
-        ES().flush()
+        ES().refresh()
 
         if codingjob is not None:
             if not codingjob.coded_articles.filter(article=article):

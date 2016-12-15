@@ -20,7 +20,7 @@ class TestTokens(APITestCase):
         a2 = amcattest.create_test_article(title="dit is nog een kop", text="Van je een, van je twee, van je drie!",
                                           articleset=aset, project=aset.project)
 
-        ES().flush()
+        ES().refresh()
         #     url(r'^projects/(?P<project_id>[0-9]+)/articlesets/(?P<articleset_id>[0-9]+)/tokens/?$', TokensView.as_view(), name="tokens"),
 
         url = reverse("api:tokens", kwargs=dict(project_id=aset.project.id, articleset_id=aset.id)) + "?format=json"

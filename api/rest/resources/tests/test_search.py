@@ -38,7 +38,7 @@ class TestSearch(ApiTestCase):
             a = amcattest.create_test_article(date=d)
             s = amcattest.create_test_set(project=a.project)
             s.add_articles([a.id])
-            amcates.ES().flush()
+            amcates.ES().refresh()
 
             res = self.get("/api/v4/search", project=a.project_id)
             date = iso8601.parse_date(res['results'][0]['date'])

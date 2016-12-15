@@ -84,7 +84,7 @@ class TestArticleViewSet(APITestCase):
         self.assertEqual(response.status_code, expected_status,
                          "Status code {response.status_code}: {response.content}".format(**locals()))
 
-        amcates.ES().flush()
+        amcates.ES().refresh()
         if return_json:
             return json.loads(response.content.decode(response.charset))
         else:
@@ -144,7 +144,7 @@ class TestArticleViewSet(APITestCase):
         self.assertEqual(arts[1].title, a2['title'])
 
         # Are the articles added to the index?
-        amcates.ES().flush()
+        amcates.ES().refresh()
         self.assertEqual(len(set(amcates.ES().query_ids(filters={"sets": self.aset.id}))), 2)
 
     @amcattest.use_elastic
@@ -172,7 +172,7 @@ class TestArticleViewSet(APITestCase):
         aid1 = self._post_articles(a)['id']
         self.setUp_set()
         aid2 = self._post_articles(a)['id']
-        amcates.ES().flush()
+        amcates.ES().refresh()
         # are the resulting ids identical?
         self.assertEqual(aid1, aid2)
         # is it added to elastic for this set?

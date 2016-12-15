@@ -55,7 +55,7 @@ class TestAggregateES(amcattest.AmCATTestCase):
         self.aset2.add_articles([self.a3])
         self.aset2.refresh_index(True)
 
-        ES().flush()
+        ES().refresh()
 
     def aggregate(self, **kwargs):
         aggr_args = {"filters": {"sets": list(ArticleSet.objects.all().values_list("id", flat=True))}}
