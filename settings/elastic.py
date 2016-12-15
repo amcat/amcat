@@ -45,7 +45,8 @@ ES_MAPPING_TYPE_PRIMITIVES = {
     "url": str,
     "id": str,
     "text": str,
-    "default": str
+    "default": str,
+    "tag": str,
 }
 
 
@@ -56,6 +57,7 @@ ES_MAPPING_TYPES = {
     'url': {"index": "not_analyzed", "type": "string"},
     'id': {"index": "not_analyzed", "type": "string"},
     'text': {"type": "string"},
+    'tag': {"type": "string", "analyzer": "tag"},
     'default': {"type": "string",
                  "fields": {"raw":   { "type": "string", "index": "not_analyzed", "ignore_above": 256}}}
     }
@@ -82,8 +84,12 @@ ES_SETTINGS = {"analysis": {
             "tokenizer": "unicode_letters_digits",
             "filter": [
                 "icu_folding", "lengthfilter"
-            ]
-        }
+            ],
+        },
+        "tag": {
+            "type": "pattern",
+            "pattern": "\s*,\s*",
+        },
     },
     "tokenizer": {
         "unicode_letters_digits": {

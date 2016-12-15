@@ -380,16 +380,17 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(article.id, es_article.id)
         self.assertEqual(hash, es_article.hash)
         self.assertEqual(hash, article.hash)
-        #self.assertEqual(_get_hash(es_article.to_dict()), hash)
-        
+
     @amcattest.use_elastic
     def test_properties(self):
         """Are properties stored as flat fields and with correct mapping?"""
         props = dict(
-            proptest="123",
+            proptest="123 test, and another",
             proptest2_url="http://example.org",
             proptest3_date="2001-01-01",
-            proptest4_num=-1)
+            proptest4_num=-1,
+            proptest5_tag="123 test, and another",
+            proptest6_id="123 test, and another")
 
         self.assertEqual(set(props.keys()) & set(ES().get_mapping().keys()), set())
 
@@ -397,11 +398,22 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
         mapping = ES().get_mapping()
         for field, ftype in dict(proptest="default", proptest2_url="url",
-                                 proptest3_date="date", proptest4_num="num").items():
+                                 proptest3_date="date", proptest4_num="num",
+                                 proptest5_tag="tag").items():
             self.assertEqual(mapping[field], settings.ES_MAPPING_TYPES[ftype])
             
         src = ES().get(a.id)
         self.assertEqual(set(mapping.keys()), set(props.keys()) | ALL_FIELDS)
+
+        # test if term vectors are correct, i.e. test analysis
+        def tokens(field):
+            tokens = list(ES().get_tokens(a.id, fields=[field]))
+            return [w for (f, p, w) in sorted(tokens)]
+
+        self.assertEqual(tokens("proptest"), ["123", "test", "and", "another"])
+        self.assertEqual(tokens("proptest5_tag"), ["123 test", "and another"])
+        self.assertEqual(tokens("proptest6_id"), ["123 test, and another"])
+        self.assertEqual(tokens("proptest2_url"), ["http://example.org"])
 
     def test_used_properties(self):
         a1 = amcattest.create_test_article(properties={"p1": "test", "p2_date": "2001-01-01"})

@@ -544,7 +544,7 @@ class ES(object):
             monitor.update(message="Adding batch {iplus}/{nbatches}..".format(iplus=i+1, nbatches=nbatches))
             self.bulk_update(batch, UPDATE_SCRIPT_ADD_TO_SET, params={'set' : setid})
 
-    def get_tokens(self, aid: int, fields=["text", "title"]) -> Iterable[str]:
+    def get_tokens(self, aid: int, fields=["text", "title"]):
         """
         Get a list of all tokens (words and their positions) in the given document
         :param aid: Article ID
