@@ -258,15 +258,34 @@ def delete_test_indices():
 class ElasticSearchError(Exception):
     pass
 
-class ES(object):
-    def __init__(self, index=None, doc_type=None, timeout=300, **args):
-        elhost = {"host":settings.ES_HOST, "port":settings.ES_PORT}
-        self.es = Elasticsearch(hosts=[elhost, ], timeout=timeout, **args)
-        self.index = settings.ES_INDEX if index is None else index
-        self.doc_type = settings.ES_ARTICLE_DOCTYPE if doc_type is None else doc_type
 
-        if settings.TESTING and index is None:
-            self.index += "_{pid}".format(pid=os.getpid())
+_singletons = {}
+def ES(index=None, doc_type=None, host=None, port=None):
+    if index is None:
+        index = settings.ES_INDEX
+        if settings.TESTING:
+            index += "_{pid}".format(pid=os.getpid())
+    if doc_type is None:
+        doc_type = settings.ES_ARTICLE_DOCTYPE
+    if host is None:
+        host = settings.ES_HOST
+    if port is None:
+        port = settings.ES_PORT if port is None else port
+    key = (index, doc_type, host, port)
+    try:
+        return _singletons[key]
+    except KeyError:
+        _singletons[key] = _ES(*key)
+        return _singletons[key]
+
+
+class _ES(object):
+    def __init__(self, index, doc_type, host, port, timeout=300, **args):
+        self.host = host
+        self.port = port
+        self.index = index
+        self.doc_type = doc_type
+        self.es = Elasticsearch(hosts=[{"host": self.host, "port": self.port}, ], timeout=timeout, **args)
 
     def check_properties(self, properties):
         """
