@@ -53,6 +53,7 @@ class TestToolkit(amcattest.AmCATTestCase):
             ("22 maart 1980" , datetime.datetime(1980, 3, 22,0,0,0)),
             ("22 mrt 1980" , datetime.datetime(1980, 3, 22,0,0,0)),
             ("22/3/1980" , datetime.datetime(1980, 3, 22,0,0,0)),
+            ("1980-05-02" , datetime.datetime(1980, 5, 2,0,0,0)),
             ("1980-3-22" , datetime.datetime(1980, 3, 22,0,0,0)),
             ("1980-3-22T01:00:05" , datetime.datetime(1980, 3, 22,1,0,5)),
             ("1980-3-22 01:00" , datetime.datetime(1980, 3, 22,1,0,0)),
@@ -62,6 +63,9 @@ class TestToolkit(amcattest.AmCATTestCase):
             ("31/12/72", datetime.datetime(1972, 12, 31,0,0,0)),
             ("1/2/1972", datetime.datetime(1972, 2, 1,0,0,0)),
             ("30.09.2008", datetime.datetime(2008, 9, 30,0,0,0)),
+            ("02.09.2008", datetime.datetime(2008, 9, 2,0,0,0)),
+            ("30-09-2008", datetime.datetime(2008, 9, 30,0,0,0)),
+            ("02-09-2008", datetime.datetime(2008, 9, 2,0,0,0)),
             ("31. Januar 2009", datetime.datetime(2009, 1, 31, 0, 0, 0)),
             ("March 31, 2003", datetime.datetime(2003, 3, 31, 0, 0, 0)),
             ("December 31, 2009 Thursday", datetime.datetime(2009, 12, 31, 0, 0, 0)),
@@ -71,7 +75,7 @@ class TestToolkit(amcattest.AmCATTestCase):
             ('23aug2013', datetime.datetime(2013, 8, 23, 0, 0, 0)),
         ):
             date2 = toolkit.read_date(s)
-            self.assertEqual(date2, date)
+            self.assertEqual(date, date2, "while parsing {}".format(repr(s)))
 
     def test_random_alphanum(self):
         self.assertEqual(len(toolkit.random_alphanum(1000)), 1000)

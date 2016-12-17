@@ -44,6 +44,7 @@ import logging
 import random
 import string
 import time
+import re
 from contextlib import contextmanager
 from typing import Sequence
 
@@ -190,7 +191,9 @@ def temp_locale(category, loc=(None, None)):
 def read_date(datestr: str):
     datestr = datestr.replace("Maerz", "März")  # Needed in LN parser?
     settings = {'PREFER_DAY_OF_MONTH': 'first'}
-    if "/" in datestr:
+    if re.match(r'\d{4}-\d{2}-\d{2}', datestr):
+        settings['DATE_ORDER'] = 'YMD' # ISO
+    else:
         settings['DATE_ORDER'] = 'DMY'  # MDY is studid!
     with temp_locale(locale.LC_TIME):
         date = dateparser.parse(datestr, settings=settings)
