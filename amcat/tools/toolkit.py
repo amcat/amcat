@@ -177,7 +177,7 @@ def random_alphanum(size=10):
 ###########################################################################
 ##                     Date(time) functions                              ##
 ###########################################################################
-
+RE_ISO = re.compile(r'\d{4}-\d{2}-\d{2}')
 @contextmanager
 def temp_locale(category, loc=(None, None)):
     _old = locale.getlocale(category)
@@ -191,7 +191,7 @@ def temp_locale(category, loc=(None, None)):
 def read_date(datestr: str):
     datestr = datestr.replace("Maerz", "März")  # Needed in LN parser?
     settings = {'PREFER_DAY_OF_MONTH': 'first'}
-    if re.match(r'\d{4}-\d{2}-\d{2}', datestr):
+    if RE_ISO.match(datestr):
         settings['DATE_ORDER'] = 'YMD' # ISO
     else:
         settings['DATE_ORDER'] = 'DMY'  # MDY is studid!

@@ -1,4 +1,6 @@
 import datetime
+import unittest
+
 from amcat.models import Language
 from amcat.scripts.forms.selection import DAY_DELTA, SelectionForm
 from amcat.tools import amcattest
@@ -49,9 +51,10 @@ class TestSelectionForm(amcattest.AmCATTestCase):
         )
 
     def test_date_formats(self):
+
         dates = (
             "2006-10-25", "2006/10/25", "25-10-2006", "25/10/2006",
-            "Oct 25 2006", "Oct 25, 2006", "25 Oct 2006", "25 Oct, 2006",
+            "Oct 25, 2006", "25 Oct 2006", "25 Oct, 2006",
             "October 25 2006", "October 25, 2006", "25 October 2006",
             "25 October, 2006"
         )
