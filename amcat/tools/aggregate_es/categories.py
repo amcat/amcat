@@ -206,12 +206,13 @@ class TermCategory(Category):
 
 
 class IntervalCategory(Category):
-    def __init__(self, interval, field="date"):
+    def __init__(self, interval, field="date", fill_zeros=True):
         if interval not in ELASTIC_TIME_UNITS:
             err_msg = "{} not a valid interval. Choose on of: {}"
             raise ValueError(err_msg.format(interval, ELASTIC_TIME_UNITS))
         self.interval = interval
         self.field = field
+        self.fill_zeros = fill_zeros
 
     def postprocess(self, value):
         d = datetime.datetime.fromtimestamp(value / 1000)
@@ -222,7 +223,8 @@ class IntervalCategory(Category):
             "date": {
                 "date_histogram": {
                     "field": "date",
-                    "interval": self.interval
+                    "interval": self.interval,
+                    "min_doc_count": 0 if self.fill_zeros else 1
                 }
             }
         }

@@ -28,7 +28,7 @@ from django.template.loader import get_template
 
 from amcat.forms.forms import order_fields
 from amcat.scripts.query import QueryAction, QueryActionForm
-from amcat.tools.aggregate_es import IntervalCategory, fill_zeroes
+from amcat.tools.aggregate_es import IntervalCategory
 from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.toolkit import Timer
 
@@ -95,7 +95,6 @@ class SummaryAction(QueryAction):
                     interval = "day"
 
                 date_aggr = selection.get_nested_aggregate([IntervalCategory(interval)])
-                date_aggr = fill_zeroes((((date,),(value,)) for date,value in date_aggr), IntervalCategory(interval))
             else:
                 # Increase progress without doing anything (because we don't have to aggregate)
                 self.monitor.update()

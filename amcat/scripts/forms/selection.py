@@ -331,4 +331,5 @@ class SelectionForm(forms.Form):
         # in order to validate the query field.
         SelectionSearch(self).get_query()
         return self.cleaned_data
+        #return super().clean()
 

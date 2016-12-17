@@ -21,6 +21,8 @@ import io
 
 from typing import Iterable, Tuple
 
+import functools
+
 from amcat.models import get_used_properties_by_articlesets
 from amcat.scripts.query.queryaction import NotInCacheError
 from amcat.tools.amcates import get_property_primitive_type, ARTICLE_FIELDS
@@ -175,13 +177,13 @@ def get_aggregation_choices(properties: Iterable[str]) -> Iterable[Tuple]:
 
 
 class AggregationActionForm(QueryActionForm):
+    fill_zeroes = BooleanField(label="Show empty dates as 0 (if interval selected)", required=False, initial=True)
+
     primary = ChoiceField(label="Primary aggregation", choices=())
     secondary = ChoiceField(label="Secondary aggregation", choices=(), required=False)
 
     value1 = ChoiceField(label="First value", initial="count(articles)", choices=[("count(articles)", "Article count")])
     value2 = ChoiceField(label="Second value", required=False, initial="", choices=())
-
-    fill_zeroes = BooleanField(label="Show empty dates as 0 (if interval selected)", required=False, initial=True)
 
     def __init__(self, *args, **kwargs):
         super(AggregationActionForm, self).__init__(*args, **kwargs)
@@ -209,7 +211,7 @@ class AggregationActionForm(QueryActionForm):
 
         if field_value.endswith(INTERVALS):
             fieldname, interval = field_value.rsplit("_", 1)
-            return aggregate_es.IntervalCategory(field=fieldname, interval=interval)
+            return aggregate_es.IntervalCategory(field=fieldname, interval=interval, fill_zeros=self.cleaned_data["fill_zeroes"])
 
         if field_value.endswith("_str"):
             # _str is added to disambiguate between fields and intervals
@@ -237,7 +239,7 @@ class AggregationAction(QueryAction):
         ("text/csv", "CSV (Download)"),
     )
     form_class = AggregationActionForm
-    monitor_steps = 4
+    monitor_steps = 3
 
     def run(self, form):
         selection = SelectionSearch(form)
@@ -259,13 +261,6 @@ class AggregationAction(QueryAction):
             self.set_cache([primary, secondary, categories, aggregation])
         else:
             self.monitor.update(2)
-
-        if form.cleaned_data.get("fill_zeroes") and type(primary) is IntervalCategory:
-            self.monitor.update(message="Filling zeroes..")
-            aggregation = list(aggregate_es.fill_zeroes(aggregation, primary, secondary))
-        else:
-            self.monitor.update()
-
 
         # Matrices are very annoying to construct in javascript due to missing hashtables. If
         # the user requests a table, we thus first convert it to a different format which should

@@ -18,7 +18,7 @@
 ###########################################################################
 import datetime
 from itertools import count, takewhile
-__all__ = ("aggregate","fill_zeroes")
+__all__ = ("aggregate",)
 
 
 def flatten(aggregation, categories):
@@ -80,51 +80,7 @@ def aggregate(query=None, filters=None, categories=(), objects=True, es=None, fl
     if not flat:
         aggregation = ((row[:-1], row[-1:]) for row in aggregation)
 
+    aggregation = list(aggregation)
+
     return aggregation
 
-
-def iter_dates_from(start, interval):
-    if interval == "quarter":
-        interval_size = 3
-        interval = "month"
-    elif interval == "week":
-        interval_size = 7
-        interval = "day"
-    else:
-        interval_size = 1
-
-    if interval == "day":
-        days = count(start.day - 1, interval_size)
-        for day in days:
-            yield start + datetime.timedelta(day)
-
-    elif interval == "month":
-        year_month = ((start.year + int(m / 12), m % 12) for m in count(start.month - 1, interval_size))
-        for year,month in year_month:
-            yield start.replace(year=year, month=month + 1)
-
-    elif interval == "year":
-        years = count(start.year)
-        for year in years:
-            yield start.replace(year=year)
-
-def fill_zeroes(aggregation, primary, secondary=None, zeroval = (0,)):
-    interval = primary.interval
-    aggregation = list(aggregation)
-    if secondary:
-        secondaries = set(value[0][1] for value in aggregation)
-    else:
-        secondaries = None
-
-    aggregation_dates = list(set(value[0][0] for value in aggregation))
-    aggregation_dates.sort()
-
-    aggregation_dict = dict(aggregation)
-
-    dates = iter_dates_from(aggregation_dates[0], interval)
-    for date in takewhile(lambda date: date <= aggregation_dates[-1], dates):
-        if secondaries:
-            for snd in secondaries:
-                yield ((date,snd), aggregation_dict.get((date, snd), zeroval))
-        else:
-            yield ((date,),aggregation_dict.get((date,),zeroval))
