@@ -18,6 +18,7 @@
 ###########################################################################
 import copy
 from multiprocessing.pool import ThreadPool
+from types import MappingProxyType
 
 import amcat.models
 
@@ -30,7 +31,7 @@ import re
 from collections import namedtuple
 from hashlib import sha224 as hash_class
 from json import dumps as serialize
-from typing import Union, Iterable
+from typing import Union
 
 from django.conf import settings
 from elasticsearch import Elasticsearch, NotFoundError
@@ -44,6 +45,9 @@ from amcat.tools.toolkit import multidict, splitlist
 log = logging.getLogger(__name__)
 
 _clean_re = re.compile('[\x00-\x08\x0B\x0C\x0E-\x1F]')
+
+
+EMPTY_RO_DICT = MappingProxyType({})
 
 
 def _clean(s):
@@ -412,7 +416,7 @@ class _ES(object):
         """
         return scan(self.es, index=self.index, doc_type=self.doc_type, query=query, **kargs)
         
-    def query_ids(self, query=None, filters={}, body=None, limit=None, **kwargs):
+    def query_ids(self, query=None, filters=EMPTY_RO_DICT, body=None, limit=None, **kwargs):
         """
         Query the index returning a sequence of article ids for the mathced articles
 
@@ -431,7 +435,7 @@ class _ES(object):
                 return
             yield int(a['_id'])
 
-    def query(self, query=None, filters={}, highlight=False, lead=False, fields=[], score=True, **kwargs):
+    def query(self, query=None, filters=EMPTY_RO_DICT, highlight=False, lead=False, fields=(), score=True, **kwargs):
         """
         Execute a query for the given fields with the given query and filter
         @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
@@ -980,7 +984,7 @@ def build_filter(*args, **kargs):
     return combine_filters(filters)
 
 
-def build_body(query=None, filters={}, query_as_filter=False):
+def build_body(query=None, filters=EMPTY_RO_DICT, query_as_filter=False):
     """
     Construct the query body from the query and/or filter(s)
     (call with dict(build_body)
@@ -1002,9 +1006,4 @@ def build_body(query=None, filters={}, query_as_filter=False):
 
 if __name__ == '__main__':
     ES().check_index()
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-# amcat.tools.tests.amcates
 
