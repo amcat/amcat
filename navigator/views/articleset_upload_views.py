@@ -5,6 +5,11 @@ import os
 from tempfile import mkdtemp
 from uuid import uuid4, UUID
 
+import shutil
+
+import itertools
+
+import functools
 from django import forms
 from django.core.files.uploadedfile import UploadedFile
 from django.core.urlresolvers import reverse
@@ -33,6 +38,7 @@ def get_type_choices():
     default = 'default'
     return [(k, k) for k in sorted(ES_MAPPING_TYPES.keys(), key=lambda x: '\0' if x == default else x)]
 
+
 def get_destination_choices(project=None):
     core_fields = sorted((x, x + (" *" if x in upload.REQUIRED else "")) for x in ARTICLE_FIELDS if x not in ("parent_hash",))
     choices = [
@@ -42,8 +48,8 @@ def get_destination_choices(project=None):
     ]
 
     if project:
-        properties = sorted(set(property for articleset in project.favourite_articlesets.all()
-                            for property in articleset.get_used_properties()))
+        properties = (aset.get_used_properties() for aset in project.favourite_articlesets.all())
+        properties = sorted(set(itertools.chain.from_iterable(properties)))
         if properties:
             choices.append(("Project fields", [(x, x) for x in properties]))
 
@@ -75,7 +81,6 @@ class ArticleSetUploadScriptHandler(ScriptHandler):
         arguments = cls.serialize_files(arguments)
         return arguments
 
-
     def get_script(self):
         script_cls = self.task.get_class()
         kwargs = self.get_form_kwargs()
@@ -100,15 +105,13 @@ class ArticleSetUploadView(BaseMixin, FormView):
     url_fragment = "upload"
 
     def store_upload(self, upload_id, file, encoding, script, articleset, articleset_name):
-        dir = get_or_create_upload_dir(str(self.request.user.id), upload_id)
-        file_path = os.path.join(dir, file.name)
-        with open(file_path, "wb") as f:
-            f.seek(0)
-            for chunk in file.chunks():
-                f.write(chunk)
-            f.flush()
-        ses = self.request.session
-        uploads = ses.get('uploads', {})
+        upload_dir = get_or_create_upload_dir(str(self.request.user.id), upload_id)
+        file_path = os.path.join(upload_dir, file.name)
+
+        with open(file_path, "wb") as dst:
+            shutil.copyfileobj(file, dst)
+
+        uploads = self.request.session.get('uploads', {})
         uploads[upload_id] = {"project": self.project.id,
                               "upload_id": upload_id,
                               "encoding": encoding,
@@ -118,20 +121,22 @@ class ArticleSetUploadView(BaseMixin, FormView):
                               "articleset": articleset and articleset.id,
                               "articleset_name": articleset_name,
                               "size": file.size}
-        ses['uploads'] = uploads
+        self.request.session['uploads'] = uploads
 
     def form_valid(self, form):
         upload_id = uuid4()
         upload_id_urlsafe = base64.urlsafe_b64encode(upload_id.bytes).decode()
         self.store_upload(str(upload_id), **form.cleaned_data)
-        return redirect("{}?upload_id={}".format(reverse("navigator:articleset-upload-options", args=(self.project.id,)),
-                                        upload_id_urlsafe))
+        redirect_url = reverse("navigator:articleset-upload-options", args=(self.project.id,))
+        return redirect("{}?upload_id={}".format(redirect_url, upload_id_urlsafe))
+
 
 def validate_property_name(value, type):
     if type != "default":
         value = "{}_{}".format(value, type)
     if not is_valid_property_name(value):
         raise forms.ValidationError("Invalid property name: {}".format(value))
+
 
 class ArticleUploadFieldForm(forms.Form):
     label = forms.CharField(required=False, help_text="(Type Constant value)")
@@ -155,9 +160,11 @@ class ArticleUploadFieldForm(forms.Form):
             validate_property_name(cleaned_data['new_name'], cleaned_data['type'])
         return cleaned_data
 
+
 class ArticleUploadFormSet(forms.BaseFormSet):
     management_initial = ()
     project = None
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.management_initial = dict(self.management_initial)
@@ -177,21 +184,17 @@ class ArticleUploadFormSet(forms.BaseFormSet):
         if required:
             raise forms.ValidationError("Missing required article field(s): {}".format(", ".join(required)))
 
+
 class ArticlesetUploadOptionsView(BaseMixin, FormView):
     parent = ProjectDetailsView
     view_name = "articleset-upload-options"
     url_fragment = "upload-options"
 
     @property
+    @functools.lru_cache()
     def script_fields(self):
-        # We don't want to parse files multiple times, so cache value
-        try: 
-            return self._script_fields
-        except AttributeError:
-            self._script_fields = list(self.script_class.get_fields(
-                self.uploaded_file, self.upload['encoding']))
-            return self._script_fields
-        
+        return list(self.script_class.get_fields(self.uploaded_file, self.upload['encoding']))
+
     @property
     def upload_id(self):
         return UUID(bytes=base64.urlsafe_b64decode(self.request.GET["upload_id"]))
@@ -203,7 +206,8 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
     def initial_data(self):
         def abbrev_and_quote(x, maxlen):
             x = str(x).strip()
-            if len(x) > maxlen: x = x[:maxlen] + "..."
+            if len(x) > maxlen:
+                x = x[:maxlen] + "..."
             return '{}'.format(x)
             
         for f in self.script_fields:
@@ -288,6 +292,7 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
         handler = ArticleSetUploadScriptHandler.call(target_class=self.script_class, arguments=args,
                             project=self.project, user=self.request.user)
         return redirect(reverse("navigator:task-details", args=(self.project.id, handler.task.id)))
+
 
 def get_or_create_upload_dir(upload_id: str, user_id):
     dir = os.path.join(STORAGE_DIR, str(user_id), upload_id)
