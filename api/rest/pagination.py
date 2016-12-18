@@ -72,10 +72,15 @@ class AmCATPageNumberPagination(pagination.PageNumberPagination):
         try:
             self.page = paginator.page(page_number)
         except InvalidPage as exc:
-            msg = self.invalid_page_message.format(
-                page_number=page_number, message=str(exc)
-            )
-            raise NotFound(msg)
+            if "datatables_options" in request.GET:
+                # HACK: Datatables does not expect 404 when a page does not exist. Instead, it
+                # expects to get page 1 (which it will render correctly).
+                self.page = paginator.page(1)
+            else:
+                msg = self.invalid_page_message.format(
+                    page_number=page_number, message=str(exc)
+                )
+                raise NotFound(msg)
 
         if paginator.count > 1 and self.template is not None:
             # The browsable API should display pagination controls.
