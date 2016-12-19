@@ -49,6 +49,7 @@ from contextlib import contextmanager
 from typing import Sequence
 
 import dateparser
+from iso8601 import iso8601
 
 log = logging.getLogger(__name__)
 
@@ -189,6 +190,11 @@ def temp_locale(category, loc=(None, None)):
 
 
 def read_date(datestr: str):
+    try:
+        return iso8601.parse_date(datestr, default_timezone=None)
+    except iso8601.ParseError:
+        pass
+
     datestr = datestr.replace("Maerz", "März")  # Needed in LN parser?
     settings = {'PREFER_DAY_OF_MONTH': 'first'}
     if RE_ISO.match(datestr):
