@@ -22,7 +22,7 @@ class TestCSV(amcattest.AmCATTestCase):
         articles = _run_test_csv(header, data, field_map)
         self.assertEqual(len(articles), 2)
 
-        # Scraper is not guarenteed to return articles in order.
+        # Scraper is not guaranteed to return articles in order.
         self.assertEqual({articles[0].title, articles[1].title}, {'kop1', 'kop2'})
         self.assertEqual({articles[0].properties['page'], articles[1].properties['page']}, {"12", ''})
 

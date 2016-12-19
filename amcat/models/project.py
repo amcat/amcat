@@ -25,7 +25,7 @@ from datetime import datetime
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
-from typing import Union
+from typing import Union, Set
 
 import amcat.models
 from amcat.models import ProjectRole
@@ -42,6 +42,7 @@ LITTER_PROJECT_ID = 1
 LAST_VISITED_FIELD_NAME = "last_visited_at"
 
 import logging; log = logging.getLogger(__name__)
+
 
 class Project(AmcatModel):
     """Model for table projects.
@@ -80,6 +81,10 @@ class Project(AmcatModel):
     codebooks = models.ManyToManyField("amcat.Codebook", related_name="projects_set")
     articlesets = models.ManyToManyField("amcat.ArticleSet", related_name="projects_set")
     favourite_articlesets = models.ManyToManyField("amcat.articleset", related_name="favourite_of_projects")
+
+    def get_used_properties(self, only_favourites=False) -> Set[str]:
+        articlesets = (self.favourite_articlesets if only_favourites else self.articlesets).all().only("id")
+        return set(itertools.chain.from_iterable(aset.get_used_properties() for aset in articlesets))
 
     def get_codingschemas(self):
         """
@@ -174,7 +179,7 @@ class Project(AmcatModel):
                  .format(**locals()))
 
         return actual_role_id is not None and actual_role_id >= role_id
-        
+
     def get_role_id(self, user=None):
         """
         Return the role id that this user has, by his own right or as guest
@@ -199,7 +204,7 @@ class RecentProject(AmcatModel):
 
     user = models.ForeignKey("amcat.UserProfile")
 
-    #related_name should be the same as the ProjectSerializer's column name to assert sortability
+    # related_name should be the same as the ProjectSerializer's column name to assert sortability
     project = models.ForeignKey(Project, related_name=LAST_VISITED_FIELD_NAME)
     date_visited = models.DateTimeField()
 

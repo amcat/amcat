@@ -3,6 +3,7 @@ import json
 import logging
 import os
 from tempfile import mkdtemp
+from typing import List
 from uuid import uuid4, UUID
 
 import shutil
@@ -18,29 +19,31 @@ from django.shortcuts import redirect
 from django.utils.datastructures import MultiValueDict
 from django.views.generic import FormView
 
-from amcat.models import Plugin, ArticleSet, Article
+from amcat.models import Plugin
 from amcat.scripts.article_upload import upload
-from amcat.scripts.article_upload.upload import REQUIRED
+from amcat.scripts.article_upload.upload import REQUIRED, ArticleField
 from amcat.tools.amcates import is_valid_property_name, ARTICLE_FIELDS
 from navigator.views.project_views import ProjectDetailsView
 from navigator.views.projectview import BaseMixin
 from navigator.views.scriptview import ScriptHandler, get_temporary_file_dict
 from settings import ES_MAPPING_TYPES
 
-NEW_FIELD = "new_field"
 
 log = logging.getLogger(__name__)
 
 STORAGE_DIR = mkdtemp(prefix="amcat_upload")
+CORE_FIELDS = sorted(ARTICLE_FIELDS - {"parent_hash"})
+NEW_FIELD = "new_field"
 
 
+@functools.lru_cache()
 def get_type_choices():
-    default = 'default'
-    return [(k, k) for k in sorted(ES_MAPPING_TYPES.keys(), key=lambda x: '\0' if x == default else x)]
+    mapping_types = set(ES_MAPPING_TYPES.keys()) - {"default"}
+    return [(k, k) for k in ["default"] + sorted(mapping_types)]
 
 
 def get_destination_choices(project=None):
-    core_fields = sorted((x, x + (" *" if x in upload.REQUIRED else "")) for x in ARTICLE_FIELDS if x not in ("parent_hash",))
+    core_fields = [(x, x + (" *" if x in upload.REQUIRED else "")) for x in CORE_FIELDS]
     choices = [
         ("-", "(don't use)"),
         (NEW_FIELD, "New field..."),
@@ -48,8 +51,7 @@ def get_destination_choices(project=None):
     ]
 
     if project:
-        properties = (aset.get_used_properties() for aset in project.favourite_articlesets.all())
-        properties = sorted(set(itertools.chain.from_iterable(properties)))
+        properties = sorted(project.get_used_properties(only_favourites=True))
         if properties:
             choices.append(("Project fields", [(x, x) for x in properties]))
 
@@ -192,7 +194,7 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
 
     @property
     @functools.lru_cache()
-    def script_fields(self):
+    def script_fields(self) -> List[ArticleField]:
         return list(self.script_class.get_fields(self.uploaded_file, self.upload['encoding']))
 
     @property
@@ -211,10 +213,20 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
             return '{}'.format(x)
             
         for f in self.script_fields:
-            #HACK: use initial['values'] to pass values to the respective form.__init__.
+            # HACK: use initial['values'] to pass values to the respective form.__init__.
             values = [abbrev_and_quote(x, 20) for x in f.values if x] if f.values else []
+            data = {'label': f.label, 'values': values}
 
-            yield {'label': f.label, 'values': values, 'destination': f.suggested_destination}
+            existing_fields = self.project.get_used_properties(only_favourites=True)
+            if f.suggested_destination:
+                if f.suggested_destination in CORE_FIELDS or f.suggested_destination in existing_fields:
+                    data['destination'] = f.suggested_destination
+                else:
+                    data['destination'] = NEW_FIELD
+                    data['new_name'] = f.suggested_destination.rsplit("_", 1)[0]
+                    data['type'] = f.suggested_type
+
+            yield data
 
     def get_initial(self):
         return list(self.initial_data())
@@ -267,7 +279,7 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
         name = "{}_{}".format(name, type) if type and type != "default" else name
         if not is_valid_property_name(name):
             raise Exception("Invalid property name: {}".format(name))
-        return  name
+        return name
 
     def get_field_map(self, form):
         for i, field in enumerate(form):

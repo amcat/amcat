@@ -24,8 +24,16 @@ import csv
 import datetime
 import itertools
 import logging
-from io import TextIOWrapper
+from operator import itemgetter
 
+import iso8601
+
+from io import TextIOWrapper
+from collections import defaultdict
+from typing import Optional, Tuple
+
+
+from amcat.contrib.oset import OrderedSet
 from amcat.models import Article, get_property_primitive_type
 from amcat.scripts.article_upload.upload import UploadScript, ArticleField
 from amcat.tools.amcates import ARTICLE_FIELDS
@@ -54,6 +62,71 @@ def get_fields():
 
 def get_parser(field_type):
     return PARSERS.get(field_type, lambda x: x)
+
+
+def get_fieldname_tuple(field_name: str, suggested_type: str):
+    if field_name.endswith("_" + suggested_type):
+        return field_name, suggested_type
+    return "{}_{}".format(field_name, suggested_type), suggested_type
+
+
+def guess_destination_and_type(field_name: str, sample_value: Optional[str]) -> Tuple:
+    if field_name == "id":
+        # The uploader *probably* does not mean to use the id field (possibly originating
+        # from another AmCAT instance).
+        return None, None
+
+    from navigator.views.articleset_upload_views import CORE_FIELDS
+    if field_name in CORE_FIELDS:
+        return field_name, None
+
+    # Guess based on field_name:
+    ptype = get_property_primitive_type(field_name)
+    if ptype != str:
+        if ptype == float:
+            return field_name, "num"
+        elif ptype == int:
+            return field_name, "int"
+        elif ptype == datetime.datetime:
+            return field_name, "date"
+        else:
+            raise ValueError("Did not recognize return value of get_property_primitive_type: {}".format(ptype))
+
+    # Guess based on sample value
+    if sample_value is None:
+        # Not able to guess something, do not recommend anything
+        return None, None
+
+    # Guess datetime
+    try:
+        iso8601.parse_date(sample_value)
+    except iso8601.ParseError:
+        pass
+    else:
+        return get_fieldname_tuple(field_name, "date")
+
+    # TODO: Guess datetime based on DATE_INPUT_TYPES of Django
+
+    # Guess int
+    try:
+        int(sample_value)
+    except ValueError:
+        pass
+    else:
+        return get_fieldname_tuple(field_name, "int")
+
+    # Guess float
+    try:
+        float(sample_value)
+    except ValueError:
+        pass
+    else:
+        return get_fieldname_tuple(field_name, "num")
+
+    if sample_value.startswith(("https://", "http://")):
+        return get_fieldname_tuple(field_name, "url")
+
+    return field_name, "default"
 
 
 class CSV(UploadScript):
@@ -97,7 +170,6 @@ class CSV(UploadScript):
         return parser(value)
 
     def parse_file(self, file):
-        file_name = file.name
         reader = csv.DictReader(TextIOWrapper(file.file, encoding="utf8"))
         for unmapped_dict in reader:
             art_dict = self.map_article(unmapped_dict)
@@ -116,22 +188,32 @@ class CSV(UploadScript):
 
     @classmethod
     def get_fields(cls, file, encoding):
+        sample_data = defaultdict(OrderedSet)
+
         for f in UploadScript.unpack_file(file):
-            reader = csv.DictReader(cls.textio(file, encoding))
-            values = list(itertools.islice(reader, 0, 5))
-            known_articleset_fields = set() #TODO: get these somehow
-            known_fields = set(ARTICLE_FIELDS) | known_articleset_fields
+            csvf = cls.textio(f, encoding)
+            reader = csv.DictReader(csvf)
+            for row in itertools.islice(reader, 0, 5):
+                for field_name, value in row.items():
+                    if value.strip():
+                        sample_data[field_name].add(value.strip())
 
-            for column in reader.fieldnames:
-                article_field = ArticleField(column)
-                if column.lower() in known_fields:
-                    article_field.suggested_destination = column.lower()
-                article_field.values = [v[column] for v in values]
+        # Delete empty data
+        for values in sample_data.values():
+            if "" in values:
+                values.remove("")
 
-                yield article_field
+        # Guess types and destinations
+        for field_name, values in sorted(sample_data.items(), key=itemgetter(0)):
+            try:
+                value = next(iter(values))
+            except StopIteration:
+                value = None
+
+            suggested_destination, suggested_type = guess_destination_and_type(field_name, value)
+            yield ArticleField(field_name, suggested_destination, list(itertools.islice(sample_data[field_name], 0, 5)), None, suggested_type)
 
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
-
     cli.run_cli(CSV)

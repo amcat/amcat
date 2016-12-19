@@ -24,34 +24,32 @@ import datetime
 import logging
 import os.path
 import zipfile
-
 import chardet
+
+from io import TextIOWrapper
+from actionform import ActionForm
+
 from django import forms
 from django.contrib.postgres.forms import JSONField
 from django.core.files import File
 from django.core.files.utils import FileProxyMixin
 from django.forms.widgets import HiddenInput
-from io import TextIOWrapper
 
-from amcat.models import Article, Project, ArticleSet
+from amcat.models import Article, ArticleSet, Project
 from amcat.models.articleset import create_new_articleset
-
-from actionform import ActionForm
-
 from amcat.tools import amcates
 from amcat.tools.progress import NullMonitor
 
 log = logging.getLogger(__name__)
 
-REQUIRED = tuple(
-    field.name for field in Article._meta.get_fields() if field.name in amcates.ARTICLE_FIELDS and not field.blank)
+REQUIRED = tuple(field.name for field in Article._meta.get_fields() if field.name in amcates.ARTICLE_FIELDS and not field.blank)
 
-##### HACK: Django's FileProxyMixin misses the readable and writable properties of IOBase, see Django ticket #26646
-##### fixed in Django 1.11+
+# HACK: Django's FileProxyMixin misses the readable and writable properties of IOBase,
+# HACK: see Django ticket #26646 fixed in Django 1.11+.
 if not hasattr(FileProxyMixin, 'readable'):
     setattr(FileProxyMixin, "readable", property(lambda self: getattr(self.file, 'readable', False)))
     setattr(FileProxyMixin, "writable", property(lambda self: getattr(self.file, 'writable', False)))
-#####
+
 
 def validate_field_map(value):
     required = set(REQUIRED)
@@ -65,6 +63,7 @@ def validate_field_map(value):
     if required:
         raise forms.ValidationError("Missing required article field(s): {}".format(", ".join(required)))
 
+
 class ArticleField(object):
     """
     Simple 'struct' to hold information about fields in uploaded files
@@ -76,6 +75,11 @@ class ArticleField(object):
         self.values = values  # top X values  
         self.possible_types = possible_types  # allowed article property types (text, date, number, integer)
         self.suggested_type = suggested_type  # suggested article property type
+
+    def __repr__(self):
+        return "<ArticleField(label={self.label}, suggested_destination={self.suggested_destination}, " \
+               "suggested_type={self.suggested_type})> ".format(self=self)
+
 
 class ParseError(Exception):
     pass 
@@ -105,7 +109,7 @@ class UploadForm(forms.Form):
     def clean_articleset_name(self):
         """If articleset name not specified, use file base name instead"""
         if 'articleset' in self.errors:
-            #skip check if error in articlesets: cleaned_data['articlesets'] does not exist
+            # skip check if error in articlesets: cleaned_data['articlesets'] does not exist
             return
         if self.files.get('file') and not (
                     self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
@@ -174,7 +178,7 @@ class UploadScript(ActionForm):
     def explain_error(self, error, article=None, index=None):
         """Explain the error in the context of unit for the end user"""
         index = " {}".format(article) if article is not None else ""
-        return "Error in element{}: {}".format(article, error)
+        return "Error in element{}: {}".format(index, error)
 
     def get_provenance(self, file, articles):
         n = len(articles)
@@ -266,7 +270,8 @@ class UploadScript(ActionForm):
 
 def _set_project(art, project):
     try:
-        if getattr(art, "project", None) is not None: return
+        if getattr(art, "project", None) is not None:
+            return
     except Project.DoesNotExist:
         pass  # django throws DNE on x.y if y is not set and not nullable
     art.project = project
