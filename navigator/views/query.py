@@ -129,13 +129,13 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         codingjob_ids_json = json.dumps(list(codingjob_ids))
 
         if codingjob_ids:
-            all_articlesets = self.project.all_articlesets().only("id", "name")
+            all_articlesets = self.project.favourite_articlesets.all().only("id", "name")
             all_articlesets = all_articlesets.filter(codingjob_set__id__in=codingjob_ids)
             articleset_ids = all_articlesets.values_list("id", flat=True)
             all_codingjobs = self.project.codingjob_set.all().filter(id__in=codingjob_ids)
         else:
             all_codingjobs = None
-            all_articlesets = self.project.all_articlesets().only("id", "name")
+            all_articlesets = self.project.favourite_articlesets.all().only("id", "name")
             all_articlesets = all_articlesets.filter(codingjob_set__id__isnull=True)
 
         articlesets = self.project.all_articlesets().filter(id__in=articleset_ids).only("id", "name")
