@@ -15,11 +15,9 @@ CODED_ARTICLE_METADATA = {
         "status": "/api/v4/codedarticlestatus",
         "article": "/api/v4/article",
         "codingjob": "/api/v4/codingjob",
-        "medium": "/api/v4/medium"
     },
     "fields": {
         "status": "ModelChoiceField", # Real
-        "medium": "ModelChoiceField",
         "title": "SerializerMethodField",
         "codingjob": "ModelChoiceField", # Real
         "comments": "CharField", # Real

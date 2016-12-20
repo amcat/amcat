@@ -100,6 +100,20 @@
                         {% endfor %}
                     </td>
                 </tr>
+                {% if codingjobs %}
+                    <tr class="hbreak-before">
+                        <td>In&nbsp;codingjobs:</td>
+                        <td>
+                            {% for codingjob in codingjobs %}
+                                <a href="{% url "navigator:codingjob-details" project.id codingjob.id %}">{{codingjob.id}}
+                                    - {{ codingjob.name }}</a>
+                                <br/>
+                            {% empty %}
+                                This article does not occur in any c
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {% endif %}
             </table>
         </div>
     </div>

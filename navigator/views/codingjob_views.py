@@ -97,6 +97,7 @@ class CodingJobDetailsView(ProjectDetailView, DatatableMixin):
 
     def filter_table(self, table):
         table = table.filter(sets=self.object.articleset.id)
+        table = table.filter(project=self.project.id)
         table = table.rowlink_reverse('navigator:article-details', args=[self.project.id, self.object.articleset.id, '{id}'])
         return table
 

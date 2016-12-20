@@ -29,7 +29,7 @@ from navigator.views.articleset_views import ArticleSetDetailsView
 from amcat.models import Article, ArticleSet, Sentence
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectFormView, ProjectActionRedirectView
 from amcat.tools import sbd
-from amcat.models import authorisation, Project
+from amcat.models import authorisation, Project, CodingJob
 from navigator.views.project_views import ProjectDetailsView
 import navigator.forms
 
@@ -64,6 +64,9 @@ class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         context['articleset'] = None
         if 'articleset' in self.kwargs:
             context['articleset'] = ArticleSet.objects.get(id=self.kwargs['articleset'])
+
+        article = self.get_object()
+        context['codingjobs'] = CodingJob.objects.filter(articleset__in=article.articlesets_set.all())
 
         # HACK: put query back on session to allow viewing more articles
         self.request.session["query"] = self.last_query
