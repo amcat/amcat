@@ -16,15 +16,9 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-
-
-import logging
-
 from django.conf import settings
 from django.conf.urls import include, patterns, url
 from django.contrib import admin
-from django.views.generic import RedirectView
-from navigator.views.index import IndexRedirect
 
 admin.autodiscover()
 
@@ -38,10 +32,9 @@ urlpatterns = patterns(
     url(r'^restframework', include('rest_framework.urls', namespace='rest_framework'))
     )
 
-# Static files
-if settings.LOCAL_DEVELOPMENT:
-    urlpatterns += patterns("django.views",
-        url(r"%s(?P<path>.*)$" % settings.MEDIA_URL[1:], "static.serve", {
-            "document_root": settings.MEDIA_ROOT,
-        })
-    )
+# Static files (will be filtered by nginx on deployment)
+urlpatterns += patterns("django.views",
+    url(r"%s(?P<path>.*)$" % settings.MEDIA_URL[1:], "static.serve", {
+        "document_root": settings.MEDIA_ROOT,
+    })
+)

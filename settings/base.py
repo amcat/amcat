@@ -16,48 +16,26 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-
-# Django settings for amcatnavigator project.
 import os
-from os import path
-
 import datetime
 
-from amcat import __version__
-from amcat.tools.toolkit import random_alphanum
+from amcat.tools.toolkit import get_cookie_secret
+from amcat.tools.toolkit import get_amcat_config
 
-# Python 2.x vs 3.x
-try:
-    import ConfigParser as configparser
-except ImportError:
-    import configparser
+amcat_config = get_amcat_config()
 
-if os.environ.get('AMCAT_DEBUG', None) is not None:
-    DEBUG = (os.environ['AMCAT_DEBUG'] in ("1", "Y", "ON"))
-else:
-    DEBUG = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
-                 or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
+# Base
+DEBUG = TEMPLATE_DEBUG = amcat_config["base"].getboolean("debug")
 
-LOCAL_DEVELOPMENT = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
-                         or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
+# Auth and security
+REQUIRE_LOGON = amcat_config["auth"].getboolean("require_login")
+ALLOW_REGISTER = amcat_config["auth"].getboolean("registrations")
+REGISTER_REQUIRE_VALIDATION = amcat_config["auth"].getboolean("require_email")
+ALLOWED_HOSTS = amcat_config["auth"].get("allowed_hosts").split(",")
+SECRET_KEY = amcat_config["auth"].get("cookie_secret")
 
-TEMPLATE_DEBUG = DEBUG
-
-APPNAME = 'navigator'
-APPNAME_VERBOSE = 'AmCAT Navigator'
-AMCAT_VERSION = __version__
-
-REQUIRE_LOGON = os.environ.get('AMCAT_REQUIRE_LOGON', 'Y').lower() in ("1", "y", "t")
-ALLOW_REGISTER = os.environ.get('AMCAT_ALLOW_REGISTER', 'Y').lower() in ("1", "y", "t")
-
-REGISTER_REQUIRE_VALIDATION = os.environ.get('AMCAT_REGISTER_REQUIRE_VALIDATION', 'Y').lower() in ("1", "y", "t")
-ROOT = path.abspath(path.join(path.dirname(path.abspath(__file__)), '..'))
-
-DATABASE_OPTIONS = {
-    "init_command": "set transaction isolation level read uncommitted"
-}
-
-ALLOWED_HOSTS = os.environ.get("AMCAT_ALLOWED_HOSTS", "localhost,.amcat.nl,.vu.nl").split(",")
+if not SECRET_KEY:
+    SECRET_KEY = get_cookie_secret()
 
 ACCESS_CONTROL_ORIGINS = []
 ACCESS_CONTROL_HEADERS = []
@@ -71,20 +49,25 @@ if DEBUG:
         "X-CSRFTOKEN", "X-HTTP-METHOD-OVERRIDE"
     ]
 
-DATABASES = dict(default=dict(
-    ENGINE=os.environ.get("AMCAT_DB_ENGINE", 'django.db.backends.postgresql_psycopg2'),
-    NAME=os.environ.get("AMCAT_DB_NAME", 'amcat'),
-    USER=os.environ.get("AMCAT_DB_USER", ''),
-    PASSWORD=os.environ.get("AMCAT_DB_PASSWORD", ''),
-    HOST=os.environ.get("AMCAT_DB_HOST", ''),
-    PORT=os.environ.get("AMCAT_DB_PORT", ''),
-))
+# Database
+DATABASE_OPTIONS = {
+    "init_command": "set transaction isolation level read uncommitted"
+}
 
+DATABASES = {"default": {
+    "ENGINE": amcat_config["database"].get("engine"),
+    "NAME": amcat_config["database"].get("table"),
+    "USER": amcat_config["database"].get("user"),
+    "PASSWORD": amcat_config["database"].get("pass"),
+    "HOST": amcat_config["database"].get("host"),
+    "PORT": amcat_config["database"].get("port"),
+}}
 
+# Caching
 CACHES = {
     "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
+        "BACKEND": amcat_config['cache'].get("backend"),
+        "LOCATION": amcat_config['cache'].get("location"),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
@@ -93,7 +76,7 @@ CACHES = {
 
 CACHE_BUST_TOKEN = datetime.datetime.now().isoformat()
 if not DEBUG:
-    CACHE_BUST_TOKEN = os.environ.get("CACHE_BUST_TOKEN", CACHE_BUST_TOKEN)
+    CACHE_BUST_TOKEN = amcat_config["cache"].get("bust_token")
 
 
 # Local time zone for this installation. Choices can be found here:
@@ -128,6 +111,7 @@ DATE_INPUT_FORMATS = (
 
 # Absolute path to the directory that holds media.
 # Example: "/home/media/media.lawrence.com/"
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 MEDIA_ROOT = os.path.join(ROOT, 'navigator', 'media')
 STATIC_ROOT = os.path.join(MEDIA_ROOT, 'static')
 
@@ -145,14 +129,6 @@ STATICFILES_DIRS = (
     os.path.join(ROOT, "navigator/static"),
     os.path.join(ROOT, "static"),
 )
-
-# URL prefix for admin media -- CSS, JavaScript and images. Make sure to use a
-# trailing slash.
-# Examples: "http://foo.com/media/", "/media/".
-ADMIN_MEDIA_PREFIX = '/media/admin/'
-
-#TEST_RUNNER = "django.test.runner.DiscoverRunner"
-TEST_RUNNER = 'djcelery.contrib.test_runner.CeleryTestSuiteRunner'
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
@@ -233,34 +209,6 @@ TEMPLATE_CONTEXT_PROCESSORS = (
 
 DEFAULT_FROM_EMAIL = "wat200@vu.nl"
 
-
-def get_secret():
-    """
-    Get or create a secret key to sign cookies with.
-
-    ~/.cookie-secret will be used to store the secret key.
-    """
-    sfile = os.path.expanduser("~/.cookie-secret")
-
-    if os.path.exists(sfile):
-        if os.path.isfile(sfile):
-            try:
-                with open(sfile) as f:
-                    return f.read()
-            except IOError as e:
-                print("%r is not readable!" % sfile)
-                raise
-        else:
-            print("%r is not a file." % sfile)
-            raise (Exception())
-
-    with open(sfile, 'w') as sfile:
-        sfile.write(random_alphanum(40))
-
-    return get_secret()
-
-
-SECRET_KEY = get_secret()
 FIXTURE_DIRS = (os.path.join(ROOT, "amcat/models"),)
 
 REST_FRAMEWORK = {
@@ -299,13 +247,12 @@ REST_FRAMEWORK = {
 }
 
 if not DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = os.environ.get("AMCAT_EMAIL_HOST", '')
-    EMAIL_PORT = os.environ.get("AMCAT_EMAIL_PORT", 587)
-    EMAIL_HOST_USER = os.environ.get("AMCAT_EMAIL_USER", '')
-    EMAIL_HOST_PASSWORD = os.environ.get("AMCAT_EMAIL_PASSWORD", '')
-    EMAIL_USE_TLS = os.environ.get("AMCAT_EMAIL_TLS", 'Y') in ("1", "Y", "ON")
-
+    EMAIL_BACKEND = amcat_config["email"].get("backend")
+    EMAIL_HOST = amcat_config["email"].get("host")
+    EMAIL_PORT = amcat_config["email"].get("port")
+    EMAIL_HOST_USER = amcat_config["email"].get("user")
+    EMAIL_HOST_PASSWORD = amcat_config["email"].get("password")
+    EMAIL_USE_TLS = amcat_config["email"].getboolean("use_tls")
 else:
     ALLOWED_HOSTS.append("*")
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

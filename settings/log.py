@@ -16,16 +16,11 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from amcat.tools.toolkit import get_amcat_config
 
-import os, sys
+amcat_config = get_amcat_config()
 
-if os.environ.get('AMCAT_DEBUG', None) is not None:
-    DEBUG = (os.environ['AMCAT_DEBUG'] in ("1", "Y", "ON"))
-else:
-    DEBUG = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
-                 or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
-
-LOG_LEVEL = os.environ.get('AMCAT_LOG_LEVEL', 'DEBUG' if DEBUG else 'INFO')
+LOG_LEVEL = amcat_config["logs"].get("LEVEL")
 
 LOGGING = {
     'version': 1,
@@ -74,15 +69,15 @@ LOGGING = {
     }
 }
 
-if os.environ.get('AMCAT_LOG_QUERIES', 'N').upper() in ("1", "Y", "ON"):
+if amcat_config["logs"].getboolean("queries"):
     LOGGING['loggers']['django.db'] = {}
 
-if os.environ.get('AMCAT_USE_LOGSTASH', 'N').upper() in ("1", "Y", "ON"):
+if amcat_config["logs"].getboolean("logstash"):
     LOGGING['handlers']['logstash'] =  {
         'level': 'INFO',
         'class': 'logstash.LogstashHandler',
-        'host': 'localhost',
-        'port': 5959,
+        'host': amcat_config["logs"].get("logstash_host"),
+        'port': amcat_config["logs"].get("logstash_port"),
         'version': 1, 
         'message_type': 'logstash',
     }
@@ -91,9 +86,9 @@ if os.environ.get('AMCAT_USE_LOGSTASH', 'N').upper() in ("1", "Y", "ON"):
         'level': 'INFO',
     }
         
-if 'AMCAT_LOG_FILE' in os.environ:
+if not amcat_config["base"].getboolean("debug") and amcat_config["logs"].get("file"):
     # Add file log handler
-    LOG_FILE = os.environ['AMCAT_LOG_FILE']
+    LOG_FILE = amcat_config["logs"].get("file")
     LOGGING['handlers']['logfile'] = {
         'level': LOG_LEVEL,
         'class': 'logging.handlers.RotatingFileHandler',
@@ -119,5 +114,5 @@ if 'AMCAT_LOG_FILE' in os.environ:
     })
 
 
-if os.environ.get('AMCAT_LOG_TO_CONSOLE', 'Y') in ("1", "Y", "ON"):
+if amcat_config["logs"].getboolean("console"):
     LOGGING['loggers']['']['handlers'] += ['console']
