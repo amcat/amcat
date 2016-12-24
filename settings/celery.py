@@ -18,7 +18,7 @@
 ###########################################################################
 from kombu import Exchange, Queue
 
-from amcat.tools.toolkit import get_amcat_config
+from settings import get_amcat_config
 
 amcat_config = get_amcat_config()
 

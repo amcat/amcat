@@ -16,9 +16,16 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from amcat.tools.toolkit import get_amcat_config
+from settings import get_amcat_config
 
 amcat_config = get_amcat_config()
+
+try:
+    import colorlog
+except ImportError:
+    use_colorlog = False
+else:
+    use_colorlog = True
 
 LOG_LEVEL = amcat_config["logs"].get("LEVEL")
 
@@ -26,19 +33,6 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
     'formatters': {
-        'color': {
-            '()': 'colorlog.ColoredFormatter',
-            'format': "%(log_color)s[%(asctime)s %(levelname)s %(name)s:%(lineno)s] %(message)s",
-            'log_colors': {
-                'DEBUG': 'bold_black',
-                'INFO': 'white',
-                'WARNING': 'yellow',
-                'ERROR': 'bold_red',
-                'CRITICAL': 'bold_red',
-            },
-        },
-
-
         'standard': {
             'format': "[%(asctime)s %(levelname)s %(name)s:%(lineno)s] %(message)s",
             'datefmt': "%Y-%m-%d %H:%M:%S"
@@ -48,7 +42,7 @@ LOGGING = {
         'console': {
             'level': LOG_LEVEL,
             'class': 'logging.StreamHandler',
-            'formatter': 'color'
+            'formatter': 'color' if use_colorlog else 'standard'
         },
     },
     'loggers': {
@@ -68,6 +62,19 @@ LOGGING = {
         },
     }
 }
+
+if use_colorlog:
+    LOGGING["formatters"]["color"] = {
+        '()': 'colorlog.ColoredFormatter',
+        'format': "%(log_color)s[%(asctime)s %(levelname)s %(name)s:%(lineno)s] %(message)s",
+        'log_colors': {
+            'DEBUG': 'bold_black',
+            'INFO': 'white',
+            'WARNING': 'yellow',
+            'ERROR': 'bold_red',
+            'CRITICAL': 'bold_red',
+        },
+    }
 
 if amcat_config["logs"].getboolean("queries"):
     LOGGING['loggers']['django.db'] = {}
@@ -95,7 +102,7 @@ if not amcat_config["base"].getboolean("debug") and amcat_config["logs"].get("fi
         'filename': LOG_FILE,
         'maxBytes': 2 * 1024 * 1024,
         'backupCount': 2,
-        'formatter': 'color',
+        'formatter': 'color' if use_colorlog else 'standard',
     }
     LOGGING['loggers']['']['handlers'] += ['logfile']
 

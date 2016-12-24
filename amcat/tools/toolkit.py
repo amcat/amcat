@@ -37,26 +37,19 @@ this organisation!
 """
 
 import collections
-import configparser
 import datetime
-import functools
 import itertools
 import locale
 import logging
-import os
 import random
+import re
 import string
 import time
-import re
-import sys
-
 from contextlib import contextmanager
 from typing import Sequence
 
 import dateparser
 from iso8601 import iso8601
-
-import amcat
 
 log = logging.getLogger(__name__)
 
@@ -173,16 +166,6 @@ def strip_accents(s):
     return "".join(REV_ACCENTS_MAP.get(c, c) for c in s)
 
 
-def random_alphanum(size=10):
-    # TODO: Should switch to secrets ASAP (https://docs.python.org/3.5/library/secrets.html)
-    def crypto_choice(rng: random.SystemRandom, choices: Sequence):
-        return choices[rng.randrange(0, len(choices))]
-
-    cryptogen = random.SystemRandom()
-    choices = string.ascii_letters + string.digits
-    return ''.join([crypto_choice(cryptogen, choices) for i in range(size)])
-
-
 ###########################################################################
 ##                     Date(time) functions                              ##
 ###########################################################################
@@ -238,53 +221,11 @@ class Timer:
         self.interval = self.end - self.start
 
 
-@functools.lru_cache()
-def get_amcat_config() -> configparser.ConfigParser:
-    """
-    Reads configuration files in this order:
+def random_alphanum(size=10):
+    # TODO: Should switch to secrets ASAP (https://docs.python.org/3.5/library/secrets.html)
+    def crypto_choice(rng: random.SystemRandom, choices: Sequence):
+        return choices[rng.randrange(0, len(choices))]
 
-     * /etc/default/amcat
-     * /etc/amcat.ini
-     * ~/.amcat.ini
-    """
-    default_ini = os.path.join(amcat.__file__, "../../settings/amcat.ini")
-    config = configparser.ConfigParser()
-    config.read(os.path.abspath(default_ini))
-    config.read("/etc/default/amcat", "utf-8")
-    config.read("/etc/amcat.ini", "utf-8")
-    config.read(os.path.expanduser("~/.amcat.ini"), "utf-8")
-
-    if os.environ.get("AMCAT_CONFIG", "").strip():
-        if not config.read(os.environ["AMCAT_CONFIG"]):
-            raise OSError("Could not read: {}".format(os.environ["AMCAT_CONFIG"]))
-
-    if "runserver" in sys.argv:
-        config["base"]["debug"] = True
-
-    return config
-
-
-def get_cookie_secret():
-    """
-    Get or create a secret key to sign cookies with.
-
-    ~/.cookie-secret will be used to store the secret key.
-    """
-    sfile = os.path.expanduser("~/.cookie-secret")
-
-    if os.path.exists(sfile):
-        if os.path.isfile(sfile):
-            try:
-                with open(sfile) as f:
-                    return f.read()
-            except IOError:
-                print("%r is not readable!" % sfile)
-                raise
-        else:
-            print("%r is not a file." % sfile)
-            raise ValueError("%r is not a file." % sfile)
-
-    with open(sfile, 'w') as sfile:
-        sfile.write(random_alphanum(40))
-
-    return get_cookie_secret()
+    cryptogen = random.SystemRandom()
+    choices = string.ascii_letters + string.digits
+    return ''.join([crypto_choice(cryptogen, choices) for i in range(size)])

@@ -20,8 +20,3 @@
 from .base import *
 from .elastic import *
 from .log import *
-
-try:
-    from .private import *
-except ImportError:
-    pass

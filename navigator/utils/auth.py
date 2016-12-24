@@ -26,9 +26,10 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
+import amcat.tools.toolkit
+import settings.tools
 from amcat.models.user import create_user as _create_user
 from amcat.tools import sendmail
-from amcat.tools import toolkit
 
 log=logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ def create_user(username, first_name, last_name, email,  password=None):
     """
     email_password = (password is None)
     if password is None:
-        password = toolkit.random_alphanum(7)
+        password = amcat.tools.toolkit.random_alphanum(7)
         
     log.info("Creating new user: {username}".format(**locals()))
 

@@ -19,8 +19,7 @@
 import os
 import datetime
 
-from amcat.tools.toolkit import get_cookie_secret
-from amcat.tools.toolkit import get_amcat_config
+from settings.tools import get_amcat_config, get_cookie_secret
 
 amcat_config = get_amcat_config()
 
