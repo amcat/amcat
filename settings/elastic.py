@@ -78,6 +78,13 @@ ES_MAPPING = {
 }
 
 ES_SETTINGS = {
+    "index": {
+      "similarity": {
+        "default": {
+          "type": "hitcountsimilarity"
+        }
+      }
+    },
     "analysis": {
         "analyzer": {
             "default": {

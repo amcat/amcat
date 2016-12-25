@@ -149,22 +149,19 @@ HIGHLIGHT_OPTIONS = {
     }
 }
 
-LEAD_SCRIPT_FIELD = {"lead": {"script": r"if (_source['text']) _source['text'].replace('\r', '').split('\n\n')[0]"}}
-
-UPDATE_SCRIPT_REMOVE_FROM_SET = ("s=ctx._source; "
-                                 "if (s.sets) {s.sets -= set}")
-
-UPDATE_SCRIPT_ADD_TO_SET = ("s=ctx._source; "
-                            "if (s.sets) {if (!(set in s.sets)) s.sets += set} "
-                            "else {s.sets = [set]}")
+LEAD_SCRIPT_FIELD = "amcat_lead"
+UPDATE_SCRIPT_REMOVE_FROM_SET = "amcat_remove_from_set"
+UPDATE_SCRIPT_ADD_TO_SET = "amcat_add_to_set"
 
 def _get_bulk_body(articles, action):
     for article_id, article in articles.items():
         yield serialize({action: {'_id': article_id}})
         yield article
 
+
 def get_bulk_body(articles, action="index"):
     return "\n".join(_get_bulk_body(articles, action)) + "\n"
+
 
 class SearchResult(object):
     """Iterable collection of results that also has total"""
@@ -456,7 +453,7 @@ class _ES(object):
             else:
                 body['highlight'] = HIGHLIGHT_OPTIONS
         if lead or False and query == "" and highlight: 
-            body['script_fields'] = LEAD_SCRIPT_FIELD
+            body['script_fields'] = {"lead": {"script": {"file": LEAD_SCRIPT_FIELD}}}
 
         result = self.search(body, fields=fields, **kwargs)
         return SearchResult(result, fields, score, body, query=query)
@@ -603,7 +600,7 @@ class _ES(object):
         """
         Execute a bulk update script with the given params on the given article ids.
         """
-        payload = serialize(dict(script=script, params=params))
+        payload = serialize({"script": {"file": script, "params": params}})
         body = get_bulk_body({aid: payload for aid in article_ids}, action="update")
         resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
 

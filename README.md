@@ -64,12 +64,8 @@ sudo bin/plugin install mobz/elasticsearch-head
 sudo bin/plugin install analysis-icu
 sudo bin/plugin install amcat/hitcount/2.3.4
 
-# Enable hitcount as default similarity provider, and enable groovy scripting
-cat <<EOT | sudo tee --append /etc/elasticsearch/elasticsearch.yml
-index.similarity.default.type: hitcountsimilarity
-script.inline: on
-script.update: on
-EOT
+# Install scripts (scripts can also be found in config/elasticsearch
+wget "https://www.hmbastiaan.nl/martijn/downloads/amcat_scripts.tar.gz" -O - -q | sudo tar xzf - -C /etc/elasticsearch/scripts
 
 # Restart elastic
 sudo systemctl stop elasticsearch

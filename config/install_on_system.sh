@@ -197,20 +197,16 @@ setup_elasticsearch(){
     rm elasticsearch-${ELASTIC_VERSION}.deb
 
     # Install plugins
-    cd /usr/share/elasticsearch
     systemctl stop elasticsearch
+
+    cd /usr/share/elasticsearch
     bin/plugin remove analysis-icu || true
     bin/plugin remove head || true
     bin/plugin remove hitcount || true
     bin/plugin install mobz/elasticsearch-head
     bin/plugin install analysis-icu
     bin/plugin install amcat/hitcount/${ELASTIC_VERSION}
-
-    # Enable hitcount as default similarity provider, and enable groovy scripting
-    echo >> /etc/elasticsearch/elasticsearch.yml
-    echo "index.similarity.default.type: hitcountsimilarity" >> /etc/elasticsearch/elasticsearch.yml
-    echo "script.inline: on" >> /etc/elasticsearch/elasticsearch.yml
-    echo "script.update: on" >> /etc/elasticsearch/elasticsearch.yml
+    cp ${INSTALL_DIR}amcat/config/elasticsearch/* /etc/elasticsearch/scripts
 
     systemctl start elasticsearch
 
@@ -259,7 +255,7 @@ setup_nginx(){
 }
 
 
-#uninstall
+uninstall
 echo "Setting up user amcat"
 setup_user
 
