@@ -196,7 +196,8 @@ class TermCategory(Category):
             yield label, {"filter": body}
 
     def parse_aggregation_result(self, result):
-        return result.items()
+        for label in self.terms:
+            yield label, result[label]
 
     def get_column_names(self):
         return self.terms.keys()

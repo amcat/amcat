@@ -17,6 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import datetime
+import pprint
 
 from amcat.models import ArticleSet
 from amcat.tools import amcattest
@@ -146,13 +147,23 @@ class TestAggregateES(amcattest.AmCATTestCase):
         term3 = SearchQuery("lamp")
 
         cat1 = TermCategory([term1, term2, term3])
-        cat2 = IntervalCategory("day")
+        cat2 = IntervalCategory("day", fill_zeros=False)
 
         result = self.aggregate(categories=[cat1, cat2])
         self.assertEqual(result, {
             (term1, datetime.datetime(2010, 1, 1, 0, 0), 2),
             (term2, datetime.datetime(2010, 1, 1, 0, 0), 2),
             (term3, datetime.datetime(2010, 1, 2, 0, 0), 1)
+        })
+
+        result = self.aggregate(categories=[cat2, cat1])
+        self.assertEqual(result, {
+            (datetime.datetime(2010, 1, 1, 0, 0), term1, 2),
+            (datetime.datetime(2010, 1, 1, 0, 0), term2, 2),
+            (datetime.datetime(2010, 1, 1, 0, 0), term3, 0),
+            (datetime.datetime(2010, 1, 2, 0, 0), term1, 0),
+            (datetime.datetime(2010, 1, 2, 0, 0), term2, 0),
+            (datetime.datetime(2010, 1, 2, 0, 0), term3, 1)
         })
 
     @amcattest.use_elastic
