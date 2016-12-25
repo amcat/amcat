@@ -77,33 +77,34 @@ ES_MAPPING = {
     },
 }
 
-ES_SETTINGS = {"analysis": {
-    "analyzer": {
-        "default": {
-            "type": "custom",
-            "tokenizer": "unicode_letters_digits",
-            "filter": [
-                "icu_folding", "lengthfilter"
-            ],
+ES_SETTINGS = {
+    "analysis": {
+        "analyzer": {
+            "default": {
+                "type": "custom",
+                "tokenizer": "unicode_letters_digits",
+                "filter": [
+                    "icu_folding", "lengthfilter"
+                ],
+            },
+            "tag": {
+                "type": "pattern",
+                "pattern": "\s*,\s*",
+            },
         },
-        "tag": {
-            "type": "pattern",
-            "pattern": "\s*,\s*",
+        "tokenizer": {
+            "unicode_letters_digits": {
+                "type": "pattern",
+                "pattern": "[^\\p{L}\\p{M}\\p{N}]",
+                "lowercase": "true"
+            }
         },
-    },
-    "tokenizer": {
-        "unicode_letters_digits": {
-            "type": "pattern",
-            "pattern": "[^\\p{L}\\p{M}\\p{N}]",
-            "lowercase": "true"
-        }
-    },
-    # prevent 'immense term' error when people use really long words
-    "filter": {
-        "lengthfilter": {
-            "type" : "length",
-            "min" : 0,
-            "max" : 2000,
+        # prevent 'immense term' error when people use really long words
+        "filter": {
+            "lengthfilter": {
+                "type": "length",
+                "min": 0,
+                "max": 2000,
             }
         }
     },
