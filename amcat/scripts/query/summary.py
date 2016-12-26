@@ -94,7 +94,7 @@ class SummaryAction(QueryAction):
                 except (StopIteration, TypeError):
                     interval = "day"
 
-                date_aggr = selection.get_nested_aggregate([IntervalCategory(interval)])
+                date_aggr = selection.get_aggregate([IntervalCategory(interval)], objects=False)
             else:
                 # Increase progress without doing anything (because we don't have to aggregate)
                 self.monitor.update()

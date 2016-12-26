@@ -164,13 +164,13 @@ class SelectionSearch:
     def get_statistics(self):
         return self.es.statistics(self.get_query(), self.get_filters())
 
-    def get_aggregate(self, categories, flat=True):
+    def get_aggregate(self, categories, flat=True, objects=True):
         # If we're aggregating on terms, we don't want a global filter
         query = None
         if not any(isinstance(c, TermCategory) for c in categories):
             query = self.get_query()
 
-        aggr = aggregate(query, self.get_filters(), categories, flat=flat)
+        aggr = aggregate(query, self.get_filters(), categories, flat=flat, objects=objects)
         return sorted(aggr, key=to_sortable_tuple)
 
     def get_nested_aggregate(self, categories):

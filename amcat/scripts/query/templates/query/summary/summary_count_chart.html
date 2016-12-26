@@ -27,7 +27,7 @@
                 name: 'Articles',
                 data: [
                     {% for date, count in date_aggr %}
-                        [Date.UTC({{ date.0.year }}, {{ date.0.month }} -1, {{ date.0.day }}), {{ count.0 }}],
+                        [Date.UTC({{ date.year }}, {{ date.month }} -1, {{ date.day }}), {{ count }}],
                     {% endfor %}
                 ]
             }],
