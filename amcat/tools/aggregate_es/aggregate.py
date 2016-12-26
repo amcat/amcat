@@ -18,19 +18,41 @@
 ###########################################################################
 import datetime
 from itertools import count, takewhile
+
+import itertools
+
 __all__ = ("aggregate",)
 
 
-def flatten(aggregation, categories):
-    aggregation = categories.pop(0).parse_aggregation_result(aggregation)
+def flatten(aggregation, categories, categories_values=()):
+    aggregation = iter(categories.pop(0).parse_aggregation_result(aggregation))
 
+    seen = set()
     if not categories:
         for key, aggr in aggregation:
+            if categories_values:
+                seen.add(key)
             yield [key, aggr["doc_count"]]
     else:
         for key, sub in aggregation:
-            for row in flatten(sub, list(categories)):
+            values = categories_values[1:] if categories_values else ()
+            flattened = flatten(sub, list(categories), list(values))
+
+            for row in flattened:
                 yield [key] + row
+
+            if categories_values:
+                seen.add(key)
+
+    # Fill zeros
+    if categories_values:
+        not_seen = categories_values[0] - seen
+        missing = [not_seen]
+        missing.extend(categories_values[1:])
+        if missing:
+            for subvals in map(list, itertools.product(*missing)):
+                subvals.append(0)
+                yield subvals
 
 
 def build_aggregate(categories):
@@ -52,7 +74,7 @@ def build_query(query, filters, categories):
         yield "query", {"constant_score": dict(body)}
 
 
-def aggregate(query=None, filters=None, categories=(), objects=True, es=None, flat=True):
+def aggregate(query=None, filters=None, categories=(), objects=True, es=None, flat=True, filter_zeros=False):
     from amcat.tools.amcates import ES
 
     if not categories:
@@ -62,9 +84,13 @@ def aggregate(query=None, filters=None, categories=(), objects=True, es=None, fl
     raw_result = (es or ES()).search(body, search_type="count")
     aggregation = list(flatten(raw_result["aggregations"], list(categories)))
 
+    if not filter_zeros:
+        values = list(map(set, zip(*aggregation)))[:-1]
+        aggregation = list(flatten(raw_result["aggregations"], list(categories), values))
+
     # Convert to suitable Python value
     for i, category in enumerate(categories):
-        for row  in aggregation:
+        for row in aggregation:
             row[i] = category.postprocess(row[i])
 
     # Replace ids with model objects
@@ -79,6 +105,7 @@ def aggregate(query=None, filters=None, categories=(), objects=True, es=None, fl
 
     if not flat:
         aggregation = ((row[:-1], row[-1:]) for row in aggregation)
+
 
     aggregation = list(aggregation)
 

@@ -19,8 +19,11 @@
 
 import logging
 import datetime
+import re
 
 from collections import OrderedDict
+
+import iso8601
 
 from amcat.models import ArticleSet
 from amcat.tools import amcates
@@ -39,7 +42,6 @@ __all__ = (
 log = logging.getLogger(__name__)
 
 ELASTIC_TIME_UNITS = [
-    "milli-second",
     "second",
     "minute",
     "hour",
@@ -215,9 +217,49 @@ class IntervalCategory(Category):
         self.field = field
         self.fill_zeros = fill_zeros
 
-    def postprocess(self, value):
-        d = datetime.datetime.fromtimestamp(value / 1000)
-        return datetime.datetime(d.year, d.month, d.day)
+        self.serialize = getattr(self, "_serialize_{}".format(interval), self._serialize_default)
+        self.deserialize = getattr(self, "_deserialize_{}".format(interval), self._deserialize_default)
+
+    def _deserialize_default(self, stamp: str) -> datetime.datetime:
+        return iso8601.iso8601.parse_date(stamp, default_timezone=None)
+
+    def _deserialize_year(self, stamp: str) -> datetime.datetime:
+        return datetime.datetime(int(stamp), 1, 1)
+
+    def _deserialize_quarter(self, stamp: str):
+        year, quarter = map(int, stamp.split("-Q"))
+        return datetime.datetime(year, (quarter - 1) * 3 + 1, 1)
+
+    def _deserialize_month(self, stamp: str):
+        return self._deserialize_default(stamp + "-1")
+
+    def _deserialize_week(self, stamp: str):
+        return datetime.datetime.strptime(stamp + '-0', "%Y-%W-%w")
+
+    def _serialize_default(self, stamp: datetime.datetime) -> str:
+        return stamp.isoformat()
+
+    def _serialize_year(self, stamp: datetime.datetime) -> str:
+        return str(stamp.year)
+
+    def _serialize_quarter(self, stamp: datetime.datetime):
+        quarter = ((stamp.month - 1) // 3) + 1
+        return "{}-Q{}".format(stamp.year, quarter)
+
+    def _serialize_month(self, stamp: datetime.datetime) -> str:
+        return stamp.strftime("%Y-%m")
+
+    def _serialize_week(self, stamp: datetime.datetime) -> str:
+        return stamp.strftime("%Y-%W")
+
+    def _serialize_day(self, stamp: datetime.datetime) -> str:
+        return stamp.date().isoformat()
+
+    def postprocess(self, value) -> datetime.datetime:
+        return datetime.datetime.fromtimestamp(value / 1000)
+
+    def get_object(self, _, timestamp: datetime.datetime):
+        return self.serialize(timestamp)
 
     def get_aggregation(self):
         return {
@@ -234,8 +276,7 @@ class IntervalCategory(Category):
         yield "date"
 
     def get_column_values(self, obj):
-        """@type obj: datetime.datetime"""
-        yield obj.isoformat()
+        yield obj
 
     def __repr__(self):
         return "<IntervalCategory: {} per {}>".format(self.field, self.interval)
