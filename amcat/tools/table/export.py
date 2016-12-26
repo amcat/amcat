@@ -86,16 +86,14 @@ class CSV(TableExporter):
     dialect = csv.excel
 
     def to_stream(self, table, stream, encoding):
-        def encode(val):
-            if val is None: return val
-            return str(val).encode(encoding)
-
+        # FIXME: We're ignoring encoding parameter here, because it doesn't make sense as
+        # FIXME: writerow() only takes strings (not bytes).
         csvwriter = csv.writer(stream, dialect=self.dialect)
 
         cols = list(table.get_columns())
-        csvwriter.writerow([encode(col) for col in cols])
+        csvwriter.writerow([col for col in cols])
         for row in table.get_rows():
-            csvwriter.writerow([encode(table.get_value(row, col)) for col in cols])
+            csvwriter.writerow([table.get_value(row, col) for col in cols])
 
 
 class CSV_semicolon(CSV):
@@ -178,9 +176,10 @@ class SPSS(TableExporter):
 
     def to_bytes(self, table, **kargs):
         from . import table2spss
-
         filename = table2spss.table2sav(table)
-        return open(filename, 'rb').read()
+        contents = open(filename, 'rb').read()
+        os.unlink(filename)
+        return contents
 
 
 EXPORTERS = {
