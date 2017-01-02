@@ -95,6 +95,9 @@ export ES_CLASSPATH
 sudo service elasticsearch restart
 ```
 
+
+**Warning**: By default, elasticsearch listens on all interfaces (port 9200) and does not have authentication enabled. Please make sure to configure elasticsearch and/or your firewall to block unauthorized accesss. 
+
 ### Installing AmCAT (clone)
 
 Clone the project from github and pip install the requirements. 
