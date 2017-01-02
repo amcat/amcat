@@ -76,6 +76,8 @@ sudo systemctl stop elasticsearch
 sudo systemctl start elasticsearch
 ```
 
+**Warning**: By default, elasticsearch listens on all interfaces (port 9200) and does not have authentication enabled. Please make sure to configure elasticsearch and/or your firewall to block unauthorized accesss. 
+
 **Warning**: We enabled a non-sandboxed scripting language (Groovy). Make sure to restrict access to the elastic instance by untrusted parties, as this allows executing arbitrary code as the user `elasticsearch`.
 
 
