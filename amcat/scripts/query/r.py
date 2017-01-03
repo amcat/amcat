@@ -16,10 +16,40 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import glob
+import os
+
 from amcat.scripts.query.queryaction_r import RQueryAction
 
 
-class TestAction(RQueryAction):
-    output_types = (("text/html", "Result"),)
-    r_file = "r_plugins/demo_plugin1.r"
+__all__ = set()
+
+
+def create_action(path: str):
+    """Based on a path pointing to an R-script, create an RQueryAction and register
+    it as a global variable in this module."""
+    filename = os.path.basename(path)
+    classname = "".join(p.title() for p in filename[:-2].split("_")) + "Action"
+    raction = type(classname, (RQueryAction,), {
+        "output_types": (("text/html", "Result"),),
+        "r_file": path
+    })
+
+    globals()[classname] = raction
+    __all__.add(classname)
+
+
+# Get local plugins
+system_dir = os.path.join(os.path.dirname(__file__), "r_plugins")
+for path in glob.glob(os.path.join(system_dir, "*.r")):
+    if path.endswith("/formfield_functions.r"):
+        continue
+    create_action(path)
+
+# Get plugins from user directories
+user_dir = os.path.expanduser("~/amcat_r_plugins")
+for path in glob.glob(os.path.join(user_dir, "*.r")):
+    create_action(path)
+
+__all__ = list(__all__)
 

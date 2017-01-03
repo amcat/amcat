@@ -43,11 +43,12 @@ from amcat.tools.toolkit import synchronized_with
 R_STRING_RE = re.compile(r'^\[1\] "(?P<str>.*)"$')
 
 
-@functools.lru_cache()
-def source_r_file(filename):
+def source_r_file(path):
     """Executes a file in R, similar to 'include' in C or import in Python"""
-    filename = os.path.join(os.path.dirname(__file__), filename)
-    r('source("{filename}")'.format(filename=filename))
+    if not os.path.isabs(path):
+        # If we got a relative path, make it absolute relative to this file
+        path = os.path.join(os.path.dirname(__file__), path)
+    r('source("{path}")'.format(path=path))
 
 
 @functools.lru_cache()  # Only run once
@@ -131,14 +132,14 @@ class RQueryAction(QueryAction):
         r_json_arguments = robjects.StrVector([json.dumps(cdata, indent=4)])
         r_arguments = importr("rjson").fromJSON(r_json_arguments)
         source_r_file(self.r_file)
-        result = str(r['do.call']('run', r_arguments))
+        result = str(r['do.call']('run', r_arguments)).encode("utf-8").decode("unicode_escape")
 
         # Interpret results as string
         match = R_STRING_RE.match(result)
         if not match:
             err_msg = "Expected a string as return value from R script. Got: {}"
             raise ValueError(err_msg.format(result))
-        return match.groupdict()["str"].replace("\\\\", "\\")
+        return match.groupdict()["str"]
 
     def run(self, form):
         cleaned_data = cleaned_data_to_r_primitives(form.cleaned_data)

@@ -21,7 +21,7 @@ import json
 from django.contrib.auth.models import User
 
 from amcat.models import ArticleSet
-from amcat.scripts.query import TestAction
+from amcat.scripts.query import DemoPluginAction
 from amcat.tools import amcattest
 
 
@@ -33,7 +33,8 @@ class TestRDemoPlugin(amcattest.AmCATTestCase):
         self.asets = ArticleSet.objects.filter(id=self.aset.id)
 
     def _run_action(self, data, is_json=True):
-        aa = TestAction(self.user, self.project, self.asets, data=data)
+        data = {**{"output_type": "text/html"}, **data}
+        aa = DemoPluginAction(self.user, self.project, self.asets, data=data)
 
         aa_form = aa.get_form()
         aa_form.full_clean()
@@ -46,10 +47,12 @@ class TestRDemoPlugin(amcattest.AmCATTestCase):
         return aa.run(aa_form)
 
     def test_demo_plugin_1(self):
-        result = self._run_action(is_json=False, data={
-            "output_type": "text/html",
-            "field1": r"\o/",
-            "field2": 10
-        })
-
+        """Test escapes of tricky characters"""
+        result = self._run_action(is_json=False, data={"field1": r"\o/", "field2": 10})
         self.assertEqual(result, r"Hello \o/ ( 10 )")
+
+        result = self._run_action(is_json=False, data={"field1": r"'", "field2": 10})
+        self.assertEqual(result, r"Hello ' ( 10 )")
+
+        result = self._run_action(is_json=False, data={"field1": r'"', "field2": 10})
+        self.assertEqual(result, r'Hello " ( 10 )')

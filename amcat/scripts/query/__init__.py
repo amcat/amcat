@@ -12,4 +12,4 @@ from .statistics import StatisticsAction
 from .codings_aggregation import CodingAggregationAction
 from .save_query_to_codebook import SaveQueryToCodebookAction
 
-from .test import TestAction
+from .r import *
