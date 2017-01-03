@@ -55,6 +55,18 @@ log = logging.getLogger(__name__)
 
 
 ###########################################################################
+##                            Decorators                                 ##
+###########################################################################
+def synchronized_with(lock):
+    def decorator(func):
+        def synced_func(*args, **kws):
+            with lock:
+                return func(*args, **kws)
+        return synced_func
+    return decorator
+
+
+###########################################################################
 ##                     Sequence functions                                ##
 ###########################################################################
 def grouper(iterable, n, fillvalue=None):

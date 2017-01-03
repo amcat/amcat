@@ -1,4 +1,4 @@
-##########################################################################
+###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -16,22 +16,40 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from rpy2.robjects import r
-import os
+import json
 
-## Set R library path
-if not os.path.exists('r_plugins/package_library'):
-    os.makedirs('r_plugins/package_library')
+from django.contrib.auth.models import User
 
-r(".libPaths('r_plugins/package_library')") ## set path from which R loads packages and where R stores new packages (install can be called from within R plugins) 
-
-## load functions to get formfields 
-r("source('r_plugins/formfield_functions.r')")
-
-## iterate through R plugins
-plugins = ['demo_plugin1.r', 'demo_plugin2.r']
-for plugin in plugins:
-	r('source("r_plugins/%s")' % plugin) ## load the R script
-	print(r('formfields')[0]) ## extract the formfield json
+from amcat.models import ArticleSet
+from amcat.scripts.query import TestAction
+from amcat.tools import amcattest
 
 
+class TestRDemoPlugin(amcattest.AmCATTestCase):
+    def setUp(self):
+        self.aset = amcattest.create_test_set()
+        self.project = self.aset.project
+        self.user = User.objects.first()
+        self.asets = ArticleSet.objects.filter(id=self.aset.id)
+
+    def _run_action(self, data, is_json=True):
+        aa = TestAction(self.user, self.project, self.asets, data=data)
+
+        aa_form = aa.get_form()
+        aa_form.full_clean()
+        self.assertTrue(aa_form.is_bound)
+        self.assertTrue(aa_form.is_valid())
+
+        if is_json:
+            return json.loads(aa.run(aa_form))
+
+        return aa.run(aa_form)
+
+    def test_demo_plugin_1(self):
+        result = self._run_action(is_json=False, data={
+            "output_type": "text/html",
+            "field1": r"\o/",
+            "field2": 10
+        })
+
+        self.assertEqual(result, r"Hello \o/ ( 10 )")

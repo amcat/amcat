@@ -287,4 +287,6 @@ class QueryAction(object):
         if actual < self.required_role:
             raise PermissionDenied("User has no permission to perform {self.__class__.__name__}"
                                    " on project {project}".format(**locals()))
-            
+
+
+
