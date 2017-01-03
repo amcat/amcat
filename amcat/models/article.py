@@ -221,7 +221,7 @@ class Article(AmcatModel):
     parent_hash = HashField(null=True, blank=True, max_length=64)
 
     # flexible properties, should be flat str:primitive (json) dict 
-    properties = PropertyField(null=False, blank=False)
+    properties = PropertyField(null=False, blank=False, default="{}")
 
     def __init__(self, *args, **kwargs):
         if kwargs:

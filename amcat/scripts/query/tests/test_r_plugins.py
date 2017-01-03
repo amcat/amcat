@@ -19,6 +19,7 @@
 import json
 
 from django.contrib.auth.models import User
+from rest_framework.authtoken.models import Token
 
 from amcat.models import ArticleSet
 from amcat.scripts.query import DemoPluginAction

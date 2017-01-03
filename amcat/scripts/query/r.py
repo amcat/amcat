@@ -17,12 +17,13 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import glob
+import inspect
 import os
 
 from amcat.scripts.query.queryaction_r import RQueryAction
 
 
-__all__ = set()
+__all__ = {"get_r_queryactions"}
 
 
 def create_action(path: str):
@@ -37,6 +38,12 @@ def create_action(path: str):
 
     globals()[classname] = raction
     __all__.add(classname)
+
+
+def get_r_queryactions():
+    for cls in map(globals().get, __all__):
+        if inspect.isclass(cls) and issubclass(cls, RQueryAction):
+            yield cls
 
 
 # Get local plugins

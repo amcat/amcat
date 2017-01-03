@@ -28,6 +28,7 @@ import re
 from collections import OrderedDict
 from threading import Lock
 
+import datetime
 from django import forms
 from django.db.models import QuerySet, Model
 from rest_framework.authtoken.models import Token
@@ -143,12 +144,14 @@ class RQueryAction(QueryAction):
 
     def run(self, form):
         cleaned_data = cleaned_data_to_r_primitives(form.cleaned_data)
-        api_token = Token.objects.create(user=self.user)
-        cleaned_data["api_token"] = api_token.key
 
-        try:
-            return self._run(cleaned_data)
-        finally:
-            api_token.delete()
+        # We can only create one token per user..
+        api_token, created = Token.objects.get_or_create(user=self.user)
+        if not created:
+            api_token.created = datetime.datetime.now()
+            api_token.save()
+
+        cleaned_data["api_token"] = api_token.key
+        return self._run(cleaned_data)
 
 
