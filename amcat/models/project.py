@@ -77,7 +77,7 @@ class Project(AmcatModel):
     active = models.BooleanField(default=True)
 
     # Temporary field enabling R plugins in the query screen
-    r_plugin_enabled = models.BooleanField(default=False)
+    r_plugins_enabled = models.BooleanField(default=False)
 
     # Coding fields
     codingschemas = models.ManyToManyField("amcat.CodingSchema", related_name="projects_set")

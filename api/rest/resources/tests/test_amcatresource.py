@@ -73,40 +73,42 @@ class TestAmCATResource(ApiTestCase):
     def test_options(self):
         opts = self.get_options(ProjectResource)
         name = u'api-v4-project'
-        models = {u'owner': u'/api/v4/user', u'guest_role': u'/api/v4/role',
-                  #these should NOT be included as we don't want the foreign key fields
-                  #u'codebooks': u'/api/v4/codebook',
-                  #u'codingschemas': u'/api/v4/codingschema',
-                  #u'articlesets': u'/api/v4/articleset',
-                  u'insert_user': u'/api/v4/user', }
+        models = {
+            'owner': '/api/v4/user',
+            'guest_role': '/api/v4/role',
+            'insert_user': '/api/v4/user', }
 
-        fields = {u'name': u'CharField',
-                  u'guest_role': u'ModelChoiceField',
-                  #these should NOT be included as we don't want the foreign key fields
-                  #u'codebooks': u'ModelChoiceField', u'codingschemas': u'ModelChoiceField',
-                  #u'articlesets': u'ModelChoiceField',
-                  u'owner': u'ModelChoiceField', u'active': u'BooleanField', u'description': u'CharField',
-                  u'id': u'IntegerField',
-                  u'insert_date': u'DateTimeField',
-                  u'insert_user': u'ModelChoiceField',
-                  u'last_visited_at': u'SerializerMethodField',
-                  u'favourite': u'SerializerMethodField',
-                  }
-        parses = [u'application/json', u'application/x-www-form-urlencoded', u'multipart/form-data',
-                  u'application/xml']
-        label = u'{name}'
-        renders = {u'application/json', u'text/html'}#, u'text/csv'}
-        description = u''
+        fields = {
+            'name': 'CharField',
+            'guest_role': 'ModelChoiceField',
+            'owner': 'ModelChoiceField',
+            'active': 'BooleanField',
+            'description': u'CharField',
+            'id': 'IntegerField',
+            'insert_date': 'DateTimeField',
+            'insert_user': 'ModelChoiceField',
+            'last_visited_at': 'SerializerMethodField',
+            'favourite': 'SerializerMethodField',
+            'r_plugins_enabled': 'BooleanField'
+        }
 
+        parses = [
+            'application/json',
+            'application/x-www-form-urlencoded',
+            'multipart/form-data',
+            'application/xml'
+        ]
+
+        label = '{name}'
+        renders = {'application/json', 'text/html'}
+        description = ''
 
         self.assertEqual(opts['name'], name)
         self.assertEqual(opts['label'], label)
         self.assertEqual(opts['description'], description)
-
-
-
         self.assertDictsEqual(opts['models'], models)
         self.assertDictsEqual(opts['fields'], fields)
+
         # CSV not supported yet, this will fail:
         missing = renders - set(opts['renders'])
         self.assertFalse(missing, "Missing renderers: {missing}".format(**locals()))
