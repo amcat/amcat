@@ -35,7 +35,7 @@ PROJECT_ROLE_READER=11
 
 class AddProjectForm(forms.ModelForm):
     owner = forms.ModelChoiceField(queryset=User.objects.all())
-    guest_role = forms.ModelChoiceField(queryset=Role.objects.filter(projectlevel=True),
+    guest_role = forms.ModelChoiceField(queryset=Role.objects.all(),
                                         required=False, help_text="Leaving this value "+
                                         "empty means it will not be readable by guests.",
                                        initial=PROJECT_ROLE_READER)
@@ -74,7 +74,7 @@ class AddProject(Script):
         p = Project.objects.create(**self.options)
         # Add user to project (as admin)
         pr = ProjectRole(project=p, user=self.options['owner'])
-        pr.role = Role.objects.get(projectlevel=True, label='admin')
+        pr.role = Role.objects.get(label='admin')
         pr.save()
         # Make project favourite for creating user
         self.options['owner'].userprofile.favourite_projects.add(p)

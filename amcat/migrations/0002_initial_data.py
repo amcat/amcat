@@ -3,12 +3,6 @@
 from __future__ import unicode_literals
 
 from django.db import migrations
-from django.core.management import call_command
-
-fixture = '_initial_data'
-
-def load_fixture(apps, schema_editor):
-    call_command('loaddata', fixture, app_label='amcat')
 
 class Migration(migrations.Migration):
 
@@ -17,5 +11,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(load_fixture),
+        # Empty, has been moved to 0007_initial_data, due to schema changes
     ]

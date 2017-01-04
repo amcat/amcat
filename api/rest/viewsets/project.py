@@ -154,7 +154,7 @@ class ProjectViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
 
     def filter_queryset(self, queryset):
         qs = super(ProjectViewSet, self).filter_queryset(queryset)
-        role = Role.objects.get(label="metareader", projectlevel=True)
+        role = Role.objects.get(label="metareader")
         if self.request.user.is_anonymous():
             return qs.filter(guest_role__id__gte=role.id)
         else:

@@ -183,8 +183,8 @@ class TestArticleViewSet(APITestCase):
 
     def test_permissions(self):
         from amcat.models import Role, ProjectRole
-        metareader = Role.objects.get(label='metareader', projectlevel=True)
-        reader = Role.objects.get(label='reader', projectlevel=True)
+        metareader = Role.objects.get(label='metareader')
+        reader = Role.objects.get(label='reader')
 
         p1 = amcattest.create_test_project(guest_role=None)
         p2 = amcattest.create_test_project(guest_role=metareader)

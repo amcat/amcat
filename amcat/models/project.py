@@ -35,7 +35,7 @@ from amcat.models.coding.codingschema import CodingSchema
 from amcat.models.article import Article
 from amcat.models.articleset import ArticleSetArticle, ArticleSet
 
-from amcat.models.authorisation import Role, ADMIN_ROLE, ROLE_PROJECT_READER
+from amcat.models.authorisation import Role, ROLE_PROJECT_READER
 
 LITTER_PROJECT_ID = 1
 
@@ -103,11 +103,6 @@ class Project(AmcatModel):
         """
         return Codebook.objects.filter(Q(projects_set=self)|Q(project=self)).distinct()
 
-    def can_read(self, user):
-        return (self in user.userprofile.projects
-                or user.userprofile.haspriv('view_all_projects')
-                or self.guest_role is not None)
-
     @property
     def users(self):
         """Get a list of all users with some role in this project"""
@@ -166,11 +161,8 @@ class Project(AmcatModel):
         if user.is_superuser:
             return True
 
-        if not user.is_anonymous and user.role_id >= ADMIN_ROLE:
-            return True
-
         if isinstance(role, str):
-            role_id = Role.objects.get(label=role, projectlevel=True).id
+            role_id = Role.objects.get(label=role).id
         elif isinstance(role, Role):
             role_id = role.id
         else:
