@@ -57,7 +57,7 @@ LOGGING = {
                             'level': 'WARN',
         },
         '': {
-            'handlers': [],
+            'handlers': ["console"],
             'level': LOG_LEVEL,
         },
     }
