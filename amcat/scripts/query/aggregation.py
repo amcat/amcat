@@ -254,7 +254,7 @@ class AggregationAction(QueryAction):
 
             # Get aggregation
             primary = form.cleaned_data["primary"]
-            secondary= form.cleaned_data["secondary"]
+            secondary = form.cleaned_data["secondary"]
             categories = list(filter(None, [primary, secondary]))
             aggregation = list(selection.get_aggregate(categories, flat=False))
 

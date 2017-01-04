@@ -32,8 +32,6 @@ from django.contrib.auth.models import User
 from django.db import models
 from amcat.tools.model import AmcatModel
 
-ADMIN_ROLE = 3
-
 ROLE_PROJECT_METAREADER = 10
 ROLE_PROJECT_READER = 11
 ROLE_PROJECT_WRITER = 12
@@ -47,49 +45,15 @@ class AccessDenied(EnvironmentError):
             privilege, projectstr, user, privilege.role, user.userprofile.role)
         EnvironmentError.__init__(self, msg)
 
-def check(user, privilege, project=None):
-    """Check `user` for `privilege`.
-
-    If permission is denied, will raise L{AccessDenied}; otherwise will
-    return silently
-
-    @type user: user.User
-    @param user: User to check for `privilege`
-
-    @type privilege: Privilege object or str
-    @param privilege: The requested privilege
-
-    @param project: The project the privilege is requested on,
-      or None (ignored) for global privileges
-
-    @return: None (raises exception if denied)
-    """
-    if isinstance(privilege, str):
-        privilege = Privilege.objects.get(label=privilege, role__projectlevel=bool(project))
-
-    if not user.is_superuser:
-        nrole = privilege.role # Needed role
-
-        try:
-            role = (Role.objects.get(projectrole__user=user, projectrole__project=project)
-                    if privilege.role.projectlevel else user.userprofile.role)
-        except Role.DoesNotExist:
-            # User has no role on this project!
-            raise AccessDenied(user, privilege, project)
-
-        # Return None if access is OK
-        if role.id < nrole.id:
-            raise AccessDenied(user, privilege, project)
 
 class Role(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='role_id')
-    label = models.CharField(max_length=50)
-    projectlevel = models.BooleanField(default=False)
+    label = models.CharField(max_length=50, unique=True)
 
     class Meta():
         db_table = 'roles'
         app_label = 'amcat'
-        unique_together = ("label", "projectlevel")
+
 
 class ProjectRole(AmcatModel):
     project = models.ForeignKey("amcat.Project", db_index=True)
@@ -104,11 +68,6 @@ class ProjectRole(AmcatModel):
         unique_together = ("project", "user")
         app_label = 'amcat'
 
-    def can_update(self, user):
-        return user.userprofile.haspriv('manage_project_users', self.project)
-
-    def can_delete(self, user):
-        return user.userprofile.haspriv('manage_project_users', self.project)
 
 class Privilege(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='privilege_id')

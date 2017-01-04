@@ -27,7 +27,7 @@ from amcat.tools import amcattest
 from amcat.tools.amcates import ES
 
 
-class TestQueryAction(amcattest.AmCATTestCase):
+class TestAggregationQueryAction(amcattest.AmCATTestCase):
     def setUp(self):
         self.aset = amcattest.create_test_set()
         self.project = self.aset.project
@@ -61,15 +61,15 @@ class TestQueryAction(amcattest.AmCATTestCase):
         self.assertEqual(result, {
                 "columns": ["Value"],
                 "data": [[[1]], [[2]]],
-                "rows": ["2011-01-01T00:00:00", "2011-01-02T00:00:00"]
+                "rows": ["2011-01-01", "2011-01-02"]
             }
         )
 
     @amcattest.use_elastic
     def test_week_aggregation(self):
-        self.a1 = amcattest.create_test_article(articleset=self.aset, date=date(2017, 1, 1))  # week 1
-        self.a2 = amcattest.create_test_article(articleset=self.aset, date=date(2017, 1, 17)) # week 4
-        self.a3 = amcattest.create_test_article(articleset=self.aset, date=date(2017, 1, 17)) # week 4
+        self.a1 = amcattest.create_test_article(articleset=self.aset, date=date(2017, 1, 1))  # week 0
+        self.a2 = amcattest.create_test_article(articleset=self.aset, date=date(2017, 1, 17)) # week 3
+        self.a3 = amcattest.create_test_article(articleset=self.aset, date=date(2017, 1, 17)) # week 3
         ES().refresh()
 
         result = self._run_action({
@@ -81,10 +81,10 @@ class TestQueryAction(amcattest.AmCATTestCase):
         self.assertEqual(result, {
             'columns': ['Value'],
             'rows': [
-                '2016-12-26T00:00:00',
-                '2017-01-02T00:00:00',
-                '2017-01-09T00:00:00',
-                '2017-01-16T00:00:00'
+                '2016-52',
+                '2017-01',
+                '2017-02',
+                '2017-03'
             ],
             'data': [[[1]], [[0]], [[0]], [[2]]]
         })
@@ -98,8 +98,8 @@ class TestQueryAction(amcattest.AmCATTestCase):
         self.assertEqual(result, {
             'columns': ['Value'],
             'rows': [
-                '2016-12-26T00:00:00',
-                '2017-01-16T00:00:00'
+                '2016-52',
+                '2017-03'
             ],
             'data': [[[1]], [[2]]]
         })

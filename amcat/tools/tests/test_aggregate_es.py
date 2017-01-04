@@ -58,7 +58,7 @@ class TestAggregateES(amcattest.AmCATTestCase):
         ES().refresh()
 
     def aggregate(self, **kwargs):
-        aggr_args = {"filters": {"sets": list(ArticleSet.objects.all().values_list("id", flat=True))}}
+        aggr_args = {"filter_zeros": True, "filters": {"sets": list(ArticleSet.objects.all().values_list("id", flat=True))}}
         aggr_args.update(**kwargs)
         return set(aggregate(**aggr_args))
 
@@ -98,7 +98,7 @@ class TestAggregateES(amcattest.AmCATTestCase):
         self.set_up()
 
         # Do not limit articlesets
-        result = self.aggregate(categories=[ArticlesetCategory()])
+        result = self.aggregate(categories=[ArticlesetCategory()], objects=True)
         self.assertEqual(result, {
             (self.aset1, 2),
             (self.aset2, 1)
@@ -115,10 +115,10 @@ class TestAggregateES(amcattest.AmCATTestCase):
     def test_interval_category(self):
         self.set_up()
 
-        result = self.aggregate(categories=[IntervalCategory("day")])
+        result = self.aggregate(objects=True, categories=[IntervalCategory("day")])
         self.assertEqual(result, {
-            (datetime.datetime(2010, 1, 2, 0, 0), 1),
-            (datetime.datetime(2010, 1, 1, 0, 0), 2),
+            (datetime.date(2010, 1, 2).isoformat(), 1),
+            (datetime.date(2010, 1, 1).isoformat(), 2),
         })
 
     @amcattest.use_elastic
@@ -146,13 +146,23 @@ class TestAggregateES(amcattest.AmCATTestCase):
         term3 = SearchQuery("lamp")
 
         cat1 = TermCategory([term1, term2, term3])
-        cat2 = IntervalCategory("day")
+        cat2 = IntervalCategory("day", fill_zeros=False)
 
         result = self.aggregate(categories=[cat1, cat2])
         self.assertEqual(result, {
-            (term1, datetime.datetime(2010, 1, 1, 0, 0), 2),
-            (term2, datetime.datetime(2010, 1, 1, 0, 0), 2),
-            (term3, datetime.datetime(2010, 1, 2, 0, 0), 1)
+            (term1, datetime.date(2010, 1, 1).isoformat(), 2),
+            (term2, datetime.date(2010, 1, 1).isoformat(), 2),
+            (term3, datetime.date(2010, 1, 2).isoformat(), 1)
+        })
+
+        result = self.aggregate(categories=[cat2, cat1])
+        self.assertEqual(result, {
+            (datetime.date(2010, 1, 1).isoformat(), term1, 2),
+            (datetime.date(2010, 1, 1).isoformat(), term2, 2),
+            (datetime.date(2010, 1, 1).isoformat(), term3, 0),
+            (datetime.date(2010, 1, 2).isoformat(), term1, 0),
+            (datetime.date(2010, 1, 2).isoformat(), term2, 0),
+            (datetime.date(2010, 1, 2).isoformat(), term3, 1)
         })
 
     @amcattest.use_elastic

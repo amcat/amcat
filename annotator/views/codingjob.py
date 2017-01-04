@@ -65,7 +65,7 @@ def save(request, project_id, codingjob_id, coded_article_id):
             raise PermissionDenied("Only {request.user} or project admins can edit this codingjob.".format(**locals()))
 
     try:
-        codings = json.loads(request.body)
+        codings = json.loads(request.body.decode())
     except ValueError:
         return HttpResponseBadRequest("Invalid JSON in POST body")
 

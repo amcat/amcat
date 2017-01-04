@@ -28,9 +28,6 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.db.models.signals import post_save
 
-from amcat.models import authorisation as auth
-from amcat.models.authorisation import Role, ADMIN_ROLE
-from amcat.models.language import Language
 from amcat.models.project import Project, RecentProject
 
 log = logging.getLogger(__name__)
@@ -49,10 +46,12 @@ class UserProfile(AmcatModel):
     Additional user information is stored here
     """
     user = models.OneToOneField(User)
-    role = models.ForeignKey(Role, default=0)
 
-    recent_projects = models.ManyToManyField(Project, through=RecentProject,
-                                             through_fields=("user", "project"), related_name="recent_projects")
+    recent_projects = models.ManyToManyField(
+        to=Project, through=RecentProject,
+        through_fields=("user", "project"),
+        related_name="recent_projects"
+    )
 
     favourite_projects = models.ManyToManyField("amcat.project", related_name="favourite_users")
 
@@ -84,22 +83,6 @@ class UserProfile(AmcatModel):
 
     def get_recent_projects(self):
         return RecentProject.get_recent_projects(self)
-
-
-    def haspriv(self, privilege, onproject=None):
-        """
-        @type privilege: Privilege object, id, or str
-        @param privilege: The requested privilege
-        @param onproject: The project the privilege is requested on,
-          or None (ignored) for global privileges
-
-        @return: True or False
-        """
-        try:
-            auth.check(self.user, privilege, onproject)
-        except auth.AccessDenied:
-            return False
-        return True
 
     def save(self, force_permissions=False, **kwargs):
         if not force_permissions:

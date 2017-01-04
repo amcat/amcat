@@ -221,7 +221,7 @@ class Article(AmcatModel):
     parent_hash = HashField(null=True, blank=True, max_length=64)
 
     # flexible properties, should be flat str:primitive (json) dict 
-    properties = PropertyField(null=False, blank=False)
+    properties = PropertyField(null=False, blank=False, default="{}")
 
     def __init__(self, *args, **kwargs):
         if kwargs:
@@ -369,7 +369,7 @@ class Article(AmcatModel):
             return True
 
         # Check default role on project
-        read_meta = Role.objects.get(label='metareader', projectlevel=True)
+        read_meta = Role.objects.get(label='metareader')
         if self.project.guest_role.id >= read_meta.id:
             return True
 

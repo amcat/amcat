@@ -42,7 +42,7 @@ class ProjectRoleForm(forms.ModelForm):
             # Disable self.project
             del self.fields['project']
 
-            choices = [(r.id, r.label) for r in Role.objects.filter(projectlevel=True)] + [(None, "Remove user")]
+            choices = [(r.id, r.label) for r in Role.objects.all()] + [(None, "Remove user")]
             self.fields['role'].choices = choices
 
             if user is not None:
@@ -83,7 +83,7 @@ class ProjectUserAddView(ProjectViewMixin, HierarchicalViewMixin, RedirectView):
     def get_redirect_url(self, project):
         project = Project.objects.get(id=project)
         role = self.request.POST['role']
-        role = None if role == 'None' or role == "" else Role.objects.get(id=role, projectlevel=True)
+        role = None if role == 'None' or role == "" else Role.objects.get(id=role)
 
         for user in User.objects.filter(id__in=self.request.POST.getlist('user')):
             try:

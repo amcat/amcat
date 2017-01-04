@@ -227,7 +227,7 @@ class CSVRenderer(TableRenderer):
         return result
 
     def render_fast(self, data):
-        header = []       
+        header = []
         out = StringIO()
         w = csv.writer(out)
         if 'results' not in data:

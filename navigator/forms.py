@@ -42,25 +42,12 @@ logger = logging.getLogger(__name__)
 name_sort = lambda x: x[0].name.lower()
 
 ALLOWED_EXTENSIONS = ('txt', 'csv', 'dat')
-_ADMIN_ID = None
-def get_admin_id():
-    global _ADMIN_ID
-    if _ADMIN_ID is None:
-        _ADMIN_ID = Role.objects.get(label="admin", projectlevel=False).id
-    return _ADMIN_ID
-
 
 def gen_user_choices(project: Project=None):
     """This function generates a list of users formatted in such a way it's usable for a Django Choicefield."""
     users = User.objects.all() if (project is None) else project.users
     users.order_by("first_name", "last_name", "username").only("id", "first_name", "last_name", "username")
     return [(u.id, "{u.first_name} {u.last_name} ({u.id}: {u.username})".format(u=u)) for u in users]
-
-
-def gen_roles():
-    """Generate choices for UserForm.roles."""
-    roles = Role.objects.filter(projectlevel=False)
-    return ((r.id, r) for r in roles)
 
 
 def gen_coding_choices(user, model):
@@ -70,13 +57,14 @@ def gen_coding_choices(user, model):
         Q(project__projectrole__user=user)|
         # User has access to project through guestrole
         Q(project__guest_role__id__gte=user.userprofile.role.id)
-    ).distinct() if not user.userprofile.role.id >= get_admin_id() else model.objects.all()
+    ).distinct() if not user.is_superuser else model.objects.all()
 
     objects.select_related("project__name").only("name")
     objects = toolkit.multidict(((cb.project, cb) for cb in objects), ltype=list)
 
     for project, objs in sorted(objects.items(), key=name_sort):
         yield(project, [(x.id, x.name) for x in objs])
+
 
 class SplitArticleForm(forms.Form):
     add_to_new_set = forms.CharField(required=False)
@@ -101,45 +89,19 @@ class SplitArticleForm(forms.Form):
         self.fields["remove_from_sets"].queryset = project.all_articlesets().filter(articles=article)
         self.fields["add_to_sets"].queryset = project.all_articlesets()
 
-class UserForm(forms.ModelForm):
-    role = forms.ModelChoiceField(queryset=Role.objects.filter(projectlevel=False))
 
+class UserForm(forms.ModelForm):
     def __init__(self, request, editing=True, *args, **kwargs):
         super(UserForm, self).__init__(*args, **kwargs)
-
-        if not request.user.is_anonymous():
-            # Only show roles lesser or equal to the current role of the user
-            uprofile = request.user.userprofile
-
-            self.fields['role'].queryset = Role.objects.filter(
-                projectlevel=False, id__lte=uprofile.role.id
-            )
-
-            # Set initial values for this user
-            self.fields['role'].initial = uprofile.role if not editing else kwargs['instance'].userprofile.role
-        else:
-            # Only show roles appropriate for anonymous users
-            self.fields['role'].queryset = Role.objects.filter(
-                projectlevel=False, id__lte=MAX_SIGNUP_ROLEID
-            )
 
         # We don't use Django groups and permissions
         for fi in ("groups", "user_permissions"):
             if fi in self.fields:
                 del self.fields[fi]
 
-    def save(self, commit=True):
-        u = super(UserForm, self).save(commit)
-
-        up = u.userprofile
-        up.role = self.cleaned_data['role']
-        up.save()
-
-        return u
-
     class Meta:
         model = User
-        fields = ("role",)
+        fields = ('username', 'first_name', 'last_name', 'email')
 
 class UserDetailsForm(UserForm):
     def __init__(self, request, *args, **kwargs):
@@ -196,7 +158,7 @@ class AddMultipleUsersForm(AddUserForm):
         return super(AddMultipleUsersForm, self).full_clean(*args, **kwargs)
 
 class ProjectForm(forms.ModelForm):
-    guest_role = forms.ModelChoiceField(queryset=Role.objects.filter(projectlevel=True),
+    guest_role = forms.ModelChoiceField(queryset=Role.objects.all(),
                                         required=False, help_text="Leaving this value \
                                         empty means it will not be readable at all.",
                                         initial=11)

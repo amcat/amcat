@@ -32,7 +32,6 @@ from navigator.views.scriptview import ScriptView
 from amcat.tools.usage import log_request_usage
 
 PROJECT_READ_WRITE = authorisation.ROLE_PROJECT_WRITER
-# = Role.objects.get(projectlevel=True, label="read/write").id
 
 
 class BreadCrumbMixin(object):

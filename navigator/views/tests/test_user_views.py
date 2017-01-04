@@ -41,19 +41,19 @@ class TestUserViews(amcattest.AmCATTestCase):
 
         # Adding a user as plebs should not be possible
         self.assertEqual(1, ProjectRole.objects.count())
-        admin_role = Role.objects.get(label="admin", projectlevel=True)
+        admin_role = Role.objects.get(label="admin")
         response = self.post(url, plebs, {"role": admin_role.id, "user": plebs.id})
         self.assertEqual(403, response.status_code)
         self.assertEqual(1, ProjectRole.objects.count())
 
         # Adding as superuser should be possible
-        reader_role = Role.objects.get(label="reader", projectlevel=True)
+        reader_role = Role.objects.get(label="reader")
         response = self.post(url, admin, {"role": reader_role.id, "user": plebs.id})
         self.assertEqual(302, response.status_code)
         self.assertEqual(2, ProjectRole.objects.count())
 
         # Plebs gonna be plebs
-        admin_role = Role.objects.get(label="admin", projectlevel=True)
+        admin_role = Role.objects.get(label="admin")
         response = self.post(url, plebs, {"role": admin_role.id, "user": plebs.id})
         self.assertEqual(403, response.status_code)
         self.assertEqual(2, ProjectRole.objects.count())
