@@ -65,9 +65,9 @@ sudo bin/plugin install analysis-icu
 sudo bin/plugin install amcat/hitcount/2.3.4
 
 # Install scripts (scripts can also be found in config/elasticsearch
-sudo wget -c -q https://github.com/amcat/amcat/blob/master/config/elasticsearch/amcat_remove_from_set.groovy -O /etc/elasticsearch/scripts/amcat_remove_from_set.groovy
-sudo wget -c -q https://github.com/amcat/amcat/blob/master/config/elasticsearch/amcat_add_to_set.groovy -O /etc/elasticsearch/scripts/amcat_add_to_set.groovy
-sudo wget -c -q https://github.com/amcat/amcat/blob/master/config/elasticsearch/amcat_lead.groovy -O /etc/elasticsearch/scripts/amcat_lead.groovy
+sudo wget -q https://raw.githubusercontent.com/amcat/amcat/master/config/elasticsearch/amcat_remove_from_set.groovy -O /etc/elasticsearch/scripts/amcat_remove_from_set.groovy
+sudo wget -q https://raw.githubusercontent.com/amcat/amcat/master/config/elasticsearch/amcat_add_to_set.groovy -O /etc/elasticsearch/scripts/amcat_add_to_set.groovy
+sudo wget -q https://raw.githubusercontent.com/amcat/amcat/master/config/elasticsearch/amcat_lead.groovy -O /etc/elasticsearch/scripts/amcat_lead.groovy
 
 # Restart elastic
 sudo systemctl stop elasticsearch
