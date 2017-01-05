@@ -46,7 +46,7 @@ def get_amcat_config() -> configparser.ConfigParser:
             raise OSError("Could not read: {}".format(os.environ["AMCAT_CONFIG"]))
 
     if "runserver" in sys.argv:
-        config["base"]["debug"] = True
+        config["base"]["debug"] = "yes"
 
     return config
 
