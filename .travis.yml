@@ -34,8 +34,8 @@ before_install:
 
 install:
  - sudo apt-get update
- - cat apt_requirements.txt | tr '\n' ' ' | xargs sudo apt-get install -y
- - sudo apt-get install python-lxml python-amqplib python-psycopg2 python-requests python-pygments texinfo -y
+   #- cat apt_requirements.txt | tr '\n' ' ' | xargs sudo apt-get install -y
+ - sudo apt-get install python-lxml python-amqplib python-psycopg2 python-requests python-pygments texinfo unrtf rabbitmq-server python3-dev libxml2-dev libxslt-dev lib32z1-dev git curl python-pdfminer graphviz pspp r-base r-base-dev antiword redis-server -y
  - sudo service rabbitmq-server start
 
  # Latest PSPP (present in 15.04, 15.10, 16.04 archives)
