@@ -53,11 +53,10 @@ install:
  - sudo /usr/share/elasticsearch/bin/plugin install mobz/elasticsearch-head
  - sudo /usr/share/elasticsearch/bin/plugin install analysis-icu
  - sudo /usr/share/elasticsearch/bin/plugin install amcat/hitcount/2.3.4
- - "sudo tee -a /etc/elasticsearch/elasticsearch.yml <<< 'index.similarity.default.type: hitcountsimilarity'"
- - "sudo tee -a /etc/elasticsearch/elasticsearch.yml <<< 'script.inline: on'"
- - "sudo tee -a /etc/elasticsearch/elasticsearch.yml <<< 'script.update: on'"
- - sudo service elasticsearch stop
- - sudo service elasticsearch start
+ - sudo wget -q https://raw.githubusercontent.com/amcat/amcat/master/config/elasticsearch/amcat_remove_from_set.groovy -O /etc/elasticsearch/scripts/amcat_remove_from_set.groovy
+ - sudo wget -q https://raw.githubusercontent.com/amcat/amcat/master/config/elasticsearch/amcat_add_to_set.groovy -O /etc/elasticsearch/scripts/amcat_add_to_set.groovy
+ - sudo wget -q https://raw.githubusercontent.com/amcat/amcat/master/config/elasticsearch/amcat_lead.groovy -O /etc/elasticsearch/scripts/amcat_lead.groovy  
+ - sudo service elasticsearch restart
  - pip install -r requirements.txt
  - pip install coverage coveralls
  - celery -A amcat.amcatcelery worker -l DEBUG -Q amcat &
