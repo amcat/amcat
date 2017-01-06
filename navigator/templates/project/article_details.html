@@ -12,109 +12,111 @@
 {% endblock %}
 
 {% block content %}
-    <div class="row">
-        <div class="col-md-8 col-sm-12">
-            <h1>{{headline|safe}}</h1>
-            <article>
-                {% if article.byline %}<h2>{{article.byline}}</h2>{% endif %}
-                {% if can_view_text %}
-                    {{ text|safe|urlizetrunc:30|linebreaks }}
-                {% else %}
-   		    {% if article.url %}
-		<div class="alert alert-info">View article in original
-		    context
-		    at <a href="{{article.url}}">{{article.url|urlizetrunc:40}}</a></div>
+  <div class="row">
+    <div class="col-md-8 col-sm-12">
+      <h1>{{headline|safe}}</h1>
+      <article>
+        {% if article.byline %}<h2>{{article.byline}}</h2>{% endif %}
+        {% if can_view_text %}
+          {{ text|safe|urlizetrunc:30|linebreaks }}
+        {% else %}
+          {% if article.url %}
+            <div class="alert alert-info">View article in original
+              context
+              at <a href="{{article.url}}">{{article.url|urlizetrunc:40}}</a></div>
 
-		    {% endif %}
-                    <div class="alert alert-warning">You do not have sufficient access to this project to view the full text of the article. Please contact an administrator of <a href="{% url "navigator:user-list" article.project_id %}">project {{article.project_id}} - {{article.project}}</a> to gain access</div>
-                {% endif %}
-            </article>
-        </div>
-        <div class="col-md-4 col-sm-12">
-            <h1>Article details</h1>
-
-            <style type="text/css">
-                table tr td:first-child{ font-weight:bold; }
-            </style>
-
-            <table>
-                <tr>
-                    <td>ID:</td>
-                    <td>{{article.id}}</td>
-                </tr>
-                <tr>
-                    <td>UUID:</td>
-                    <td style="white-space: nowrap">{{article.uuid}}</td>
-                </tr>
-                <tr>
-                    <td>Title:</td>
-                    <td>{{article.title}}</td>
-                </tr>
-                <tr>
-                    <td>Date:</td>
-                    <td>{{article.date|date:"d-m-Y H:i"}}</td>
-                </tr>
-                <tr>
-                    <td>Project:</td>
-                    <td><a href="{% url "navigator:project" article.project_id %}">{{article.project_id}} - {{article.project}}</a></td>
-                </tr>
-                <tr class="hbreak">
-                  <td>URL:</td>
-                  <td>{% if article.url %}{{article.url|urlizetrunc:20}}{% endif %}</td>
-                </tr>
-		<tr>
-                  <td>Parent:</td>
-                  <td>{% if article.parent %}<a href="{% url "navigator:project-article-details" project.id article.parent.id %}">{{article.parent}}</a>{% endif %}</td>
-		</tr>
-
-		<tr class="hbreak">
-                  <td>Children:</td>
-                  <td>{% if article.children %}
-		    <ul>
-		      {% for child in article.children %}
-		      <li/><a href="{% url "navigator:project-article-details" project.id child.id %}">{{child}}</a>
-		      {% endfor %}
-		    </ul>
-		    {% endif %}</td>
-                </tr>
-		
-		{% for k, v in article.properties.items %}
-		<tr>
-		  <td>{{k}}:</td>
-		  <td>{{v}}</td>
-		</tr>
-		{% endfor %}
-		
-
-                <tr class="hbreak-before">
-                    <td>In&nbsp;articlesets:</td>
-                    <td>
-                        {% for aset in article.articlesets_set.all.distinct %}
-                            <a href="{% url "navigator:articleset-details" project.id aset.id %}">{{aset.id}} - {{aset}}</a>
-                            {% if can_edit %}
-                                <a href="{% url "navigator:article-removefromset" project.id article.id %}?remove_set={{aset.id}}&return_set={{articleset_id}}" class="btn btn-warning btn-xxs"><i class="glyphicon glyphicon-trash"></i></a>
-                            {% endif %}
-                            <br/>
-                        {% empty %}
-                            This article does not occur in any set
-                        {% endfor %}
-                    </td>
-                </tr>
-                {% if codingjobs %}
-                    <tr class="hbreak-before">
-                        <td>In&nbsp;codingjobs:</td>
-                        <td>
-                            {% for codingjob in codingjobs %}
-                                <a href="{% url "navigator:codingjob-details" project.id codingjob.id %}">{{codingjob.id}}
-                                    - {{ codingjob.name }}</a>
-                                <br/>
-                            {% empty %}
-                                This article does not occur in any c
-                            {% endfor %}
-                        </td>
-                    </tr>
-                {% endif %}
-            </table>
-        </div>
+          {% endif %}
+          <div class="alert alert-warning">You do not have sufficient access to this project to view the full text of the article. Please contact an administrator of <a href="{% url "navigator:user-list" article.project_id %}">project {{article.project_id}} - {{article.project}}</a> to gain access</div>
+        {% endif %}
+      </article>
     </div>
+    <div class="col-md-4 col-sm-12">
+      <h1>Article details</h1>
+
+      <style type="text/css">
+        table tr td:first-child{ font-weight:bold; }
+      </style>
+
+      <table>
+        <tr>
+          <td>ID:</td>
+          <td>{{article.id}}</td>
+        </tr>
+        <tr>
+          <td>Title:</td>
+          <td>{{article.title}}</td>
+        </tr>
+        <tr>
+          <td>Date:</td>
+          <td>{{article.date|date:"d-m-Y H:i"}}</td>
+        </tr>
+        <tr>
+          <td>Project:</td>
+          <td><a href="{% url "navigator:project" article.project_id %}">{{article.project_id}} - {{article.project}}</a></td>
+        </tr>
+        <tr class="hbreak">
+          <td>URL:</td>
+          <td>{% if article.url %}{{article.url|urlizetrunc:20}}{% endif %}</td>
+        </tr>
+        <tr>
+          <td>Parent:</td>
+          <td>{% if article.parent %}<a href="{% url "navigator:project-article-details" project.id article.parent.id %}">{{article.parent}}</a>{% endif %}</td>
+        </tr>
+
+        <tr class="hbreak">
+          <td>Children:</td>
+          <td>{% if article.children %}
+            <ul>
+              {% for child in article.children %}
+                <li/><a href="{% url "navigator:project-article-details" project.id child.id %}">{{child}}</a>
+              {% endfor %}
+            </ul>
+          {% endif %}</td>
+        </tr>
+
+        {% for k, v in article.properties.items %}
+          <tr>
+            <td>{{k}}:</td>
+            <td>
+              {% if "_url" in k %}
+                <a href="{{v}}">{{ v|truncatechars:60 }}</a>
+              {% else %}
+                {{v}}
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+
+
+        <tr class="hbreak-before">
+          <td>In&nbsp;articlesets:</td>
+          <td>
+            {% for aset in article.articlesets_set.all.distinct %}
+              <a href="{% url "navigator:articleset-details" project.id aset.id %}">{{aset.id}} - {{aset}}</a>
+              {% if can_edit %}
+                <a href="{% url "navigator:article-removefromset" project.id article.id %}?remove_set={{aset.id}}&return_set={{articleset_id}}" class="btn btn-warning btn-xxs"><i class="glyphicon glyphicon-trash"></i></a>
+              {% endif %}
+              <br/>
+            {% empty %}
+              This article does not occur in any set
+            {% endfor %}
+          </td>
+        </tr>
+        {% if codingjobs %}
+          <tr class="hbreak-before">
+            <td>In&nbsp;codingjobs:</td>
+            <td>
+              {% for codingjob in codingjobs %}
+                <a href="{% url "navigator:codingjob-details" project.id codingjob.id %}">{{codingjob.id}}
+                  - {{ codingjob.name }}</a>
+                <br/>
+              {% empty %}
+                This article does not occur in any c
+              {% endfor %}
+            </td>
+          </tr>
+        {% endif %}
+      </table>
+    </div>
+  </div>
 {% endblock %}
