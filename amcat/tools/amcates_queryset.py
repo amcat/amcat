@@ -182,7 +182,10 @@ class ESQuerySet:
                 "pre_tags": ["<mark>"],
                 "post_tags": ["</mark>"],
                 "fields": {}
-            }
+            },
+            "sort": [
+                "_doc"
+            ]
         }
 
         # Filters do not calculate scores. On filter is always present (due to filtering
@@ -206,8 +209,9 @@ class ESQuerySet:
         elif self.query_term:
             query["query"]["filtered"]["query"] = self.query_term.get_dsl()
 
-        if self.ordering:
-            pass
+        # Sorting
+        for dir, field in reversed(self.ordering):
+            query["sort"].append({field: dir})
 
         return query
 
@@ -281,19 +285,28 @@ class ESQuerySet:
             return self._copy(fields=())
 
         # Check for validity
+        ordering = []
         for field in fields:
             if field == "?":
                 # Random ordering
-                continue
+                raise NotImplementedError("Random ordering not yet supported")
+                ordering.append("?")
 
+            order = "asc"
             _field = field
             if field.startswith(("+", "-")):
+                if field[0] == "-":
+                    order = "desc"
                 _field = field[1:]
 
+            if get_property_primitive_type(_field) == str:
+                raise NotImplementedError("Ordering on string type not yet supported")
+
             self._check_fields((_field,))
+            ordering.append((order, _field))
 
         # Copy self and return new one
-        return self._copy(ordering=fields)
+        return self._copy(ordering=tuple(ordering))
 
     def _copy(self, **kwargs):
         new = ESQuerySet(ArticleSet.objects.none())
