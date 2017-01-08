@@ -46,7 +46,7 @@ ES_MAPPING_TYPE_PRIMITIVES = {
     "id": str,
     "text": str,
     "default": str,
-    "tag": str,
+    "tag": set,
 }
 
 

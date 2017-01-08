@@ -21,9 +21,12 @@ import datetime
 
 import iso8601
 from django.conf import settings
+from django.http import QueryDict
+
 from amcat.models import Article
 from amcat.tools import amcattest
-from amcat.tools.amcates import ES, get_article_dict, ALL_FIELDS, get_property_primitive_type
+from amcat.tools.amcates import ES, get_article_dict, ALL_FIELDS, get_property_primitive_type, \
+    get_filter_clauses, _get_filter_clauses_from_querydict, get_filter_clauses_from_querydict
 from amcat.tools.amcattest import create_test_project
 from amcat.tools.keywordsearch import SearchQuery
 
@@ -448,3 +451,94 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(es_date, '1992-12-31T23:59:00')
         self.assertEqual(iso8601.parse_date(es_date, None), date)
 
+    def test_get_filter_clauses(self):
+        self.assertEqual(
+            list(get_filter_clauses(date="2011-01-01")),
+            [{"terms": {"date": "2011-01-01T00:00:00"}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses(date__gte="2011-01-01")),
+            [{"range": {"date": {"gte": "2011-01-01T00:00:00"}}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses(date__on="2011-01-01")),
+            [{"range": {"date": {"gte": "2011-01-01T00:00:00||/d", "lt": "2011-01-01T00:00:00||+1d/d"}}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses(length_int=10)),
+            [{"terms": {"length_int": 10}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses(length_int__in=[10])),
+            [{"terms": {"length_int": {10}}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses(length_int__in=[10, 20])),
+            [{"terms": {"length_int": {10, 20}}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses(length_int__in=["10", "20"])),
+            [{"terms": {"length_int": {10, 20}}}]
+        )
+
+        # Huilen dit..
+        r1, r2 = get_filter_clauses(date__lte="2011-1-2", date__gte="2011-1-1")
+        result = [
+            {"range": {"date": {"lte": "2011-01-02T00:00:00"}}},
+            {"range": {"date": {"gte": "2011-01-01T00:00:00"}}}
+        ]
+        self.assertIn(r1, result)
+        self.assertIn(r2, result)
+
+        self.assertEqual(
+            list(get_filter_clauses(sets__in=["10", "20"])),
+            [{"terms": {"sets": {10, 20}}}]
+        )
+
+    def test__get_filter_clauses_from_querydict(self):
+        self.assertEqual(
+            _get_filter_clauses_from_querydict(QueryDict("length_int=10")),
+            {"length_int__in": {'10'}}
+        )
+
+        self.assertEqual(
+            _get_filter_clauses_from_querydict(QueryDict("length_int__in=10,20")),
+            {"length_int__in": {'10', '20'}}
+        )
+
+        self.assertEqual(
+            _get_filter_clauses_from_querydict(QueryDict("length_int=10&length_int=20")),
+            {"length_int__in": {'10', '20'}}
+        )
+
+        self.assertEqual(
+            _get_filter_clauses_from_querydict(QueryDict("length_int=10&length_int__in=10,20")),
+            {"length_int__in": {'10'}}
+        )
+
+        self.assertEqual(
+            _get_filter_clauses_from_querydict(QueryDict("length_int=0&length_int__in=10,20")),
+            {"length_int__in": set()}
+        )
+
+    def test_get_filter_clauses_from_querydict(self):
+        self.assertEqual(
+            list(get_filter_clauses_from_querydict(QueryDict("length_int=10"))),
+            [{"terms": {"length_int": {10}}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses_from_querydict(QueryDict("length_int=10&length_int=20"))),
+            [{"terms": {"length_int": {10, 20}}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses_from_querydict(QueryDict("length_int__in=10,20"))),
+            [{"terms": {"length_int": {10, 20}}}]
+        )

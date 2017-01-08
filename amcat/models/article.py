@@ -344,6 +344,8 @@ class Article(AmcatModel):
     def save(self, *args, **kwargs):
         if self._highlighted:
             raise ValueError("Cannot save a highlighted article.")
+        if not self.hash:
+            self.compute_hash()
 
         super(Article, self).save(*args, **kwargs)
 
@@ -483,6 +485,14 @@ class Article(AmcatModel):
                 aset.add_articles(dupes, add_to_index=True, monitor=monitor)
             else:
                 monitor.update()
+
+        # Add to articleset caches
+        properties = set()
+        for article in articles:
+            properties.update(article.properties.keys())
+
+        for articleset in articlesets:
+            articleset._add_to_property_cache(properties)
 
         return articles
 
