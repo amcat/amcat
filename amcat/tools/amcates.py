@@ -310,7 +310,7 @@ class _ES(object):
 
     def highlight_article(self, aid, query):
         body = {
-            'filter': build_filter(ids=aid),
+            'filter': build_filter(ids=[aid]),
             'highlight': {
                 "fields": {
                     "text": get_highlight_query(query, "text"),
@@ -647,14 +647,17 @@ class _ES(object):
         log.info("Refreshing")
         self.refresh()
 
+    def _count(self, body):
+        """Raw version of count directly passing given query to elastic, while setting the index and doc_type"""
+        return self.es.count(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=body)
+
     def count(self, query=None, filters=None):
         """
         Compute the number of items matching the given query / filter
         """
         filters = dict(build_body(query, filters, query_as_filter=True))
         body = {"query": {"constant_score": filters}}
-        result = self.es.count(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=body)
-        return result["count"]
+        return self._count(body)["count"]
 
     def search_aggregate(self, aggregation, query=None, filters=None, **options):
         """
