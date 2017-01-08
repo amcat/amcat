@@ -62,6 +62,22 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
         self.qs = ESQuerySet(self.asets)
 
     @amcattest.use_elastic
+    def test_order_by_random(self):
+        self.set_up()
+
+        # Deterministic run, all values should be the same (P < 1e-6):
+        ids = []
+        for i in range(20):
+            ids.append(tuple(self.qs.order_by("?", seed=0).values_list("id", flat=True)))
+        self.assertTrue(all(ids[0] == id for id in ids))
+
+        # Random run, query should be different sometimes
+        ids = []
+        for i in range(20):
+            ids.append(tuple(self.qs.order_by("?").values_list("id", flat=True)))
+        self.assertFalse(all(ids[0] == id for id in ids))
+
+    @amcattest.use_elastic
     def test_order_by(self):
         self.set_up()
 

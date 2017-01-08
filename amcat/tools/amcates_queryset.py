@@ -18,6 +18,8 @@
 ###########################################################################
 import datetime
 import functools
+import random
+
 import iso8601
 
 from collections import ChainMap
@@ -29,7 +31,6 @@ from amcat.models import get_used_properties_by_articlesets, ArticleSet, Project
 from amcat.tools import queryparser
 from amcat.tools.amcates import get_filter_clause, ALL_FIELDS, ES, get_property_primitive_type
 from amcat.tools.queryparser import Term
-from amcat.tools.toolkit import random_alphanum
 
 
 class ESArticle:
@@ -65,7 +66,7 @@ class ESQuerySet:
     """
     Provides a Django-like way of querying documents.
     """
-    def __init__(self, articlesets: QuerySet, seed=None):
+    def __init__(self, articlesets: QuerySet):
         """
         @param articlesets: articlesets to consider articles from
         @param seed: seed used for random ordering
@@ -74,19 +75,22 @@ class ESQuerySet:
         self.used_properties = ALL_FIELDS | frozenset(get_used_properties_by_articlesets(self.articlesets))
         self.filters = ()
         self.ordering = ()
-        self.seed = seed
+        self.seed = None
         self.fields = ("id", "title", "date")
         self.query_raw = None  # type: Optional[str]
         self.query_term = None  # type: Optional[Term]
         self.highlight = ()
         self.track_scores = False
+        self._count_cache = None
 
     def _do_query(self):
         return ES().search(self.get_query())
 
     @functools.lru_cache()
     def _get_hits(self):
-        return self._do_query()["hits"]["hits"]
+        hits = self._do_query()["hits"]["hits"]
+        self._count_cache = len(hits)
+        return hits
 
     def __iter__(self) -> Iterable[ESArticle]:
         hits = self._get_hits()
@@ -98,9 +102,23 @@ class ESQuerySet:
             for hit in hits:
                 yield ESArticle(self.fields, hit["fields"])
 
+    @functools.lru_cache()
     def __len__(self):
-        # TODO: Query eleastic for article count
-        return len(self._get_hits())
+        """For a more efficient way of determining this size of this set use count(). This
+        method will execute the query (which includes fetching all documents) and count
+        the size of that set.
+
+        This method is left 'inefficient' due to the following common pattern:
+
+            qs = list(ESQuerySet(...))
+
+        list() will first determine the size of its given argument (if it detects __len__)
+        to allocate a sufficient amount of memory. Therefore; if we would call count() we
+        would execute the query twice which is clearly undesirable.
+        """
+        if self._count_cache:
+            return self._count_cache
+        return sum(1 for _ in self)
 
     def __getitem__(self, item: Union[int, slice]):
         # TODO: Query elastic for pagination
@@ -156,7 +174,7 @@ class ESQuerySet:
     def get_seed(self):
         """Return current seed or, if it doesn't exist, generate a fresh one"""
         if self.seed is None:
-            self.seed = random_alphanum(20)
+            self.seed = random.randint(0, 2**63-1)
         return self.seed
 
     def set_seed(self, seed: Optional[str]):
@@ -170,48 +188,58 @@ class ESQuerySet:
             "track_scores": True if "?" in self.ordering else self.track_scores,
             "fields": self.fields,
             "query": {
-                # Using filtered allows us to combine a filter context (boolean query) with
-                # a query context (allowing highlighting and scoring)
-                "filtered": {
-                    "filter": [
-                        get_filter_clause("sets", "in", aset_ids)
-                    ]
+                "function_score": {
+                    "query": {
+                        # Using filtered allows us to combine a filter context (boolean query) with
+                        # a query context (allowing highlighting and scoring)
+                        "filtered": {
+                            "filter": [
+                                get_filter_clause("sets", "in", aset_ids)
+                            ]
+                        },
+                    },
+                    "random_score": {
+                        "seed": self.get_seed()
+                    }
                 }
+
             },
             "highlight": {
                 "pre_tags": ["<mark>"],
                 "post_tags": ["</mark>"],
                 "fields": {}
-            },
-            "sort": [
-                "_doc"
-            ]
+            }
         }
 
         # Filters do not calculate scores. On filter is always present (due to filtering
         # on articlesets), so we can safely extend the list even if the user specified
         # no filters
-        query["query"]["filtered"]["filter"].extend(self.filters)
+        query["query"]["function_score"]["query"]["filtered"]["filter"].extend(self.filters)
 
         # Highlighting is a bit tricky: the query needs to filter on *all* available fields
         # on the document, but the highlighter can only work on specific fields. We therefore
         # specify the query as a filter and the highlighter on specific fields
         if self.highlight:
-            query["query"]["filtered"]["filter"].append(self.query_term.get_dsl())
-            query["query"]["filtered"]["query"] = {"bool": {"should": []}}
+            query["query"]["function_score"]["query"]["filtered"]["filter"].append(self.query_term.get_dsl())
+            query["query"]["function_score"]["query"]["filtered"]["query"] = {"bool": {"should": []}}
 
             for field in self.highlight:
                 term_dsl = self.query_term.get_dsl()
                 term_dsl["match"][field] = term_dsl["match"].pop("_all")
-                query["query"]["filtered"]["query"]["bool"]["should"].append(term_dsl)
+                query["query"]["function_score"]["query"]["filtered"]["query"]["bool"]["should"].append(term_dsl)
                 query["highlight"]["fields"][field] = {"no_match_size": 100}
-
         elif self.query_term:
-            query["query"]["filtered"]["query"] = self.query_term.get_dsl()
+            query["query"]["function_score"]["query"]["filtered"]["query"] = self.query_term.get_dsl()
 
         # Sorting
-        for dir, field in reversed(self.ordering):
-            query["sort"].append({field: dir})
+        if self.ordering:
+            sort = []
+            for order in self.ordering:
+                if order == "?":
+                    sort.append("_score")
+                else:
+                    sort.append(dict((order,)))
+            query["sort"] = sort
 
         return query
 
@@ -263,7 +291,7 @@ class ESQuerySet:
         # Copy self and install new filters
         return self._copy(filters=self.filters + tuple(new_filters))
 
-    def order_by(self, *fields) -> "ESQuerySet":
+    def order_by(self, *fields, seed: Optional[int]=None) -> "ESQuerySet":
         """
         Order by a number of fields. By default, order ascending. If a minus is given in front
         of the fieldname, order in a descending manner. Random ordering can be given by passing
@@ -280,6 +308,12 @@ class ESQuerySet:
             qs.order_by()
             qs.order_by(None)
 
+        If you need a deterministic ordering, but you don't care about the ordering itself use
+        _doc as an order field:
+
+            qs.order_by("_doc")
+
+        @param seed: a random ordering can be made deterministic by supplying a seed value.
         """
         if fields == (None,):
             return self._copy(fields=())
@@ -287,10 +321,10 @@ class ESQuerySet:
         # Check for validity
         ordering = []
         for field in fields:
-            if field == "?":
-                # Random ordering
-                raise NotImplementedError("Random ordering not yet supported")
-                ordering.append("?")
+            if field == "?" or field == "_doc":
+                # Random ordering or deterministic ordering
+                ordering.append(field)
+                continue
 
             order = "asc"
             _field = field
@@ -303,10 +337,14 @@ class ESQuerySet:
                 raise NotImplementedError("Ordering on string type not yet supported")
 
             self._check_fields((_field,))
-            ordering.append((order, _field))
+            ordering.append((_field, order))
 
         # Copy self and return new one
-        return self._copy(ordering=tuple(ordering))
+        seed = seed if seed is not None else self.seed
+        return self._copy(ordering=tuple(ordering), seed=seed)
+
+    def count(self):
+        return ES()._count(self.get_query())["count"]
 
     def _copy(self, **kwargs):
         new = ESQuerySet(ArticleSet.objects.none())
