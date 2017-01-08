@@ -40,6 +40,7 @@
     {% endif %}
 
     <legend> Uploading articles using {{ script_name }} </legend>
+    <p>Step 2 of 2</p>
     <form method="POST" enctype="multipart/form-data" action="">
         {% csrf_token %}
         {{ form.management_form }}
@@ -87,6 +88,11 @@
                             {% else %}
                                 <input type="text" name="{{ fieldform.label.html_name }}"
                                        placeholder="{{ fieldform.label.help_text }}">
+
+                                <br>
+                                <small>
+                                    <span>Optional, adds a property with the same value for each article.</span>
+                                </small>
                             {% endif %}
                         </td>
                         <td>
