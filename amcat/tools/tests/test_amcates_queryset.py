@@ -21,7 +21,7 @@ import datetime
 from amcat.models import Article, ArticleSet
 from amcat.tools import amcates
 from amcat.tools import amcattest
-from amcat.tools.amcates_queryset import ESQuerySet
+from amcat.tools.amcates_queryset import ESQuerySet, merge_highlighted
 
 now = datetime.datetime.now()
 
@@ -60,6 +60,14 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
         amcates.ES().refresh()
 
         self.qs = ESQuerySet(self.asets)
+
+    @amcattest.use_elastic
+    def test_exact_filter(self):
+        self.set_up()
+
+        print(list(self.qs.filter(author__exact="Thomas Hogeling")))
+        print(list(self.qs.filter(author__exact__in=["Thomas Hogeling"])))
+
 
     @amcattest.use_elastic
     def test_order_by_random(self):
@@ -115,8 +123,8 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
     @amcattest.use_elastic
     def test_only(self):
         self.set_up()
-        self.assertEqual({"date"}, set(next(iter(self.qs.only("date"))).to_dict().keys()))
-        self.assertEqual({"date", "author"}, set(next(iter(self.qs.only("date", "author"))).to_dict().keys()))
+        self.assertEqual({"_doc", "date"}, set(next(iter(self.qs.only("date"))).to_dict().keys()))
+        self.assertEqual({"date", "author", "_doc"}, set(next(iter(self.qs.only("date", "author"))).to_dict().keys()))
         self.assertRaises(ValueError, self.qs.only, "non-existent")
 
     @amcattest.use_elastic
@@ -179,31 +187,77 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
         self.set_up()
 
         # Test one field
-        highlighted = self.qs.only("title", "text").query("opkomende", highlight=("title",))
+        highlighted = self.qs.only("title", "text").query('opkomende').highlight("opkomende", ("title",), "mark")
         self.assertEqual(1, len(highlighted))
         self.assertEqual("VVD trots op <mark>opkomende</mark> zon", highlighted[0].title)
 
         # Multiple fields
-        highlighted = self.qs.only("title", "text").query("man", highlight=("title",))
+        highlighted = self.qs.only("title", "text").query("man").highlight("man", ("title",), "mark")
         self.assertEqual(1, len(highlighted))
         self.assertEqual("<mark>Man</mark> leeft nog steeds in de gloria", highlighted[0].title)
         self.assertEqual("Gezongen vloek op verjaardag maakt leven van man tot een vrolijke hel.", highlighted[0].text)
 
-        highlighted = self.qs.only("title", "text").query("man", highlight=("title", "text"))
+        highlighted = self.qs.only("title", "text").query("man").highlight("man", ("title", "text"), "mark")
         self.assertEqual(1, len(highlighted))
         self.assertEqual("<mark>Man</mark> leeft nog steeds in de gloria", highlighted[0].title)
         self.assertEqual("Gezongen vloek op verjaardag maakt leven van <mark>man</mark> tot een vrolijke hel.", highlighted[0].text)
 
         # Highlighter should force fetching of fields if specified in highlight, but not in fields
-        highlighted = self.qs.only("date").query("man", highlight=("title", "text"))
+        highlighted = self.qs.only("date").query("man").highlight("man", ("title", "text"), "mark")
         self.assertEqual(1, len(highlighted))
         self.assertEqual({"date", "title", "text"}, set(highlighted[0]._fields))
 
         # We should be able to access not highlighted fields
-        highlighted = self.qs.only("title", "text").query("man", highlight=("title", "text"))
+        highlighted = self.qs.only("title", "text").query("man").highlight("man", ("title", "text"), "mark")
         self.assertEqual(1, len(highlighted))
         non_highlighted = highlighted[0].get_non_highlighted()
         self.assertEqual("Man leeft nog steeds in de gloria", non_highlighted.title)
         self.assertEqual("Gezongen vloek op verjaardag maakt leven van man tot een vrolijke hel.", non_highlighted.text)
 
+    @amcattest.use_elastic
+    def test_highlight_complex(self):
+        self.set_up()
+
+        # Test match_phrase
+        query = '"op opkomende"'
+        highlighted = self.qs.only("title").filter_query(query).highlight(query, ("title",))
+        self.assertEqual(
+            list(highlighted)[0].title,
+            "VVD trots <mark0>op</mark0> <mark0>opkomende</mark0> zon"
+        )
+
+        # Test OR
+        # TODO:
+        query = '"op opkomende" OR vvd'
+        highlighted = self.qs.only("title").filter_query(query).highlight(query, ("title",))
+        self.assertEqual(
+            list(highlighted)[0].title,
+            "VVD trots <mark0>op</mark0> <mark0>opkomende</mark0> zon"
+        )
+
+
+    def test_merge_highlighted_texts(self):
+        text = "Gezongen  vloek op verjaardag maakt leven van man tot een vrolijke hel."
+        text1 = "Gezongen  vloek op verjaardag maakt leven van man tot een <mark1>vrolijke</mark1> hel."
+        text2 = "Gezongen  vloek op verjaardag maakt leven van <mark2>man</mark2> tot een <mark2>vrolijke</mark2> hel."
+        merged = "".join(merge_highlighted(text, [text1, text2], ["mark1", "mark2"]))
+        self.assertEqual(merged, "Gezongen  vloek op verjaardag maakt leven van <mark2>man</mark2> tot een <mark2><mark1>vrolijke</mark1></mark2> hel.")
+
+        text = "  Gezongen  vloek op verjaardag maakt leven van man tot een vrolijke hel."
+        text1 = "  Gezongen  vloek op verjaardag maakt leven van man tot een <mark1>vrolijke</mark1> hel."
+        text2 = "  Gezongen  vloek op verjaardag maakt leven van <mark2>man</mark2> tot een <mark2>vrolijke</mark2> hel."
+        merged = "".join(merge_highlighted(text, [text1, text2], ["mark1", "mark2"]))
+        self.assertEqual(merged, "  Gezongen  vloek op verjaardag maakt leven van <mark2>man</mark2> tot een <mark2><mark1>vrolijke</mark1></mark2> hel.")
+
+        text = "Gezongen  vloek op verjaardag maakt leven van man tot een vrolijke hel.  "
+        text1 = "Gezongen  vloek op verjaardag maakt leven van man tot een <mark1>vrolijke</mark1> hel.  "
+        text2 = "Gezongen  vloek op verjaardag maakt leven van <mark2>man</mark2> tot een <mark2>vrolijke</mark2> hel.  "
+        merged = "".join(merge_highlighted(text, [text1, text2], ["mark1", "mark2"]))
+        self.assertEqual(merged, "Gezongen  vloek op verjaardag maakt leven van <mark2>man</mark2> tot een <mark2><mark1>vrolijke</mark1></mark2> hel.  ")
+
+        text = "  Gezongen  vloek op verjaardag maakt leven van man tot een vrolijke hel.  "
+        text1 = "  Gezongen  vloek op verjaardag maakt leven van man tot een <mark1>vrolijke</mark1> hel.  "
+        text2 = "  Gezongen  vloek op verjaardag maakt leven van <mark2>man</mark2> tot een <mark2>vrolijke</mark2> hel.  "
+        merged = "".join(merge_highlighted(text, [text1, text2], ["mark1", "mark2"]))
+        self.assertEqual(merged, "  Gezongen  vloek op verjaardag maakt leven van <mark2>man</mark2> tot een <mark2><mark1>vrolijke</mark1></mark2> hel.  ")
 

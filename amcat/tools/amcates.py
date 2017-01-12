@@ -935,6 +935,10 @@ def get_filter_clause_str(field: str, qualifier: Optional[str], filter_value):
         return {"terms": {field: filter_value}}
     elif qualifier == "in":
         return {"terms": {field: _to_list(str, filter_value)}}
+    elif qualifier == "exact":
+        return {"match": {"{}.raw".format(field): filter_value}}
+    elif qualifier == "exact__in":
+        return {"match": {"{}.raw".format(field): filter_value}}
     else:
         raise ValueError("Did not recognize qualifier {!r} on str field {!r}.".format(qualifier, field))
 
@@ -1015,7 +1019,7 @@ def _get_filter_clauses_from_querydict(qdict: QueryDict):
     filters = {}
     for field in qdict:
         if "__" in field:
-            field_name, qualifier = field.split("__")
+            field_name, qualifier = field.split("__", 1)
 
             if qualifier == "in":
                 # If user specifies multiply ins, take intersection
@@ -1081,10 +1085,8 @@ def get_filter_clauses(**filters):
             raise ValueError("Do not pass plurals: {}. Use field__in instead.".format(field))
 
     for field, filter_value in filters.items():
-        assert field.count("__") <= 1, "We don't do nested filters"
-
         if "__" in field:
-            field_name, qualifier = field.split("__")
+            field_name, qualifier = field.split("__", 1)
         else:
             field_name = field
             qualifier = None

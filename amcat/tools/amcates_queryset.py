@@ -23,14 +23,70 @@ import random
 import iso8601
 
 from collections import ChainMap
-from typing import Iterable, Any, Union
+from typing import Iterable, Any, Union, Sequence, Dict, Tuple, List
 from typing import Optional
 
+import itertools
+
+import regex
+from django.conf import settings
 from django.db.models import QuerySet
 from amcat.models import get_used_properties_by_articlesets, ArticleSet, Project
 from amcat.tools import queryparser
+from amcat.tools import toolkit
 from amcat.tools.amcates import get_filter_clause, ALL_FIELDS, ES, get_property_primitive_type
 from amcat.tools.queryparser import Term
+
+
+TOKEN_START = toolkit.random_alphanum(16)
+TOKENIZER_PATTERN = settings.ES_SETTINGS["analysis"]["tokenizer"]["unicode_letters_digits"]["pattern"]
+TOKENIZER_INV = regex.compile(TOKENIZER_PATTERN.replace("^", "") + "+")
+TOKENIZER = regex.compile(TOKENIZER_PATTERN)
+
+
+def tokenize_highlighted_text(text: str, marker: str):
+    start_marker = "<{}>".format(marker)
+    stop_marker = "</{}>".format(marker)
+
+    # Get rid of html tags. Instead, replace them by unique tokens
+    text = text.replace(start_marker, TOKEN_START).replace(stop_marker, "")
+
+    for token in TOKENIZER.split(text):
+        if token:
+            yield token.startswith(TOKEN_START)
+
+
+def merge_highlighted(original_text, highlighted_texts: Sequence[str], markers: Sequence[str]):
+    """
+
+    """
+    tokens = [token for token in TOKENIZER.split(original_text) if token]
+    delimiters = TOKENIZER_INV.split(original_text)
+    highlighted_tokens = zip(*(tokenize_highlighted_text(text, marker) for text, marker in zip(highlighted_texts, markers)))
+
+    # If first delimiter is empty, we did not start with empty space. If it is not empty, we did
+    # start with some white space. Either way, yield the delimiter.
+    yield delimiters.pop(0)
+
+    for token, highlighted in zip(tokens, highlighted_tokens):
+        for token_highlighted, marker in zip(highlighted, markers):
+            if token_highlighted:
+                token = "<{marker}>{token}</{marker}>".format(marker=marker, token=token)
+
+        # yield marked (or unmarked) token
+        yield token
+
+        # yield space in between
+        yield delimiters.pop(0)
+
+
+def merge_highlighted_document(texts: Dict[str, str], highlighted_texts: Sequence[Dict[str, str]], markers=Sequence[str]) -> Iterable[Tuple[str, str]]:
+    for field in texts.keys():
+        texts_and_markers = [(h[field], m) for h, m in zip(highlighted_texts, markers) if field in h]
+        if not texts_and_markers:
+            yield field, texts[field]
+        else:
+            yield field, "".join(merge_highlighted(texts[field], *zip(*texts_and_markers)))
 
 
 class ESArticle:
@@ -42,7 +98,7 @@ class ESArticle:
         if field in self._fields:
             value = None
             if field in self._result:
-                value = self._result[field][0]
+                value = self._result[field]
                 if get_property_primitive_type(field) == datetime.datetime:
                     value = iso8601.parse_date(value, default_timezone=None)
             setattr(self, field, value)
@@ -62,10 +118,37 @@ class HighlightedESArticle(ESArticle):
         return ESArticle(self._fields, self._result.maps[1])
 
 
+def replace_keys(dsl: dict, key: str, replacement: str):
+    for value in dsl.values():
+        if isinstance(value, dict):
+            replace_keys(value, key, replacement)
+
+    if key in dsl:
+        dsl[replacement] = dsl.pop(key)
+
+
+class Highlight:
+    def __init__(self, fields: Sequence[str], query: str, mark: str):
+        self.query = queryparser.parse_to_terms(query)  # type: Term
+        self.fields = fields
+        self.mark = mark
+
+
+def _to_flat_dict(d: Dict[str, List[Any]]):
+    for key in list(d.keys()):
+        d[key] = d[key][0]
+
+
 class ESQuerySet:
     """
     Provides a Django-like way of querying documents.
     """
+    # Use slots to use tracking down bugs due to wrongly implement copy logic:
+    __slots__ = (
+        "articlesets", "used_properties", "filters", "ordering", "seed",
+        "fields", "highlights", "track_scores", "_count_cache", "_query"
+    )
+
     def __init__(self, articlesets: QuerySet):
         """
         @param articlesets: articlesets to consider articles from
@@ -77,30 +160,43 @@ class ESQuerySet:
         self.ordering = ()
         self.seed = None
         self.fields = ("id", "title", "date")
-        self.query_raw = None  # type: Optional[str]
-        self.query_term = None  # type: Optional[Term]
-        self.highlight = ()
+        self.highlights = ()
         self.track_scores = False
+        self._query = None
         self._count_cache = None
 
-    def _do_query(self):
-        return ES().search(self.get_query())
-
-    @functools.lru_cache()
-    def _get_hits(self):
-        hits = self._do_query()["hits"]["hits"]
-        self._count_cache = len(hits)
-        return hits
+    def _do_query(self, query):
+        return ES().search(query)
 
     def __iter__(self) -> Iterable[ESArticle]:
-        hits = self._get_hits()
-
-        if self.highlight:
+        if not self.highlights:
+            # Case 1: no highlighters
+            hits = ES().search(self.get_query())["hits"]["hits"]
             for hit in hits:
-                yield HighlightedESArticle(self.fields, ChainMap(hit["highlight"], hit["fields"]))
-        else:
-            for hit in hits:
+                _to_flat_dict(hit["fields"])
                 yield ESArticle(self.fields, hit["fields"])
+        else:
+            # Case 2: at least one highlighter present. We need to execute a query for every
+            # highlighter plus one for the original text.
+            original_texts = self._do_query(self.get_query())["hits"]["hits"]
+            for hit in original_texts:
+                _to_flat_dict(hit["fields"])
+
+            # Order might be unreliable, so we make mappings
+            unordered = self.order_by(None)
+            highlighted_texts = []
+            for highlight in self.highlights:
+                unordered.get_query(highlight)
+                result = self._do_query(self.get_query(highlight))
+                for hit in result["hits"]["hits"]:
+                    _to_flat_dict(hit["highlight"])
+                highlighted_texts.append({d["_id"]: d["highlight"] for d in result["hits"]["hits"]})
+
+            markers = [h.mark for h in self.highlights]
+            for text in original_texts:
+                highlighted = [h.get(text["_id"], text["fields"]) for h in highlighted_texts]
+                merged = dict(merge_highlighted_document(text["fields"], highlighted, markers))
+                yield HighlightedESArticle(self.fields, ChainMap(merged, text["fields"]))
 
     @functools.lru_cache()
     def __len__(self):
@@ -180,13 +276,14 @@ class ESQuerySet:
     def set_seed(self, seed: Optional[str]):
         self.seed = seed
 
-    def get_query(self) -> dict:
-        """Return elasticsearch query"""
+    def get_query(self, highlight: Optional[Highlight]=None) -> dict:
+        """Return elasticsearch query based on a specific highlighter (or None). A highlighter
+        will force a query (if specified) to run as a filter."""
         aset_ids = [aset.id for aset in self.articlesets]
 
         query = {
             "track_scores": True if "?" in self.ordering else self.track_scores,
-            "fields": self.fields,
+            "fields": tuple(set(self.fields) | {"_doc"}),
             "query": {
                 "function_score": {
                     "query": {
@@ -207,29 +304,41 @@ class ESQuerySet:
             "highlight": {
                 "pre_tags": ["<mark>"],
                 "post_tags": ["</mark>"],
-                "fields": {}
+                "fields": {
+
+                }
             }
         }
+
+        if highlight:
+            query["highlight"]["pre_tags"][0] = "<{}>".format(highlight.mark)
+            query["highlight"]["post_tags"][0] = "</{}>".format(highlight.mark)
+
+            query["fields"] = ("id",)
+
+            # Highlighting is a bit tricky: the query needs to filter on *all* available fields
+            # on the document, but the highlighter can only work on specific fields. We therefore
+            # specify the query as a filter and the highlighter on specific fields
+            query["query"]["function_score"]["query"]["filtered"]["filter"].append(highlight.query.get_dsl())
+            query["query"]["function_score"]["query"]["filtered"]["query"] = {"bool": {"should": []}}
+
+            for field in highlight.fields:
+                term_dsl = highlight.query.get_dsl()
+                replace_keys(term_dsl, "_all", field)
+                query["query"]["function_score"]["query"]["filtered"]["query"]["bool"]["should"].append(term_dsl)
+                query["highlight"]["fields"][field] = {"no_match_size": 100}
+
+            if self._query:
+                # Add query as filter if we are highlighting
+                query["query"]["function_score"]["query"]["filtered"]["filter"].append(self._query.get_dsl())
+        elif self._query:
+            # No highlighter present, only a query
+            query["query"]["function_score"]["query"]["filtered"]["query"] = self._query.get_dsl()
 
         # Filters do not calculate scores. On filter is always present (due to filtering
         # on articlesets), so we can safely extend the list even if the user specified
         # no filters
         query["query"]["function_score"]["query"]["filtered"]["filter"].extend(self.filters)
-
-        # Highlighting is a bit tricky: the query needs to filter on *all* available fields
-        # on the document, but the highlighter can only work on specific fields. We therefore
-        # specify the query as a filter and the highlighter on specific fields
-        if self.highlight:
-            query["query"]["function_score"]["query"]["filtered"]["filter"].append(self.query_term.get_dsl())
-            query["query"]["function_score"]["query"]["filtered"]["query"] = {"bool": {"should": []}}
-
-            for field in self.highlight:
-                term_dsl = self.query_term.get_dsl()
-                term_dsl["match"][field] = term_dsl["match"].pop("_all")
-                query["query"]["function_score"]["query"]["filtered"]["query"]["bool"]["should"].append(term_dsl)
-                query["highlight"]["fields"][field] = {"no_match_size": 100}
-        elif self.query_term:
-            query["query"]["function_score"]["query"]["filtered"]["query"] = self.query_term.get_dsl()
 
         # Sorting
         if self.ordering:
@@ -247,20 +356,30 @@ class ESQuerySet:
         self._check_fields(fields)
         return self._copy(fields=fields)
 
-    def query(self, query: str, highlight=(), track_scores=False) -> "ESQuerySet":
+    def highlight(self, query: str, fields: Sequence[str]=(), mark="mark%i") -> "ESQuerySet":
         """
-        Use a query string to query the final result. Based on this highlights can be made
-        and scores can be calculated. If you just want to filter, use filter_query().
+        Use a query to highlight terms in a document.
+
+        :param query: Lucene DSL query
+        :param fields: fields to highlight
+        :param mark: html tag to use. %i will be replaced by a number to account for multiple queries.
         """
-        self._check_fields(highlight)
-        fields = self.fields
-        for field in highlight:
-            if field not in fields:
-                fields += (field,)
-        self.highlight = highlight
-        self.track_scores = track_scores
-        query_term = queryparser.parse_to_terms(query)
-        return self._copy(query_term=query_term, query_raw=query, fields=fields)
+        self._check_fields(fields)
+        new_fields = self.fields
+        for field in fields:
+            if field not in new_fields:
+                new_fields += (field,)
+        highlight = Highlight(fields, query, mark.replace("%i", str(len(self.highlights))))
+        return self._copy(highlights=self.highlights + (highlight,), fields=new_fields)
+
+    def query(self, query: str) -> "ESQuerySet":
+        """
+        Use a query string to query the final result. If you do not need scoring, use filter_query.
+
+        @param query: query in Lucene syntax
+        """
+        query_dsl = queryparser.parse_to_terms(query)
+        return self._copy(_query=query_dsl)
 
     def filter_query(self, query: str):
         """
@@ -284,7 +403,7 @@ class ESQuerySet:
         for field, value in kwargs.items():
             qualifier = None
             if "__" in field:
-                field, qualifier = field.rsplit("__", 1)
+                field, qualifier = field.split("__", 1)
             self._check_fields((field,))
             new_filters.append(get_filter_clause(field, qualifier, value))
 
@@ -316,7 +435,7 @@ class ESQuerySet:
         @param seed: a random ordering can be made deterministic by supplying a seed value.
         """
         if fields == (None,):
-            return self._copy(fields=())
+            return self._copy(ordering=())
 
         # Check for validity
         ordering = []
@@ -348,16 +467,8 @@ class ESQuerySet:
 
     def _copy(self, **kwargs):
         new = ESQuerySet(ArticleSet.objects.none())
-        new.used_properties = self.used_properties
-        new.articlesets = self.articlesets
-        new.ordering = self.ordering
-        new.filters = self.filters
-        new.query_term = self.query_term
-        new.query_raw = self.query_raw
-        new.fields = self.fields
-        new.seed = self.seed
-        new.highlight = self.highlight
-        new.track_scores = self.track_scores
+        for slot in self.__slots__:
+            setattr(new, slot, getattr(self, slot))
 
         for attr, value in kwargs.items():
             setattr(new, attr, value)
