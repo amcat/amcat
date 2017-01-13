@@ -356,21 +356,32 @@ class ESQuerySet:
         self._check_fields(fields)
         return self._copy(fields=fields)
 
-    def highlight(self, query: str, fields: Sequence[str]=(), mark="mark%i") -> "ESQuerySet":
+    def highlight(self, query: str, fields: Sequence[str]=(), mark="mark%i", add_filter=False) -> "ESQuerySet":
         """
         Use a query to highlight terms in a document.
 
         :param query: Lucene DSL query
         :param fields: fields to highlight
         :param mark: html tag to use. %i will be replaced by a number to account for multiple queries.
+        :param add_filter: Indicates whether you also want to *filter* documents on this highlight. If True, only
+                           documents with highlighting will be returned.
         """
+        # Check fields, add fields if necessary
         self._check_fields(fields)
         new_fields = self.fields
         for field in fields:
             if field not in new_fields:
                 new_fields += (field,)
+
+        # Create highlighted ESQuerySet
         highlight = Highlight(fields, query, mark.replace("%i", str(len(self.highlights))))
-        return self._copy(highlights=self.highlights + (highlight,), fields=new_fields)
+        new = self._copy(highlights=self.highlights + (highlight,), fields=new_fields)
+
+        # Also add query as filter if user requested so
+        if add_filter:
+            return new.filter_query(query)
+
+        return new
 
     def query(self, query: str) -> "ESQuerySet":
         """
