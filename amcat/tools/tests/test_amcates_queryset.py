@@ -65,8 +65,9 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
     def test_exact_filter(self):
         self.set_up()
 
-        print(list(self.qs.filter(author__exact="Thomas Hogeling")))
-        print(list(self.qs.filter(author__exact__in=["Thomas Hogeling"])))
+        # TODO:
+        #print(list(self.qs.filter(author__exact="Thomas Hogeling")))
+        #print(list(self.qs.filter(author__exact__in=["Thomas Hogeling"])))
 
 
     @amcattest.use_elastic
@@ -123,8 +124,8 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
     @amcattest.use_elastic
     def test_only(self):
         self.set_up()
-        self.assertEqual({"_doc", "date"}, set(next(iter(self.qs.only("date"))).to_dict().keys()))
-        self.assertEqual({"date", "author", "_doc"}, set(next(iter(self.qs.only("date", "author"))).to_dict().keys()))
+        self.assertEqual({"date"}, set(next(iter(self.qs.only("date"))).to_dict().keys()))
+        self.assertEqual({"date", "author"}, set(next(iter(self.qs.only("date", "author"))).to_dict().keys()))
         self.assertRaises(ValueError, self.qs.only, "non-existent")
 
     @amcattest.use_elastic
@@ -227,14 +228,12 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
         )
 
         # Test OR
-        # TODO:
         query = '"op opkomende" OR vvd'
         highlighted = self.qs.only("title").filter_query(query).highlight(query, ("title",))
         self.assertEqual(
             list(highlighted)[0].title,
-            "VVD trots <mark0>op</mark0> <mark0>opkomende</mark0> zon"
+            "<mark0>VVD</mark0> trots <mark0>op</mark0> <mark0>opkomende</mark0> zon"
         )
-
 
     def test_merge_highlighted_texts(self):
         text = "Gezongen  vloek op verjaardag maakt leven van man tot een vrolijke hel."

@@ -19,16 +19,13 @@
 import datetime
 import functools
 import random
-
+import regex
 import iso8601
 
 from collections import ChainMap
 from typing import Iterable, Any, Union, Sequence, Dict, Tuple, List
 from typing import Optional
 
-import itertools
-
-import regex
 from django.conf import settings
 from django.db.models import QuerySet
 from amcat.models import get_used_properties_by_articlesets, ArticleSet, Project
@@ -129,6 +126,7 @@ def replace_keys(dsl: dict, key: str, replacement: str):
 
 class Highlight:
     def __init__(self, fields: Sequence[str], query: str, mark: str):
+        self.query_raw = query
         self.query = queryparser.parse_to_terms(query)  # type: Term
         self.fields = fields
         self.mark = mark
@@ -320,12 +318,14 @@ class ESQuerySet:
             # on the document, but the highlighter can only work on specific fields. We therefore
             # specify the query as a filter and the highlighter on specific fields
             query["query"]["function_score"]["query"]["filtered"]["filter"].append(highlight.query.get_dsl())
-            query["query"]["function_score"]["query"]["filtered"]["query"] = {"bool": {"should": []}}
+            query["query"]["function_score"]["query"]["filtered"]["query"] = {
+                "query_string": {
+                    "fields": highlight.fields,
+                    "query": highlight.query_raw
+                }
+            }
 
             for field in highlight.fields:
-                term_dsl = highlight.query.get_dsl()
-                replace_keys(term_dsl, "_all", field)
-                query["query"]["function_score"]["query"]["filtered"]["query"]["bool"]["should"].append(term_dsl)
                 query["highlight"]["fields"][field] = {"no_match_size": 100}
 
             if self._query:
