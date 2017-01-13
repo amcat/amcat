@@ -188,28 +188,28 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
         self.set_up()
 
         # Test one field
-        highlighted = self.qs.only("title", "text").query('opkomende').highlight("opkomende", ("title",), "mark")
+        highlighted = self.qs.only("title", "text").highlight("opkomende", ("title",), add_filter=True)
         self.assertEqual(1, len(highlighted))
-        self.assertEqual("VVD trots op <mark>opkomende</mark> zon", highlighted[0].title)
+        self.assertEqual("VVD trots op <mark0>opkomende</mark0> zon", highlighted[0].title)
 
         # Multiple fields
-        highlighted = self.qs.only("title", "text").query("man").highlight("man", ("title",), "mark")
+        highlighted = self.qs.only("title", "text").highlight("man", ("title",), add_filter=True)
         self.assertEqual(1, len(highlighted))
-        self.assertEqual("<mark>Man</mark> leeft nog steeds in de gloria", highlighted[0].title)
+        self.assertEqual("<mark0>Man</mark0> leeft nog steeds in de gloria", highlighted[0].title)
         self.assertEqual("Gezongen vloek op verjaardag maakt leven van man tot een vrolijke hel.", highlighted[0].text)
 
-        highlighted = self.qs.only("title", "text").query("man").highlight("man", ("title", "text"), "mark")
+        highlighted = self.qs.only("title", "text").highlight("man", ("title", "text"), add_filter=True)
         self.assertEqual(1, len(highlighted))
-        self.assertEqual("<mark>Man</mark> leeft nog steeds in de gloria", highlighted[0].title)
-        self.assertEqual("Gezongen vloek op verjaardag maakt leven van <mark>man</mark> tot een vrolijke hel.", highlighted[0].text)
+        self.assertEqual("<mark0>Man</mark0> leeft nog steeds in de gloria", highlighted[0].title)
+        self.assertEqual("Gezongen vloek op verjaardag maakt leven van <mark0>man</mark0> tot een vrolijke hel.", highlighted[0].text)
 
         # Highlighter should force fetching of fields if specified in highlight, but not in fields
-        highlighted = self.qs.only("date").query("man").highlight("man", ("title", "text"), "mark")
+        highlighted = self.qs.only("date").highlight("man", ("title", "text"), add_filter=True)
         self.assertEqual(1, len(highlighted))
         self.assertEqual({"date", "title", "text"}, set(highlighted[0]._fields))
 
         # We should be able to access not highlighted fields
-        highlighted = self.qs.only("title", "text").query("man").highlight("man", ("title", "text"), "mark")
+        highlighted = self.qs.only("title", "text").highlight("man", ("title", "text"), add_filter=True)
         self.assertEqual(1, len(highlighted))
         non_highlighted = highlighted[0].get_non_highlighted()
         self.assertEqual("Man leeft nog steeds in de gloria", non_highlighted.title)
