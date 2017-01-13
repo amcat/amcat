@@ -366,6 +366,9 @@ class ESQuerySet:
         :param add_filter: Indicates whether you also want to *filter* documents on this highlight. If True, only
                            documents with highlighting will be returned.
         """
+        if fields == ():
+            fields = self.fields
+
         # Check fields, add fields if necessary
         self._check_fields(fields)
         new_fields = self.fields

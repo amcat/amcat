@@ -198,7 +198,7 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
         self.assertEqual("<mark0>Man</mark0> leeft nog steeds in de gloria", highlighted[0].title)
         self.assertEqual("Gezongen vloek op verjaardag maakt leven van man tot een vrolijke hel.", highlighted[0].text)
 
-        highlighted = self.qs.only("title", "text").highlight("man", ("title", "text"), add_filter=True)
+        highlighted = self.qs.only("title", "text").highlight("man", add_filter=True)
         self.assertEqual(1, len(highlighted))
         self.assertEqual("<mark0>Man</mark0> leeft nog steeds in de gloria", highlighted[0].title)
         self.assertEqual("Gezongen vloek op verjaardag maakt leven van <mark0>man</mark0> tot een vrolijke hel.", highlighted[0].text)
@@ -209,7 +209,7 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
         self.assertEqual({"date", "title", "text"}, set(highlighted[0]._fields))
 
         # We should be able to access not highlighted fields
-        highlighted = self.qs.only("title", "text").highlight("man", ("title", "text"), add_filter=True)
+        highlighted = self.qs.only("title", "text").highlight("man", add_filter=True)
         self.assertEqual(1, len(highlighted))
         non_highlighted = highlighted[0].get_non_highlighted()
         self.assertEqual("Man leeft nog steeds in de gloria", non_highlighted.title)
@@ -221,12 +221,12 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
 
         # Test non-overlapping
         filtered = self.qs.only("title").filter_query("man")
-        highlighted = filtered.highlight("man", ("title",)).highlight("gloria", ("title",))
+        highlighted = filtered.highlight("man").highlight("gloria")
         self.assertEqual(next(iter(highlighted)).title, "<mark0>Man</mark0> leeft nog steeds in de <mark1>gloria</mark1>")
 
         # Test overlapping
         filtered = self.qs.only("title").filter_query("man")
-        highlighted = filtered.highlight("man", ("title",)).highlight('"man leeft"', ("title",))
+        highlighted = filtered.highlight("man").highlight('"man leeft"')
         self.assertEqual(next(iter(highlighted)).title, "<mark1><mark0>Man</mark0></mark1> <mark1>leeft</mark1> nog steeds in de gloria")
 
     @amcattest.use_elastic
@@ -235,7 +235,7 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
 
         # Test match_phrase
         query = '"op opkomende"'
-        highlighted = self.qs.only("title").filter_query(query).highlight(query, ("title",))
+        highlighted = self.qs.only("title").filter_query(query).highlight(query)
         self.assertEqual(
             list(highlighted)[0].title,
             "VVD trots <mark0>op</mark0> <mark0>opkomende</mark0> zon"
@@ -243,7 +243,7 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
 
         # Test OR
         query = '"op opkomende" OR vvd'
-        highlighted = self.qs.only("title").filter_query(query).highlight(query, ("title",))
+        highlighted = self.qs.only("title").filter_query(query).highlight(query)
         self.assertEqual(
             list(highlighted)[0].title,
             "<mark0>VVD</mark0> trots <mark0>op</mark0> <mark0>opkomende</mark0> zon"
