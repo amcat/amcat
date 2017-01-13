@@ -216,6 +216,20 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
         self.assertEqual("Gezongen vloek op verjaardag maakt leven van man tot een vrolijke hel.", non_highlighted.text)
 
     @amcattest.use_elastic
+    def test_highlight_multiple(self):
+        self.set_up()
+
+        # Test non-overlapping
+        filtered = self.qs.only("title").filter_query("man")
+        highlighted = filtered.highlight("man", ("title",)).highlight("gloria", ("title",))
+        self.assertEqual(next(iter(highlighted)).title, "<mark0>Man</mark0> leeft nog steeds in de <mark1>gloria</mark1>")
+
+        # Test overlapping
+        filtered = self.qs.only("title").filter_query("man")
+        highlighted = filtered.highlight("man", ("title",)).highlight('"man leeft"', ("title",))
+        self.assertEqual(next(iter(highlighted)).title, "<mark1><mark0>Man</mark0></mark1> <mark1>leeft</mark1> nog steeds in de gloria")
+
+    @amcattest.use_elastic
     def test_highlight_complex(self):
         self.set_up()
 
