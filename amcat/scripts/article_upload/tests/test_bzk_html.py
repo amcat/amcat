@@ -1,3 +1,5 @@
+import datetime
+import json
 import os.path
 import unittest
 from amcat.models import ArticleSet
@@ -5,24 +7,77 @@ from amcat.scripts.article_upload.bzk_html import BZK
 from amcat.tools import amcattest
 
 
-@unittest.skip("BZK needs more test-files.")
 class TestBZK(amcattest.AmCATTestCase):
     def setUp(self):
         from django.core.files import File
         import os.path
-
+        self.project = amcattest.create_test_project()
         self.dir = os.path.join(os.path.dirname(__file__), 'test_files', 'bzk')
-        self.bzk = BZK(project=amcattest.create_test_project().id,
-                       file=File(open(os.path.join(self.dir, 'test.html'))),
-                       articlesets=[amcattest.create_test_set().id])
-        self.result = ArticleSet.objects.get(id=self.bzk.run()[0]).articles.all()
+        self.file_scrape1 = File(open(os.path.join(self.dir, 'test.html'), mode="rb"))
+        self.file_scrape2 = File(open(os.path.join(self.dir, 'test_scrape2.html'), mode="rb"))
 
-    def todo_test_scrape_unit(self):
-        self.assertTrue(self.result)
+    def test_get_fields(self):
+        fields = set(f.label for f in BZK.get_fields(self.file_scrape1, encoding="utf-8"))
+        self.assertIn("title", fields)
+        self.assertIn("date", fields)
+        self.assertIn("text", fields)
 
-    def todo_test_scrape_file(self):
-        must_props = ('headline', 'text', 'medium', 'date')
-        must_props = [[getattr(a, prop) for a in self.result] for prop in must_props]
+    def _create_id_field_map(self, *fields):
+        """
+        Creates a json formatted identity field map where each source and destination is the same.
+        """
+        return json.dumps({field : {"type": "field", "value": field} for field in fields})
 
-        for proplist in must_props:
-            self.assertTrue(all(proplist))
+    @amcattest.use_elastic
+    def _test_parse_file(self, file, n_articles, min_article_length=20, expected_articles=()):
+        """
+        Tests the parsing of a file using the scrape_2 format.
+        @param expected_articles    A sequence of {field: value} dicts, each with at least a 'title' field.
+        """
+        field_map = self._create_id_field_map("title", "text", "medium", "date")
+        script = BZK(field_map=field_map, file=file, project=self.project.id, encoding="UTF-8")
+        result_set = script.run()
+        self.assertIsInstance(result_set, ArticleSet)
+        articles = list(result_set.articles.all())
+        self.assertEqual(len(articles), n_articles)
+        article_map = {a.title: a for a in articles}
+        for fields in expected_articles:
+            title = fields['title']
+            article = article_map[title]
+            self.assertGreaterEqual(len(article.text), min_article_length)
+            for field, value in fields.items():
+                self.assertEqual(article.get_property(field), value,
+                                 "Expected value '{}' for article field '{}'".format(value, field))
+
+
+
+    @amcattest.use_elastic
+    def test_parse_file_scrape1(self):
+        """
+        Tests the parsing of a file using the scrape_1 format.
+        """
+        self._test_parse_file(self.file_scrape1, 45)
+
+    @amcattest.use_elastic
+    def test_parse_file_scrape2(self):
+        """
+        Tests the parsing of a file using the scrape_2 format.
+        """
+        expected_articles = [
+            {"title": "Staat schond persvrijheid Telegraaf", "date": datetime.datetime(2017, 1, 5)},
+            {"title": "Neprom hekelt uitzonderingspositie energie-eisen Amsterdam en Den Haag"},
+            {"title": "Opposition thrown out of Curaçao Parliament", "date": datetime.datetime(2017, 1, 4)},
+            {"title": "Statia petitions against embedding public entity in Dutch Constitution",
+             "date": datetime.datetime(2017, 1, 5) }
+        ]
+        self._test_parse_file(self.file_scrape2, 51, expected_articles=expected_articles)
+
+
+    @unittest.skip("No test files for format 3")
+    @amcattest.use_elastic
+    def test_parse_file_scrape3(self):
+        """
+        Tests the parsing of a file using the scrape_3 format.
+        """
+        pass
+

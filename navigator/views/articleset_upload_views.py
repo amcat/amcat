@@ -155,7 +155,7 @@ class ArticleUploadFieldForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
-        if (cleaned_data['destination'] == NEW_FIELD) != bool(cleaned_data['new_name']):
+        if (cleaned_data['destination'] == NEW_FIELD) and not cleaned_data['new_name']:
             raise forms.ValidationError("Fieldname required for new field")
 
         if cleaned_data['new_name']:
