@@ -335,27 +335,27 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
     def test__get_filter_clauses_from_querydict(self):
         self.assertEqual(
             _get_filter_clauses_from_querydict(QueryDict("length_int=10")),
-            {"length_int__in": {'10'}}
+            {"length_int__in": ['10']}
         )
 
         self.assertEqual(
             _get_filter_clauses_from_querydict(QueryDict("length_int__in=10,20")),
-            {"length_int__in": {'10', '20'}}
+            {"length_int__in": ['10', '20']}
         )
 
         self.assertEqual(
             _get_filter_clauses_from_querydict(QueryDict("length_int=10&length_int=20")),
-            {"length_int__in": {'10', '20'}}
+            {"length_int__in": ['10', '20']}
         )
 
         self.assertEqual(
             _get_filter_clauses_from_querydict(QueryDict("length_int=10&length_int__in=10,20")),
-            {"length_int__in": {'10'}}
+            {"length_int__in": ['10']}
         )
 
         self.assertEqual(
             _get_filter_clauses_from_querydict(QueryDict("length_int=0&length_int__in=10,20")),
-            {"length_int__in": set()}
+            {"length_int__in": []}
         )
 
     def test_get_filter_clauses_from_querydict(self):
