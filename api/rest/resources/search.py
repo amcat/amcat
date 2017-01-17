@@ -32,8 +32,7 @@ from rest_framework.serializers import Serializer, FloatField
 from amcat.models import Project, Article, ROLE_PROJECT_METAREADER, ArticleSet, \
     get_used_properties_by_articlesets
 from amcat.tools import amcates, keywordsearch
-from amcat.tools.amcates import get_property_primitive_type, ALL_FIELDS, \
-    get_filter_clauses_from_querydict
+from amcat.tools.amcates import get_property_primitive_type, ALL_FIELDS
 from api.rest.resources.amcatresource import AmCATResource
 
 RE_KWIC = re.compile("(?P<left>.*?)<mark>(?P<keyword>.*?)</mark>(?P<right>.*)", re.DOTALL)

@@ -17,15 +17,6 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import copy
-import json
-from multiprocessing.pool import ThreadPool
-from types import MappingProxyType
-
-import iso8601
-from django.http import QueryDict
-
-import amcat.models
-
 import datetime
 import functools
 import logging
@@ -35,12 +26,15 @@ import re
 from collections import namedtuple
 from hashlib import sha224 as hash_class
 from json import dumps as serialize
-from typing import Union, Optional
+from multiprocessing.pool import ThreadPool
+from types import MappingProxyType
+from typing import Union
 
 from django.conf import settings
 from elasticsearch import Elasticsearch, NotFoundError
 from elasticsearch.helpers import scan, bulk
 
+import amcat.models
 from amcat.tools import queryparser, toolkit
 from amcat.tools.caching import cached
 from amcat.tools.progress import NullMonitor
@@ -81,6 +75,9 @@ _KNOWN_PROPERTIES = None
 @functools.lru_cache()
 def get_property_primitive_type(name) -> Union[int, float, str, set, datetime.datetime]:
     """Based on a property name, determine its primitive Python type."""
+    if name == "sets":
+        return set
+
     if "_" in name:
         return settings.ES_MAPPING_TYPE_PRIMITIVES[name[name.rfind("_")+1:]]
 
@@ -924,174 +921,56 @@ def get_date(timestamp):
     return datetime.datetime(d.year, d.month, d.day)
 
 
-def _to_list(ptype, filter_value):
-    if isinstance(filter_value, str):
-        filter_value = filter_value.split(",")
-    return [ptype(v) for v in filter_value]
-
-
-def get_filter_clause_str(field: str, qualifier: Optional[str], filter_value):
-    if qualifier is None:
-        return {"terms": {field: filter_value}}
-    elif qualifier == "in":
-        return {"terms": {field: _to_list(str, filter_value)}}
-    elif qualifier == "exact":
-        return {"match": {"{}.raw".format(field): filter_value}}
-    elif qualifier == "exact__in":
-        return {"match": {"{}.raw".format(field): filter_value}}
-    else:
-        raise ValueError("Did not recognize qualifier {!r} on str field {!r}.".format(qualifier, field))
-
-
-def get_filter_clause_num(field: str, qualifier: Optional[str], filter_value, ptype):
-    if qualifier is None:
-        assert isinstance(filter_value, (int, float))
-        return {"term": {field: filter_value}}
-    elif qualifier == "in":
-        return {"terms": {field: _to_list(ptype, filter_value)}}
-    elif qualifier in ("lte", "gte", "lt", "gt"):
-        return {"range": {field: {qualifier: filter_value}}}
-    else:
-        raise ValueError("Did not recognize qualifier {!r} on numeric field {!r}.".format(qualifier, field))
-
-
-def get_filter_clause_date(field: str, qualifier: Optional[str], filter_value):
-    if qualifier != "in":
-        filter_value = [filter_value]
-
-    # If given a datetime the filter value must either be a datetime object or
-    # an iso8601 conforming string
-    parsed_values = set()
-    for v in filter_value:
-        if not isinstance(v, datetime.datetime):
-            try:
-                parsed_values.add(iso8601.parse_date(v, default_timezone=None))
-            except iso8601.ParseError:
-                raise ValueError("Value of {}, {}, is not an iso8601 string or datetime".format(field, v))
-        else:
-            parsed_values.add(v)
-
-    filter_value = list({v.isoformat() for v in parsed_values})
-    if qualifier != "in":
-        filter_value = filter_value[0]
-
-    if qualifier is None or qualifier == "in":
-        # Match exactly
-        return {"terms": {field: filter_value}}
-    elif qualifier == "on":
-        # Match all articles on given date
-        return {"range": {field: {"gte": filter_value + "||/d", "lt": filter_value + "||+1d/d"}}}
-    elif qualifier in ("lte", "gte", "lt", "gt"):
-        return {"range": {field: {qualifier: filter_value}}}
-    else:
-        raise ValueError("Did not recognize qualifier {!r} on date field.".format(qualifier))
-
-
-def get_filter_clause(field: str, qualifier: Optional[str], filter_value):
+def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
+    """
+    Build a elastic DSL query from the 'form' fields.
+    For convenience, the singular versions (mediumid, id) etc are allowed as aliases
     """
 
-    @param field:
-    @param qualifier:
-    @param filter_value:
-    @return:
-    """
-    if field == "ids":
-        field = "id"
-        qualifier = "in"
+    def _list(x, number=True):
+        if isinstance(x, (str, int)):
+            return [int(x) if number else x]
+        elif hasattr(x, 'pk'):
+            return [x.pk]
+        elif isinstance(x, (set, tuple, list)):
+            return x
+        return list(x)
 
-    if field in ("id", "pk", "sets"):
-        # TODO / HACK: do not handle pk/sets separately
-        ptype = int
-    else:
-        ptype = get_property_primitive_type(field)
+    def parse_date(d):
+        if isinstance(d, list) and len(d) == 1:
+            d = d[0]
+        if isinstance(d, str):
+            d = toolkit.read_date(d)
+        return d.isoformat()
 
-    if ptype == datetime.datetime:
-        return get_filter_clause_date(field, qualifier, filter_value)
-    elif ptype == int or ptype == float:
-        return get_filter_clause_num(field, qualifier, filter_value, ptype)
-    elif ptype == str:
-        return get_filter_clause_str(field, qualifier, filter_value)
-    else:
-        raise ValueError("Did not recognize primitive type {} of field {}".format(ptype, field))
-
-
-def _get_filter_clauses_from_querydict(qdict: QueryDict):
-    filters = {}
-    for field in qdict:
-        if "__" in field:
-            field_name, qualifier = field.split("__", 1)
-
-            if qualifier == "in":
-                # If user specifies multiply ins, take intersection
-                value = {v.strip() for v in qdict.get(field).split(",")}
-                for values in qdict.getlist(field):
-                    value &= {v.strip() for v in values.split(",")}
-            elif len(qdict.getlist(field)) > 1:
-                raise ValueError("Is does not make sense to have more than 1 value for filter: {}".format(field))
-            else:
-                value = qdict.get(field)
-        else:
-            value = set(qdict.getlist(field))
-            field += "__in"
-
-        if field in filters:
-            filters[field] &= value
-        else:
-            filters[field] = value
-    return filters
+    # Allow singulars as alias for plurals
+    f = {}
+    for singular, plural in [("id", "ids"),
+                             ("set", "sets"),
+                             ("hash", "hashes")]:
+        if plural in filters:
+            if singular in filters:
+                raise TypeError("Cannot supply both {plural} and {singular}".format(**locals()))
+            f[singular] = filters.pop(plural)
+        elif singular in filters:
+            f[singular] = filters.pop(singular)
 
 
-def get_filter_clauses_from_querydict(qdict: QueryDict):
-    """
-    Given a querydict, calculate filters given to amcates
-    """
-    return get_filter_clauses(**_get_filter_clauses_from_querydict(qdict))
+    for k, v in filters.items():
+        yield {'terms': {k: _list(v, number=False)}}
 
+    if 'set' in f: yield dict(terms={'sets': _list(f['set'])})
+    if 'id' in f: yield dict(ids={'values': _list(f['id'])})
+    if 'hash' in f: yield dict(terms={'hash' : _list(f['hash'], number=False)})
 
-def get_filter_clauses(**filters):
-    """
-    Build elastic filter, based on Django like filters. Values can be given as strings, even if
-    their associated field is not a string field. Dates should adhere to ISO8601 however, while
-    ints and floats need to be able to be parsed by their respective Python builtin functions.
+    date_range = {}
+    if start_date: date_range['gte'] = parse_date(start_date)
+    if end_date: date_range['lt'] = parse_date(end_date)
+    if date_range: yield dict(range={'date': date_range})
+    if on_date: date_range={"gte": parse_date(on_date),
+                            "lt": parse_date(on_date)+"||+1d"}
+    if date_range: yield dict(range={'date' : date_range})
 
-    Examples:
-
-        >>> get_filter_clauses(date="2011-01-01")
-        {"match": {"date": "2011-01-01T00:00:00"}}
-        >>> get_filter_clauses(date__gte="2011-01-01")
-        {"range": {"date": {"gte": "2011-01-01T00:00:00||/d"}}}
-        >>> get_filter_clauses(date__on=datetime.datetime(2011, 1, 1))
-        {"range": {"date": {"gte": "2011-01-01T00:00:00||/d", "lt": "2011-01-01T00:00:00||+1d/d"}}}
-        >>> get_filter_clauses(length_int=10)
-        {"match": {"length_int": 10}}
-        >>> get_filter_clauses(length_int__in=[10, 20])
-        {"match": {"length_int": {10, 20}}}
-        >>> get_filter_clauses(length_int__in=["10", "20"])
-        {"match": {"length_int": {10, 20}}}
-        >>> get_filter_clauses(length_int__gte=10)
-        {"range": {"length_int": {"gte": 10}}}
-    """
-    # TODO: Remove these checks as soon as callers are fixed
-    for field in ("start_date", "end_date", "on_date"):
-        if field in filters:
-            raise ValueError("Do not pass {}. Use date, date__gt, date__lt instead.")
-
-    for field in ("hashes",):
-        if field in filters:
-            raise ValueError("Do not pass plurals: {}. Use field__in instead.".format(field))
-
-    for field in ("project", "projectid"):
-        if field in filters:
-            raise ValueError("Do not pass plurals: {}. Use field__in instead.".format(field))
-
-    for field, filter_value in filters.items():
-        if "__" in field:
-            field_name, qualifier = field.split("__", 1)
-        else:
-            field_name = field
-            qualifier = None
-
-        yield get_filter_clause(field_name, qualifier, filter_value)
 
 
 def combine_filters(filters):
