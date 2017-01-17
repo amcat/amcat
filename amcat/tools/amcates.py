@@ -71,8 +71,6 @@ ALL_FIELDS = frozenset({"id", "sets", "hash"} | ARTICLE_FIELDS)
 
 RE_PROPERTY_NAME = re.compile('[A-Za-z][A-Za-z0-9]*$')
 
-_KNOWN_PROPERTIES = None
-
 
 @functools.lru_cache()
 def get_property_primitive_type(name) -> Union[int, float, str, set, datetime.datetime]:
@@ -276,7 +274,7 @@ class _ES(object):
         properties = set(properties)
         if not (properties - self.get_properties()):
             return
-        to_add = properties - self.get_properties(force_refresh=True)
+        to_add = properties - self.get_properties()
         if to_add:
             self.add_properties(to_add)
 
@@ -295,12 +293,9 @@ class _ES(object):
         m = self.es.indices.get_mapping(self.index, self.doc_type)
         return m[self.index]['mappings'][self.doc_type]['properties']
 
-    def get_properties(self, force_refresh=False):
-        global _KNOWN_PROPERTIES
-        if force_refresh or (_KNOWN_PROPERTIES is None):
-            self.check_index()
-            _KNOWN_PROPERTIES = set(self.get_mapping().keys())
-        return _KNOWN_PROPERTIES
+    def get_properties(self):
+        self.check_index()
+        return set(self.get_mapping().keys())
 
     def refresh(self):
         self.es.indices.refresh()
@@ -325,8 +320,6 @@ class _ES(object):
         self.es.indices.clear_cache()
 
     def delete_index(self):
-        global _KNOWN_PROPERTIES
-        _KNOWN_PROPERTIES=None
         try:
             self.es.indices.delete(self.index)
         except NotFoundError:
@@ -479,12 +472,12 @@ class _ES(object):
         Returns a sequency of property names in use in the specified set(s) (or setids)
         """
         if set_ids is not None:
-            filters["sets__in"] = set_ids
+            filters["sets"] = set_ids
 
         if article_ids is not None:
             filters["ids"] = article_ids
 
-        all_properties = self.get_properties(force_refresh=True)
+        all_properties = self.get_properties()
         flexible_properties = set(all_properties) - set(ALL_FIELDS)
 
         body = {"query": {"bool": {"must": [
