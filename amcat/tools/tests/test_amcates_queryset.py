@@ -18,10 +18,13 @@
 ###########################################################################
 import datetime
 
+from django.http import QueryDict
+
 from amcat.models import Article, ArticleSet
 from amcat.tools import amcates
 from amcat.tools import amcattest
-from amcat.tools.amcates_queryset import ESQuerySet, merge_highlighted
+from amcat.tools.amcates_queryset import ESQuerySet, merge_highlighted, get_filter_clauses, \
+    _get_filter_clauses_from_querydict, get_filter_clauses_from_querydict
 
 now = datetime.datetime.now()
 
@@ -274,3 +277,99 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
         merged = "".join(merge_highlighted(text, [text1, text2], ["mark1", "mark2"]))
         self.assertEqual(merged, "  Gezongen  vloek op verjaardag maakt leven van <mark2>man</mark2> tot een <mark2><mark1>vrolijke</mark1></mark2> hel.  ")
 
+    def test_get_filter_clauses(self):
+        self.assertEqual(
+            list(get_filter_clauses(date="2011-01-01")),
+            [{"terms": {"date": "2011-01-01T00:00:00"}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses(date__gte="2011-01-01")),
+            [{"range": {"date": {"gte": "2011-01-01T00:00:00"}}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses(date__on="2011-01-01")),
+            [{"range": {"date": {"gte": "2011-01-01T00:00:00||/d", "lt": "2011-01-01T00:00:00||+1d/d"}}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses(length_int=10)),
+            [{"term": {"length_int": 10}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses(length_int__in=[10])),
+            [{"terms": {"length_int": [10]}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses(length_int__in=[10, 20])),
+            [{"terms": {"length_int": [10, 20]}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses(length_int__in=["10", "20"])),
+            [{"terms": {"length_int": [10, 20]}}]
+        )
+
+        # Huilen dit..
+        r1, r2 = get_filter_clauses(date__lte="2011-1-2", date__gte="2011-1-1")
+        result = [
+            {"range": {"date": {"lte": "2011-01-02T00:00:00"}}},
+            {"range": {"date": {"gte": "2011-01-01T00:00:00"}}}
+        ]
+        self.assertIn(r1, result)
+        self.assertIn(r2, result)
+
+        self.assertEqual(
+            list(get_filter_clauses(sets__overlap=["10", "20"])),
+            [{"terms": {"sets": ["10", "20"]}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses(sets__overlap=[10, 20])),
+            [{"terms": {"sets": [10, 20]}}]
+        )
+
+    def test__get_filter_clauses_from_querydict(self):
+        self.assertEqual(
+            _get_filter_clauses_from_querydict(QueryDict("length_int=10")),
+            {"length_int__in": {'10'}}
+        )
+
+        self.assertEqual(
+            _get_filter_clauses_from_querydict(QueryDict("length_int__in=10,20")),
+            {"length_int__in": {'10', '20'}}
+        )
+
+        self.assertEqual(
+            _get_filter_clauses_from_querydict(QueryDict("length_int=10&length_int=20")),
+            {"length_int__in": {'10', '20'}}
+        )
+
+        self.assertEqual(
+            _get_filter_clauses_from_querydict(QueryDict("length_int=10&length_int__in=10,20")),
+            {"length_int__in": {'10'}}
+        )
+
+        self.assertEqual(
+            _get_filter_clauses_from_querydict(QueryDict("length_int=0&length_int__in=10,20")),
+            {"length_int__in": set()}
+        )
+
+    def test_get_filter_clauses_from_querydict(self):
+        self.assertEqual(
+            list(get_filter_clauses_from_querydict(QueryDict("length_int=10"))),
+            [{"terms": {"length_int": [10]}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses_from_querydict(QueryDict("length_int=10&length_int=20"))),
+            [{"terms": {"length_int": [10, 20]}}]
+        )
+
+        self.assertEqual(
+            list(get_filter_clauses_from_querydict(QueryDict("length_int__in=10,20"))),
+            [{"terms": {"length_int": [10, 20]}}]
+        )

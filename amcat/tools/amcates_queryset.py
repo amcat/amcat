@@ -28,10 +28,12 @@ from typing import Optional
 
 from django.conf import settings
 from django.db.models import QuerySet
+from django.http import QueryDict
+
 from amcat.models import get_used_properties_by_articlesets, ArticleSet, Project
 from amcat.tools import queryparser
 from amcat.tools import toolkit
-from amcat.tools.amcates import get_filter_clause, ALL_FIELDS, ES, get_property_primitive_type
+from amcat.tools.amcates import ALL_FIELDS, ES, get_property_primitive_type
 from amcat.tools.queryparser import Term
 
 
@@ -84,6 +86,180 @@ def merge_highlighted_document(texts: Dict[str, str], highlighted_texts: Sequenc
             yield field, texts[field]
         else:
             yield field, "".join(merge_highlighted(texts[field], *zip(*texts_and_markers)))
+
+
+def _to_list(ptype, filter_value):
+    if isinstance(filter_value, str):
+        filter_value = filter_value.split(",")
+    return [ptype(v) for v in filter_value]
+
+
+def get_filter_clause_str(field: str, qualifier: Optional[str], filter_value):
+    if qualifier is None:
+        return {"terms": {field: str(filter_value)}}
+    elif qualifier == "in":
+        return {"terms": {field: _to_list(str, filter_value)}}
+    elif qualifier == "exact":
+        return {"match": {"{}.raw".format(field): filter_value}}
+    elif qualifier == "exact__in":
+        return {"match": {"{}.raw".format(field): filter_value}}
+    else:
+        raise ValueError("Did not recognize qualifier {!r} on str field {!r}.".format(qualifier, field))
+
+
+def get_filter_clause_num(field: str, qualifier: Optional[str], filter_value, ptype):
+    if qualifier is None:
+        return {"term": {field: ptype(filter_value)}}
+    elif qualifier == "in":
+        return {"terms": {field: _to_list(ptype, filter_value)}}
+    elif qualifier in ("lte", "gte", "lt", "gt"):
+        return {"range": {field: {qualifier: filter_value}}}
+    else:
+        raise ValueError("Did not recognize qualifier {!r} on numeric field {!r}.".format(qualifier, field))
+
+
+def get_filter_clause_date(field: str, qualifier: Optional[str], filter_value):
+    if qualifier != "in":
+        filter_value = [filter_value]
+
+    # If given a datetime the filter value must either be a datetime object or
+    # an iso8601 conforming string
+    parsed_values = []
+    for v in filter_value:
+        if not isinstance(v, datetime.datetime):
+            try:
+                parsed_values.append(iso8601.parse_date(v, default_timezone=None))
+            except iso8601.ParseError:
+                raise ValueError("Value of {}, {}, is not an iso8601 string or datetime".format(field, v))
+        else:
+            parsed_values.append(v)
+
+    filter_value = list({v.isoformat() for v in parsed_values})
+    if qualifier != "in":
+        filter_value = filter_value[0]
+
+    if qualifier is None or qualifier == "in":
+        # Match exactly
+        return {"terms": {field: filter_value}}
+    elif qualifier == "on":
+        # Match all articles on given date
+        return {"range": {field: {"gte": filter_value + "||/d", "lt": filter_value + "||+1d/d"}}}
+    elif qualifier in ("lte", "gte", "lt", "gt"):
+        return {"range": {field: {qualifier: filter_value}}}
+    else:
+        raise ValueError("Did not recognize qualifier {!r} on date field.".format(qualifier))
+
+
+def get_filter_clause_sets(field: str, qualifier: Optional[str], filter_value):
+    if field != "sets":
+        raise ValueError("No set field except 'sets' is supported right now.")
+
+    if qualifier == "overlap":
+        return {"terms": {field: list(filter_value)}}
+
+    error = "{!r} not a valid qualifier. Choose from: overlap. Example: filter({}__overlap={}"
+    raise ValueError(error.format(qualifier, field, filter_value))
+
+
+def get_filter_clause(field: str, qualifier: Optional[str], filter_value):
+    """
+
+    @param field:
+    @param qualifier:
+    @param filter_value:
+    @return:
+    """
+    ptype = get_property_primitive_type(field)
+
+    if ptype == datetime.datetime:
+        return get_filter_clause_date(field, qualifier, filter_value)
+    elif ptype == int or ptype == float:
+        return get_filter_clause_num(field, qualifier, filter_value, ptype)
+    elif ptype == str:
+        return get_filter_clause_str(field, qualifier, filter_value)
+    elif ptype == set:
+        return get_filter_clause_sets(field, qualifier, filter_value)
+    else:
+        raise ValueError("Did not recognize primitive type {} of field {}".format(ptype, field))
+
+
+def _get_filter_clauses_from_querydict(qdict: QueryDict):
+    filters = {}
+    for field in qdict:
+        if "__" in field:
+            field_name, qualifier = field.split("__", 1)
+
+            if qualifier == "in":
+                # If user specifies multiply ins, take intersection
+                value = {v.strip() for v in qdict.get(field).split(",")}
+                for values in qdict.getlist(field):
+                    value &= {v.strip() for v in values.split(",")}
+            elif len(qdict.getlist(field)) > 1:
+                raise ValueError("Is does not make sense to have more than 1 value for filter: {}".format(field))
+            else:
+                value = qdict.get(field)
+        else:
+            value = set(qdict.getlist(field))
+            field += "__in"
+
+        if field in filters:
+            filters[field] &= value
+        else:
+            filters[field] = value
+    return filters
+
+
+def get_filter_clauses_from_querydict(qdict: QueryDict):
+    """
+    Given a querydict, calculate filters given to amcates
+    """
+    return get_filter_clauses(**_get_filter_clauses_from_querydict(qdict))
+
+
+def get_filter_clauses(**filters):
+    """
+    Build elastic filter, based on Django like filters. Values can be given as strings, even if
+    their associated field is not a string field. Dates should adhere to ISO8601 however, while
+    ints and floats need to be able to be parsed by their respective Python builtin functions.
+
+    Examples:
+
+        >>> get_filter_clauses(date="2011-01-01")
+        {"match": {"date": "2011-01-01T00:00:00"}}
+        >>> get_filter_clauses(date__gte="2011-01-01")
+        {"range": {"date": {"gte": "2011-01-01T00:00:00||/d"}}}
+        >>> get_filter_clauses(date__on=datetime.datetime(2011, 1, 1))
+        {"range": {"date": {"gte": "2011-01-01T00:00:00||/d", "lt": "2011-01-01T00:00:00||+1d/d"}}}
+        >>> get_filter_clauses(length_int=10)
+        {"match": {"length_int": 10}}
+        >>> get_filter_clauses(length_int__in=[10, 20])
+        {"match": {"length_int": {10, 20}}}
+        >>> get_filter_clauses(length_int__in=["10", "20"])
+        {"match": {"length_int": {10, 20}}}
+        >>> get_filter_clauses(length_int__gte=10)
+        {"range": {"length_int": {"gte": 10}}}
+    """
+    # TODO: Remove these checks as soon as callers are fixed
+    for field in ("start_date", "end_date", "on_date"):
+        if field in filters:
+            raise ValueError("Do not pass {}. Use date, date__gt, date__lt instead.")
+
+    for field in ("hashes",):
+        if field in filters:
+            raise ValueError("Do not pass plurals: {}. Use field__in instead.".format(field))
+
+    for field in ("project", "projectid"):
+        if field in filters:
+            raise ValueError("Do not pass plurals: {}. Use field__in instead.".format(field))
+
+    for field, filter_value in filters.items():
+        if "__" in field:
+            field_name, qualifier = field.split("__", 1)
+        else:
+            field_name = field
+            qualifier = None
+
+        yield get_filter_clause(field_name, qualifier, filter_value)
 
 
 class ESArticle:
@@ -289,7 +465,7 @@ class ESQuerySet:
                         # a query context (allowing highlighting and scoring)
                         "filtered": {
                             "filter": [
-                                get_filter_clause("sets", "in", aset_ids)
+                                get_filter_clause("sets", "overlap", aset_ids)
                             ]
                         },
                     },
