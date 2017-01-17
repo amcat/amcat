@@ -64,17 +64,17 @@ sudo bin/plugin install mobz/elasticsearch-head
 sudo bin/plugin install analysis-icu
 sudo bin/plugin install amcat/hitcount/2.3.4
 
-# Enable hitcount as default similarity provider, and enable groovy scripting
-cat <<EOT | sudo tee --append /etc/elasticsearch/elasticsearch.yml
-index.similarity.default.type: hitcountsimilarity
-script.inline: on
-script.update: on
-EOT
+# Install scripts (scripts can also be found in config/elasticsearch
+sudo wget -q https://raw.githubusercontent.com/amcat/amcat/master/config/elasticsearch/amcat_remove_from_set.groovy -O /etc/elasticsearch/scripts/amcat_remove_from_set.groovy
+sudo wget -q https://raw.githubusercontent.com/amcat/amcat/master/config/elasticsearch/amcat_add_to_set.groovy -O /etc/elasticsearch/scripts/amcat_add_to_set.groovy
+sudo wget -q https://raw.githubusercontent.com/amcat/amcat/master/config/elasticsearch/amcat_lead.groovy -O /etc/elasticsearch/scripts/amcat_lead.groovy
 
 # Restart elastic
 sudo systemctl stop elasticsearch
 sudo systemctl start elasticsearch
 ```
+
+**Warning**: By default, elasticsearch listens on all interfaces (port 9200) and does not have authentication enabled. Please make sure to configure elasticsearch and/or your firewall to block unauthorized accesss. 
 
 **Warning**: We enabled a non-sandboxed scripting language (Groovy). Make sure to restrict access to the elastic instance by untrusted parties, as this allows executing arbitrary code as the user `elasticsearch`.
 

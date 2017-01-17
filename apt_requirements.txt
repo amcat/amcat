@@ -1,7 +1,8 @@
 unrtf
 rabbitmq-server
-python-dev
-python-pip
+python3-dev
+python3-pip
+python3-venv
 libxml2-dev
 libxslt-dev
 lib32z1-dev
@@ -12,3 +13,5 @@ graphviz
 pspp
 r-base
 r-base-dev
+antiword
+redis-server

@@ -70,7 +70,11 @@ class SummaryAction(QueryAction):
     monitor_steps = 4
 
     def run(self, form):
-        form_data = json.dumps(dict(form.data.lists()))
+        form_data = dict(form.data.lists())
+        for value in form_data.values():
+            if value == [None]:
+                value.pop()
+        form_data = json.dumps(form_data, indent=4)
 
         size = form.cleaned_data['size']
         offset = form.cleaned_data['offset']

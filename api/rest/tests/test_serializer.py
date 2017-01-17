@@ -40,7 +40,8 @@ class TestSerializer(ApiTestCase):
         self.assertEqual(res['echo'], 5)
 
     def test_get(self):
-        p1 = amcattest.create_test_project(name="testnaam", description="testdescription", insert_date='2012-01-01')
+        p1 = amcattest.create_test_project(name="testnaam", description="testdescription",
+                                           insert_date='2012-01-01')
 
         actual = self.get(ProjectResource, id=p1.id)
 
@@ -49,28 +50,30 @@ class TestSerializer(ApiTestCase):
         actual_results = actual_results[0]
 
         date = actual_results.pop('insert_date')
-        read_date(date)# check valid date, not much more to check here?
+        read_date(date)  # check valid date, not much more to check here?
 
-        expected_results={u'insert_user': p1.insert_user.id,
-                          u'description': 'testdescription',
-                          u'name': u'testnaam',
-                          u'guest_role': 11,
-                          u'owner': p1.owner.id,
-                          u'active': True,
-                           u'id': p1.id,
-                          u'last_visited_at': "Never",
-                          u'favourite' : False,
+        expected_results = {
+            'insert_user': p1.insert_user.id,
+            'description': 'testdescription',
+            'name': u'testnaam',
+            'guest_role': 11,
+            'owner': p1.owner.id,
+            'active': True,
+            'id': p1.id,
+            'last_visited_at': "Never",
+            'favourite': False,
+            "r_plugins_enabled": False
         }
 
         expected_meta = {
-            u'page' : 1,
-            u'next' : None,
-            u'previous' : None,
-            u'per_page' : 10,
-            u'total' : 1,
-            u'pages' : 1,
-            u'echo' : None,
-            }
+            'page': 1,
+            'next': None,
+            'previous': None,
+            'per_page': 10,
+            'total': 1,
+            'pages': 1,
+            'echo': None,
+        }
 
         self.assertDictsEqual(actual, expected_meta)
         self.assertDictsEqual(actual_results, expected_results)

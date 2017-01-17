@@ -17,12 +17,15 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from kombu import Exchange, Queue
-import os
+
+from settings import get_amcat_config
+
+amcat_config = get_amcat_config()
 
 CELERY_RESULT_BACKEND = 'amqp'
 CELERY_TASK_RESULT_EXPIRES = 3600
 
-_qname = os.environ.get('AMCAT_CELERY_QUEUE', 'amcat')
+_qname = amcat_config["celery"].get('queue')
 CELERY_QUEUES = (
     Queue(_qname, Exchange('default'), routing_key=_qname),
 )
@@ -32,6 +35,6 @@ CELERY_DEFAULT_ROUTING_KEY = _qname
 
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
-CELERY_ACCEPT_CONTENT=['json']
+CELERY_ACCEPT_CONTENT = ['json']
 
-CELERY_IGNORE_RESULT=False
+CELERY_IGNORE_RESULT = False

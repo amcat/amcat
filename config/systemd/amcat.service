@@ -1,0 +1,16 @@
+[Unit]
+Description=WSGI server for AmCAT
+Requires=amcat_worker.service
+
+[Service]
+Environment=UWSGI_LOGGER=file:/var/log/amcat/uwsgi.log
+Environment=UWSGI_MAX_REQUESTS=50
+Environment=UWSGI_BUFFER_SIZE=65535
+
+ExecStart=/usr/bin/uwsgi --ini /etc/amcat/uwsgi.ini
+Restart=always
+KillSignal=SIGQUIT
+Type=notify
+StandardError=journal
+StandardOutput=journal
+NotifyAccess=all

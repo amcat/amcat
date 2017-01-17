@@ -16,34 +16,23 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from settings import get_amcat_config
 
-import os, sys
+amcat_config = get_amcat_config()
 
-if os.environ.get('AMCAT_DEBUG', None) is not None:
-    DEBUG = (os.environ['AMCAT_DEBUG'] in ("1", "Y", "ON"))
+try:
+    import colorlog
+except ImportError:
+    use_colorlog = False
 else:
-    DEBUG = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
-                 or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
+    use_colorlog = True
 
-LOG_LEVEL = os.environ.get('AMCAT_LOG_LEVEL', 'DEBUG' if DEBUG else 'INFO')
+LOG_LEVEL = amcat_config["logs"].get("LEVEL")
 
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
     'formatters': {
-        'color': {
-            '()': 'colorlog.ColoredFormatter',
-            'format': "%(log_color)s[%(asctime)s %(levelname)s %(name)s:%(lineno)s] %(message)s",
-            'log_colors': {
-                'DEBUG': 'bold_black',
-                'INFO': 'white',
-                'WARNING': 'yellow',
-                'ERROR': 'bold_red',
-                'CRITICAL': 'bold_red',
-            },
-        },
-
-
         'standard': {
             'format': "[%(asctime)s %(levelname)s %(name)s:%(lineno)s] %(message)s",
             'datefmt': "%Y-%m-%d %H:%M:%S"
@@ -53,7 +42,7 @@ LOGGING = {
         'console': {
             'level': LOG_LEVEL,
             'class': 'logging.StreamHandler',
-            'formatter': 'color'
+            'formatter': 'color' if use_colorlog else 'standard'
         },
     },
     'loggers': {
@@ -68,21 +57,34 @@ LOGGING = {
                             'level': 'WARN',
         },
         '': {
-            'handlers': [],
+            'handlers': ["console"],
             'level': LOG_LEVEL,
         },
     }
 }
 
-if os.environ.get('AMCAT_LOG_QUERIES', 'N').upper() in ("1", "Y", "ON"):
+if use_colorlog:
+    LOGGING["formatters"]["color"] = {
+        '()': 'colorlog.ColoredFormatter',
+        'format': "%(log_color)s[%(asctime)s %(levelname)s %(name)s:%(lineno)s] %(message)s",
+        'log_colors': {
+            'DEBUG': 'bold_black',
+            'INFO': 'white',
+            'WARNING': 'yellow',
+            'ERROR': 'bold_red',
+            'CRITICAL': 'bold_red',
+        },
+    }
+
+if amcat_config["logs"].getboolean("queries"):
     LOGGING['loggers']['django.db'] = {}
 
-if os.environ.get('AMCAT_USE_LOGSTASH', 'N').upper() in ("1", "Y", "ON"):
+if amcat_config["logs"].getboolean("logstash"):
     LOGGING['handlers']['logstash'] =  {
         'level': 'INFO',
         'class': 'logstash.LogstashHandler',
-        'host': 'localhost',
-        'port': 5959,
+        'host': amcat_config["logs"].get("logstash_host"),
+        'port': amcat_config["logs"].get("logstash_port"),
         'version': 1, 
         'message_type': 'logstash',
     }
@@ -91,16 +93,16 @@ if os.environ.get('AMCAT_USE_LOGSTASH', 'N').upper() in ("1", "Y", "ON"):
         'level': 'INFO',
     }
         
-if 'AMCAT_LOG_FILE' in os.environ:
+if not amcat_config["base"].getboolean("debug") and amcat_config["logs"].get("file"):
     # Add file log handler
-    LOG_FILE = os.environ['AMCAT_LOG_FILE']
+    LOG_FILE = amcat_config["logs"].get("file")
     LOGGING['handlers']['logfile'] = {
         'level': LOG_LEVEL,
         'class': 'logging.handlers.RotatingFileHandler',
         'filename': LOG_FILE,
         'maxBytes': 2 * 1024 * 1024,
         'backupCount': 2,
-        'formatter': 'color',
+        'formatter': 'color' if use_colorlog else 'standard',
     }
     LOGGING['loggers']['']['handlers'] += ['logfile']
 
@@ -119,5 +121,5 @@ if 'AMCAT_LOG_FILE' in os.environ:
     })
 
 
-if os.environ.get('AMCAT_LOG_TO_CONSOLE', 'Y') in ("1", "Y", "ON"):
+if amcat_config["logs"].getboolean("console"):
     LOGGING['loggers']['']['handlers'] += ['console']

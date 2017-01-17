@@ -8,6 +8,7 @@ from django.apps import AppConfig
 
 default_app_config = 'amcat.AmCATAppConfig'
 
+
 class AmCATAppConfig(AppConfig):
     name = 'amcat'
     verbose_name = "AmCAT"

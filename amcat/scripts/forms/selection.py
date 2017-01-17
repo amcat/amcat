@@ -299,7 +299,7 @@ class SelectionForm(forms.Form):
 
     def clean_article_ids(self):
         article_ids = self.cleaned_data["article_ids"].split("\n")
-        article_ids = filter(bool, map(str.strip, article_ids))
+        article_ids = list(filter(bool, map(str.strip, article_ids)))
 
         # Parse all article ids as integer
         try:
@@ -320,9 +320,8 @@ class SelectionForm(forms.Form):
             # fetching all possible articles)
             existing = all_articles.values_list("id", flat=True)
             offenders = chosen_articles.exclude(id__in=existing).values_list("id", flat=True)
-            raise ValidationError(
-                ("Articles {offenders} not in chosen articlesets or some non-existent"
-                 .format(**locals())), code="invalid")
+            error_msg = "Article(s) {} do not exist in chosen article sets"
+            raise ValidationError((error_msg.format(", ".join(map(str, offenders)))), code="invalid")
 
         return article_ids
 

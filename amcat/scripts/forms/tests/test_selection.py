@@ -51,13 +51,7 @@ class TestSelectionForm(amcattest.AmCATTestCase):
         )
 
     def test_date_formats(self):
-
-        dates = (
-            "2006-10-25", "2006/10/25", "25-10-2006", "25/10/2006",
-            "Oct 25, 2006", "25 Oct 2006", "25 Oct, 2006",
-            "October 25 2006", "October 25, 2006", "25 October 2006",
-            "25 October, 2006"
-        )
+        dates = ("2006-10-25", "2006/10/25", "25-10-2006", "25/10/2006")
 
         project = amcattest.create_test_project()
 

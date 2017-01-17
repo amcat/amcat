@@ -1,49 +1,8 @@
 [
   {
-    "pk": 0, 
-    "model": "amcat.role", 
-    "fields": {
-      "projectlevel": false, 
-      "label": "reader"
-    }
-  }, 
-  {
-    "pk": 1, 
-    "model": "amcat.role", 
-    "fields": {
-      "projectlevel": false, 
-      "label": "read/write"
-    }
-  }, 
-  {
-    "pk": 2, 
-    "model": "amcat.role", 
-    "fields": {
-      "projectlevel": false, 
-      "label": "admin"
-    }
-  }, 
-  {
-    "pk": 3, 
-    "model": "amcat.role", 
-    "fields": {
-      "projectlevel": false, 
-      "label": "superadmin"
-    }
-  },
-  {
-    "pk": 4, 
-    "model": "amcat.role", 
-    "fields": {
-      "projectlevel": false, 
-      "label": "developer"
-    }
-  },
-  {
     "pk": 10, 
     "model": "amcat.role", 
     "fields": {
-      "projectlevel": true, 
       "label": "metareader"
     }
   }, 
@@ -51,7 +10,6 @@
     "pk": 11, 
     "model": "amcat.role", 
     "fields": {
-      "projectlevel": true, 
       "label": "reader"
     }
   }, 
@@ -59,7 +17,6 @@
     "pk": 12, 
     "model": "amcat.role", 
     "fields": {
-      "projectlevel": true, 
       "label": "read/write"
     }
   }, 
@@ -67,7 +24,6 @@
     "pk": 13, 
     "model": "amcat.role", 
     "fields": {
-      "projectlevel": true, 
       "label": "admin"
     }
   }, 

@@ -117,7 +117,7 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         class Meta:
             model = Project
             exclude = ('codingschemas', 'codebooks', 'articlesets', 'favourite_articlesets')
-        guest_role = forms.ModelChoiceField(queryset = Role.objects.filter(projectlevel=True), required=False,
+        guest_role = forms.ModelChoiceField(queryset=Role.objects.all(), required=False,
                                             help_text="What level of access should people who are not added to the "
                                             "project have? If you select None, the project and its contents will "
                                             "not be visible to non-members")

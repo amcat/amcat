@@ -21,7 +21,7 @@ class TestSplitArticles(amcattest.AmCATTestCase):
         aset.add_articles([article])
 
         user = amcattest.create_test_user(username="fred", password="secret")
-        ProjectRole.objects.create(user=user, project=aset.project, role=Role.objects.get(label="admin", projectlevel=True))
+        ProjectRole.objects.create(user=user, project=aset.project, role=Role.objects.get(label="admin"))
 
         # Only test the very basic; if a simple split works we trust the view
         # to use handle_split(), which is tested more extensively below.
@@ -202,8 +202,8 @@ class TestArticleViews(amcattest.AmCATTestCase):
     def test_permissions(self):
         # articles should be visible if any of the sets it is in has the correct permissions
 
-        role_metareader = Role.objects.get(label="metareader", projectlevel=True)
-        role_reader = Role.objects.get(label="reader", projectlevel=True)
+        role_metareader = Role.objects.get(label="metareader")
+        role_reader = Role.objects.get(label="reader")
 
         user = amcattest.create_test_user(username="fred", password="secret")
 

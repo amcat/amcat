@@ -148,12 +148,6 @@ def get_test_language(**kargs):
     return djangotoolkit.get_or_create(Language, label='en')
 
 
-def get_test_role(**kargs):
-    from amcat.models import Role
-    from amcat.tools import djangotoolkit
-    return djangotoolkit.get_or_create(Role, label='admin', projectlevel=False)
-
-
 def _parse_date(s: str):
     date = dateparser.parse(s, ['%Y-%m-%d', '%d-%m-%Y'], settings={"STRICT_PARSING": True})
     if date is None:

@@ -50,7 +50,23 @@
         </ul>
     </div>
 
-    {% if settings.DEBUG %}
+  {% if project.r_plugins_enabled %}
+    <div class="btn-group" role="group">
+        <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+            R plugins <span class="caret"></span>
+        </button>
+
+        <ul class="dropdown-menu pull-right" role="menu">
+          {% for r_plugin in r_queryactions %}
+            <li>
+                <a href="" class="script" id="script_{{ r_plugin|lower }}" name="{{ r_plugin|lower }}">{{ r_plugin|lower }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+    </div>
+  {% endif %}
+
+  {% if settings.DEBUG %}
         <div class="btn-group" role="group">
             <button type="button" class="btn btn-sm btn-warning dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
                 Debug <span class="caret"></span>

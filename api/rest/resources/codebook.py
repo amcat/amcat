@@ -17,22 +17,19 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.models import Codebook
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.exceptions import APIException
-
-from api.rest.resources.amcatresource import AmCATResource
+import itertools
 
 from django.conf.urls import url
+from rest_framework.response import Response
 
-import collections
-import itertools
+from amcat.models import Codebook, Label
+from api.rest.resources.amcatresource import AmCATResource
 from api.rest.serializer import AmCATModelSerializer
+from api.rest.viewsets import CodebookSerializer
 
 MAX_CODEBOOKS = 5
 CACHE_LABELS = (2, 1)
+
 
 def _walk(nodes):
     """Convert all TreeItems to dictionaries"""
@@ -40,6 +37,7 @@ def _walk(nodes):
         node = node._asdict()
         node['children'] = tuple(_walk(node['children']))
         yield node
+
 
 class CodebookHierarchyResource(AmCATResource):
     """
@@ -66,6 +64,7 @@ class CodebookHierarchyResource(AmCATResource):
     # ^ Docstring displayed on API web-page as documentation
     model = Codebook
     queryset = Codebook.objects.all()
+    serializer_class = CodebookSerializer
 
     @classmethod
     def get_url_pattern(cls):
@@ -87,7 +86,6 @@ class CodebookHierarchyResource(AmCATResource):
         codebook.cache()
         codebook.cache_labels()
         return tuple(_walk(codebook.get_tree(**kwargs)))
-
 
     def _get(self, request, *args, **kwargs):
         qs = self.filter_queryset(self.get_queryset())
@@ -111,13 +109,10 @@ class CodebookResource(AmCATResource):
             model = Codebook
 
 
-
-from amcat.models import Label
-from api.rest.resources.amcatresource import AmCATResource
-
 class LabelSerializer(AmCATModelSerializer):
     class Meta:
         model = Label
+
 
 class LabelResource(AmCATResource):
     model = Label

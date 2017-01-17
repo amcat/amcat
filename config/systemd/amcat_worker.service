@@ -1,0 +1,12 @@
+[Unit]
+Description=Celery workers for AmCAT
+BindsTo=amcat.service
+
+[Service]
+Environment=PYTHONPATH=${INSTALL_DIR}amcat
+ExecStart=${INSTALL_DIR}amcat/env/bin/python -m amcat.manage celery worker -l INFO -n amcat.%h --concurrency=4 -Q amcat
+Type=simple
+Restart=always
+StandardError=journal
+StandardOutput=journal
+

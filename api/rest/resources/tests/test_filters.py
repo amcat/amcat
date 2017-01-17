@@ -66,7 +66,7 @@ class TestFilters(ApiTestCase):
     def test_filter(self):
         from amcat.models import Role
         from api.rest.resources import ProjectResource
-        r = Role.objects.get(label='admin', projectlevel=True)
+        r = Role.objects.get(label='admin')
 
         p = amcattest.create_test_project(name="test")
         p2 = amcattest.create_test_project(name="not a test", guest_role=r)

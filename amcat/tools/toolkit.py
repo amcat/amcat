@@ -42,9 +42,9 @@ import itertools
 import locale
 import logging
 import random
+import re
 import string
 import time
-import re
 from contextlib import contextmanager
 from typing import Sequence
 
@@ -52,6 +52,18 @@ import dateparser
 from iso8601 import iso8601
 
 log = logging.getLogger(__name__)
+
+
+###########################################################################
+##                            Decorators                                 ##
+###########################################################################
+def synchronized_with(lock):
+    def decorator(func):
+        def synced_func(*args, **kws):
+            with lock:
+                return func(*args, **kws)
+        return synced_func
+    return decorator
 
 
 ###########################################################################
@@ -166,20 +178,9 @@ def strip_accents(s):
     return "".join(REV_ACCENTS_MAP.get(c, c) for c in s)
 
 
-def random_alphanum(size=10):
-    # TODO: Should switch to secrets ASAP (https://docs.python.org/3.5/library/secrets.html)
-    def crypto_choice(rng: random.SystemRandom, choices: Sequence):
-        return choices[rng.randrange(0, len(choices))]
-
-    cryptogen = random.SystemRandom()
-    choices = string.ascii_letters + string.digits
-    return ''.join([crypto_choice(cryptogen, choices) for i in range(size)])
-
-
 ###########################################################################
 ##                     Date(time) functions                              ##
 ###########################################################################
-
 RE_ISO = re.compile(r'\d{4}-\d{2}-\d{2}')
 
 
@@ -230,3 +231,13 @@ class Timer:
     def __exit__(self, *args):
         self.end = time.clock()
         self.interval = self.end - self.start
+
+
+def random_alphanum(size=10):
+    # TODO: Should switch to secrets ASAP (https://docs.python.org/3.5/library/secrets.html)
+    def crypto_choice(rng: random.SystemRandom, choices: Sequence):
+        return choices[rng.randrange(0, len(choices))]
+
+    cryptogen = random.SystemRandom()
+    choices = string.ascii_letters + string.digits
+    return ''.join([crypto_choice(cryptogen, choices) for i in range(size)])

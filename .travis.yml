@@ -34,8 +34,8 @@ before_install:
 
 install:
  - sudo apt-get update
- - cat apt_requirements.txt | tr '\n' ' ' | xargs sudo apt-get install -y
- - sudo apt-get install python-lxml python-amqplib python-psycopg2 python-requests python-pygments texinfo -y
+   #- cat apt_requirements.txt | tr '\n' ' ' | xargs sudo apt-get install -y
+ - sudo apt-get install python-lxml python-amqplib python-psycopg2 python-requests python-pygments texinfo unrtf rabbitmq-server python3-dev libxml2-dev libxslt-dev lib32z1-dev git curl python-pdfminer graphviz pspp r-base r-base-dev antiword redis-server -y
  - sudo service rabbitmq-server start
 
  # Latest PSPP (present in 15.04, 15.10, 16.04 archives)
@@ -53,11 +53,10 @@ install:
  - sudo /usr/share/elasticsearch/bin/plugin install mobz/elasticsearch-head
  - sudo /usr/share/elasticsearch/bin/plugin install analysis-icu
  - sudo /usr/share/elasticsearch/bin/plugin install amcat/hitcount/2.3.4
- - "sudo tee -a /etc/elasticsearch/elasticsearch.yml <<< 'index.similarity.default.type: hitcountsimilarity'"
- - "sudo tee -a /etc/elasticsearch/elasticsearch.yml <<< 'script.inline: on'"
- - "sudo tee -a /etc/elasticsearch/elasticsearch.yml <<< 'script.update: on'"
- - sudo service elasticsearch stop
- - sudo service elasticsearch start
+ - sudo wget -q https://raw.githubusercontent.com/amcat/amcat/master/config/elasticsearch/amcat_remove_from_set.groovy -O /etc/elasticsearch/scripts/amcat_remove_from_set.groovy
+ - sudo wget -q https://raw.githubusercontent.com/amcat/amcat/master/config/elasticsearch/amcat_add_to_set.groovy -O /etc/elasticsearch/scripts/amcat_add_to_set.groovy
+ - sudo wget -q https://raw.githubusercontent.com/amcat/amcat/master/config/elasticsearch/amcat_lead.groovy -O /etc/elasticsearch/scripts/amcat_lead.groovy  
+ - sudo service elasticsearch restart
  - pip install -r requirements.txt
  - pip install coverage coveralls
  - celery -A amcat.amcatcelery worker -l DEBUG -Q amcat &
