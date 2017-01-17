@@ -412,7 +412,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
             return [w for (f, p, w) in sorted(tokens)]
 
         self.assertEqual(tokens("proptest"), ["123", "test", "and", "another"])
-        self.assertEqual(tokens("proptest5_tag"), ["123 test", "and another"])
+        self.assertEqual(set(tokens("proptest5_tag")), {"123 test", "and another"})
         self.assertEqual(tokens("proptest6_id"), ["123 test, and another"])
         self.assertEqual(tokens("proptest2_url"), ["http://example.org"])
 
