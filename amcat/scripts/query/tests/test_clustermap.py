@@ -30,7 +30,7 @@ from amcat.tools.amcates import ES
 
 def _to_comparable(result):
     for r in result:
-        yield tuple((k, (tuple(sorted(v)) if isinstance(v, list) else v)) for k,v in r.items())
+        yield frozenset((k, (tuple(sorted(v)) if isinstance(v, list) else v)) for k,v in r.items())
 
 def _strip_csv(s):
     return "\n".join(l.strip() for l in s.split("\n")).strip()
