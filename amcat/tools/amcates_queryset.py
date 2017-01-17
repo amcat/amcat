@@ -191,19 +191,22 @@ def _get_filter_clauses_from_querydict(qdict: QueryDict):
 
             if qualifier == "in":
                 # If user specifies multiply ins, take intersection
-                value = {v.strip() for v in qdict.get(field).split(",")}
-                for values in qdict.getlist(field):
-                    value &= {v.strip() for v in values.split(",")}
+                value = [v.strip() for v in qdict.get(field).split(",")]
+                if len(qdict.getlist(field)) > 1:
+                    for values in qdict.getlist(field):
+                        value = set(value) & {v.strip() for v in values.split(",")}
+                    value = list(value)
             elif len(qdict.getlist(field)) > 1:
                 raise ValueError("Is does not make sense to have more than 1 value for filter: {}".format(field))
             else:
                 value = qdict.get(field)
         else:
-            value = set(qdict.getlist(field))
+            value = list(qdict.getlist(field))
             field += "__in"
 
         if field in filters:
-            filters[field] &= value
+            # Field has already been filtered with a different qualifier
+            filters[field] = list(set(filters[field]) & set(value))
         else:
             filters[field] = value
     return filters
