@@ -20,17 +20,22 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-import logging; log = logging.getLogger(__name__)
-
-from amcat.scripts.script import Script
-from amcat.models import ArticleSet
-from hashlib import sha224 as hash_class
-from django import forms
-from amcat.tools import amcates
-import json
 import collections
+import logging
+from itertools import chain
+from typing import Iterable, Tuple
+from hashlib import sha224 as hash_class
 
-FIELDS = ["text", "title", "date", "creator", "medium", "byline", "section", "page", "addressee", "length"]
+from django import forms
+
+from amcat.forms.widgets import BootstrapMultipleSelect
+from amcat.models import ArticleSet
+from amcat.scripts.script import Script
+from amcat.tools import amcates
+
+log = logging.getLogger(__name__)
+
+STATIC_FIELDS = ["text", "title", "date", "url"]
 
 class DeduplicateSet(Script):
     """
@@ -39,40 +44,31 @@ class DeduplicateSet(Script):
 
     class options_form(forms.Form):
         articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
-        skip_text = forms.BooleanField(initial=False, required=False,
-                                       help_text="Ignore full text when finding duplicates")
-        skip_title = forms.BooleanField(initial=False, required=False,
-                                           help_text="Ignore title when finding duplicates")
-        skip_date = forms.BooleanField(initial=False, required=False,
-                                       help_text="Ignore date when finding duplicates")
-        skip_creator = forms.BooleanField(initial=False, required=False,
-                                          help_text="Ignore creator when finding duplicates")
-        skip_medium = forms.BooleanField(initial=False, required=False,
-                                         help_text="Ignore medium when finding duplicates")
-        skip_byline = forms.BooleanField(initial=False, required=False,
-                                         help_text="Ignore byline when finding duplicates")
-        skip_section = forms.BooleanField(initial=False, required=False,
-                                         help_text="Ignore section when finding duplicates")
-        skip_page = forms.BooleanField(initial=False, required=False,
-                                         help_text="Ignore page when finding duplicates")
-        skip_addressee = forms.BooleanField(initial=False, required=False,
-                                            help_text="Ignore addressee when finding duplicates")
-        skip_length = forms.BooleanField(initial=False, required=False,
-                                         help_text="Ignore length when finding duplicates")
-        save_duplicates_to = forms.CharField(initial="", required=False, 
+        ignore_fields = forms.MultipleChoiceField(choices=[(f, f) for f in STATIC_FIELDS],
+                                                  required=False,
+                                                  widget=BootstrapMultipleSelect)
+        save_duplicates_to = forms.CharField(initial="", required=False,
                                              help_text="If not empty, save duplicates to new set with this name.")
 
         dry_run = forms.BooleanField(initial=False, required=False,
                                      help_text="Prints all duplicates but doesn't remove them")
 
-    def _run(self, articleset, save_duplicates_to, dry_run, **_):
+        def __init__(self, *args, articleset=None, **kwargs):
+            super().__init__(*args, **kwargs)
+            articleset = articleset or kwargs.get('data', {}).get('articleset')
+            if isinstance(articleset, int):
+                articleset = ArticleSet.objects.get(pk=articleset)
+            properties = articleset.get_used_properties()
+            self.fields['ignore_fields'].choices = [(f, f) for f in chain(STATIC_FIELDS, properties)]
+
+    def _run(self, articleset, save_duplicates_to, dry_run, ignore_fields, **_):
         hashes = collections.defaultdict(set)
-        for i, (id, h) in enumerate(self.get_hashes()):
-            if not i%100000:
+        for i, (id, h) in enumerate(self.hash_articles(articleset, set(ignore_fields))):
+            if not i % 100000:
                 logging.info("Collecting hashes, n={i}, |hashes|={n}".format(n=len(hashes), **locals()))
             hashes[h].add(id)
 
-        hashes = {hash: ids for (hash, ids) in hashes.items() if len(ids)>1}
+        hashes = {hash: ids for (hash, ids) in hashes.items() if len(ids) > 1}
         logging.info("Duplicates founds for {} articles".format(len(hashes)))
 
         to_remove = set()
@@ -82,7 +78,8 @@ class DeduplicateSet(Script):
                 logging.info("Duplicates: {ids}".format(**locals()))
             to_remove |= set(sorted(ids)[1:])
             if not i % 100000:
-                logging.info("Iterating over hashes {i}/{n}, |to_remove|={m}".format(n=len(hashes), m=len(to_remove), **locals()))
+                logging.info("Iterating over hashes {i}/{n}, |to_remove|={m}".format(n=len(hashes), m=len(to_remove),
+                                                                                     **locals()))
 
         n = len(to_remove)
         if not to_remove:
@@ -97,22 +94,35 @@ class DeduplicateSet(Script):
                 dupes_article_set = ArticleSet.create_set(articleset.project, save_duplicates_to, to_remove)
         return n, dry_run
 
-    def get_hashes(self):
-        fields =  [f for f in FIELDS if not self.options.get("skip_{}".format(f))]
-        if fields == FIELDS:
+    @classmethod
+    def hash_articles(cls, articleset: ArticleSet, ignore_fields: set) -> Iterable[Tuple[int, str]]:
+        """
+        Finds all articles in an articleset, and hashes articles as a tuple of field values, ordered alphabetically
+        by field name. Fields in ignore_fields will not affect the hash.
+        Hashes for two articles are equal, if and only if for each field that is not in ignore_fields, the
+        values of thoses fields are equal in both articles.
+
+        @param articleset       The articleset that is to be searched
+        @param ignore_fields    A set of fields that should not be included in the calculated hashes
+
+        @return                 An iterable of (<article_id>, <hash>) tuples.
+        """
+        all_fields = STATIC_FIELDS + list(articleset.get_used_properties())
+
+        if not ignore_fields:
             fields = ["hash"]
-        setid = self.options['articleset'].id
-        for x in amcates.ES().scan(query={"query" : {"constant_score" : {"filter": {"term": {"sets": setid}}}}},
+        else:
+            fields = sorted(f for f in all_fields if not f in ignore_fields)
+
+        x = amcates.ES().scan(query={"query": {"constant_score": {"filter": {"term": {"sets": articleset.id}}}}},
+                              fields=fields)
+        for x in amcates.ES().scan(query={"query": {"constant_score": {"filter": {"term": {"sets": articleset.id}}}}},
                                    fields=fields):
-            if fields == ["hash"]:
-                hash = x['fields']['hash'][0]
-            else:
-                def get(flds, f):
-                    val = flds.get(f)
-                    return val[0] if val is not None else val
-                    
-                d = {f: get(x['fields'], f) for f in fields}
-                hash = hash_class(json.dumps(d)).hexdigest()
+            if not ignore_fields:
+                yield int(x['_id']), x['fields']['hash'][0]
+                continue
+            art_tuple = tuple(str(x['fields'].get(k, [None])[0]) for k in fields)
+            hash = hash_class(repr(art_tuple).encode()).hexdigest()
             yield int(x['_id']), hash
 
 

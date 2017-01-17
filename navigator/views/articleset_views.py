@@ -280,6 +280,11 @@ class ArticleSetDeduplicateView(ProjectScriptView):
         form.fields["articleset"].initial = self.get_object()
         return form
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['articleset'] = self.get_object()
+        return kwargs
+
     def success_message(self, result=None):
         (n, dry_run) = self.result
         if not n:
