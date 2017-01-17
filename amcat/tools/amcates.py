@@ -50,9 +50,11 @@ EMPTY_RO_DICT = MappingProxyType({})
 
 def _clean(s):
     """Remove non-printable characters and convert dates"""
-    if not isinstance(s, (datetime.date, float, int, str, type(None))):
+    if not isinstance(s, (datetime.date, float, int, str, set, type(None))):
         raise ValueError("Cannot convert {} to elastic field: {}".format(type(s), s))
 
+    if isinstance(s, set):
+        return list(map(_clean, s))
     if isinstance(s, str):
         # Convert non-printable characters to spaces
         return _clean_re.sub(' ', s)
@@ -159,10 +161,8 @@ def _get_bulk_body(articles, action):
         yield serialize({action: {'_id': article_id}})
         yield article
 
-
 def get_bulk_body(articles, action="index"):
     return "\n".join(_get_bulk_body(articles, action)) + "\n"
-
 
 class SearchResult(object):
     """Iterable collection of results that also has total"""
@@ -294,14 +294,14 @@ class _ES(object):
     def get_mapping(self):
         m = self.es.indices.get_mapping(self.index, self.doc_type)
         return m[self.index]['mappings'][self.doc_type]['properties']
-        
+
     def get_properties(self, force_refresh=False):
         global _KNOWN_PROPERTIES
         if force_refresh or (_KNOWN_PROPERTIES is None):
             self.check_index()
             _KNOWN_PROPERTIES = set(self.get_mapping().keys())
         return _KNOWN_PROPERTIES
-            
+
     def refresh(self):
         self.es.indices.refresh()
 
@@ -368,7 +368,7 @@ class _ES(object):
 
     def put_mapping(self, doc_type, body, **kargs):
         return self.es.indices.put_mapping(index=self.index, doc_type=doc_type, body=body, **kargs)
-        
+
     def status(self):
         nodes = self.es.nodes.info()['nodes'].values()
         return {"ping": self.es.ping(),
@@ -396,7 +396,7 @@ class _ES(object):
         getdocs = [{"_index" : self.index, "_id" : id, "_parent" : parent, "_type" : doc_type}
                    for (id, parent) in zip(ids, parents)]
         return self.es.mget({"docs": getdocs})['docs']
-        
+
     def search(self, body, **options):
         """
         Perform a 'raw' search on the underlying ES index
@@ -411,7 +411,7 @@ class _ES(object):
         See: http://elasticsearch-py.readthedocs.org/en/latest/helpers.html#elasticsearch.helpers.scan
         """
         return scan(self.es, index=self.index, doc_type=self.doc_type, query=query, **kargs)
-        
+
     def query_ids(self, query=None, filters=EMPTY_RO_DICT, body=None, limit=None, **kwargs):
         """
         Query the index returning a sequence of article ids for the mathced articles
@@ -451,7 +451,7 @@ class _ES(object):
                 body['highlight'] = highlight
             else:
                 body['highlight'] = HIGHLIGHT_OPTIONS
-        if lead or False and query == "" and highlight: 
+        if lead or False and query == "" and highlight:
             body['script_fields'] = {"lead": {"script": {"file": LEAD_SCRIPT_FIELD}}}
 
         result = self.search(body, fields=fields, **kwargs)
@@ -518,7 +518,7 @@ class _ES(object):
             all_sets = multidict((aa.article_id, aa.articleset_id)
                                  for aa in ArticleSetArticle.objects.filter(article__in=batch))
             dicts = (get_article_dict(article, list(all_sets.get(article.id, [])))
-                     for article in Article.objects.filter(pk__in=batch))            
+                     for article in Article.objects.filter(pk__in=batch))
             self.bulk_insert(dicts, batch_size=None)
 
     def remove_from_set(self, setid, article_ids, flush=True):
@@ -578,7 +578,7 @@ class _ES(object):
             resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
             if resp["errors"]:
                 raise ElasticSearchError(resp)
-            
+
     def update_values(self, article_id, values):
         """Update properties of existing article.
 
