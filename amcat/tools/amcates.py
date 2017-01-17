@@ -23,7 +23,6 @@ import logging
 import os
 import re
 
-from collections import namedtuple
 from hashlib import sha224 as hash_class
 from json import dumps as serialize
 from multiprocessing.pool import ThreadPool
@@ -649,124 +648,6 @@ class _ES(object):
         body = {"query": {"constant_score": filters}}
         return self._count(body)["count"]
 
-    def search_aggregate(self, aggregation, query=None, filters=None, **options):
-        """
-        Run an aggregate search query and return the aggregation results
-        @param aggregation: raw elastic query, e.g. {"terms" : {"field" : "medium"}}
-        """
-        body = dict(query={"filtered": dict(build_body(query, filters, query_as_filter=True))},
-                    aggregations={"aggregation": aggregation})
-        result = self.search(body, size=0, search_type="count", **options)
-        return result['aggregations']['aggregation']
-
-    def _parse_terms_aggregate(self, aggregate, group_by, terms, sets):
-        if not group_by:
-            for term in terms:
-                yield term, aggregate[term.label]['doc_count']
-        else:
-            for term in terms:
-                yield term, self._parse_aggregate(aggregate[term.label], list(group_by), terms, sets)
-
-    def _parse_other_aggregate(self, aggregate, group_by, group, terms, sets):
-        buckets = aggregate[group]["buckets"]
-        if not group_by:
-            return ((b['key'], b['doc_count']) for b in buckets)
-        return ((b['key'], self._parse_aggregate(b, list(group_by), terms, sets)) for b in buckets)
-
-    def _parse_aggregate(self, aggregate, group_by, terms, sets):
-        """Parse a aggregation result to (nested) namedtuples."""
-        group = group_by.pop(0)
-
-        if group == "terms":
-            result = self._parse_terms_aggregate(aggregate, group_by, terms, sets)
-        else:
-            result = self._parse_other_aggregate(aggregate, group_by, group, terms, sets)
-            if group == "sets" and sets is not None:
-                # Filter sets if 'sets' is given
-                result = ((aset_id, res) for aset_id, res in result if aset_id in set(sets))
-            elif group == "date":
-                # Parse timestamps as datetime objects
-                result = ((get_date(stamp), aggr) for stamp, aggr in result)
-
-        # Return results as namedtuples
-        ntuple = namedtuple("Aggr", [group, "buckets" if group_by else "count"])
-        return [ntuple(*r) for r in result]
-
-    def _build_aggregate(self, group_by, date_interval, terms, sets):
-        """Build nested aggregation query for list of groups"""
-        group = group_by.pop(0)
-
-        if group == 'date':
-            aggregation = {
-                group: {
-                    'date_histogram': {
-                        'field': group,
-                        'interval': date_interval,
-                        "min_doc_count" : 1
-                    }
-                }
-            }
-        elif group == 'terms':
-            aggregation = {
-                term.label: {
-                    'filter': dict(build_body(term.query))
-                } for term in terms
-            }
-        else:
-            aggregation = {
-                group: {
-                    'terms': {
-                        # Default size is too small, we want to return all results
-                        'size': 999999,
-                        'field': group
-                    }
-                }
-            }
-
-        # We need to nest the other aggregations, see:
-        # http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-aggregations.html
-        if group_by:
-            nested = self._build_aggregate(group_by, date_interval, terms, sets)
-            for aggr in aggregation.values():
-                aggr["aggregations"] = nested
-
-        return aggregation
-
-    def aggregate_query(self, query=None, filters=None, group_by=None, terms=None, sets=None, date_interval='month'):
-        """
-        Compute an aggregate query, e.g. select count(*) where <filters> group by <group_by>. If
-        date is used as a group_by variable, uses date_interval to bin it. It does support multiple
-        values for group_by.
-
-        You can group_by on terms by supplying "terms" to group_by. In addition, you will need to
-        supply terms as a parameter, which consists of a list of SearchQuery's. Query is then used
-        as a global filter, while terms are 'local'.
-
-        @param query: an elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
-        @type group_by: list / tuple
-        @type mediums: bool
-        @param mediums: return Medium objects, instead of ids
-        """
-        if isinstance(group_by, str):
-            log.warning("Passing strings to aggregate_query(group_by) is deprecated.")
-            group_by = [group_by]
-
-        if "terms" in group_by and terms is None:
-            raise ValueError("You should pass a list of terms if aggregating on it.")
-
-        filters = dict(build_body(query, filters, query_as_filter=True))
-        aggregations = self._build_aggregate(list(group_by), date_interval, terms, sets)
-
-        body = {
-            "query": {"constant_score": filters},
-            "aggregations": aggregations
-        }
-
-        log.debug("es.search(body={body})".format(**locals()))
-        result = self.search(body)
-        result = self._parse_aggregate(result["aggregations"], list(group_by), terms, sets)
-        return result
-
     def statistics(self, query=None, filters=None):
         """Compute and return a Result object with n, start_date and end_date for the selection"""
         body = {
@@ -821,37 +702,6 @@ class _ES(object):
         """
         hash = get_article_dict(article).hash
         return self.query(filters={'hashes': hash}, fields=["sets"], score=False)
-
-    def find_occurrences(self, query, article):
-        """
-        Find the occurrences of the query in the article (id)
-        @return: a sequence of (offset, word) pairs
-        """
-        if not isinstance(article, int):
-            article = article.id
-        # get highlighted text
-        hl = self.highlight_article(article, query)
-        if not (hl and 'text' in hl):
-            return
-        text = hl['text']
-
-        # parse highlight to return offsets
-        pre_tag, post_tag = "<em>", "</em>"
-        in_tag = False
-        offset = 0
-        for token in re.split("({pre_tag}|{post_tag})".format(**locals()), text):
-            if token == pre_tag:
-                if in_tag:
-                    raise ValueError("Encountered pre_tag while in tag")
-                in_tag = True
-            elif token == post_tag:
-                if not in_tag:
-                    raise ValueError("Encountered post_tag while not in tag")
-                in_tag = False
-            else:
-                if in_tag:
-                    yield offset, token
-                offset += len(token)
 
     def _get_purge_actions(self, query):
         for id in self.query_ids(body=query):

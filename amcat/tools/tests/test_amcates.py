@@ -81,52 +81,6 @@ class TestAmcatES(amcattest.AmCATTestCase):
         ES().refresh()
 
     @amcattest.use_elastic
-    def test_aggregate(self):
-        """Can we make tables per date interval?"""
-        s1, s2, a, b, c, d, e = self.setup()
-
-        self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="date", date_interval="year")),
-                         {datetime.datetime(2001, 1, 1): 3, datetime.datetime(2002, 1, 1): 1})
-
-        self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="date", date_interval="month")),
-                         {datetime.datetime(2001, 1, 1): 1, datetime.datetime(2002, 1, 1): 1, datetime.datetime(2001, 2, 1): 2})
-
-        # set statistics
-        stats = ES().statistics(filters=dict(sets=s1.id))
-        self.assertEqual(stats.n, 4)
-        self.assertEqual(stats.start_date, datetime.datetime(2001, 1, 1))
-        self.assertEqual(stats.end_date, datetime.datetime(2002, 1, 1))
-
-
-    @amcattest.use_elastic
-    def test_terms_aggregate(self):
-        s1, s2, a, b, c, d, e = self.setup()
-        q1 = SearchQuery.from_string("noot")
-        q2 = SearchQuery.from_string("bla")
-
-        query = lambda **kw: ES().aggregate_query(filters={"sets": s1.id}, **kw)
-
-        # Should raise error if not terms are supplied
-        self.assertRaises(ValueError, query, group_by=["terms"])
-
-        # Should convert terms to 'buckets'
-        aggr = query(group_by=["terms"], terms=[q1, q2])
-        self.assertEqual(set(aggr), {(q1, 3), (q2, 1)})
-
-    @amcattest.use_elastic
-    def test_sets_aggregate(self):
-        s1, s2, a, b, c, d, e = self.setup()
-
-        query = lambda **kw: set(ES().aggregate_query(filters={"sets": [s1.id, s2.id]}, **kw))
-
-        # Not specifiying a 'filter' should result in all sets
-        self.assertEqual(query(group_by=["sets"]), {(s1.id, 4), (s2.id, 1)})
-
-        # Specifiying a 'filter' should result in less sets
-        self.assertEqual(query(group_by=["sets"], sets=[s1.id]), {(s1.id, 4)})
-
-
-    @amcattest.use_elastic
     def test_query_all(self):
         """Test that query_all works"""
         from amcat.models import Article
