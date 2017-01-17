@@ -44,7 +44,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
     def test_get_property_primitive_type(self):
         # Special property names
-        self.assertEqual(get_property_primitive_type("sets"), int)
+        self.assertEqual(get_property_primitive_type("sets"), set)
         self.assertEqual(get_property_primitive_type("text"), str)
         self.assertEqual(get_property_primitive_type("hash"), str)
         self.assertEqual(get_property_primitive_type("date"), datetime.datetime)
@@ -390,7 +390,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
             proptest2_url="http://example.org",
             proptest3_date="2001-01-01",
             proptest4_num=-1,
-            proptest5_tag="123 test, and another",
+            proptest5_tag={"123 test", "and another"},
             proptest6_id="123 test, and another")
 
         self.assertEqual(set(props.keys()) & set(ES().get_mapping().keys()), set())

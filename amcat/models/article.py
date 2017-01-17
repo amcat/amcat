@@ -97,13 +97,15 @@ def get_used_properties(articles: Union[Set[int], Sequence[int]]) -> Set[str]:
 EMPTY = object()
 
 
-class DateTimeEncoder(json.JSONEncoder):
+class PropertyMappingJSONEncoder(json.JSONEncoder):
     """Datetime aware JSON encoder. Credits: http://stackoverflow.com/a/27058505/478503"""
     def default(self, o):
         if isinstance(o, datetime.datetime):
             return o.isoformat()
         elif isinstance(o, datetime.date):
             return datetime.datetime(o.year, o.month, o.day).isoformat()
+        elif isinstance(o, set):
+            return self.encode(list(o))
         return json.JSONEncoder.default(self, o)
 
 
@@ -177,7 +179,7 @@ class PropertyField(JSONField):
 
     def get_prep_value(self, value):
         if value is not None:
-            return Json(value, dumps=functools.partial(json.dumps, cls=DateTimeEncoder))
+            return Json(value, dumps=functools.partial(json.dumps, cls=PropertyMappingJSONEncoder))
         return None
 
     def validate(self, value, model_instance):
