@@ -151,9 +151,6 @@ def get_filter_clause_date(field: str, qualifier: Optional[str], filter_value):
 
 
 def get_filter_clause_sets(field: str, qualifier: Optional[str], filter_value):
-    if field != "sets":
-        raise ValueError("No set field except 'sets' is supported right now.")
-
     if qualifier == "overlap":
         return {"terms": {field: list(filter_value)}}
 

@@ -44,7 +44,8 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
             project=self.project,
             exists="Once",
             page_int=5,
-            section_int=10
+            section_int=10,
+            tags_tag={"gloria", "vloek"}
         )
 
         self.a2 = Article(
@@ -55,7 +56,8 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
             publisher="De Speld",
             project=self.project,
             page_int=5,
-            section_int=11
+            section_int=11,
+            tags_tag={"vvd", "nederland", "speld"}
         )
 
         Article.create_articles([self.a1, self.a2], articleset=self.aset)
@@ -71,6 +73,25 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
         # TODO:
         #print(list(self.qs.filter(author__exact="Thomas Hogeling")))
         #print(list(self.qs.filter(author__exact__in=["Thomas Hogeling"])))
+
+    @amcattest.use_elastic
+    def test_filter_tags(self):
+        self.set_up()
+
+        self.assertEqual(
+            set(self.qs.filter(tags_tag__overlap=["vvd"]).values_list("id", flat=True)),
+            {self.a2.id}
+        )
+
+        self.assertEqual(
+            set(self.qs.filter(tags_tag__overlap=["vvd", "nederland"]).values_list("id", flat=True)),
+            {self.a2.id}
+        )
+
+        self.assertEqual(
+            set(self.qs.filter(tags_tag__overlap=["vloek", "vvd", "nederland"]).values_list("id", flat=True)),
+            {self.a2.id, self.a1.id}
+        )
 
 
     @amcattest.use_elastic
