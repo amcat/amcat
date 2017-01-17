@@ -19,21 +19,25 @@
 
 import copy
 import functools
-import datetime
+import itertools
 import re
-
 from typing import Container
+
 from django.http import QueryDict
 from django_filters import filters, filterset
 from rest_framework.exceptions import ParseError, NotFound, PermissionDenied
 from rest_framework.fields import CharField, IntegerField, DateTimeField
-from rest_framework.serializers import Serializer, FloatField
+from rest_framework.serializers import Serializer
 
-from amcat.models import Project, Article, ROLE_PROJECT_METAREADER, ArticleSet, \
-    get_used_properties_by_articlesets
+from amcat.models import Project, Article, ROLE_PROJECT_METAREADER
 from amcat.tools import amcates, keywordsearch
-from amcat.tools.amcates import get_property_primitive_type, ALL_FIELDS
+from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import AmCATResource
+
+# NOTE: Adding 'page' to filter fields introduces ambiguity (article-page vs. API page)
+FILTER_FIELDS = frozenset({"start_date", "end_date", "on_date", "mediumid", "sets", "section"})
+FILTER_SINGLE_FIELDS = frozenset({"start_date", "end_date", "on_date", "section"})
+FILTER_ID_FIELDS = frozenset({"ids", "pk"})
 
 RE_KWIC = re.compile("(?P<left>.*?)<mark>(?P<keyword>.*?)</mark>(?P<right>.*)", re.DOTALL)
 
@@ -190,19 +194,17 @@ class SearchResourceSerialiser(Serializer):
 
         for column in columns:
             if column not in self.fields:
-                ptype = get_property_primitive_type(column)
-                if ptype == int:
-                    self.fields[column] = IntegerField()
-                elif ptype == float:
-                    self.fields[column] = FloatField()
-                elif ptype == datetime.datetime:
-                    self.fields[column] = DateTimeField()
-                else:
-                    self.fields[column] = CharField()
+                self.fields[column] = CharField()
 
         if "hits" in columns and queries:
             for q in queries:
                 self.fields[q.label] = ScoreField()
+
+        if "text" in columns:
+            self.fields['text'] = CharField()
+
+        if "projectid" in columns:
+            self.fields['projectid'] = IntegerField()
 
         if "lead" in columns:
             self.fields['lead'] = HighlightField()
@@ -260,7 +262,7 @@ class SearchResource(AmCATResource):
         return self.get(request, *args, **kwargs)
 
     @property
-    @functools.lru_cache()
+    @cached
     def params(self):
         q = QueryDict("", mutable=True)
         q.update(self.request.query_params)
@@ -268,12 +270,12 @@ class SearchResource(AmCATResource):
         return QueryDict(q.urlencode().encode('utf-8'))
 
     @property
-    @functools.lru_cache()
+    @cached
     def columns(self):
         return self.params.getlist("col")
 
     @property
-    @functools.lru_cache()
+    @cached
     def queries(self):
         queries = filter(bool, self.params.getlist("q"))
         return [keywordsearch.SearchQuery.from_string(q) for q in queries]
@@ -307,17 +309,22 @@ class SearchResource(AmCATResource):
         return frozenset(given_set_ids or valid_set_ids)
 
     def filter_queryset(self, queryset):
-        # TODO: Use rest_framework filtersets
+        # Allow for both 'ids' and 'pk' filtering
+        ids = [self.params.getlist(field_name) for field_name in FILTER_ID_FIELDS]
+        ids = list(itertools.chain.from_iterable(ids))
+        if ids:
+            queryset.filter("ids", ids)
+
         # Force filtering of correct sets by overriding user values (if necessary)
         params = copy.copy(self.params)
         params.setlist("sets", map(str, self.get_articlesets()))
 
-        articlesets = ArticleSet.objects.filter(id__in=self.get_articlesets()).only('id')
-        used_properties = set(get_used_properties_by_articlesets(articlesets)) | ALL_FIELDS
-        for field in list(params):
-            fieldname = field.split("__")[0]
-            if fieldname not in used_properties:
-                del params[field]
+        for k in FILTER_FIELDS:
+            if k in params:
+                if k in FILTER_SINGLE_FIELDS:
+                    queryset.filter(k, params.get(k))
+                else:
+                    queryset.filter(k, params.getlist(k))
 
         return queryset
 

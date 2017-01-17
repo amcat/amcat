@@ -40,7 +40,7 @@ class TestSearch(ApiTestCase):
             s.add_articles([a.id])
             amcates.ES().refresh()
 
-            res = self.get("/api/v4/search", project=a.project_id)
+            res = self.get("/api/v4/search", project=a.project_id, q="*", sets=[s.id])
             date = iso8601.parse_date(res['results'][0]['date'])
 
             self.assertEqual(
