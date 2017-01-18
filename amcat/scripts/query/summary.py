@@ -73,8 +73,7 @@ class SummaryActionForm(QueryActionForm):
     offset = IntegerField(initial=0)
     number_of_fragments = IntegerField(initial=3)
     fragment_size = IntegerField(initial=150)
-    show_fields = forms.MultipleChoiceField(choices=(), initial=("author", "publisher", "section"), required=False)
-
+    show_fields = forms.MultipleChoiceField(choices=(), initial=(), required=False)
     aggregations = BooleanField(initial=True, required=False)
 
     def __init__(self, user, *args, **kwargs):
@@ -82,6 +81,7 @@ class SummaryActionForm(QueryActionForm):
 
         article_props = set(get_used_properties_by_articlesets(self.articlesets))
         self.fields["show_fields"].choices = sorted((p, p) for p in article_props)
+        self.fields["show_fields"].initial = [p for p in ("author", "publisher", "section") if p in article_props]
 
 
 class SummaryAction(QueryAction):

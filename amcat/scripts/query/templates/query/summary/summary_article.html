@@ -24,5 +24,9 @@
 </div>
 
 <div class="article-snippet">
-    {{ a.text|safe }}
+    {% if "<em>" not in a.text %}
+      {{ a.text|truncatewords:50 }}
+    {% else %}
+      {{ a.text|safe }}
+    {% endif %}
 </div>
