@@ -20,6 +20,7 @@ import datetime
 import functools
 import random
 import regex
+import html
 import iso8601
 
 from collections import ChainMap
