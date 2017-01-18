@@ -821,37 +821,6 @@ class _ES(object):
         hash = get_article_dict(article).hash
         return self.query(filters={'hashes': hash}, fields=["sets"], score=False)
 
-    def find_occurrences(self, query, article):
-        """
-        Find the occurrences of the query in the article (id)
-        @return: a sequence of (offset, word) pairs
-        """
-        if not isinstance(article, int):
-            article = article.id
-        # get highlighted text
-        hl = self.highlight_article(article, query)
-        if not (hl and 'text' in hl):
-            return
-        text = hl['text']
-
-        # parse highlight to return offsets
-        pre_tag, post_tag = "<em>", "</em>"
-        in_tag = False
-        offset = 0
-        for token in re.split("({pre_tag}|{post_tag})".format(**locals()), text):
-            if token == pre_tag:
-                if in_tag:
-                    raise ValueError("Encountered pre_tag while in tag")
-                in_tag = True
-            elif token == post_tag:
-                if not in_tag:
-                    raise ValueError("Encountered post_tag while not in tag")
-                in_tag = False
-            else:
-                if in_tag:
-                    yield offset, token
-                offset += len(token)
-
     def _get_purge_actions(self, query):
         for id in self.query_ids(body=query):
             yield {

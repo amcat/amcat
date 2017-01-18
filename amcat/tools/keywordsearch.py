@@ -186,14 +186,8 @@ class SelectionSearch:
     def get_article_ids_per_query(self):
         return dict(self._get_article_ids_per_query())
 
-    def get_articles(self, size=None, offset=0):
-        """
-
-        """
-        query = self.get_query()
-        lead = not query
-        fields = ['title','text','date', 'length','medium','author','section']
-        return ES().query(query, self.get_filters(), True, size=size, from_=offset, fields=fields, lead=lead)
+    def get_articles(self, size=None, offset=0, fields=()):
+        return ES().query(self.get_query(), self.get_filters(), True, size=size, from_=offset, fields=fields)
 
 
 class SearchQuery(object):

@@ -3,28 +3,16 @@
         <span class="hit-count">{{a.totalHits}} hits - </span>
     {% endif %}
     <a href="{% url "navigator:project-article-details" project.id a.id %}" target="_blank">
-        {% if a.highlight.title %}
-            {{ a.highlight.title|first|safe|default:"[No title]"}}
-        {% else %}
-            {{ a.title|default:"[No title]"}}
-        {% endif %}
+        {{ a.title|default:"[No title]"|safe }}
     </a>
 </div>
 
 <div class="article-meta">
     {{ a.date|date:"d-m-Y" }} |
-    {{ a.length }} words |
-    {{ a.medium.id }} - {{ a.medium.name }}
     {% if a.section %} | {{ a.section }} {% endif %}
     {% if a.author %} | Author: {{ a.author }} {% endif %}
 </div>
 
 <div class="article-snippet">
-    {% if a.highlight.text %}
-        … {% for t in a.highlight.text %}
-        {{ t|safe}} …
-    {% endfor %}
-    {% else %}
-        {{ a.lead }}
-    {% endif %}
+    {{ a.text|safe }}
 </div>

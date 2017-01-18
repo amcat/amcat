@@ -23,12 +23,15 @@ import re
 
 from django.forms import IntegerField, BooleanField
 from django.template import Context
-from django.template.defaultfilters import escape as escape_filter
 from django.template.loader import get_template
+from typing import Sequence
 
 from amcat.forms.forms import order_fields
+from amcat.models import Article
 from amcat.scripts.query import QueryAction, QueryActionForm
+from amcat.tools import toolkit
 from amcat.tools.aggregate_es import IntervalCategory
+from amcat.tools.amcates_queryset import ESQuerySet
 from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.toolkit import Timer
 
@@ -44,30 +47,41 @@ TIMEDELTAS = [
 
 MAX_DATE_GROUPS = 500
 
-@order_fields(("offset", "size"))
+
+def get_fragments(query: str, article_ids: Sequence[int], fragment_size=150, number_of_fragments=3):
+    if not query:
+        query = toolkit.random_alphanum(20)
+
+    articles = Article.objects.defer("text", "title").in_bulk(article_ids)
+    qs = ESQuerySet().filter(id__in=article_ids)
+    fragments = qs.highlight_fragments(query, ("text", "title"), mark="em", fragment_size=fragment_size, number_of_fragments=number_of_fragments)
+    for article_id, fields in fragments.items():
+        articles[article_id]._highlighted = True  # Disable save()
+        for field, highlights in fields.items():
+            if len(highlights) > 1:
+                fragment = "<p>... " + " ...</p><p>... ".join(h.strip().replace("\n", " ") for h in highlights) + " ...</p>"
+            else:
+                fragment = highlights[0]
+            setattr(articles[article_id], field, fragment)
+    return articles.values()
+
+@order_fields(("offset", "size", "number_of_fragments", "fragment_size"))
 class SummaryActionForm(QueryActionForm):
     size = IntegerField(initial=40)
     offset = IntegerField(initial=0)
+    number_of_fragments = IntegerField(initial=3)
+    fragment_size = IntegerField(initial=150)
+
     aggregations = BooleanField(initial=True, required=False)
 
-def escape_article_result(article):
-    if hasattr(article,'highlight'):
-        try:
-            article.highlight['title'][0] = escape_filter(article.highlight['title'][0])
-            article.highlight['title'][0] = re.sub(r'&lt;(\/?)mark&gt;',r'<\1mark>',article.highlight['title'][0])
-        except KeyError:
-            pass
-        try:
-            article.highlight['text'][0] = escape_filter(article.highlight['text'][0])
-            article.highlight['text'][0] = re.sub(r'&lt;(\/?)mark&gt;',r'<\1mark>',article.highlight['text'][0])
-        except KeyError:
-            pass
-    return article
 
 class SummaryAction(QueryAction):
     output_types = (("text/html+summary", "HTML"),)
     form_class = SummaryActionForm
     monitor_steps = 4
+
+    def get_highlighted_article_fragments(self):
+        pass
 
     def run(self, form):
         form_data = dict(form.data.lists())
@@ -78,6 +92,8 @@ class SummaryAction(QueryAction):
 
         size = form.cleaned_data['size']
         offset = form.cleaned_data['offset']
+        number_of_fragments = form.cleaned_data['number_of_fragments']
+        fragment_size = form.cleaned_data['fragment_size']
         show_aggregation = form.cleaned_data['aggregations']
 
         with Timer() as timer:
@@ -85,7 +101,9 @@ class SummaryAction(QueryAction):
             self.monitor.update(message="Executing query..")
             narticles = selection.get_count()
             self.monitor.update(message="Fetching articles..".format(**locals()))
-            articles = [escape_article_result(art) for art in selection.get_articles(size=size, offset=offset)]
+
+            articles = selection.get_articles(size=size, offset=offset).as_dicts()
+            articles = get_fragments(selection.get_query(), [a["id"] for a in articles], fragment_size, number_of_fragments)
 
             if show_aggregation:
                 self.monitor.update(message="Aggregating..".format(**locals()))

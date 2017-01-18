@@ -219,6 +219,78 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
         )
 
     @amcattest.use_elastic
+    def test_highlight_fragments(self):
+        self.set_up()
+
+        articleset = amcattest.create_test_set()
+        project = articleset.project
+
+        text = """
+        The Alderman Proctor's Drinking Fountain (grid reference ST566738) is a historic building
+        on Clifton Down, Bristol, England.
+
+        The city of Bristol began supplying municipal drinking water in 1858. To inform the public
+        about the new water supply, Robert Lang made a proposal though the Bristol Times that public
+        drinking fountains be constructed. Lang began the "Fountain Fund" in January 1859 with a
+        donation of one hundred pounds. By 1906, there were more than 40 public drinking fountains
+        throughout the city.
+
+        In 1872, Alderman Thomas Proctor commissioned the firm of George and Henry Godwin to build
+        the fountain to commemorate the 1861 presentation of <i>Clifton Down</i> to the City of
+        Bristol by the Society of Merchant Venturers.
+
+        **Commemorative plaque**
+
+        The three-sided fountain is done in Gothic Revival style. The main portion is of limestone
+        with pink marble columns and white marble surround. The commemorative plaque is of black
+        lettering on white marble; the plaque reads, "Erected by Alderman Thomas Proctor, of Bristol
+        to record the liberal gift of certain rights on Clifton Down made to the citizens by the
+        Society of Merchant Venturers under the provision of the Clifton and Drudham Downs Acts
+        of Parliament, 1861, whereby the enjoyment of these Downs is preserved to the citizens of
+        Bristol for ever." The fountain bears the coat of arms for the city of Bristol, the Society
+        of Merchant Venturers and that of Alderman Thomas Proctor.
+
+        The fountain was originally situated at the head of Bridge Valley Road. It became a sight
+        impediment to modern auto traffic in the later 20th century. The fountain was moved to the
+        other side of the road, closer to the Mansion House in 1987. After the move, it underwent
+        restoration and was re-dedicated on 1 May 1988. It has been designated by English Heritage
+        as a grade II listed building since 1977.
+        """
+
+        paragraphs = [" ".join(s.strip() for s in p.strip().split("\n")) for p in text.split("\n\n")]
+
+        long_article = Article(
+            title="Alderman Proctor's Drinking Fountain",
+            text="\n\n".join(paragraphs).strip(),
+            date=datetime.datetime(2017, 1, 18, 13, 29, 11),
+            url="https://en.wikipedia.org/wiki/Alderman_Proctor%27s_Drinking_Fountain",
+            publisher="Wikipedia",
+            project=project
+        )
+
+        Article.create_articles([long_article], articleset)
+        amcates.ES().refresh()
+
+        qs = ESQuerySet(ArticleSet.objects.filter(id=articleset.id))
+        fragments = qs.highlight_fragments('"Clifton Down"', ("text", "title"), fragment_size=50)
+
+        self.assertEqual(1, len(qs))
+        self.assertEqual(1, len(fragments))
+
+        fragments = next(iter(fragments.values()))
+        text_fragments = set(fragments["text"])
+        title_fragments = fragments["title"]
+
+        self.assertEqual(1, len(title_fragments))
+        self.assertNotIn("<mark>", title_fragments[0])
+        self.assertEqual(3, len(text_fragments))
+        self.assertEqual(text_fragments, {
+             ' presentation of &lt;i&gt;<mark>Clifton</mark> <mark>Down</mark>&lt;/i&gt; to the City of Bristol',
+             ' <mark>Clifton</mark> <mark>Down</mark>, Bristol, England.\n\nThe city of Bristol',
+             ' the liberal gift of certain rights on <mark>Clifton</mark> <mark>Down</mark> made'
+        })
+
+    @amcattest.use_elastic
     def test_highlight(self):
         self.set_up()
 

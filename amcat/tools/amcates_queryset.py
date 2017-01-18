@@ -19,6 +19,7 @@
 import datetime
 import functools
 import random
+import collections
 import regex
 import html
 import iso8601
@@ -321,7 +322,8 @@ class ESQuerySet:
     # Use slots to use tracking down bugs due to wrongly implement copy logic:
     __slots__ = (
         "articlesets", "used_properties", "filters", "ordering", "seed",
-        "fields", "highlights", "track_scores", "_count_cache", "_query"
+        "fields", "highlights", "track_scores", "_count_cache", "_query",
+        "size", "offset"
     )
 
     def __init__(self, articlesets: Optional[QuerySet]=None):
@@ -345,8 +347,17 @@ class ESQuerySet:
         self._query = None
         self._count_cache = None
 
+        # HACK: Set size to default max of elastic. We should think about pagination..
+        self.size = 10000
+        self.offset = 0
+
     def _do_query(self, query):
-        return ES().search(query)
+        result = ES().search(query)
+
+        if len(result["hits"]["hits"]) == self.size:
+            raise NotImplementedError("Returned 10000 articles exactly. Time to implement scroll :)")
+
+        return result
 
     def __iter__(self) -> Iterable[ESArticle]:
         if not self.highlights:
@@ -467,6 +478,8 @@ class ESQuerySet:
         query = {
             "track_scores": True if "?" in self.ordering else self.track_scores,
             "fields": tuple(set(self.fields) | {"_doc"}),
+            "size": self.size,
+            "from": self.offset,
             "query": {
                 "function_score": {
                     "query": {
@@ -544,14 +557,79 @@ class ESQuerySet:
         self._check_fields(fields)
         return self._copy(fields=fields)
 
-    def highlight(self, query: str, fields: Sequence[str]=(), mark="mark%i", add_filter=False) -> "ESQuerySet":
+    def highlight_fragments(self,
+                            query: str,
+                            fields: Sequence[str],
+                            mark="mark",
+                            add_filter=False,
+                            number_of_fragments=3,
+                            fragment_size=150) -> Dict[int, Dict[str, List[str]]]:
         """
-        Use a query to highlight terms in a document.
+        Highlight articles but only return fragments.
 
-        :param query: Lucene DSL query
-        :param fields: fields to highlight
-        :param mark: html tag to use. %i will be replaced by a number to account for multiple queries.
-        :param add_filter: Indicates whether you also want to *filter* documents on this highlight. If True, only
+        @param query: Lucene query
+        @param fields: fields to highlight
+        @param mark: html tag to mark highlights.
+        @param add_filter: Indicates whether you also want to *filter* documents on this
+                            highlight. If True, only documents with highlighting will be
+                            returned.
+        @param number_of_fragments: Number of fragments to include
+        @param fragment_size: size of fragments in characters (bytes/unicode codepoints, not
+                              formalized by elasticsearch..)
+        @return: A dictionary mapping and article id to a dictionary mappping fieldnames
+                 to a list of fragments
+        """
+        # Pass highlight options to "normal" highlighter, generate default query
+        random_mark = toolkit.random_alphanum(20)
+        new = self.highlight(query, fields=fields, mark=random_mark, add_filter=add_filter)
+        dsl = new.get_query(new.highlights[-1])
+
+        # Set highlight options for fragments
+        for field in fields:
+            dsl["highlight"]["fields"][field] = {
+                "number_of_fragments": number_of_fragments,
+                "fragment_size": fragment_size,
+                "no_match_size": fragment_size
+            }
+
+        # Parse result
+        articles = collections.OrderedDict()
+        for hit in new._do_query(dsl)["hits"]["hits"]:
+            articles[hit["fields"]["id"][0]] = {
+                field: hit["highlight"][field] for field in fields
+            }
+
+        # HACK: Elastic does not escape html tags *in the article*. We therefore pass a random
+        # marker and use it to escape ourselves.
+        double_random_mark = random_mark + random_mark
+        for article in articles.values():
+            for field in list(article.keys()):
+                texts = article[field]
+                for i, text in enumerate(texts):
+                    text = text.replace("<{}>".format(random_mark), random_mark)
+                    text = text.replace("</{}>".format(random_mark), double_random_mark)
+                    text = html.escape(text)
+                    text = text.replace(double_random_mark, "</{}>".format(mark))
+                    text = text.replace(random_mark, "<{}>".format(mark))
+                    texts[i] = text
+
+        return articles
+
+    def highlight(self,
+                  query: str,
+                  fields: Sequence[str]=(),
+                  mark="mark%i",
+                  add_filter=False,
+                  ) -> "ESQuerySet":
+        """
+        Use a query to highlight terms in a document. If any html is present in the document it
+        will be escaped. It is therefore safe to insert highlighted fields directly into an HTML
+        document.
+
+        @param query: Lucene DSL query
+        @param fields: fields to highlight
+        @param mark: html tag to use. %i will be replaced by a number to account for multiple queries.
+        @param add_filter: Indicates whether you also want to *filter* documents on this highlight. If True, only
                            documents with highlighting will be returned.
         """
         if fields == ():
