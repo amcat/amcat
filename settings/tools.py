@@ -20,8 +20,8 @@ import configparser
 import functools
 import os
 import sys
-
 import amcat
+
 from amcat.tools.toolkit import random_alphanum
 
 
@@ -34,7 +34,7 @@ def get_amcat_config() -> configparser.ConfigParser:
      * /etc/amcat.ini
      * ~/.amcat.ini
     """
-    default_ini = os.path.join(amcat.__file__, "../../settings/amcat.ini")
+    default_ini = os.path.join(os.path.realpath(amcat.__file__), "../../settings/amcat.ini")
     config = configparser.ConfigParser()
     config.read(os.path.abspath(default_ini))
     config.read("/etc/default/amcat", "utf-8")
