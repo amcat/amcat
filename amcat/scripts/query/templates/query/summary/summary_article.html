@@ -1,3 +1,4 @@
+{% load misc %}
 <div class="article-title">
     {% if a.totalHits %}
         <span class="hit-count">{{a.totalHits}} hits - </span>
@@ -8,9 +9,18 @@
 </div>
 
 <div class="article-meta">
-    {{ a.date|date:"d-m-Y" }} |
-    {% if a.section %} | {{ a.section }} {% endif %}
-    {% if a.author %} | Author: {{ a.author }} {% endif %}
+    {{ a.date|date:"d-m-Y" }}
+
+    {% for field in show_fields %}
+       |
+
+      {% if field in a.properties %}
+        {{ a.properties|get_item:field }}
+      {% else %}
+        <i>{{ field|title }} missing</i>
+      {% endif %}
+
+    {% endfor %}
 </div>
 
 <div class="article-snippet">

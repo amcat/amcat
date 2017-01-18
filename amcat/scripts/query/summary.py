@@ -21,16 +21,18 @@ import datetime
 import json
 import re
 
+from django import forms
 from django.forms import IntegerField, BooleanField
 from django.template import Context
 from django.template.loader import get_template
 from typing import Sequence
 
 from amcat.forms.forms import order_fields
-from amcat.models import Article
+from amcat.models import Article, get_used_properties_by_articlesets
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools import toolkit
 from amcat.tools.aggregate_es import IntervalCategory
+from amcat.tools.amcates import ARTICLE_FIELDS
 from amcat.tools.amcates_queryset import ESQuerySet
 from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.toolkit import Timer
@@ -65,14 +67,21 @@ def get_fragments(query: str, article_ids: Sequence[int], fragment_size=150, num
             setattr(articles[article_id], field, fragment)
     return articles.values()
 
-@order_fields(("offset", "size", "number_of_fragments", "fragment_size"))
+@order_fields(("offset", "size", "number_of_fragments", "fragment_size", "show_fields"))
 class SummaryActionForm(QueryActionForm):
     size = IntegerField(initial=40)
     offset = IntegerField(initial=0)
     number_of_fragments = IntegerField(initial=3)
     fragment_size = IntegerField(initial=150)
+    show_fields = forms.MultipleChoiceField(choices=(), initial=("author", "publisher", "section"), required=False)
 
     aggregations = BooleanField(initial=True, required=False)
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(user, *args, **kwargs)
+
+        article_props = set(get_used_properties_by_articlesets(self.articlesets))
+        self.fields["show_fields"].choices = sorted((p, p) for p in article_props)
 
 
 class SummaryAction(QueryAction):
@@ -94,6 +103,7 @@ class SummaryAction(QueryAction):
         offset = form.cleaned_data['offset']
         number_of_fragments = form.cleaned_data['number_of_fragments']
         fragment_size = form.cleaned_data['fragment_size']
+        show_fields = sorted(form.cleaned_data['show_fields'])
         show_aggregation = form.cleaned_data['aggregations']
 
         with Timer() as timer:
