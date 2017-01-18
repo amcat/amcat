@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-
+import html
 from itertools import chain
 
 from django.views.generic.detail import DetailView
@@ -50,6 +50,8 @@ class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
     
     def highlight(self):
         if not self.last_query:
+            self.object.text = html.escape(self.object.text)
+            self.object.title = html.escape(self.object.title)
             return None
         self.object.highlight(self.last_query)
 

@@ -59,13 +59,13 @@ def merge_highlighted(original_text, highlighted_texts: Sequence[str], markers: 
     """
 
     """
-    tokens = [token for token in TOKENIZER.split(original_text) if token]
+    tokens = [html.escape(token) for token in TOKENIZER.split(original_text) if token]
     delimiters = TOKENIZER_INV.split(original_text)
     highlighted_tokens = zip(*(tokenize_highlighted_text(text, marker) for text, marker in zip(highlighted_texts, markers)))
 
     # If first delimiter is empty, we did not start with empty space. If it is not empty, we did
     # start with some white space. Either way, yield the delimiter.
-    yield delimiters.pop(0)
+    yield html.escape(delimiters.pop(0))
 
     for token, highlighted in zip(tokens, highlighted_tokens):
         for token_highlighted, marker in zip(highlighted, markers):
@@ -76,7 +76,7 @@ def merge_highlighted(original_text, highlighted_texts: Sequence[str], markers: 
         yield token
 
         # yield space in between
-        yield delimiters.pop(0)
+        yield html.escape(delimiters.pop(0))
 
 
 def merge_highlighted_document(texts: Dict[str, str], highlighted_texts: Sequence[Dict[str, str]], markers=Sequence[str]) -> Iterable[Tuple[str, str]]:
@@ -323,13 +323,18 @@ class ESQuerySet:
         "fields", "highlights", "track_scores", "_count_cache", "_query"
     )
 
-    def __init__(self, articlesets: QuerySet):
+    def __init__(self, articlesets: Optional[QuerySet]=None):
         """
         @param articlesets: articlesets to consider articles from
         @param seed: seed used for random ordering
         """
-        self.articlesets = articlesets.only("id")
-        self.used_properties = ALL_FIELDS | frozenset(get_used_properties_by_articlesets(self.articlesets))
+        if articlesets is None:
+            self.articlesets = ArticleSet.objects.only("id")
+            self.used_properties = ES().get_properties()
+        else:
+            self.articlesets = articlesets.only("id")
+            self.used_properties = ALL_FIELDS | frozenset(get_used_properties_by_articlesets(self.articlesets))
+
         self.filters = ()
         self.ordering = ()
         self.seed = None
@@ -389,6 +394,9 @@ class ESQuerySet:
         if self._count_cache:
             return self._count_cache
         return sum(1 for _ in self)
+
+    def __bool__(self):
+        return bool(len(self))
 
     def __getitem__(self, item: Union[int, slice]):
         # TODO: Query elastic for pagination
@@ -502,7 +510,10 @@ class ESQuerySet:
             }
 
             for field in highlight.fields:
-                query["highlight"]["fields"][field] = {"no_match_size": 100}
+                query["highlight"]["fields"][field] = {
+                    "no_match_size": 1024*1024*5,  # 5 MiB articles anyone?
+                    "number_of_fragments": 0
+                }
 
             if self._query:
                 # Add query as filter if we are highlighting

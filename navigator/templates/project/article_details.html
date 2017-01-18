@@ -14,9 +14,8 @@
 {% block content %}
   <div class="row">
     <div class="col-md-8 col-sm-12">
-      <h1>{{headline|safe}}</h1>
+      <h1>{{title|safe}}</h1>
       <article>
-        {% if article.byline %}<h2>{{article.byline}}</h2>{% endif %}
         {% if can_view_text %}
           {{ text|safe|urlizetrunc:30|linebreaks }}
         {% else %}
@@ -44,7 +43,7 @@
         </tr>
         <tr>
           <td>Title:</td>
-          <td>{{article.title}}</td>
+          <td>{{article.title|safe}}</td>
         </tr>
         <tr>
           <td>Date:</td>

@@ -23,6 +23,8 @@ articles database table.
 """
 import collections
 import functools
+import html
+
 import iso8601
 import json
 import re
@@ -308,25 +310,25 @@ class Article(AmcatModel):
                         are used for highlighting.
         @type keep_em: bool
         """
-        if self._highlighted: return
+        if self._highlighted:
+            return
         self._highlighted = True
 
         highlighted = amcates.ES().highlight_article(self.id, query)
 
-        if not highlighted:
-            # No hits for this search query
-            return
+        self.text = highlighted["text"]
+        self.title = highlighted["title"]
 
-        self.text = highlighted.get("text", self.text)
-        self.title = highlighted.get("title", self.title)
+        if not keep_em:
+            self.text = self.text.replace("<em>", "&lt;em&gt;").replace("</em>", "&lt;/em&gt;")
+            self.title = self.title.replace("<em>", "&lt;em&gt;").replace("</em>", "&lt;/em&gt;")
 
-        if escape:
-            self.text = escape_filter(self.text)
-            self.title = escape_filter(self.title)
+        if not escape:
+            self.text = html.unescape(self.text)
+            self.title = html.unescape(self.title)
 
-            if keep_em:
-                self.text = unescape_em(self.text)
-                self.title = unescape_em(self.title)
+        highlighted["text"] = self.text
+        highlighted["title"] = self.title
 
         return highlighted
 

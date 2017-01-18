@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import html
+
 from iso8601.iso8601 import UTC
 
 from amcat.models import Article, word_len
@@ -136,9 +138,8 @@ class TestArticleHighlighting(amcattest.AmCATTestCase):
     def test_no_results_query(self):
         article = _setup_highlighting()
         article.highlight("test")
-        self.assertEqual("<p>foo</p>", article.text)
-        self.assertEqual("<p>bar</p>", article.title)
-
+        self.assertEqual(html.escape("<p>foo</p>"), article.text)
+        self.assertEqual(html.escape("<p>bar</p>"), article.title)
 
 
 def _q(**filters):

@@ -300,21 +300,20 @@ class _ES(object):
     def refresh(self):
         self.es.indices.refresh()
 
-    def highlight_article(self, aid, query):
-        body = {
-            'filter': build_filter(ids=[aid]),
-            'highlight': {
-                "fields": {
-                    "text": get_highlight_query(query, "text"),
-                    "title": get_highlight_query(query, "title"),
-                    "byline": get_highlight_query(query, "byline"),
-                }
-            }
-        }
+    def highlight_article(self, aid: int, query: str) -> dict:
+        """Highlight article given by an article id using a Lucene query. The resulting strings
+        are safe to insert into an HTML document even if the original document contained malicious
+        constructs.
 
-        result = self.search(body, fields=[])
-        hits = result['hits']['hits'][0].get("highlight", {})
-        return {f: hits[f][0] for f in hits}
+        If you need the original article including HTML, call html.unescape on this output."""
+        from amcat.tools.amcates_queryset import ESQuerySet
+
+        qs = ESQuerySet().filter(id=aid).only("text", "title").highlight(query, mark="em")
+
+        try:
+            return next(iter(qs)).to_dict()
+        except StopIteration:
+            raise ValueError("Article(id={}) not found in elastic index.".format(aid))
 
     def clear_cache(self):
         self.es.indices.clear_cache()

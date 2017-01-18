@@ -45,7 +45,8 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
             exists="Once",
             page_int=5,
             section_int=10,
-            tags_tag={"gloria", "vloek"}
+            tags_tag={"gloria", "vloek"},
+            html="Man <i>leeft</i> nog steeds in de gloria"
         )
 
         self.a2 = Article(
@@ -205,6 +206,16 @@ class TestAmcatesQuerySet(amcattest.AmCATTestCase):
         self.assertEqual(
             set(self.qs.values_list("id", "exists")),
             {(self.a1.id, "Once"), (self.a2.id, None)}
+        )
+
+    @amcattest.use_elastic
+    def test_highlight_html(self):
+        self.set_up()
+
+        gloria = self.qs.only("html").highlight("gloria", add_filter=True)
+        self.assertEqual(
+            next(iter(gloria)).html,
+            "Man &lt;i&gt;leeft&lt;/i&gt; nog steeds in de <mark0>gloria</mark0>"
         )
 
     @amcattest.use_elastic

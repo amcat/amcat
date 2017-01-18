@@ -141,6 +141,25 @@ class TestAmcatES(amcattest.AmCATTestCase):
         r = ES().query_all(filters=dict(sets=s.id), size=10)
         self.assertEqual(len(list(r)), len(arts))
 
+    @amcattest.use_elastic
+    def test_highlight_article(self):
+        s1, s2, a, b, c, d, e = self.setup()
+
+        result = ES().highlight_article(a.id, "aap")
+        self.assertEqual(result["text"], "<em>aap</em> noot mies")
+
+        result = ES().highlight_article(a.id, "aap OR mies")
+        self.assertEqual(result["text"], "<em>aap</em> noot <em>mies</em>")
+
+        result = ES().highlight_article(a.id, "aap OR mies")
+        self.assertEqual(result["text"], "<em>aap</em> noot <em>mies</em>")
+
+        result = ES().highlight_article(a.id, '"aap mies"~0')
+        self.assertEqual(result["text"], "aap noot mies")
+
+        result = ES().highlight_article(a.id, '"aap mies"~1')
+        self.assertEqual(result["text"], "<em>aap</em> noot <em>mies</em>")
+
 
     @amcattest.use_elastic
     def test_filters(self):
