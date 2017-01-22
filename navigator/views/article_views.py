@@ -82,7 +82,6 @@ class ArticleSetArticleDetailsView(ArticleDetailsView):
     def get_context_data(self, **kwargs):
         context = super(ArticleSetArticleDetailsView, self).get_context_data(**kwargs)
         context['articleset_id'] = self.kwargs['articleset']
-        context['text'] = escape(self.object.text)
         return context
 
 
