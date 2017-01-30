@@ -21,6 +21,7 @@
 Base module for article upload scripts
 """
 import datetime
+import json
 import logging
 import os.path
 import zipfile
@@ -33,6 +34,7 @@ from django import forms
 from django.contrib.postgres.forms import JSONField
 from django.core.files import File
 from django.core.files.utils import FileProxyMixin
+from django.core.serializers.json import DjangoJSONEncoder
 from django.forms.widgets import HiddenInput
 
 from amcat.models import Article, ArticleSet, Project
@@ -86,9 +88,8 @@ class ParseError(Exception):
 
 
 class UploadForm(forms.Form):
-    file = forms.FileField(help_text='Uploading very large files can take a long time. '
+    file = forms.CharField(help_text='Uploading very large files can take a long time. '
                                      'If you encounter timeout problems, consider uploading smaller files')
-    
     project = forms.ModelChoiceField(queryset=Project.objects.all())
 
     articleset = forms.ModelChoiceField(
@@ -129,11 +130,17 @@ class UploadForm(forms.Form):
             f.fields['articlesets'].queryset = ArticleSet.objects.filter(project=project)
         return f
 
-    def get_files(self):
-        yield self.cleaned_data['file']
-
     def validate(self):
         return self.is_valid()
+
+
+def _read(file, encoding):
+    """Read the file, guessing encoding if needed"""
+    bytes = open(file, mode='rb').read()
+    if encoding.lower() == 'autodetect':
+        encoding = chardet.detect(bytes[:1000])["encoding"]
+        log.info("Guessed encoding: {encoding}".format(**locals()))
+    return bytes.decode(encoding)
 
 
 class UploadScript(ActionForm):
@@ -154,7 +161,40 @@ class UploadScript(ActionForm):
     
     def parse_file(self, file):
         raise NotImplementedError()
-    
+
+    @classmethod
+    def _get_preprocessed(cls, file, encoding):
+        """
+        Get and cache _preprocess(file, encoding)
+        If preprocessing is desired, _preprocess should return a json-serializable object
+        :return: (file, encoding, preprocess_data)
+        """
+        if not hasattr(cls, "_preprocess"):
+            return file, encoding, None
+        cachefn = file + "__upload_cache.json"
+        if os.path.exists(cachefn):
+            data = json.load(open(cachefn))
+        else:
+            data = cls._preprocess(file, encoding)
+            json.dump(data, open(cachefn, "w"), cls=DjangoJSONEncoder, indent=2)
+        return file, encoding, data
+
+    @classmethod
+    def _get_files(cls, file: str, encoding: str):
+        """
+        Get the files to upload, unpacking zip files if needed, and returning preprocessed data if applicable
+        :param file: full file path
+        :param encoding: the encoding
+        :return: a sequence of (file, encoding, preprocessed_data_or_None)
+        """
+        if file.endswith(".zip"):
+            zf = zipfile.ZipFile(file)
+            for member in zf.namelist():
+                fn = zf.extract(member)
+                yield cls._get_preprocessed(fn, encoding)
+        else:
+            yield cls._get_preprocessed(file, encoding)
+
     def __init__(self, form=None, file=None, **kargs):
         if form is None:
             form = self.form_class(data=kargs, files={"file": file})
@@ -182,27 +222,24 @@ class UploadScript(ActionForm):
 
     def get_provenance(self, file, articles):
         n = len(articles)
-        filename = file and file.name
         timestamp = str(datetime.datetime.now())[:16]
-        return ("[{timestamp}] Uploaded {n} articles from file {filename!r} "
+        return ("[{timestamp}] Uploaded {n} articles from file {file!r} "
                 "using {self.__class__.__name__}".format(**locals()))
 
     def run(self):
         monitor = self.progress_monitor
 
-        file = self.options['file']
-        filename = file and file.name
+        filename = self.options['file']
         monitor.update(10, u"Importing {self.__class__.__name__} from {filename} into {self.project}"
                        .format(**locals()))
 
         articles = []
-
-        files = list(self._get_files())
+        encoding = self.options['encoding']
+        files = list(self._get_files(filename, encoding))
         nfiles = len(files)
-        for i, f in enumerate(files):
-            filename = getattr(f, 'name', str(f))
-            monitor.update(20 / nfiles, "Parsing file {i}/{nfiles}: {filename}".format(**locals()))
-            articles += list(self.parse_file(f))
+        for i, (file, encoding, data) in enumerate(files):
+            monitor.update(20 / nfiles, "Parsing file {i}/{nfiles}: {file}".format(**locals()))
+            articles += list(self.parse_file(file, encoding, data))
 
         for article in articles:
             _set_project(article, self.project)
@@ -229,32 +266,6 @@ class UploadScript(ActionForm):
         monitor.update(10, "Done! Uploaded articles".format(n=len(articles)))
         return self.options["articleset"]
 
-    @classmethod
-    def textio(cls, file, encoding):
-        if encoding.lower() == 'autodetect':
-            encoding = chardet.detect(file.read(1024))["encoding"]
-            log.info("Guessed encoding: {encoding}".format(**locals()))
-            file.seek(0)
-        return TextIOWrapper(file, encoding=encoding)
-
-    @classmethod
-    def unpack_file(cls, file):
-        """
-        Unpacks zip archives and yields its contents if necessary, otherwise it yields the file itself.
-        """
-        if file.name.endswith(".zip"):
-            zf = zipfile.ZipFile(file)
-            for entry in zf.infolist():
-                if not entry.filename.endswith("/"):
-                    f = File(zf.open(entry, mode="r"), name=entry)
-                    yield f
-        else:
-            yield file
-
-    def _get_files(self):
-        files = self.form.get_files()
-        for file in files:
-            return self.unpack_file(file)
 
     def map_article(self, art_dict):
         mapped_dict = {}

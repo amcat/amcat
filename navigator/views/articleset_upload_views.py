@@ -63,26 +63,6 @@ class ArticleSetUploadScriptHandler(ScriptHandler):
         aset_id = self.task._get_raw_result()
         return reverse("navigator:articleset-details", args=[self.task.project.id, aset_id]), "View set"
 
-    @classmethod
-    def serialize_files(cls, arguments):
-        data = {}
-        for k, v in arguments['data'].items():
-            if isinstance(v, UploadedFile):
-                data[k] = get_temporary_file_dict(v)
-
-        for k, v in arguments['files'].items():
-            if isinstance(v, UploadedFile):
-                data[k] = get_temporary_file_dict(v)
-        arguments['data'].update(data)
-        arguments['files'].update(data)
-        return arguments
-
-    @classmethod
-    def serialise_arguments(cls, arguments):
-        arguments = super().serialise_arguments(arguments)
-        arguments = cls.serialize_files(arguments)
-        return arguments
-
     def get_script(self):
         script_cls = self.task.get_class()
         kwargs = self.get_form_kwargs()
@@ -98,6 +78,7 @@ class ArticleSetUploadForm(upload.UploadForm):
         for field in list(self.fields):
             if field not in ("file", "articleset", "articleset_name", "encoding", "script"):
                 self.fields.pop(field)
+        self.fields['file'] = forms.FileField()
 
 
 class ArticleSetUploadView(BaseMixin, FormView):
@@ -113,17 +94,15 @@ class ArticleSetUploadView(BaseMixin, FormView):
         with open(file_path, "wb") as dst:
             shutil.copyfileobj(file, dst)
 
-        uploads = self.request.session.get('uploads', {})
-        uploads[upload_id] = {"project": self.project.id,
-                              "upload_id": upload_id,
-                              "encoding": encoding,
-                              "script": script.id,
-                              "filename": file.name,
-                              "file_path": file_path,
-                              "articleset": articleset and articleset.id,
-                              "articleset_name": articleset_name,
-                              "size": file.size}
-        self.request.session['uploads'] = uploads
+        session_key = "upload__{upload_id}".format(**locals())
+        self.request.session[session_key] = {"project": self.project.id,
+                                             "upload_id": upload_id,
+                                             "encoding": encoding,
+                                             "script": script.id,
+                                             "filename": file_path,
+                                             "articleset": articleset and articleset.id,
+                                             "articleset_name": articleset_name,
+                                             "size": file.size}
 
     def form_valid(self, form):
         upload_id = uuid4()
@@ -195,7 +174,7 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
     @property
     @functools.lru_cache()
     def script_fields(self) -> List[ArticleField]:
-        return list(self.script_class.get_fields(self.uploaded_file, self.upload['encoding']))
+        return list(self.script_class.get_fields(self.upload['filename'], self.upload['encoding']))
 
     @property
     def upload_id(self):
@@ -239,28 +218,20 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
 
     @property
     def upload(self):
-        return self.request.session['uploads'][str(self.upload_id)]
+        key = "upload__{self.upload_id}".format(**locals())
+        return self.request.session[key]
 
     @property
     def script_class(self):
         script = Plugin.objects.get(id=self.upload['script']).get_class()
         return script
 
-    @property
-    def uploaded_file(self):
-        filename = self.upload["filename"]
-        return UploadedFile(
-            name=filename,
-            file=open(self.upload['file_path'], "rb"),
-            size=self.upload["size"]
-        )
 
     def get_script_form_kwargs(self, upload, fieldmap):
         data = {k: upload[k] for k in ("project", "articleset", "articleset_name", "encoding")}
         data['field_map'] = json.dumps(fieldmap)
-        files = {"file": self.uploaded_file}
-
-        return {"data": data, "files": files}
+        data['file'] = self.upload['filename']
+        return {"data": data}
 
     def clean_script_args(self, args):
         if isinstance(args.get('data'), QueryDict):

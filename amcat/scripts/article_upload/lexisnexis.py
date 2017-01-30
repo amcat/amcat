@@ -21,12 +21,15 @@
 """
 This module contains a (semi-machine readable) lexisnexis parser.
 """
-
+import os
 import re
 import collections
 import logging
 
-from amcat.scripts.article_upload.upload import UploadScript, ParseError, ArticleField
+from django.core.serializers.json import json, DjangoJSONEncoder
+
+
+from amcat.scripts.article_upload.upload import UploadScript, ParseError, ArticleField, _read
 from amcat.tools import toolkit
 from amcat.models.article import Article
 
@@ -35,10 +38,10 @@ from io import StringIO
 
 log = logging.getLogger(__name__)
 
+
 # Regular expressions used for parsing document
 class RES:
     # Match at least 20 whitespace characters or at least 7 tabs, followed by # of # DOCUMENTS.
-    DOCUMENT_COUNT = re.compile("( {20,}|\t{7,})(FOCUS -)? *\d* (of|OF) \d* DOCUMENTS?")
     DOCUMENT_COUNT = re.compile("\s*(FOCUS -)? *\d* (of|OF) \d* DOCUMENTS?")
 
     # Header meta information group match
@@ -59,8 +62,7 @@ class RES:
 MONTHS = dict(spring=3,
               summer=6,
               fall=9,
-              winter=12,
-)
+              winter=12)
 
 WELL_KNOWN_BODY_KEYS = ["AUTOR", "RUBRIK", "L\xc4NGE", "UPDATE", "SPRACHE",
                         "PUBLICATION-TYPE", "CODE-REVUE", "AUTEUR", "RUBRIQUE",
@@ -76,22 +78,24 @@ BODY_KEYS_MAP = {
     "section": "section",
     "rubrique": "section",
     "rubrik": "section",
-    "l\xe4nge": "length_num",
+    "l\xe4nge": "length_int",
     "sprache": "language",
     "langue": "language",
     "language": "language",
 
-    "longueur": "length_num",
-    "length": "length_num",
+    "longueur": "length_int",
+    "length": "length_int",
     
     "titre": "title",
     
     "name": "byline"
 }
 
+
 def clean_property_key(key):
     key_parts = RES.VALID_PROPERTY_NAME_PARTS.findall(key)
     return key_parts[0] + "".join(k.title() for k in key_parts[1:])
+
 
 def split_header(doc):
     """
@@ -207,6 +211,7 @@ def _is_date(string):
 
     return True
 
+
 def parse_online_article(art):
     # First, test for online articles with specific format
     blocks = re.split("\n *\n\s*", _strip_article(art))
@@ -224,7 +229,8 @@ def parse_online_article(art):
     nwords = int(m.group(1))
     date = toolkit.read_date(datestr)
 
-    return dict(title=title.strip(), text=lead.strip(), date=date, medium=medium, length_num=nwords, url=url)
+    return dict(title=title.strip(), text=lead.strip(), date=date, medium=medium, length_int=nwords, url=url)
+
 
 def parse_article(art):
     """
@@ -245,10 +251,8 @@ def parse_article(art):
     online = parse_online_article(art)
     if online:
         return online
-
     
     header, title, meta, body = [], [], [], []
-
     header_headline = []
 
     def next_is_indented(lines, skipblank=True):
@@ -257,7 +261,6 @@ def parse_article(art):
             if not skipblank: return False
             return next_is_indented(lines[1:])
         return lines[1].startswith(" ")
-
 
     def followed_by_date_block(lines):
         # this text is followed by a date block
@@ -301,7 +304,6 @@ def parse_article(art):
         if not lines: return False
         if not lines[0].strip(): return True  # blank line
         if lines[0].startswith(" "): return True  # indented line
-
 
     def _get_header(lines) -> dict:
         """Consume and return all lines that are indented (ie the list is changed in place)"""
@@ -366,7 +368,6 @@ def parse_article(art):
                 val = re.sub("\s+", " ", val)
                 yield key, val.strip()
 
-
     def _get_body(lines):
         """Consume and return all lines until a date line is found"""
 
@@ -405,7 +406,6 @@ def parse_article(art):
 
     meta.update(dict(_get_meta(lines)))
 
-
     def _get_source(lines, i):
         source = lines[0 if i>0 else 1]
         if source.strip() in ("PCM Uitgevers B.V.", "De Persgroep Nederland BV") and i > 2 and lines[i-1].strip():
@@ -432,8 +432,6 @@ def parse_article(art):
                 date = "2009-01-01"
                 source = _get_source(header, i)
 
-
-                
     def find_re_in(pattern, lines):
         for line in lines:
             m = re.search(pattern, line)
@@ -502,11 +500,13 @@ def parse_article(art):
     meta = {k: v for (k, v) in meta.items() if v}
     return meta
 
+
 def get_query(header):
     header = {k.lower().strip(): v for k, v in header.items()}
     for key in ["zoektermen", "query", "terms"]:
         if key in header:
             return header[key]
+
 
 def split_file(text):
     header, body = split_header(text)
@@ -514,6 +514,7 @@ def split_file(text):
 
     fragments = list(split_body(body))
     return query, fragments
+
 
 class LexisNexis(UploadScript):
     """
@@ -523,27 +524,34 @@ class LexisNexis(UploadScript):
     """
 
     @classmethod
-    def get_fields(cls, file, encoding):
-        text = cls.textio(file, encoding).read()
-        fields = collections.OrderedDict()
+    def _preprocess(cls, file, encoding):
+        text = _read(file, encoding)
         query, fragments = split_file(text)
-        for doc in fragments:
-            meta = parse_article(doc)
-            if meta:
-                for k, v in meta.items():
-                    if v:
-                        fields[k] =fields.get(k, []) + [v]
-        return [ArticleField(k, k, values) for (k, values) in fields.items()]
+        arts = (parse_article(doc) for doc in fragments)
+        arts = [art for art in arts if art]
+        return query, arts
 
-    def parse_file(self, file):
-        # FIXME: redundant double reading of file in get_fields and parse_file
-        #text = file.read()
-        text = self.textio(file, self.options['encoding']).read()
-        self.ln_query, fragments = split_file(text)
-        for doc in fragments:
-            data = parse_article(doc)
-            if not data:
-                continue
+
+    @classmethod
+    def get_fields(cls, file, encoding):
+        fields = collections.OrderedDict()
+        for (file, encoding, (query, arts)) in cls._get_files(file, encoding):
+            for meta in arts:
+                if meta:
+                    for k, v in meta.items():
+                        if v:
+                            fields[k] = fields.get(k, []) + [v]
+        for k, values in fields.items():
+            k = k.replace("-", "").strip()
+            if "_" in k:
+                name, suggested_type = k.rsplit("_", 1)
+            else:
+                name, suggested_type = k, None
+            yield ArticleField(name, name, values[:5], suggested_type=suggested_type)
+
+    def parse_file(self, file, encoding, data):
+        self.ln_query, arts = data
+        for data in arts:
             art = {}
             for field, setting in self.options['field_map'].items():
                 value, typ = setting['value'], setting['type']
