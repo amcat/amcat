@@ -1,24 +1,31 @@
 
 import datetime
 import json
+import os
 
 from django.core.files import File
 
 from amcat.models import ArticleSet
 from amcat.scripts.article_upload.lexisnexis import split_header, split_body, parse_header, \
     parse_article, get_query, LexisNexis
+from amcat.scripts.article_upload.upload import UploadForm
 from amcat.tools import amcattest
+
+
+def _rmcache(fn):
+    cachefn = fn + "__upload_cache.json"
+    if os.path.exists(cachefn):
+        os.remove(cachefn)
+    return fn
 
 
 class TestLexisNexis(amcattest.AmCATTestCase):
     def setUp(self):
-        import os.path, json
-
         self.dir = os.path.join(os.path.dirname(__file__), 'test_files', 'lexisnexis')
 
-        self.test_file = os.path.join(self.dir, 'test.txt')
+        self.test_file = _rmcache(os.path.join(self.dir, 'test.txt'))
         self.test_text = open(self.test_file, encoding="utf-8").read()
-        self.test_file2 = os.path.join(self.dir, 'test2.txt')
+        self.test_file2 = _rmcache(os.path.join(self.dir, 'test2.txt'))
         self.test_text2 = open(self.test_file2, encoding="utf-8").read()
         self.test_text3 = open(os.path.join(self.dir, 'test3.txt'), encoding="utf-8").read()
 
@@ -55,7 +62,7 @@ class TestLexisNexis(amcattest.AmCATTestCase):
         self.assertEquals(meta, self.test_header_sols)
 
     def test_get_fields(self):
-        fields = list(LexisNexis.get_fields(open(self.test_file, 'rb'), "utf-8"))
+        fields = list(LexisNexis.get_fields(self.test_file, "utf-8"))
         fields = {f.label for f in fields}
         known_fields = {"title", "text", "date", "section"}
         self.assertEqual(known_fields & fields, known_fields)
@@ -119,18 +126,13 @@ class TestLexisNexis(amcattest.AmCATTestCase):
         import os.path
         from django.core.files import File
 
-        #fields = list(LexisNexis.get_fields(open(self.test_file, 'rb'), "utf-8"))
-        fields = ["date", "title", "length_num" ,"text", "section" ,"medium"]
+        fields = ["date", "title", "length_int", "text", "section", "medium"]
         field_map = {f: dict(type='field', value=f) for f in fields}
         form = dict(project=amcattest.create_test_project().id,
                     encoding="UTF-8",
-                    field_map=json.dumps(field_map))
-
-        form["articleset_name"] = "test set lexisnexis"
-        aset = LexisNexis(file=File(open(self.test_file, 'rb')), **form).run()
-
-        # form["file"] = File(open(self.test_file)),
-        # aset = LexisNexis(**form).run()
+                    field_map=json.dumps(field_map),
+                    articleset_name="test set lexisnexis")
+        aset = LexisNexis(filename=self.test_file, **form).run()
 
         articleset = ArticleSet.objects.get(pk=aset.id)
         arts = articleset.articles.all()
@@ -143,10 +145,11 @@ class TestLexisNexis(amcattest.AmCATTestCase):
 
         self.assertEqual(a['text'], b.text)
         self.assertEqual(a['date'], str(b.date))
-        self.assertEqual(a['length_num'], b.properties['length_num'])
+        self.assertEqual(a['length_int'], b.properties['length_int'])
         self.assertEqual(a['medium'], b.properties['medium'])
 
-        aset = LexisNexis(file=File(open(self.test_file2, 'rb')), **form).run()
+        aset = LexisNexis(filename = self.test_file2, **form).run()
+
         articleset = ArticleSet.objects.get(pk=aset.id)
 
         # no query so provenance is the 'standard' message

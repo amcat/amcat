@@ -492,10 +492,9 @@ def parse_article(art):
         byline = meta.pop('byline')
 
     if 'length' in meta:
-        meta['length_num'] = meta.pop('length')
-    if 'length_num' in meta:
-        meta['length_num'] = int(meta['length_num'].split()[0])
-
+        meta['length_int'] = meta.pop('length')
+    if 'length_int' in meta:
+        meta['length_int'] = int(meta['length_int'].split()[0])
     meta.update(dict(title=title.strip(), byline=byline, text=text, date=date, medium=source))
     meta = {k: v for (k, v) in meta.items() if v}
     return meta

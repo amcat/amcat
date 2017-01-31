@@ -20,15 +20,15 @@ import collections
 from lxml import html
 
 from amcat.models import Article
-from amcat.scripts.article_upload.upload import UploadScript, ArticleField
+from amcat.scripts.article_upload.upload import UploadScript, ArticleField, _read
 from amcat.tools.toolkit import read_date
 
 META = ["title", "length", "date", "medium", None, "page"]
 
 
-def split_file(file):
+def split_file(file, encoding):
     # Parses HTML file (bytes) to a more convienient lxml representation
-    document = html.fromstring(file.read())
+    document = html.fromstring(_read(file, encoding))
 
     # Selects all elements with class=article
     return document.cssselect(".article")
@@ -81,13 +81,13 @@ class Factivia(UploadScript):
     @classmethod
     def get_fields(cls, file, encoding):
         fields = collections.OrderedDict()
-        for doc in split_file(file):
+        for doc in split_file(file, encoding):
             for k, v in parse_doc(doc):
                 fields[k] = fields.get(k, []) + [v]
         return [ArticleField(k, k, values) for (k, values) in fields.items()]
 
-    def parse_file(self, file):
-        for doc in split_file(file):
+    def parse_file(self, file, encoding, _data):
+        for doc in split_file(file, encoding):
             data = dict(parse_doc(doc))
 
             art = {}

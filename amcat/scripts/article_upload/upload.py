@@ -88,8 +88,7 @@ class ParseError(Exception):
 
 
 class UploadForm(forms.Form):
-    file = forms.CharField(help_text='Uploading very large files can take a long time. '
-                                     'If you encounter timeout problems, consider uploading smaller files')
+    filename = forms.CharField()
     project = forms.ModelChoiceField(queryset=Project.objects.all())
 
     articleset = forms.ModelChoiceField(
@@ -112,9 +111,9 @@ class UploadForm(forms.Form):
         if 'articleset' in self.errors:
             # skip check if error in articlesets: cleaned_data['articlesets'] does not exist
             return
-        if self.files.get('file') and not (
+        if self.cleaned_data.get('filename') and not (
                     self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
-            fn = os.path.basename(self.files['file'].name)
+            fn = os.path.basename(self.cleaned_data['filename'])
             return fn
         name = self.cleaned_data['articleset_name']
         if not bool(name) ^ bool(self.cleaned_data['articleset']):
@@ -132,6 +131,15 @@ class UploadForm(forms.Form):
 
     def validate(self):
         return self.is_valid()
+
+
+def _open(file, encoding):
+    """Open the file in str (unicode) mode, guessing encoding if needed"""
+    if encoding.lower() == 'autodetect':
+        bytes =open(file, mode='rb').read(1000)
+        encoding = chardet.detect(bytes[:1000])["encoding"]
+        log.info("Guessed encoding: {encoding}".format(**locals()))
+    return open(file, encoding=encoding)
 
 
 def _read(file, encoding):
@@ -172,6 +180,7 @@ class UploadScript(ActionForm):
         if not hasattr(cls, "_preprocess"):
             return file, encoding, None
         cachefn = file + "__upload_cache.json"
+        log.debug("Cache file {cachefn} exists? {}".format(os.path.exists(cachefn), **locals()))
         if os.path.exists(cachefn):
             data = json.load(open(cachefn))
         else:
@@ -229,7 +238,7 @@ class UploadScript(ActionForm):
     def run(self):
         monitor = self.progress_monitor
 
-        filename = self.options['file']
+        filename = self.options['filename']
         monitor.update(10, u"Importing {self.__class__.__name__} from {filename} into {self.project}"
                        .format(**locals()))
 

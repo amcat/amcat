@@ -72,13 +72,14 @@ class ArticleSetUploadScriptHandler(ScriptHandler):
 
 class ArticleSetUploadForm(upload.UploadForm):
     script = forms.ModelChoiceField(queryset=Plugin.objects.all())
+    file = forms.FileField(help_text='Uploading very large files can take a long time. '
+                                     'If you encounter timeout problems, consider uploading smaller files')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in list(self.fields):
             if field not in ("file", "articleset", "articleset_name", "encoding", "script"):
                 self.fields.pop(field)
-        self.fields['file'] = forms.FileField()
 
 
 class ArticleSetUploadView(BaseMixin, FormView):
@@ -230,7 +231,7 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
     def get_script_form_kwargs(self, upload, fieldmap):
         data = {k: upload[k] for k in ("project", "articleset", "articleset_name", "encoding")}
         data['field_map'] = json.dumps(fieldmap)
-        data['file'] = self.upload['filename']
+        data['filename'] = self.upload['filename']
         return {"data": data}
 
     def clean_script_args(self, args):

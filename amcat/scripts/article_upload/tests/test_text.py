@@ -17,7 +17,7 @@ def _test(field_map, text="test_text", fn_prefix=None):
         f.flush()
         aset = amcattest.create_test_set().id
         form = dict(project=amcattest.create_test_project().id,
-                    file=File(open(f.name)),
+                    filename=File(open(f.name)),
                     encoding='UTF-8',
                     field_map=json.dumps(field_map),
                     articleset=aset)

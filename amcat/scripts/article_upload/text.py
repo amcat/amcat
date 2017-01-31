@@ -32,7 +32,7 @@ from PyPDF2 import PdfFileReader
 from django import forms
 
 from amcat.models.article import Article
-from amcat.scripts.article_upload.upload import UploadScript, UploadForm, ArticleField
+from amcat.scripts.article_upload.upload import UploadScript, UploadForm, ArticleField, _read
 from amcat.tools import toolkit
 
 log = logging.getLogger(__name__)
@@ -109,8 +109,8 @@ class Text(UploadScript):
         if hl.endswith(".txt"): hl = hl[:-len(".txt")]
         return hl
 
-    def parse_file(self, file):
-        dirname, filename = os.path.split(file.name)
+    def parse_file(self, file, encoding, _data):
+        dirname, filename = os.path.split(file)
         filename, ext = os.path.splitext(filename)
 
         def parse_field(file, type, value):
@@ -119,7 +119,7 @@ class Text(UploadScript):
             if value == 'filename':
                 return filename
             if value == 'text':
-                return file.read()
+                return _read(file, encoding)
             if value.startswith('filename-'):
                 n = int(value.split("-")[-1])
                 return filename.split("_")[n-1]  # filename-n is 1 based index

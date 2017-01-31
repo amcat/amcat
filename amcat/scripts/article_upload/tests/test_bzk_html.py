@@ -6,6 +6,11 @@ from amcat.models import ArticleSet
 from amcat.scripts.article_upload.bzk_html import BZK
 from amcat.tools import amcattest
 
+def _rmcache(fn):
+    cachefn = fn + "__upload_cache.json"
+    if os.path.exists(cachefn):
+        os.remove(cachefn)
+    return fn
 
 class TestBZK(amcattest.AmCATTestCase):
     def setUp(self):
@@ -13,8 +18,8 @@ class TestBZK(amcattest.AmCATTestCase):
         import os.path
         self.project = amcattest.create_test_project()
         self.dir = os.path.join(os.path.dirname(__file__), 'test_files', 'bzk')
-        self.file_scrape1 = File(open(os.path.join(self.dir, 'test.html'), mode="rb"))
-        self.file_scrape2 = File(open(os.path.join(self.dir, 'test_scrape2.html'), mode="rb"))
+        self.file_scrape1 = _rmcache(os.path.join(self.dir, 'test.html'))
+        self.file_scrape2 = _rmcache(os.path.join(self.dir, 'test_scrape2.html'))
 
     def test_get_fields(self):
         fields = set(f.label for f in BZK.get_fields(self.file_scrape1, encoding="utf-8"))
@@ -35,7 +40,7 @@ class TestBZK(amcattest.AmCATTestCase):
         @param expected_articles    A sequence of {field: value} dicts, each with at least a 'title' field.
         """
         field_map = self._create_id_field_map("title", "text", "medium", "date")
-        script = BZK(field_map=field_map, file=file, project=self.project.id, encoding="UTF-8")
+        script = BZK(field_map=field_map, filename=file, project=self.project.id, encoding="UTF-8")
         result_set = script.run()
         self.assertIsInstance(result_set, ArticleSet)
         articles = list(result_set.articles.all())

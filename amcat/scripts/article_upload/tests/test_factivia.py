@@ -9,15 +9,10 @@ from amcat.tools import amcattest
 
 class FactiviaTest(amcattest.AmCATTestCase):
     def get_file(self, filename):
-        test_file = path.join(path.dirname(__file__), "test_files/factivia", filename)
-        return SimpleUploadedFile.from_dict({
-            "filename": filename,
-            "content": open(test_file, "rb").read(),
-            "content_type": "text/html"
-        })
+        return path.join(path.dirname(__file__), "test_files/factivia", filename)
 
     def test_get_fields(self):
-        fields = Factivia.get_fields(self.get_file("factivia.htm"), None)
+        fields = Factivia.get_fields(self.get_file("factivia.htm"), "utf-8")
         fnames = {f.label for f in fields}
         self.assertIn("date", fnames)
         self.assertIn("title", fnames)
@@ -28,7 +23,7 @@ class FactiviaTest(amcattest.AmCATTestCase):
         field_map = {k: {"type": "field", "value": k.split("_")[0]} for k in fields}
         form = dict(project=amcattest.create_test_project().id,
                     articleset=articleset, field_map=json.dumps(field_map), encoding='UTF-8',
-                    file=self.get_file(filename))
+                    filename=self.get_file(filename))
         Factivia(**form).run()
         return ArticleSet.objects.get(pk=articleset).articles.all()
 

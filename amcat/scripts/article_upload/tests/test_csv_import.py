@@ -102,13 +102,11 @@ def _run_test_csv(header, rows, field_map, **options):
             w.writerow([field and field for field in row])
         f.flush()
         form = UploadForm(
-            files={
-                "file": File(open(f.name, "rb")),
-            },
             data={
                 "project": project.id,
                 "field_map": json.dumps(field_map),
-                "encoding": "UTF-8"
+                "encoding": "UTF-8",
+                "filename": f.name,
             }
         )
         form.full_clean()

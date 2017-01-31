@@ -35,7 +35,7 @@ from typing import Optional, Tuple
 
 from amcat.contrib.oset import OrderedSet
 from amcat.models import Article, get_property_primitive_type
-from amcat.scripts.article_upload.upload import UploadScript, ArticleField
+from amcat.scripts.article_upload.upload import UploadScript, ArticleField, _open
 from amcat.tools.amcates import ARTICLE_FIELDS
 from amcat.tools.toolkit import read_date
 
@@ -169,8 +169,8 @@ class CSV(UploadScript):
         parser = PARSERS[t]
         return parser(value)
 
-    def parse_file(self, file):
-        reader = csv.DictReader(TextIOWrapper(file.file, encoding="utf8"))
+    def parse_file(self, file, encoding, _data):
+        reader = csv.DictReader(_open(file, encoding))
         for unmapped_dict in reader:
             art_dict = self.map_article(unmapped_dict)
             properties = {}

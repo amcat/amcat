@@ -28,7 +28,7 @@ from collections import defaultdict
 from lxml import html
 
 from amcat.models.article import Article
-from amcat.scripts.article_upload.upload import UploadScript, ParseError, ArticleField
+from amcat.scripts.article_upload.upload import UploadScript, ParseError, ArticleField, _read
 from amcat.tools.toolkit import read_date
 
 log = logging.getLogger(__name__)
@@ -39,17 +39,15 @@ class BZK(UploadScript):
 
     @classmethod
     def get_fields(cls, file, encoding):
-        text = cls.textio(file, encoding)
         values = defaultdict(list)
-        for art_dict in cls._scrape_unit(text.read()):
+        for art_dict in cls._scrape_unit(_read(file, encoding)):
             for k, v in art_dict.items():
                 values[k].append(v)
         for k, v in values.items():
             yield ArticleField(k, k, v[:5])
         
-    def parse_file(self, file):
-        text = self.textio(file, self.options['encoding'])
-        for art_dict in self._scrape_unit(text.read()):
+    def parse_file(self, file, encoding, _data):
+        for art_dict in self._scrape_unit(_read(file, encoding)):
             yield Article.fromdict(self.map_article(art_dict))
 
     @classmethod
