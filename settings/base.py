@@ -24,7 +24,7 @@ from settings.tools import get_amcat_config, get_cookie_secret
 amcat_config = get_amcat_config()
 
 # Base
-DEBUG = TEMPLATE_DEBUG = amcat_config["base"].getboolean("debug")
+DEBUG = amcat_config["base"].getboolean("debug")
 
 # Auth and security
 REQUIRE_LOGON = amcat_config["auth"].getboolean("require_login")
@@ -126,11 +126,6 @@ STATICFILES_DIRS = (
 )
 
 # List of callables that know how to import templates from various sources.
-TEMPLATE_LOADERS = (
-    'django.template.loaders.filesystem.Loader',
-    'django.template.loaders.app_directories.Loader',
-)
-
 MIDDLEWARE_CLASSES = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'navigator.utils.misc.MethodOverrideMiddleware',
@@ -166,10 +161,6 @@ LOGIN_REDIRECT_URL = "/"
 
 ROOT_URLCONF = 'settings.urls'
 
-TEMPLATE_DIRS = (
-    os.path.join(ROOT, 'templates'),
-    os.path.join(ROOT, 'amcat/scripts/query/templates')
-)
 
 INSTALLED_APPS = [
     'django.contrib.auth',
@@ -193,14 +184,28 @@ INSTALLED_APPS = [
 
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
 
-TEMPLATE_CONTEXT_PROCESSORS = (
-    "django.core.context_processors.debug",
-    "django.core.context_processors.i18n",
-    "django.core.context_processors.media",
-    "django.contrib.messages.context_processors.messages",
-    "django.contrib.auth.context_processors.auth",
-    "navigator.context.extra"
-)
+TEMPLATES = [{
+    'BACKEND': 'django.template.backends.django.DjangoTemplates',
+    'DIRS': (
+        os.path.join(ROOT, 'templates'),
+        os.path.join(ROOT, 'amcat/scripts/query/templates')
+    ),
+    'OPTIONS': {
+        'context_processors': (
+            "django.core.context_processors.debug",
+            "django.core.context_processors.i18n",
+            "django.core.context_processors.media",
+            "django.contrib.messages.context_processors.messages",
+            "django.contrib.auth.context_processors.auth",
+            "navigator.context.extra"
+        ),
+        'debug': DEBUG,
+        'loaders': (
+            'django.template.loaders.filesystem.Loader',
+            'django.template.loaders.app_directories.Loader',
+        ),
+    }
+}]
 
 DEFAULT_FROM_EMAIL = "wat200@vu.nl"
 
