@@ -42,7 +42,8 @@ class AmCATFilterMixin(object):
 
     @classmethod
     def _get_filter_fields_for_model(cls):
-        for fieldname in cls.queryset.model._meta.get_all_field_names():
+        for field in cls.queryset.model._meta.get_fields():
+            fieldname = field.name
             fieldname = get_related_fieldname(cls.queryset.model, fieldname)
             if fieldname in cls.ignore_filters:
                 continue

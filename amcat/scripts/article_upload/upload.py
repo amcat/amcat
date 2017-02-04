@@ -98,7 +98,7 @@ class UploadForm(forms.Form):
                   "created using either the name given below, or using the file name")
 
     articleset_name = forms.CharField(
-        max_length=ArticleSet._meta.get_field_by_name('name')[0].max_length,
+        max_length=ArticleSet._meta.get_field('name').max_length,
         required=False)
 
     encoding = forms.ChoiceField(choices=[(x,x) for x in ["Autodetect", "ISO-8859-15", "UTF-8", "Latin-1"]])
