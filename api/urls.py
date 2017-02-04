@@ -17,15 +17,14 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from django.conf.urls import patterns, url, include
+from django.conf.urls import url, include
 from django.shortcuts import redirect
 
 import api.rest
 
-urlpatterns = patterns(
-    '',
+urlpatterns = [
     url(r'^$', lambda r: redirect("v4/"), name="api"),
-    (r'^v4/', include('api.rest.urls')),
+    url(r'^v4/', include('api.rest.urls')),
     url(r'^restframework', include('rest_framework.urls', namespace='rest_framework')),
-)
+]
 

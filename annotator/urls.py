@@ -17,19 +17,19 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from django.conf.urls import patterns, url, include
+from django.conf.urls import url, include
 from annotator.views import codingjob
 
-article_patterns = patterns('',
+article_patterns = [
     url(r'save$', codingjob.save),
-)
+]
 
-codingjob_patterns = patterns('',
+codingjob_patterns = [
     url('^code$', codingjob.index, name="annotator-codingjob"),
     url(r'^codedarticle/(?P<coded_article_id>\d+)/', include(article_patterns)),
-)
+]
 
-urlpatterns = patterns('',
+urlpatterns = [
     url(r"^codingjob/(?P<codingjob_id>\d+)$", codingjob.redirect, name="annotator-codingjob"),
     url(r"projects/(?P<project_id>\d+)/codingjobs/(?P<codingjob_id>\d+)/", include(codingjob_patterns)),
-)
+]

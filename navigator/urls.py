@@ -17,31 +17,31 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 from django.contrib.auth.views import password_change, password_change_done
 
+import navigator.views.codingjob
+import navigator.views.index
+import navigator.views.user
+from navigator.views.article_views import *  # noqa
 from navigator.views.articleset_upload_views import * # noqa
 from navigator.views.articleset_views import *  # noqa
-from navigator.views.article_views import *  # noqa
-from navigator.views.query import *  # noqa
-from navigator.views.project_views import *  # noqa
 from navigator.views.codebook_views import *  # noqa
-
-from navigator.views.task import TaskDetailsView, TaskListView, clean_ready, clean_stuck, uuid_redirect
-from navigator.views.user_views import *  # noqa
 from navigator.views.codingjob_views import *  # noqa
 from navigator.views.codingschema_views import *  # noqa
-from navigator.views.index import IndexRedirect
+from navigator.views.project_views import *  # noqa
+from navigator.views.query import *  # noqa
+from navigator.views.task import TaskDetailsView, TaskListView, clean_ready, clean_stuck, uuid_redirect
+from navigator.views.user_views import *  # noqa
 
 UUID_RE = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
 
-urlpatterns = patterns(
-    '',
-    url(r'^$', 'navigator.views.index.index', name="index"),
+urlpatterns = [
+    url(r'^$', navigator.views.index.index, name="index"),
 
      # Users
-    url(r'^user/(?P<id>[0-9]+)?$', 'navigator.views.user.view', name='user'),
-    url(r'^user/edit/(?P<id>[0-9]+)$', 'navigator.views.user.edit', name='user-edit'),
+    url(r'^user/(?P<id>[0-9]+)?$', navigator.views.user.view, name='user'),
+    url(r'^user/edit/(?P<id>[0-9]+)$', navigator.views.user.edit, name='user-edit'),
     url(r'^user/change-password$', password_change, name='user-change-password',
         kwargs=dict(
             template_name="change_password.html",
@@ -53,14 +53,14 @@ urlpatterns = patterns(
         )),
 
 
-    url(r'^codingjobs/?$' ,'navigator.views.codingjob.index', name='codingjobs'),
+    url(r'^codingjobs/?$' ,navigator.views.codingjob.index, name='codingjobs'),
 
     # Task actions
     url(r'^projects/(?P<project>[0-9]+)/tasks/clean_ready', clean_ready, name='task-clean-ready'),
     url(r'^projects/(?P<project>[0-9]+)/tasks/clean_stuck', clean_stuck, name='task-clean-stuck'),
     url(r'^projects/(?P<project>[0-9]+)/tasks/(?P<uuid>%s)' % UUID_RE, uuid_redirect, name='task-uuid'),
-    url(r'^to_object$', 'navigator.views.index.to_object', name='to_object'),
-)
+    url(r'^to_object$', navigator.views.index.to_object, name='to_object'),
+]
 
 _views = [
     ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView, ArticleSetCreateView,
@@ -88,14 +88,14 @@ _views = [
 
 for view in _views:
     for pattern in view.get_url_patterns():
-        urlpatterns += patterns('',
-                                url(pattern, view.as_view(), name=view.get_view_name())
-                            )
+        urlpatterns.append(
+            url(pattern, view.as_view(), name=view.get_view_name())
+        )
 
-urlpatterns += patterns('',
+urlpatterns += [
     url("^projects/(?P<project>[0-9]+)/$", ArticleSetListView.as_view(), name="project"),
     url("^projects/$", ProjectListView.as_view(), name="projects"),
     url("^projects/add/$", ProjectAddView.as_view(), name="projects-add"),
     url("^projects/(?P<what>[a-z]+)/$", ProjectListView.as_view(), name="projects"),
-)
+]
 #    url(r'^projects(?P<what>/\w+)?$', 'navigator.views.project.projectlist', name='projects'),

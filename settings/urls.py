@@ -17,24 +17,24 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from django.conf import settings
-from django.conf.urls import include, patterns, url
+from django.conf.urls import include, url
 from django.contrib import admin
+from django.views.static import serve
 
 admin.autodiscover()
 
-urlpatterns = patterns(
-    '',
-    (r'^admin/', include(admin.site.urls)),
-    (r'^accounts/', include('accounts.urls')),
-    (r'^', include('navigator.urls', namespace="navigator")),
-    (r'^api/', include('api.urls', namespace="api")),
-    (r'^', include('annotator.urls', namespace="annotator")),
+urlpatterns = [
+    url(r'^admin/', include(admin.site.urls)),
+    url(r'^accounts/', include('accounts.urls')),
+    url(r'^', include('navigator.urls', namespace="navigator")),
+    url(r'^api/', include('api.urls', namespace="api")),
+    url(r'^', include('annotator.urls', namespace="annotator")),
     url(r'^restframework', include('rest_framework.urls', namespace='rest_framework'))
-    )
+    ]
 
 # Static files (will be filtered by nginx on deployment)
-urlpatterns += patterns("django.views",
-    url(r"%s(?P<path>.*)$" % settings.MEDIA_URL[1:], "static.serve", {
+urlpatterns += [
+    url(r"%s(?P<path>.*)$" % settings.MEDIA_URL[1:], serve, {
         "document_root": settings.MEDIA_ROOT,
-    })
-)
+    }, prefix="django.views")
+]

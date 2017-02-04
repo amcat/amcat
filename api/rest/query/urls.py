@@ -17,14 +17,14 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from inspect import isclass
-from django.conf.urls import patterns, url
+
+from django.conf.urls import url
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
-from api.rest.query.viewset import wrap_query_action
 
-# No PyCharm, this isn't an unused import
 from amcat.scripts.query import *
+from api.rest.query.viewset import wrap_query_action
 
 
 def get_action_name(viewcls):
@@ -55,7 +55,7 @@ def get_url_pattern(viewcls):
 
 
 def get_url_patterns():
-    return patterns('', *map(get_url_pattern, get_query_action_viewsets()))
+    return [get_url_pattern(x) for x in get_query_action_viewsets()]
 
 
 def get_query_action_viewsets():
@@ -70,6 +70,6 @@ class QueryActionIndex(APIView):
         })
 
 
-urlpatterns = get_url_patterns() + patterns('',
+urlpatterns = get_url_patterns() + [
     url(view=QueryActionIndex.as_view(), regex=r"^$", name="queryaction-index")
-)
+]
