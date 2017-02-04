@@ -69,6 +69,20 @@ def get_fieldname_tuple(field_name: str, suggested_type: str):
         return field_name, suggested_type
     return "{}_{}".format(field_name, suggested_type), suggested_type
 
+def to_valid_field_name(field_name: str) -> str:
+    """
+    Filter field name so that it's a valid destination name.
+    Valid names consist of an alphabetical character followed by any number of alphanumerical characters.
+    @param field_name: A field name that can contain invalid characters
+    @return: A valid destination name.
+    """
+    field_name = field_name[0] + field_name.title()[1:]
+    if field_name[0].isdigit():
+        field_name = "f" + field_name
+    for char in field_name:
+        if not char.isalnum():
+            field_name = field_name.replace(char, "")
+    return field_name
 
 def guess_destination_and_type(field_name: str, sample_value: Optional[str]) -> Tuple:
     if field_name == "id":
@@ -190,8 +204,8 @@ class CSV(UploadScript):
     def get_fields(cls, file, encoding):
         sample_data = defaultdict(OrderedSet)
 
-        for f in UploadScript.unpack_file(file):
-            csvf = cls.textio(f, encoding)
+        for f, enc, _ in UploadScript._get_files(file, encoding):
+            csvf = _open(f, encoding)
             reader = csv.DictReader(csvf)
             for row in itertools.islice(reader, 0, 5):
                 for field_name, value in row.items():
@@ -205,12 +219,13 @@ class CSV(UploadScript):
 
         # Guess types and destinations
         for field_name, values in sorted(sample_data.items(), key=itemgetter(0)):
+            filtered_field_name = to_valid_field_name(field_name)
             try:
                 value = next(iter(values))
             except StopIteration:
                 value = None
 
-            suggested_destination, suggested_type = guess_destination_and_type(field_name, value)
+            suggested_destination, suggested_type = guess_destination_and_type(filtered_field_name, value)
             yield ArticleField(field_name, suggested_destination, list(itertools.islice(sample_data[field_name], 0, 5)), None, suggested_type)
 
 

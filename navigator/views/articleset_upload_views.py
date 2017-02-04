@@ -81,6 +81,8 @@ class ArticleSetUploadForm(upload.UploadForm):
             if field not in ("file", "articleset", "articleset_name", "encoding", "script"):
                 self.fields.pop(field)
 
+# Place 'file' field back on top, makes it a bit more intuitive.
+ArticleSetUploadForm.base_fields.move_to_end('file', last=False)
 
 class ArticleSetUploadView(BaseMixin, FormView):
     form_class = ArticleSetUploadForm
