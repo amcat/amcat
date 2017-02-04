@@ -230,7 +230,7 @@ class ArticleSetImportView(ProjectScriptView):
         project = self.form.cleaned_data["target_project"]
         return reverse("navigator:" + ArticleSetListView.get_view_name(), kwargs={"project":project.id})
 
-    def get_form(self, form_class):
+    def get_form(self, form_class=None):
         form = super(ArticleSetImportView, self).get_form(form_class)
         if self.request.method == 'GET':
             # list current users favourite projects but exclude already imported and currect project
@@ -274,7 +274,7 @@ class ArticleSetDeduplicateView(ProjectScriptView):
     url_fragment = "deduplicate"
 
 
-    def get_form(self, form_class):
+    def get_form(self, form_class=None):
         form = super(ArticleSetDeduplicateView, self).get_form(form_class)
         form.fields["articleset"].widget = HiddenInput()
         form.fields["articleset"].initial = self.get_object()
@@ -308,7 +308,7 @@ class ArticleSetCreateView(HierarchicalViewMixin, ProjectViewMixin, CreateView):
     url_fragment = 'create' 
     model = ArticleSet
 
-    def get_form(self, form_class):
+    def get_form(self, form_class=None):
         if self.request.method == 'GET':
             return form_class(initial={'project': self.project})
         else:

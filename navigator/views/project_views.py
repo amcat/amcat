@@ -133,7 +133,7 @@ class ProjectAddView(BreadCrumbMixin, ScriptView):
         context["script_doc"] = (self.script.__doc__ and self.script.__doc__.replace("   ", ""))
         return context
 
-    def get_form(self, form_class):
+    def get_form(self, form_class=None):
         if self.request.method == 'GET':
             return form_class.get_empty(user=self.request.user)
         else:

@@ -22,12 +22,10 @@ import json
 from django import forms
 from django.http import HttpResponse
 from django.views.generic.list import ListView
-from django_extensions.db.fields.json import JSONField
 from jsonfield.forms import JSONFormField
 
 from amcat.forms import widgets
-from amcat.models import Codebook
-from amcat.models import Language, Project, Code, CodebookCode, Label
+from amcat.models import Code, Codebook, CodebookCode, Label, Language, Project
 from amcat.scripts.actions.export_codebook import ExportCodebook
 from amcat.scripts.actions.export_codebook_as_xml import ExportCodebookAsXML
 from amcat.scripts.actions.import_codebook import ImportCodebook
@@ -35,7 +33,8 @@ from api.rest.datatable import Datatable
 from api.rest.resources import CodebookHierarchyResource
 from api.rest.viewsets import CodebookViewSet
 from navigator.views.project_views import ProjectDetailsView
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectFormView, ProjectDetailView, ProjectActionRedirectView
+from navigator.views.projectview import BreadCrumbMixin, HierarchicalViewMixin, ProjectActionRedirectView, \
+    ProjectDetailView, ProjectFormView, ProjectScriptView, ProjectViewMixin
 from navigator.views.scriptview import TableExportMixin
 
 
@@ -110,7 +109,7 @@ class CodebookImportView(ProjectScriptView):
     parent = CodebookListView
     url_fragment = 'import'
 
-    def get_form(self, form_class):
+    def get_form(self, form_class=None):
         form = super(CodebookImportView, self).get_form(form_class)
         form.fields['codebook'].queryset = self.project.codebook_set.all()
         return form
@@ -160,7 +159,7 @@ class CodebookLinkView(ProjectFormView):
     class form_class(forms.Form):
         codebooks = forms.MultipleChoiceField(widget=widgets.BootstrapMultipleSelect)
 
-    def get_form(self, form_class):
+    def get_form(self, form_class=None):
         form = super(CodebookLinkView, self).get_form(form_class)
         from navigator.forms import gen_coding_choices
         form.fields['codebooks'].choices = gen_coding_choices(self.request.user, Codebook)

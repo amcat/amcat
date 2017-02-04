@@ -156,7 +156,7 @@ class CodingSchemaCreateView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumb
     form_class = CodingSchemaForm
 
 
-    def get_form(self, form_class):
+    def get_form(self, form_class=None):
         form = super(CodingSchemaCreateView, self).get_form(form_class)
         form.fields["project"].widget = HiddenInput()
         form.fields["project"].initial = self.project
@@ -174,7 +174,7 @@ class CodingSchemaEditView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMi
     url_fragment = "edit"
     form_class = CodingSchemaForm
 
-    def get_form(self, form_class):
+    def get_form(self, form_class=None):
         form = super(CodingSchemaEditView, self).get_form(form_class)
         form.fields["highlighters"].required = False
         return form
@@ -428,7 +428,7 @@ class CodingSchemaLinkView(ProjectFormView):
     class form_class(forms.Form):
         schemas = forms.MultipleChoiceField(widget=widgets.BootstrapMultipleSelect)
 
-    def get_form(self, form_class):
+    def get_form(self, form_class=None):
         form = super(CodingSchemaLinkView, self).get_form(form_class)
         from navigator.forms import gen_coding_choices
         form.fields['schemas'].choices = gen_coding_choices(self.request.user, CodingSchema)

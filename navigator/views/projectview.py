@@ -377,7 +377,7 @@ class ProjectEditView(BaseMixin, UpdateView):
         self.request.session['notification'] = "Successfully edited object"
         return self.parent._get_breadcrumb_url(self.kwargs, self)
 
-    def get_form(self, form_class):
+    def get_form(self, form_class=None):
         form = super(ProjectEditView, self).get_form(form_class)
         if 'project' in form.fields:
             form.fields['project'].queryset = Project.objects.filter(

@@ -290,7 +290,7 @@ class ArticleSplitView(ProjectFormView):
     def _get_breadcrumb_name(cls, kwargs, view):
          return cls.url_fragment
 
-    def get_form(self, form_class):
+    def get_form(self, form_class=None):
         return form_class(data=self.request.POST, project=self.project, article=self.article)
 
     @property

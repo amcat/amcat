@@ -107,7 +107,7 @@ class CodingJobEditView(ProjectEditView):
     fields = ['project', 'name', 'coder', 'unitschema', 'articleschema']
 
 
-    def get_form(self, form_class):
+    def get_form(self, form_class=None):
         form = super(CodingJobEditView, self).get_form(form_class)
         form.fields['coder'].queryset = User.objects.filter(projectrole__project=self.project)
         form.fields['unitschema'].queryset = self.project.get_codingschemas().filter(isarticleschema=False)
@@ -135,7 +135,7 @@ class CodingJobAddView(ProjectScriptView):
         kwargs['project'] = self.project
         return kwargs
 
-    def get_form(self, form_class):
+    def get_form(self, form_class=None):
         form = super(CodingJobAddView, self).get_form(form_class)
         form.fields['insertuser'].initial = self.request.user
         form.fields["insertuser"].widget = forms.HiddenInput()
