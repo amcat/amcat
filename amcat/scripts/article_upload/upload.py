@@ -36,6 +36,7 @@ from django.core.files import File
 from django.core.files.utils import FileProxyMixin
 from django.core.serializers.json import DjangoJSONEncoder
 from django.forms.widgets import HiddenInput
+from os.path import dirname
 
 from amcat.models import Article, ArticleSet, Project
 from amcat.models.articleset import create_new_articleset
@@ -111,10 +112,12 @@ class UploadForm(forms.Form):
         if 'articleset' in self.errors:
             # skip check if error in articlesets: cleaned_data['articlesets'] does not exist
             return
-        if self.cleaned_data.get('filename') and not (
-                    self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
-            fn = os.path.basename(self.cleaned_data['filename'])
-            return fn
+        if not (self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
+            fn = self.cleaned_data.get('filename')
+            if (not fn) and self.cleaned_data.get('file'):
+                fn = self.cleaned_data.get('file').name
+            if fn:
+                return os.path.basename(fn)
         name = self.cleaned_data['articleset_name']
         if not bool(name) ^ bool(self.cleaned_data['articleset']):
             raise forms.ValidationError("Please specify either articleset or articleset_name")
@@ -197,9 +200,12 @@ class UploadScript(ActionForm):
         :return: a sequence of (file, encoding, preprocessed_data_or_None)
         """
         if file.endswith(".zip"):
+            path = os.path.dirname(file)
             zf = zipfile.ZipFile(file)
             for member in zf.namelist():
-                fn = zf.extract(member)
+                fn = os.path.join(path, member)
+                if not os.path.exists(fn):
+                    zf.extract(member, path=path)
                 yield cls._get_preprocessed(fn, encoding)
         else:
             yield cls._get_preprocessed(file, encoding)

@@ -52,10 +52,10 @@ class RES:
     BODY_META = re.compile("([^0-9a-z: ]+):(.*)$", re.UNICODE)
 
     # End of body: a line like 'UPDATE: 2. September 2011' or 'PUBLICATION_TYPE: ...'
-    BODY_END = re.compile(
-        r"[^0-9a-z: ]+:.*[ -]\d{4}$|^PUBLICATION-TYPE:|^SECTION:|^LENGTH:[^:]*$|^LANGUE:[^:]*$|^RUBRIK:", re.UNICODE)
+    BODY_END = r"[^0-9a-z: ]+:.*[ -]\d{4}$|^PUBLICATION-TYPE:|^SECTION:|^LENGTH:[^:]*$|^LANGUE:[^:]*$|^RUBRIK:"
     # Copyright notice
-    COPYRIGHT = re.compile("^Copyright \d{4}.*")
+    COPYRIGHT = "^Copyright \d{4}.*"
+    BODY_END_OR_COPYRIGHT = re.compile("|".join([BODY_END, COPYRIGHT]), re.UNICODE)
 
     VALID_PROPERTY_NAME_PARTS = re.compile("[A-Za-z][A-Za-z0-9]*")
 
@@ -204,6 +204,8 @@ def _strip_article(art):
 
 
 def _is_date(string):
+    if not re.search("\d", string):
+        return False  # no number = no date, optimizatino because dateparse is very slow on non-matches
     try:
         toolkit.read_date(string)
     except ValueError:
@@ -247,11 +249,9 @@ def parse_article(art):
     The body starts after either two blank lines, or if a line is not of the meta field form.
     The body ends with a 'load date', which is of form FIELDNAME: DATE ending with a four digit year
     """
-
     online = parse_online_article(art)
     if online:
         return online
-    
     header, title, meta, body = [], [], [], []
     header_headline = []
 
@@ -368,14 +368,15 @@ def parse_article(art):
                 val = re.sub("\s+", " ", val)
                 yield key, val.strip()
 
-    def _get_body(lines):
-        """Consume and return all lines until a date line is found"""
 
-        while lines:
-            line = lines[0].strip()
-            if RES.BODY_END.match(line) or RES.COPYRIGHT.match(line):
-                break  # end of body
-            yield lines.pop(0)
+    def _get_body(lines):
+        """split lines into body and postmatter"""
+        # index of headline or end of body
+        try:
+            i = next(i for (i, line) in enumerate(lines) if RES.BODY_END_OR_COPYRIGHT.match(line.strip()))
+            return lines[:i], lines[i:]
+        except StopIteration:
+            return lines, []
 
     lines = _strip_article(art).split("\n")
 
@@ -394,7 +395,6 @@ def parse_article(art):
             title = title.split(":", 1)[1]
     else:
         title, byline = _get_headline(lines)
-
     meta = dict(_get_meta(lines))
     if title is None:
         if 'title' in meta:
@@ -402,16 +402,15 @@ def parse_article(art):
         elif 'kop' in meta:
             title = meta.pop('kop')
 
-    body = list(_get_body(lines))
+    body, lines = _get_body(lines)
 
     meta.update(dict(_get_meta(lines)))
-
     def _get_source(lines, i):
         source = lines[0 if i>0 else 1]
         if source.strip() in ("PCM Uitgevers B.V.", "De Persgroep Nederland BV") and i > 2 and lines[i-1].strip():
             source = lines[i-1]
         return source
-    
+
     date, dateline, source = None, None, None
     for i, line in enumerate(header):
         if _is_date(line):
@@ -419,6 +418,7 @@ def parse_article(art):
             dateline = i
             source = _get_source(header, i)
             break
+
     if date is None:  # try looking for only month - year notation by preprending a 1
         for i, line in enumerate(header):
             line = "1 {line}".format(**locals())

@@ -38,6 +38,7 @@ this organisation!
 
 import collections
 import datetime
+import functools
 import itertools
 import locale
 import logging
@@ -193,7 +194,7 @@ def temp_locale(category, loc=(None, None)):
     finally:
         locale.setlocale(category, _old)
 
-
+@functools.lru_cache()
 def read_date(datestr: str):
     try:
         return iso8601.parse_date(datestr, default_timezone=None)

@@ -93,7 +93,7 @@ class TestLexisNexis(amcattest.AmCATTestCase):
                     f = found.get(key)
                     a = actual.get(key)
                     if f != a:
-                        print("Key:", key, " found:", repr(f), " actual:", repr(a))
+                        print("i:", i, "Key:", key, " found:", repr(f), " actual:", repr(a))
             self.assertEqual(fkeys, akeys)
             self.assertEquals(found, actual)
 
