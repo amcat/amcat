@@ -291,6 +291,8 @@ class ArticleSplitView(ProjectFormView):
          return cls.url_fragment
 
     def get_form(self, form_class=None):
+        if form_class is None:
+            form_class = self.get_form_class()
         return form_class(data=self.request.POST, project=self.project, article=self.article)
 
     @property
