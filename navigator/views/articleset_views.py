@@ -310,6 +310,8 @@ class ArticleSetCreateView(HierarchicalViewMixin, ProjectViewMixin, CreateView):
 
     def get_form(self, form_class=None):
         if self.request.method == 'GET':
+            if form_class is None:
+                form_class = self.get_form_class()
             return form_class(initial={'project': self.project})
         else:
             return super(ArticleSetCreateView, self).get_form(form_class)
