@@ -56,3 +56,6 @@ env
 amcat/scripts/query/r_plugins/package_library
 
 .cache
+
+#upload cache
+*__upload_cache.json
