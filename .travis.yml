@@ -69,3 +69,7 @@ script:
 after_success:
  - coverage report -m
  - coveralls
+
+notifications:
+  slack: amcat:weNC9PqWkfvAXoJbad2Xmd0v
+  
