@@ -24,11 +24,14 @@ import datetime
 import os
 import sys
 
+from settings.tools import get_amcat_config
+amcat_config = get_amcat_config()
+
 TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 
 # Host/port on which elastic can be reached:
-ES_HOST = os.environ.get("AMCAT_ES_HOST", 'localhost')
-ES_PORT = os.environ.get("AMCAT_ES_PORT", 9200)
+ES_HOST = amcat_config["elastic"].get("host")
+ES_PORT = amcat_config["elastic"].get("port")
 
 # Emulate Django behaviour by prepending index name with 'test_' if running
 ES_TEST_INDEX = "test_amcat"
