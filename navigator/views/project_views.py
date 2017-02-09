@@ -135,6 +135,8 @@ class ProjectAddView(BreadCrumbMixin, ScriptView):
 
     def get_form(self, form_class=None):
         if self.request.method == 'GET':
+            if form_class is None:
+                form_class = self.get_form_class()
             return form_class.get_empty(user=self.request.user)
         else:
             return super(ProjectAddView, self).get_form(form_class)
