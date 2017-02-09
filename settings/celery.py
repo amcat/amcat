@@ -22,6 +22,8 @@ from settings import get_amcat_config
 
 amcat_config = get_amcat_config()
 
+BROKER_URL = 'amqp://{amqp_user}:{amqp_passwd}@{amqp_host}:{amqp_port}//'.format(**amcat_config["celery"])
+
 CELERY_RESULT_BACKEND = 'amqp'
 CELERY_TASK_RESULT_EXPIRES = 3600
 
