@@ -43,6 +43,7 @@ from os.path import dirname
 
 from amcat.models import Article, ArticleSet, Project
 from amcat.models.articleset import create_new_articleset
+from amcat.scripts.article_upload.plugins import load_plugins
 from amcat.tools import amcates
 from amcat.tools.progress import NullMonitor
 
@@ -297,7 +298,6 @@ class UploadScript(ActionForm):
         monitor.update(10, "Done! Uploaded articles".format(n=len(articles)))
         return self.options["articleset"]
 
-
     def map_article(self, art_dict):
         mapped_dict = {}
         for destination, field in self.options['field_map'].items():
@@ -317,3 +317,45 @@ def _set_project(art, project):
     except Project.DoesNotExist:
         pass  # django throws DNE on x.y if y is not set and not nullable
     art.project = project
+
+
+_registered_plugins = {}
+
+def register_plugin(name:str=None):
+    """
+    Creates a decorator that registeres the plugin to AmCAT. This decorator is required for the plugin in order to
+     show up in the uploader.
+     Usage:
+        >>> @register_plugin(name="My Plugin")
+        >>> class MyPlugin:
+        >>>     ...
+
+    @param name:    A human readable name to be used as unique identifier.
+                    If not given, the __name__ attribute will be used.
+    @param default  Register the plugin as a project default.
+    @return:        A class decorator function that registers the class as a plugin.
+    """
+
+    def fn(plugin_cls: type) -> type:
+        if not issubclass(plugin_cls, UploadScript):
+            return
+        plugin_name = name if name is not None else plugin_cls.__name__
+        if plugin_name in _registered_plugins:
+            raise ValueError("Name '{}' is not unique.".format(plugin_name))
+        _registered_plugins[plugin_name] = plugin_cls
+        return plugin_cls
+
+    return fn
+
+def get_upload_plugins():
+    global _registered_plugins
+    if not _registered_plugins:
+        # noinspection PyUnresolvedReferences
+        import amcat.scripts.article_upload.plugins
+        _registered_plugins = OrderedDict(sorted(_registered_plugins.items()))
+    return _registered_plugins
+
+
+def get_upload_script(name):
+    return get_upload_plugins()[name]
+

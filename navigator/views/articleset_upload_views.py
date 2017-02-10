@@ -15,7 +15,6 @@ from django.shortcuts import redirect
 from django.utils.datastructures import MultiValueDict
 from django.views.generic import FormView
 
-from amcat.models import Plugin
 from amcat.scripts.article_upload import upload
 from amcat.scripts.article_upload.upload import ArticleField, REQUIRED
 from amcat.tools.amcates import ARTICLE_FIELDS, is_valid_property_name
@@ -66,7 +65,7 @@ class ArticleSetUploadScriptHandler(ScriptHandler):
 
 
 class ArticleSetUploadForm(upload.UploadForm):
-    script = forms.ChoiceField(choices=[(k, k) for k, _ in upload.get_upload_scripts().items()])
+    script = forms.ChoiceField(choices=[(k, k) for k, _ in upload.get_upload_plugins().items()])
     file = forms.FileField(help_text='Uploading very large files can take a long time. '
                                      'If you encounter timeout problems, consider uploading smaller files')
 
