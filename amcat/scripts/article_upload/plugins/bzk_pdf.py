@@ -27,8 +27,8 @@ import re
 
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.models.article import Article
-from amcat.scripts.article_upload.pdf import PDFParser
-from amcat.scripts.article_upload.bzk_aliases import BZK_ALIASES as MEDIUM_ALIASES
+from .pdf import PDFParser
+from .bzk_aliases import BZK_ALIASES as MEDIUM_ALIASES
 
 
 class BZKPDFScraper(UploadScript):

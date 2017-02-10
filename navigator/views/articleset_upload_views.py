@@ -66,7 +66,7 @@ class ArticleSetUploadScriptHandler(ScriptHandler):
 
 
 class ArticleSetUploadForm(upload.UploadForm):
-    script = forms.ModelChoiceField(queryset=Plugin.objects.all())
+    script = forms.ChoiceField(choices=[(k, k) for k, _ in upload.get_upload_scripts().items()])
     file = forms.FileField(help_text='Uploading very large files can take a long time. '
                                      'If you encounter timeout problems, consider uploading smaller files')
 
@@ -96,7 +96,7 @@ class ArticleSetUploadView(BaseMixin, FormView):
         self.request.session[session_key] = {"project": self.project.id,
                                              "upload_id": upload_id,
                                              "encoding": encoding,
-                                             "script": script.id,
+                                             "script": script,
                                              "filename": file_path,
                                              "articleset": articleset and articleset.id,
                                              "articleset_name": articleset_name,
@@ -223,7 +223,7 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
 
     @property
     def script_class(self):
-        script = Plugin.objects.get(id=self.upload['script']).get_class()
+        script = upload.get_upload_script(self.upload['script'])
         return script
 
 

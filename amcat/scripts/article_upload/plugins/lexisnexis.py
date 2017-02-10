@@ -29,7 +29,7 @@ import logging
 from django.core.serializers.json import json, DjangoJSONEncoder
 
 
-from amcat.scripts.article_upload.upload import UploadScript, ParseError, ArticleField, _read
+from amcat.scripts.article_upload.upload import UploadScript, ParseError, ArticleField, _read, register_plugin
 from amcat.tools import toolkit
 from amcat.models.article import Article
 
@@ -519,7 +519,7 @@ def split_file(text):
         fragments = list(split_body(body))
     return query, fragments
 
-
+@register_plugin(name="Lexis Nexis")
 class LexisNexis(UploadScript):
     """
     Script for importing files from Lexis Nexis. The files should be in plain text

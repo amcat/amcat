@@ -26,14 +26,20 @@ import logging
 import os.path
 import zipfile
 from typing import Any, Iterable, Tuple, Sequence
+from collections import OrderedDict
 
 import chardet
+
+from io import TextIOWrapper
 from actionform import ActionForm
+
 from django import forms
 from django.contrib.postgres.forms import JSONField
+from django.core.files import File
 from django.core.files.utils import FileProxyMixin
 from django.core.serializers.json import DjangoJSONEncoder
 from django.forms.widgets import HiddenInput
+from os.path import dirname
 
 from amcat.models import Article, ArticleSet, Project
 from amcat.models.articleset import create_new_articleset
@@ -290,6 +296,7 @@ class UploadScript(ActionForm):
 
         monitor.update(10, "Done! Uploaded articles".format(n=len(articles)))
         return self.options["articleset"]
+
 
     def map_article(self, art_dict):
         mapped_dict = {}

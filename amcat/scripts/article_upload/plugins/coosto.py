@@ -1,14 +1,16 @@
-from .fileupload import FileUploadForm
-from .upload import UploadScript
-import csv, datetime, json
+import csv
+import datetime
+import json
 from io import BytesIO
-from amcat.models import Article, Medium
-from amcat.scripts.article_upload.fileupload import ZipFileUploadForm
+
+from amcat.models import Article
+from amcat.scripts.article_upload.upload import UploadScript, register_plugin
 
 
-class CoostoForm(UploadScript.options_form, ZipFileUploadForm):
+class CoostoForm(UploadScript.form_class):
     pass
 
+@register_plugin(name="Coosto")
 class CoostoUpload(UploadScript):
     """
     Upload Coosto files to AmCAT.    
@@ -25,7 +27,7 @@ class CoostoUpload(UploadScript):
         row = {k:v.decode("utf-8") for k,v in row.iteritems()}
         query = row.pop('zoekopdracht')
         self.queries.add(query)
-        medium = Medium.get_or_create(row.pop('type bron'))
+        medium = row.pop('type bron')
         date = row.pop('datum')
         date = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M")
         headline = row.pop('titel')
@@ -44,7 +46,7 @@ class CoostoUpload(UploadScript):
     def get_provenance(self, file, articles):
         n = len(articles)
         filename = file and file.name
-        timestamp = unicode(datetime.datetime.now())[:16]
+        timestamp = str(datetime.datetime.now())[:16]
         queries = "; ".join(self.queries)
         return ("[{timestamp}] Uploaded {n} articles from Coosto export {filename!r} "
                 "queries: {queries}".format(**locals()))

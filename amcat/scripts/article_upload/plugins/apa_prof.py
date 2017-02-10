@@ -47,9 +47,8 @@ import itertools
 import lxml.html
 import logging
 
-from amcat.models import Article, Medium
-from amcat.scripts.article_upload.upload import UploadScript
-from amcat.scripts.article_upload import fileupload
+from amcat.models import Article
+from amcat.scripts.article_upload.upload import UploadScript, register_plugin
 from amcat.tools.toolkit import read_date
 
 log = logging.getLogger(__name__)
@@ -57,7 +56,7 @@ log = logging.getLogger(__name__)
 FS20 = "\\fs20"
 PAGE_BREAK = "page-break"
 STOP_AT = re.compile(
-    ur"((Gespeicherter Anhang:)|(Der gegenst\xc3\xa4ndliche Text ist eine Abschrift)|(Gespeicherte Anh\xc3\xa4nge))")
+    r"((Gespeicherter Anhang:)|(Der gegenst\xc3\xa4ndliche Text ist eine Abschrift)|(Gespeicherte Anh\xc3\xa4nge))")
 
 # 11.05.2004
 _RE_DATE = "(?P<day>\d{2})\.(?P<month>\d{2})\.(?P<year>\d{4})"
@@ -88,10 +87,10 @@ RE_AUTHOR = re.compile("^Von (?P<author>[^0-9]+)$")
 # All regular expressions which can match metadata
 META_RE = (RE_DATE, RE_DATE2, RE_DATETIME, RE_PAGENR, RE_SECTION, RE_AUTHOR, RE_MEDIUM, RE_MEDIUM_QUOTE)
 
-UNDECODED = bytes("NON_DECODED_CHARACTER")
-UNDECODED_UNICODE = bytes(b"NON_DECODED_UNICODE_CHARACTER")
+UNDECODED = b"NON_DECODED_CHARACTER"
+UNDECODED_UNICODE = b"NON_DECODED_UNICODE_CHARACTER"
 
-RE_UNICHAR = re.compile(ur"(?P<match>\\u(?P<hex>[0-9]+)\?)", re.UNICODE)
+RE_UNICHAR = re.compile(r"(?P<match>\\u(?P<hex>[0-9]+)\?)", re.UNICODE)
 
 ### FIXING AND PARSING ###
 def _fix_fs20(s):
@@ -302,10 +301,10 @@ def parse_page(doc_elements):
 
 
 ### NAVIGATOR INTEGRATION ###
-class APAForm(UploadScript.options_form, fileupload.ZipFileUploadForm):
+class APAForm(UploadScript.form_class):
     pass
 
-
+@register_plugin(name="APA")
 class APA(UploadScript):
     options_form = APAForm
 
