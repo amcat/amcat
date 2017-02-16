@@ -1,4 +1,9 @@
 {% extends "project/base.html" %}
+{% block javascript %}
+    <script lang="javascript">
+        require(['jquery', 'bootstrap-multiselect'], $ => $('.multiselect').multiselect());
+    </script>
+{% endblock %}
 {% block content %}
 
 {% if can_edit %}
@@ -9,7 +14,7 @@
    <table>
     {{ form.as_table }}
    </table>
- 
+
    <div class="form-actions">
     <input class="btn btn-primary" type="submit" value="Save"></input>
     <a href="{% url "navigator:project" project.id %}" class="btn">Cancel</a>
