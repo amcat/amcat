@@ -4,13 +4,13 @@ import json
 from io import BytesIO
 
 from amcat.models import Article
-from amcat.scripts.article_upload.upload import UploadScript, register_plugin
+from amcat.scripts.article_upload.upload import UploadScript, Plugin
 
 
 class CoostoForm(UploadScript.form_class):
     pass
 
-@register_plugin(name="Coosto")
+@Plugin(label="Coosto")
 class CoostoUpload(UploadScript):
     """
     Upload Coosto files to AmCAT.    

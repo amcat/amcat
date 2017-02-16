@@ -32,7 +32,7 @@ from PyPDF2 import PdfFileReader
 from django import forms
 
 from amcat.models.article import Article
-from amcat.scripts.article_upload.upload import UploadScript, UploadForm, ArticleField, _read, register_plugin
+from amcat.scripts.article_upload.upload import UploadScript, UploadForm, ArticleField, _read, Plugin
 from amcat.tools import toolkit
 
 log = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ def _convert_multiple(file, convertors):
         return convertor(file)
     raise Exception("\n".join(errors))
 
-@register_plugin()
+@Plugin(label="Plain Text", default=True)
 class Text(UploadScript):
     """
     Plain text uploader.

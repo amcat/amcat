@@ -23,6 +23,7 @@ import itertools
 from datetime import datetime
 
 from django.conf import settings
+from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.db.models import Q
 from typing import Union, Set
@@ -36,6 +37,7 @@ from amcat.models.article import Article
 from amcat.models.articleset import ArticleSetArticle, ArticleSet
 
 from amcat.models.authorisation import Role, ROLE_PROJECT_READER
+from amcat.tools.validators import DictValidator
 
 LITTER_PROJECT_ID = 1
 
@@ -78,6 +80,10 @@ class Project(AmcatModel):
 
     # Temporary field enabling R plugins in the query screen
     r_plugins_enabled = models.BooleanField(default=False)
+
+    # A mapping of {name: enabled} key-value pairs for upload plugins. If the plugin is labeled as default, this
+    # defaults to true, otherwise it defaults to false.
+    upload_plugins = JSONField(blank=True, default={}, validators=[DictValidator(str, bool)])
 
     # Coding fields
     codingschemas = models.ManyToManyField("amcat.CodingSchema", related_name="projects_set")

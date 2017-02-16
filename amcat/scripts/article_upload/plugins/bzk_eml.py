@@ -25,7 +25,7 @@ import re
 import logging
 from datetime import timedelta
 
-from amcat.scripts.article_upload.upload import UploadScript, register_plugin
+from amcat.scripts.article_upload.upload import UploadScript, Plugin
 from amcat.tools.toolkit import read_date
 from amcat.models.article import Article
 from .bzk_aliases import BZK_ALIASES
@@ -33,7 +33,7 @@ from .bzk_aliases import BZK_ALIASES
 
 log = logging.getLogger(__name__)
 
-@register_plugin(name="BZK EML")
+@Plugin(label="BZK EML")
 class BZKEML(UploadScript):
     def _scrape_unit(self, _file):
         readlines = _file.readlines()

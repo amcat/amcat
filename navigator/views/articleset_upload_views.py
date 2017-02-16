@@ -69,11 +69,16 @@ class ArticleSetUploadForm(upload.UploadForm):
     file = forms.FileField(help_text='Uploading very large files can take a long time. '
                                      'If you encounter timeout problems, consider uploading smaller files')
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, project = None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['script'].choices = self.get_script_choices(project)
         for field in list(self.fields):
             if field not in ("file", "articleset", "articleset_name", "encoding", "script"):
                 self.fields.pop(field)
+
+    def get_script_choices(self, project):
+        return [(k, k) for k, _ in upload.get_project_plugins(project).items()]
+
 
 # Place 'file' field back on top, makes it a bit more intuitive.
 ArticleSetUploadForm.base_fields.move_to_end('file', last=False)
@@ -108,6 +113,10 @@ class ArticleSetUploadView(BaseMixin, FormView):
         redirect_url = reverse("navigator:articleset-upload-options", args=(self.project.id,))
         return redirect("{}?upload_id={}".format(redirect_url, upload_id_urlsafe))
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['project'] = self.project
+        return kwargs
 
 def validate_property_name(value, type):
     if type != "default":
@@ -222,8 +231,9 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
 
     @property
     def script_class(self):
-        script = upload.get_upload_script(self.upload['script'])
-        return script
+        plugin = upload.get_upload_plugin(self.upload['script'])
+        cls = plugin.script_cls
+        return cls
 
 
     def get_script_form_kwargs(self, upload, fieldmap):

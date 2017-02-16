@@ -28,13 +28,13 @@ from collections import defaultdict
 from lxml import html
 
 from amcat.models.article import Article
-from amcat.scripts.article_upload.upload import UploadScript, ParseError, ArticleField, _read, register_plugin
+from amcat.scripts.article_upload.upload import UploadScript, ParseError, ArticleField, _read, Plugin
 from amcat.tools.toolkit import read_date
 
 log = logging.getLogger(__name__)
 from .bzk_aliases import BZK_ALIASES as MEDIUM_ALIASES
 
-@register_plugin("BZK HTML")
+@Plugin("BZK HTML")
 class BZK(UploadScript):
 
     @classmethod

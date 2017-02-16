@@ -5,7 +5,6 @@ def _init():
     import importlib
     import logging
     USER_DIRS = [
-        os.path.expanduser("~/amcat_upload_plugins"),
         os.path.expanduser("~/amcat_plugins/upload")
     ]
     __path__ += USER_DIRS
