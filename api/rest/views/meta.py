@@ -3,16 +3,16 @@ from api.rest.scrollingpaginator import ScrollingPaginator
 from rest_framework.generics import ListAPIView
 
 from rest_framework import serializers
-
+from amcat.models import Article
         
 class MetaSerializer(serializers.BaseSerializer):
     def to_representation(self, obj):
         return obj
 
-def _get_ids(param):
+def _get_ids(param, to_int=True):
     for id in param:
         for i in id.split(","):
-            yield int(i)
+            yield int(i) if to_int else i
 
     
 class ArticleMetaView(ListAPIView):
@@ -34,11 +34,16 @@ class ArticleMetaView(ListAPIView):
         elif 'id' in self.request.query_params:
             ids = list(_get_ids(self.request.query_params.getlist('id')))
             filter = {'id': ids}
+        elif 'uuid' in self.request.query_params:
+            uuids = list(_get_ids(self.request.query_params.getlist('uuid'), to_int=False))
+            ids = list(Article.objects.filter(uuid__in=uuids).values_list("pk", flat=True))
+            filter = {'id': ids}
         else:
             raise Exception("Meta API needs either articleset or id paramter")
         
         return {'body': {u'filter': {'terms': filter}},
                 'fields': fields, 'size': page_size}
+
 
     def get_renderer_context(self):
         context = super(ArticleMetaView, self).get_renderer_context()
