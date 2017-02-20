@@ -8,7 +8,10 @@ Master: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=master)](h
 We've created a Dockerfile and docker-compose.yml file that should allow you to automatically run AmCAT and all dependencies with Docker. See [amcat/amcat-docker](http://github.com/amcat/amcat-docker)
 
 
-### [Installation instructions for 3.4 (stable)](https://github.com/amcat/amcat/blob/release-3.4/README.md)
+## Installation instructions for 3.4 (stable)
+
+The installation instructions for AmCAT 3.4 (the last stable release) can be found 
+[here](https://github.com/amcat/amcat/blob/release-3.4/README.md)
 
 
 ## Installation and Configuration for development version
