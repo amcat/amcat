@@ -3,7 +3,7 @@ import json
 import os.path
 import unittest
 from amcat.models import ArticleSet
-from amcat.scripts.article_upload.bzk_html import BZK
+from amcat.scripts.article_upload.plugins.bzk_html import BZK
 from amcat.tools import amcattest
 
 def _rmcache(fn):

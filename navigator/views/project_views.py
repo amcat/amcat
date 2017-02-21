@@ -127,7 +127,8 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
                                             help_text="What level of access should people who are not added to the "
                                             "project have? If you select None, the project and its contents will "
                                             "not be visible to non-members")
-        upload_plugins = forms.MultipleChoiceField(choices=[(k, v.label) for k, v in get_upload_plugins().items()], widget=BootstrapMultipleSelect)
+        upload_plugins = forms.MultipleChoiceField(choices=[(k, v.label) for k, v in get_upload_plugins().items()],
+                                                   widget=BootstrapMultipleSelect)
 
         def clean_upload_plugins(self):
             plugins = {f: False for f, _ in self.fields['upload_plugins'].choices}

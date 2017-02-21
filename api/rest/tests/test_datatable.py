@@ -12,7 +12,7 @@ from amcat.models import Project
 
 
 class TestDatatable(amcattest.AmCATTestCase):
-    PROJECT_FIELDS = {'id', 'name', 'description', 'insert_date', 'owner', 'r_plugins_enabled',
+    PROJECT_FIELDS = {'id', 'name', 'description', 'insert_date', 'owner', 'r_plugins_enabled', 'upload_plugins',
                       'insert_user', 'guest_role', 'active', 'favourite', 'last_visited_at'}
 
     def test_viewset(self):

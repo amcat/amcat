@@ -1,5 +1,5 @@
 import os.path
-from amcat.scripts.article_upload.bzk_eml import BZKEML
+from amcat.scripts.article_upload.plugins.bzk_eml import BZKEML
 from amcat.tools import amcattest
 
 

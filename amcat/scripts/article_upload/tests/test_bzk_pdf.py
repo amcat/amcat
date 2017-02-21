@@ -1,5 +1,5 @@
 import os.path
-from amcat.scripts.article_upload.bzk_pdf import BZKPDFScraper
+from amcat.scripts.article_upload.plugins.bzk_pdf import BZKPDFScraper
 from amcat.tools import amcattest
 
 

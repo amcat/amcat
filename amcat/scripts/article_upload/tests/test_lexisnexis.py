@@ -9,7 +9,7 @@ from typing import Tuple
 from django.core.files import File
 
 from amcat.models import ArticleSet
-from amcat.scripts.article_upload.lexisnexis import split_header, split_body, parse_header, \
+from amcat.scripts.article_upload.plugins.lexisnexis import split_header, split_body, parse_header, \
     parse_article, get_query, LexisNexis, split_file
 from amcat.scripts.article_upload.upload import UploadForm
 from amcat.tools import amcattest

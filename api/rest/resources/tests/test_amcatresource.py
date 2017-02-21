@@ -89,7 +89,8 @@ class TestAmCATResource(ApiTestCase):
             'insert_user': 'ModelChoiceField',
             'last_visited_at': 'SerializerMethodField',
             'favourite': 'SerializerMethodField',
-            'r_plugins_enabled': 'BooleanField'
+            'r_plugins_enabled': 'BooleanField',
+            'upload_plugins': 'ModelField'
         }
 
         parses = [
