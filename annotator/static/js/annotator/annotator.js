@@ -901,11 +901,47 @@ define([
         }).done(function(data, textStatus, jqXHR){
             self.hide_loading();
 
+            // BUG: Codings get lost sometimes. We try to detect the bug by checking the server:
+            var response = JSON.parse(jqXHR.responseText);
+            var expected_n_codings = self.get_codings().length;
+            var expected_n_values = $.map(self.get_codings(), function(coding){
+                return $.grep(self.values(coding.values), self.is_empty_codingvalue, true).length;
+            }).reduce(function(a, b){ return a + b; }, 0);
+
+            if (expected_n_codings != response.saved_codings){
+                new PNotify({
+                    "title": "Unexpected number of saved codings!",
+                    "text": "We sent {0} codings to the server, but server saved only {1}. Press F12 and click 'console'. Copy the messages and open a bug report. Thanks!".format(
+                        expected_n_codings, response.saved_codings
+                    ),
+                    "type" : "error",
+                    "delay" : 300000
+                });
+
+                self.log("Request: " + String($.map(self.get_codings(), self.pre_serialise_coding)));
+                self.log("Response: " + String(response));
+            } else if (expected_n_values != response.saved_values) {
+                new PNotify({
+                    "title": "Unexpected number of saved coding values!",
+                    "text": "We sent {0} codings to the server, but server saved only {1}. Press F12 and click 'console'. Copy the messages and open a bug report. Thanks!".format(
+                        expected_n_values, response.saved_values
+                    ),
+                    "type": "error",
+                    "delay": 300000
+                });
+
+                self.log("Request: " + String($.map(self.get_codings(), self.pre_serialise_coding)));
+                self.log("Response: " + String(response));
+            }
+            // END BUG
+
             new PNotify({
                 "title" : "Done",
-                "text" : "Codings saved succesfully.",
+                "text" : "Codings saved succesfully. Server replied: saved {0} codings with {1} values.".format(
+                    response.saved_codings, response.saved_values
+                ),
                 "type" : "success",
-                "delay" : 500
+                "delay" : 5000
             });
 
             self.set_column_text("status", self.STATUS_TEXT[self.state.coded_article.status]);
@@ -922,7 +958,7 @@ define([
             if (success_callback !== undefined && success_callback.currentTarget === undefined){
                 success_callback(data, textStatus, jqXHR);
             }
-        }).error(error_callback);
+        }).fail(error_callback);
     };
 
     self.set_status = function set_status(state){

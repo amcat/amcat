@@ -121,12 +121,12 @@ class CodedArticle(models.Model):
         CodingValue.objects.filter(coding__coded_article=self).delete()
         Coding.objects.filter(coded_article=self).delete()
 
-        new_coding_objects = map(partial(_to_coding, self), new_codings)
+        new_coding_objects = list(map(partial(_to_coding, self), new_codings))
         new_coding_objects = bulk_insert_returning_ids(new_coding_objects)
 
-        coding_values = itertools.chain.from_iterable(
+        coding_values = list(itertools.chain.from_iterable(
             _to_codingvalues(co, c["values"]) for c, co in zip(new_codings, new_coding_objects)
-        )
+        ))
 
         return (new_coding_objects, CodingValue.objects.bulk_create(coding_values))
 
