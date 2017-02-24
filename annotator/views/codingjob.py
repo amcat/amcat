@@ -35,6 +35,7 @@ from amcat.models import CodingJob, Project, Article, CodingValue, Coding, Coded
 
 log = logging.getLogger(__name__)
 
+
 def index(request, project_id, codingjob_id):
     """returns the HTML for the main annotator page"""
     return render(request, "annotator/codingjob.html", {
@@ -44,7 +45,7 @@ def index(request, project_id, codingjob_id):
         'annotator': True
     })
 
-@transaction.atomic
+
 def save(request, project_id, codingjob_id, coded_article_id):
     """
     Big fat warning: we don't do server side validation for the codingvalues. We
@@ -72,9 +73,16 @@ def save(request, project_id, codingjob_id, coded_article_id):
     coded_article.status_id = codings["coded_article"]["status_id"]
     coded_article.comments = codings["coded_article"]["comments"]
     coded_article.save()
-    coded_article.replace_codings(codings["codings"])
 
-    return HttpResponse(status=201)
+    new_coding_objects, new_coding_values = coded_article.replace_codings(codings["codings"])
+
+    status = {
+        "saved_codings": len(new_coding_objects),
+        "saved_values": len(new_coding_values)
+    }
+
+    return HttpResponse(status=201, content=json.dumps(status))
+
 
 def redirect(request, codingjob_id):
     cj = CodingJob.objects.get(id=codingjob_id)
