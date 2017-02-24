@@ -57,13 +57,14 @@ define([
     "annotator/autocomplete",
     "annotator/rules",
     "pnotify",
+    "clipboard",
     "jquery.highlight",
     "annotator/functional",
     "annotator/utils",
     "jquery.hotkeys",
     "jquery.scrollTo",
     "bootstrap"
-    ], function($, widgets, autocomplete, rules, PNotify){
+    ], function($, widgets, autocomplete, rules, PNotify, Clipboard){
     var self = {};
     annotator = self;
 
@@ -176,8 +177,9 @@ define([
         self.save_btn = $(".save-button");
         self.save_continue_btn = $(".save-continue-button");
         self.irrelevant_btn = $(".irrelevant-button");
-        self.copy_btn = $("#copy-coding-button");
         self.delete_btn = $("#delete-button");
+        self.netviz_btn = $(".copy-to-netviz");
+        self.netviz_clipboard_btn = new Clipboard("#copy-to-netviz-clipboard");
 
         self.next_btn.click(self.select_next_article);
         self.prev_btn.click(self.select_prev_article);
@@ -185,7 +187,10 @@ define([
         self.save_btn.click(self.save);
         self.save_continue_btn.click(self.finish_and_continue);
         self.irrelevant_btn.click(self.irrelevant_and_continue);
-        self.copy_btn.click(self.copy);
+        self.netviz_btn.click(self.copy_to_netviz);
+
+        self.netviz_clipboard_btn.on('success', self.copy_to_netviz_success);
+        self.netviz_clipboard_btn.on('error', self.copy_to_netviz_error);
 
         $("#editor").hide();
         $(".sentence-options").hide();
@@ -246,6 +251,7 @@ define([
         self.unsaved_modal = $("#unsaved-changes").modal({ show : false });
         self.loading_dialog = $("#loading").modal({show : false, keyboard : false});
         self.message_dialog = $("#message").modal({ show : false });
+        self.netviz_dialog = $("#copy-to-netviz-dialog").modal({ show : false });
     };
 
     /* Calls $.getJSON and returns its output, while appending ?page_size=inf
@@ -535,6 +541,66 @@ define([
         new_active_row = active_row.nextAll(".coding").first();
         new_active_row.find(".sentence").focus();
         return new_active_row;
+    };
+
+    self.show_netviz_dialog = function show_netviz_dialog(csv){
+        self.netviz_dialog.find("textarea").val(csv);
+        self.netviz_dialog.modal("show");
+    };
+
+    self.copy_to_netviz_success = function copy_to_netviz_success(e){
+        new PNotify({
+            "type": "info",
+            "text": "NETviz data copied to clipboard.",
+            "delay": 5000
+        });
+
+        e.clearSelection();
+    };
+
+    self.copy_to_netviz_error = function copy_to_netviz_error(){
+        new PNotify({
+            "type": "error",
+            "text": "Failed to copy data to clipboard. Please use CTRL+C.",
+            "delay": 15000
+        })
+
+    };
+
+    /**
+     * Copy sentence codings to tabular format (for netviz)
+     */
+    self.copy_to_netviz = function copy_to_netviz(){
+        // Create index from id -> index
+        var schemafields = new Map();
+        $.each(self.sentence_schemafields, function(i, schemafield){
+            schemafields.set(schemafield.id, i);
+        });
+
+        // Create CSV file as string
+        var csv = $.map(self.get_sentence_codings(), function(coding){
+            var values = new Array(self.sentence_schemafields.length).fill("");
+            $.each(coding.values, function(_, scoding){
+                values[schemafields.get(scoding.field.id)] = (scoding.intval === null) ? (scoding.strval || "") : String(scoding.intval);
+            });
+
+            // We're returning a double array on purpose: map stupidly chains..
+            return values.map(function(value){
+                // Escape value for use in CSV
+                if (value.indexOf('"') !== -1){
+                    value.replace('"', '""');
+                }
+
+                if (value.indexOf(',') !== -1){
+                    value = '"' + value + '"';
+                }
+
+                return value;
+            }).join();
+        }).join("\n");
+
+        // Pop up dialog allowing the user to copy the CSV
+        self.show_netviz_dialog(csv);
     };
 
     /*
