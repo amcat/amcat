@@ -582,7 +582,10 @@ define([
         var csv = $.map(self.get_sentence_codings(), function(coding){
             var values = new Array(self.sentence_schemafields.length).fill("");
             $.each(coding.values, function(_, scoding){
-                values[schemafields.get(scoding.field.id)] = (scoding.intval === null) ? (scoding.strval || "") : String(scoding.intval);
+                var sf = self.sentence_schemafields[schemafields.get(scoding.field.id)];
+
+                values[sf.id] = (sf.codebook ? sf.codebook.codes[scoding.intval].label :
+                    ((scoding.intval === null) ? (scoding.strval || "") : String(scoding.intval)));
             });
 
             // We're returning a double array on purpose: map stupidly chains..
