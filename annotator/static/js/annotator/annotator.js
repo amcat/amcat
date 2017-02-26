@@ -581,7 +581,8 @@ define([
                 var i = schemafields.get(scoding.field.id);
                 var sf = self.sentence_schemafields[i];
                 values[i] = (sf.codebook ? sf.codebook.codes[scoding.intval].label :
-                    ((scoding.intval === null) ? (scoding.strval || "") : String(scoding.intval)));
+                    (sf.fieldtype == 9 ? String(scoding.intval / 10) :
+                    ((scoding.intval === null) ? (scoding.strval || "") : String(scoding.intval))))
             });
 
             // We're returning a double array on purpose: map stupidly chains..
