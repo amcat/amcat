@@ -24,6 +24,7 @@ import functools
 import json
 import os
 import re
+import logging
 
 from collections import OrderedDict
 from threading import Lock
@@ -62,8 +63,10 @@ def initialize_r():
     r(".libPaths('{pkgdir}')".format(pkgdir=pkgdir))
     source_r_file('r_plugins/formfield_functions.r')
 
-initialize_r()
-
+try:
+    initialize_r()
+except:
+    logging.exception("R Initialization failed, R-based query actions might not function")
 
 def _to_r_primitive(obj):
     if isinstance(obj, QuerySet):
