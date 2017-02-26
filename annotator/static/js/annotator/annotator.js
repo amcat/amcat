@@ -577,6 +577,7 @@ define([
             schemafields.set(schemafield.id, i);
         });
 
+
         // Create CSV file as string
         var csv = $.map(self.get_sentence_codings(), function(coding){
             var values = new Array(self.sentence_schemafields.length).fill("");
@@ -598,6 +599,9 @@ define([
                 return value;
             }).join();
         }).join("\n");
+
+        var header = self.sentence_schemafields.map(function(f) {return f.label;});
+        csv = header.join(",") + "\n" + csv;
 
         // Pop up dialog allowing the user to copy the CSV
         self.show_netviz_dialog(csv);
