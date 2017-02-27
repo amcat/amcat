@@ -25,7 +25,8 @@ Plugin for uploading any pdf file as raw text
 from django import forms
 from datetime import date
 
-from amcat.scripts.article_upload.upload import UploadScript, UploadForm, Plugin
+from amcat.scripts.article_upload.upload import UploadScript, UploadForm
+from amcat.scripts.article_upload.upload_plugin import UploadPlugin
 from .pdf import PDFParser
 from amcat.models.article import Article
 
@@ -36,7 +37,7 @@ class RawPDFForm(UploadForm):
     date = forms.DateField(required=False, help_text='If left blank, use current date')
     section = forms.CharField(required=False)
 
-@Plugin(label="Raw PDF")
+@UploadPlugin(label="Raw PDF")
 class RawPDFScraper(UploadScript):
     options_form = RawPDFForm
     def _scrape_unit(self, _file):

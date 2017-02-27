@@ -20,7 +20,8 @@ import collections
 from lxml import html
 
 from amcat.models import Article
-from amcat.scripts.article_upload.upload import UploadScript, ArticleField, _read, Plugin
+from amcat.scripts.article_upload.upload import UploadScript, ArticleField, _read
+from amcat.scripts.article_upload.upload_plugin import UploadPlugin
 from amcat.tools.toolkit import read_date
 
 META = ["title", "length", "date", "medium", None, "page"]
@@ -76,7 +77,7 @@ def parse_doc(document):
     paragraphs = [p.text_content() for p in document.cssselect("p")]
     yield "text", ("\n\n".join(paragraphs)).strip()
 
-@Plugin()
+@UploadPlugin()
 class Factivia(UploadScript):
     @classmethod
     def get_fields(cls, file, encoding):

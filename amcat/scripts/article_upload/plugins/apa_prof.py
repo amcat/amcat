@@ -48,7 +48,8 @@ import lxml.html
 import logging
 
 from amcat.models import Article
-from amcat.scripts.article_upload.upload import UploadScript, Plugin
+from amcat.scripts.article_upload.upload import UploadScript
+from amcat.scripts.article_upload.upload_plugin import UploadPlugin
 from amcat.tools.toolkit import read_date
 
 log = logging.getLogger(__name__)
@@ -304,7 +305,7 @@ def parse_page(doc_elements):
 class APAForm(UploadScript.form_class):
     pass
 
-@Plugin(label="APA")
+@UploadPlugin(label="APA")
 class APA(UploadScript):
     options_form = APAForm
 

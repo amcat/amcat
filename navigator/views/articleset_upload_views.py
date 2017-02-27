@@ -15,6 +15,7 @@ from django.shortcuts import redirect
 from django.utils.datastructures import MultiValueDict
 from django.views.generic import FormView
 
+import amcat.scripts.article_upload.upload_plugin
 from amcat.scripts.article_upload import upload
 from amcat.scripts.article_upload.upload import ArticleField, REQUIRED
 from amcat.tools.amcates import ARTICLE_FIELDS, is_valid_property_name
@@ -65,7 +66,7 @@ class ArticleSetUploadScriptHandler(ScriptHandler):
 
 
 class ArticleSetUploadForm(upload.UploadForm):
-    script = forms.ChoiceField(choices=[(k, k) for k, _ in upload.get_upload_plugins().items()])
+    script = forms.ChoiceField(choices=[(k, k) for k, _ in amcat.scripts.article_upload.upload_plugin.get_upload_plugins().items()])
     file = forms.FileField(help_text='Uploading very large files can take a long time. '
                                      'If you encounter timeout problems, consider uploading smaller files')
 
@@ -77,7 +78,7 @@ class ArticleSetUploadForm(upload.UploadForm):
                 self.fields.pop(field)
 
     def get_script_choices(self, project):
-        return [(k, k) for k, _ in upload.get_project_plugins(project).items()]
+        return [(k, k) for k, _ in amcat.scripts.article_upload.upload_plugin.get_project_plugins(project).items()]
 
 
 # Place 'file' field back on top, makes it a bit more intuitive.
@@ -231,7 +232,7 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
 
     @property
     def script_class(self):
-        plugin = upload.get_upload_plugin(self.upload['script'])
+        plugin = amcat.scripts.article_upload.upload_plugin.get_upload_plugin(self.upload['script'])
         cls = plugin.script_cls
         return cls
 

@@ -32,7 +32,8 @@ import iso8601
 
 from amcat.contrib.oset import OrderedSet
 from amcat.models import Article, get_property_primitive_type
-from amcat.scripts.article_upload.upload import ArticleField, Plugin, UploadScript, _open
+from amcat.scripts.article_upload.upload import ArticleField, UploadScript, _open
+from amcat.scripts.article_upload.upload_plugin import UploadPlugin
 from amcat.tools.amcates import ARTICLE_FIELDS
 from amcat.tools.toolkit import read_date
 
@@ -139,7 +140,7 @@ def guess_destination_and_type(field_name: str, sample_value: Optional[str]) -> 
 
     return field_name, "default"
 
-@Plugin(default=True)
+@UploadPlugin(default=True)
 class CSV(UploadScript):
     """
     Upload CSV files to AmCAT.

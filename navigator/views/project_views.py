@@ -23,7 +23,7 @@ from django.views.generic.list import ListView
 from django.views.generic.edit import UpdateView
 
 from amcat.forms.widgets import BootstrapMultipleSelect
-from amcat.scripts.article_upload.upload import get_upload_plugins, get_project_plugins
+from amcat.scripts.article_upload.upload_plugin import get_project_plugins, get_upload_plugins
 from navigator.views.datatableview import DatatableMixin
 from amcat.models import Project
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
