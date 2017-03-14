@@ -1,6 +1,8 @@
 from collections import OrderedDict
 from typing import Mapping, Iterable
 
+import functools
+
 from amcat.models import Project
 from amcat.scripts.article_upload.upload import UploadScript
 
@@ -16,8 +18,8 @@ class UploadPlugin:
     A callable class decorator that registeres the plugin to AmCAT. This decorator is required for the plugin
     in order for it to be registered as an uploader.
 
-    Usage:
-        >>> @UploadPlugin(label=UploadPlugin)
+    Example Usage:
+        >>> @UploadPlugin(label="My Plugin")
         >>> class MyPlugin:
         >>>     ...
     """
@@ -48,18 +50,30 @@ class UploadPlugin:
 
     @property
     def label(self):
+        """
+        A human readable label.
+        """
         if self._label is None:
             self._label = self.name
         return self._label
 
     @property
     def name(self):
+        """
+        A unique name that serves as the identifier of the plugin.
+        """
         if self._name is None:
             self._name = self.script_cls.__name__
         return self._name
 
 
 def get_project_plugins(project: Project) -> Mapping[str, UploadPlugin]:
+    """
+    Retrieves all plugins that are enabled in the project.
+
+    @param project: A Project object
+    @return:
+    """
     all_plugins = get_upload_plugins()
     enabled_plugins = {k: v.default for k, v in all_plugins.items()}
     enabled_plugins.update(project.upload_plugins)
@@ -67,6 +81,9 @@ def get_project_plugins(project: Project) -> Mapping[str, UploadPlugin]:
 
 
 def get_upload_plugins() -> Mapping[str, UploadPlugin]:
+    """
+    Returns all known plugins.
+    """
     global _registered_plugins
     if not _registered_plugins:
         # noinspection PyUnresolvedReferences
@@ -76,8 +93,8 @@ def get_upload_plugins() -> Mapping[str, UploadPlugin]:
 
 
 def get_upload_plugin(name: str) -> UploadPlugin:
+    """
+    Gets an upload plugin by name, and returns the UploadPlugin object.
+    """
     return get_upload_plugins()[name]
 
-
-def get_default_plugins() -> Iterable[UploadPlugin]:
-    return (plugin for plugin in get_upload_plugins().values() if plugin.default)

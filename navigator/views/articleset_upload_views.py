@@ -66,13 +66,16 @@ class ArticleSetUploadScriptHandler(ScriptHandler):
 
 
 class ArticleSetUploadForm(upload.UploadForm):
-    script = forms.ChoiceField(choices=[(k, k) for k, _ in amcat.scripts.article_upload.upload_plugin.get_upload_plugins().items()])
+    default_choices = [(k, k) for k, _ in amcat.scripts.article_upload.upload_plugin.get_upload_plugins().items()]
+    script = forms.ChoiceField(choices=default_choices, help_text='Choose the file parser script to use. More script '
+                                                                  'plugins can be enabled in the project settings.')
     file = forms.FileField(help_text='Uploading very large files can take a long time. '
                                      'If you encounter timeout problems, consider uploading smaller files')
 
     def __init__(self, *args, project = None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['script'].choices = self.get_script_choices(project)
+
         for field in list(self.fields):
             if field not in ("file", "articleset", "articleset_name", "encoding", "script"):
                 self.fields.pop(field)

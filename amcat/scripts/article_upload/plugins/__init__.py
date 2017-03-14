@@ -4,6 +4,9 @@ def _init():
     import pkgutil
     import importlib
     import logging
+
+    log = logging.getLogger(__name__)
+
     USER_DIRS = [
         os.path.expanduser("~/amcat_plugins/upload")
     ]
@@ -11,7 +14,6 @@ def _init():
 
     __all__ = []
 
-    log = logging.getLogger(__name__)
     for _, module, _ in pkgutil.iter_modules(__path__):
         log.debug("Importing plugin module {}".format(module))
         try:
