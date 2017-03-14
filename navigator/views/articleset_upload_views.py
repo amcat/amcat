@@ -1,18 +1,14 @@
 import base64
+import functools
 import json
 import logging
 import os
+import shutil
 from tempfile import mkdtemp
 from typing import List
-from uuid import uuid4, UUID
+from uuid import UUID, uuid4
 
-import shutil
-
-import itertools
-
-import functools
 from django import forms
-from django.core.files.uploadedfile import UploadedFile
 from django.core.urlresolvers import reverse
 from django.http import QueryDict
 from django.shortcuts import redirect
@@ -21,13 +17,12 @@ from django.views.generic import FormView
 
 from amcat.models import Plugin
 from amcat.scripts.article_upload import upload
-from amcat.scripts.article_upload.upload import REQUIRED, ArticleField
-from amcat.tools.amcates import is_valid_property_name, ARTICLE_FIELDS
+from amcat.scripts.article_upload.upload import ArticleField, REQUIRED
+from amcat.tools.amcates import ARTICLE_FIELDS, is_valid_property_name
 from navigator.views.project_views import ProjectDetailsView
 from navigator.views.projectview import BaseMixin
 from navigator.views.scriptview import ScriptHandler, get_temporary_file_dict
 from settings import ES_MAPPING_TYPES
-
 
 log = logging.getLogger(__name__)
 
@@ -137,6 +132,8 @@ class ArticleUploadFieldForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
+        if self._errors:
+            return cleaned_data
         if (cleaned_data['destination'] == NEW_FIELD) and not cleaned_data['new_name']:
             raise forms.ValidationError("Fieldname required for new field")
 

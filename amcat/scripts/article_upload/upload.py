@@ -25,18 +25,15 @@ import json
 import logging
 import os.path
 import zipfile
+from typing import Any, Iterable, Tuple, Sequence
+
 import chardet
-
-from io import TextIOWrapper
 from actionform import ActionForm
-
 from django import forms
 from django.contrib.postgres.forms import JSONField
-from django.core.files import File
 from django.core.files.utils import FileProxyMixin
 from django.core.serializers.json import DjangoJSONEncoder
 from django.forms.widgets import HiddenInput
-from os.path import dirname
 
 from amcat.models import Article, ArticleSet, Project
 from amcat.models.articleset import create_new_articleset
@@ -45,7 +42,8 @@ from amcat.tools.progress import NullMonitor
 
 log = logging.getLogger(__name__)
 
-REQUIRED = tuple(field.name for field in Article._meta.get_fields() if field.name in amcates.ARTICLE_FIELDS and not field.blank)
+REQUIRED = tuple(field.name for field in Article._meta.get_fields()
+                 if field.name in amcates.ARTICLE_FIELDS and not field.blank)
 
 # HACK: Django's FileProxyMixin misses the readable and writable properties of IOBase,
 # HACK: see Django ticket #26646 fixed in Django 1.11+.
@@ -72,6 +70,7 @@ class ArticleField(object):
     Simple 'struct' to hold information about fields in uploaded files
     in order to build the 'upload options' page
     """
+
     def __init__(self, label, destination=None, values=None, possible_types=None, suggested_type=None):
         self.label = label  # name in uploaded file
         self.suggested_destination = destination  # suggested destination model field
@@ -85,7 +84,7 @@ class ArticleField(object):
 
 
 class ParseError(Exception):
-    pass 
+    pass
 
 
 class UploadForm(forms.Form):
@@ -102,10 +101,10 @@ class UploadForm(forms.Form):
         max_length=ArticleSet._meta.get_field('name').max_length,
         required=False)
 
-    encoding = forms.ChoiceField(choices=[(x,x) for x in ["Autodetect", "ISO-8859-15", "UTF-8", "Latin-1"]])
+    encoding = forms.ChoiceField(choices=[(x, x) for x in ["Autodetect", "ISO-8859-15", "UTF-8", "Latin-1"]])
     field_map = JSONField(validators=[validate_field_map],
-        help_text='json dict with property names (title, date, etc.) as keys, and field settings as values. '
-                   'Field settings should have the form {"type": "field"/"literal", "value": "field_name_or_literal"}')
+                          help_text='json dict with property names (title, date, etc.) as keys, and field settings as values. '
+                                    'Field settings should have the form {"type": "field"/"literal", "value": "field_name_or_literal"}')
 
     def clean_articleset_name(self):
         """If articleset name not specified, use file base name instead"""
@@ -122,7 +121,7 @@ class UploadForm(forms.Form):
         if not bool(name) ^ bool(self.cleaned_data['articleset']):
             raise forms.ValidationError("Please specify either articleset or articleset_name")
         return name
-    
+
     @classmethod
     def get_empty(cls, project=None, post=None, files=None, **_options):
         f = cls(post, files) if post is not None else cls()
@@ -139,7 +138,7 @@ class UploadForm(forms.Form):
 def _open(file, encoding):
     """Open the file in str (unicode) mode, guessing encoding if needed"""
     if encoding.lower() == 'autodetect':
-        bytes =open(file, mode='rb').read(1000)
+        bytes = open(file, mode='rb').read(1000)
         encoding = chardet.detect(bytes[:1000])["encoding"]
         log.info("Guessed encoding: {encoding}".format(**locals()))
     return open(file, encoding=encoding)
@@ -155,7 +154,8 @@ def _read(file, encoding):
 
 
 class UploadScript(ActionForm):
-    """Base class for Upload Scripts, which are scraper scripts driven by the
+    """
+    Base class for Upload Scripts, which are scraper scripts driven by the
     the script input.
 
     Implementing classes should implement get_fields and parse_file,
@@ -164,21 +164,30 @@ class UploadScript(ActionForm):
     form_class = UploadForm
 
     @classmethod
-    def get_fields(cls, file, encoding):
+    def get_fields(cls, file: str, encoding: str) -> Sequence[ArticleField]:
         """
         Return a sequence of ArticleField objects listing the fields in the uploaded file(s)
         """
         return []
-    
-    def parse_file(self, file):
+
+    def parse_file(self, file: str, encoding: str, _data) -> Iterable[Article]:
+        """
+        Parse the file into an iterable of Article objects.
+        @param file: The full file path
+        @param encoding: The encoding of the file
+        @param _data: Preprocessed data
+        @return: An iterable of Article objects.
+        """
         raise NotImplementedError()
 
     @classmethod
-    def _get_preprocessed(cls, file, encoding):
+    def _get_preprocessed(cls, file: str, encoding: str) -> Tuple[str, str, Any]:
         """
         Get and cache _preprocess(file, encoding)
         If preprocessing is desired, _preprocess should return a json-serializable object
-        :return: (file, encoding, preprocess_data)
+        @param file: The full filename
+        @param encoding: The encoding of the file
+        @return: A tuple (file, encoding, preprocess_data)
         """
         if not hasattr(cls, "_preprocess"):
             return file, encoding, None
@@ -192,12 +201,12 @@ class UploadScript(ActionForm):
         return file, encoding, data
 
     @classmethod
-    def _get_files(cls, file: str, encoding: str):
+    def _get_files(cls, file: str, encoding: str) -> Iterable[Tuple[str, str, Any]]:
         """
         Get the files to upload, unpacking zip files if needed, and returning preprocessed data if applicable
-        :param file: full file path
-        :param encoding: the encoding
-        :return: a sequence of (file, encoding, preprocessed_data_or_None)
+        @param file: Full file path
+        @param encoding: The encoding of the file
+        @return: An iterable of (file, encoding, preprocessed_data_or_None)
         """
         if file.endswith(".zip"):
             path = os.path.dirname(file)
@@ -245,7 +254,8 @@ class UploadScript(ActionForm):
         monitor = self.progress_monitor
 
         filename = self.options['filename']
-        monitor.update(10, u"Importing {self.__class__.__name__} from {filename} into {self.project}"
+        file_shortname = os.path.split(self.options['filename'])[-1]
+        monitor.update(10, u"Importing {self.__class__.__name__} from {file_shortname} into {self.project}"
                        .format(**locals()))
 
         articles = []
@@ -258,7 +268,7 @@ class UploadScript(ActionForm):
 
         for article in articles:
             _set_project(article, self.project)
-        
+
         if self.errors:
             raise ParseError(" ".join(map(str, self.errors)))
         monitor.update(10, "All files parsed, saving {n} articles".format(n=len(articles)))
@@ -280,7 +290,6 @@ class UploadScript(ActionForm):
 
         monitor.update(10, "Done! Uploaded articles".format(n=len(articles)))
         return self.options["articleset"]
-
 
     def map_article(self, art_dict):
         mapped_dict = {}
