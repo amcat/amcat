@@ -5,7 +5,7 @@ from io import BytesIO
 
 from amcat.models import Article
 from amcat.scripts.article_upload.upload import UploadScript
-from amcat.scripts.article_upload.upload_plugin import UploadPlugin
+from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 
 
 class CoostoForm(UploadScript.form_class):

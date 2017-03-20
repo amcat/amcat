@@ -29,7 +29,7 @@ from lxml import html
 
 from amcat.models.article import Article
 from amcat.scripts.article_upload.upload import UploadScript, ParseError, ArticleField, _read
-from amcat.scripts.article_upload.upload_plugin import UploadPlugin
+from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.tools.toolkit import read_date
 
 log = logging.getLogger(__name__)

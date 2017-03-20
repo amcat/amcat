@@ -23,7 +23,7 @@ from django.views.generic.list import ListView
 from django.views.generic.edit import UpdateView
 
 from amcat.forms.widgets import BootstrapMultipleSelect
-from amcat.scripts.article_upload.upload_plugin import get_project_plugins, get_upload_plugins
+from amcat.scripts.article_upload.upload_plugins import get_project_plugins, get_upload_plugins
 from navigator.views.datatableview import DatatableMixin
 from amcat.models import Project
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
@@ -118,6 +118,12 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         form = super().get_form(form_class)
         form.initial['upload_plugins'] = [k for k, v in get_project_plugins(self.project).items()]
         return form
+
+    def form_valid(self, form:forms.Form):
+        response = super().form_valid(form)
+        for name, enabled in form.cleaned_data['upload_plugins'].items():
+            self.project.upload_plugins.update_or_create(name=name, defaults={"enabled": enabled})
+        return response
 
     class form_class(forms.ModelForm):
         class Meta:

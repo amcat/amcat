@@ -33,7 +33,7 @@ from django import forms
 
 from amcat.models.article import Article
 from amcat.scripts.article_upload.upload import UploadScript, UploadForm, ArticleField, _read
-from amcat.scripts.article_upload.upload_plugin import UploadPlugin
+from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.tools import toolkit
 
 log = logging.getLogger(__name__)

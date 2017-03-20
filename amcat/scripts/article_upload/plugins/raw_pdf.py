@@ -26,7 +26,7 @@ from django import forms
 from datetime import date
 
 from amcat.scripts.article_upload.upload import UploadScript, UploadForm
-from amcat.scripts.article_upload.upload_plugin import UploadPlugin
+from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from .pdf import PDFParser
 from amcat.models.article import Article
 

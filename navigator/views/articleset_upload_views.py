@@ -15,7 +15,8 @@ from django.shortcuts import redirect
 from django.utils.datastructures import MultiValueDict
 from django.views.generic import FormView
 
-import amcat.scripts.article_upload.upload_plugin
+from amcat.scripts.article_upload.upload_plugins import get_upload_plugin, get_upload_plugins, get_project_plugins, \
+    UploadPlugin
 from amcat.scripts.article_upload import upload
 from amcat.scripts.article_upload.upload import ArticleField, REQUIRED
 from amcat.tools.amcates import ARTICLE_FIELDS, is_valid_property_name
@@ -66,7 +67,7 @@ class ArticleSetUploadScriptHandler(ScriptHandler):
 
 
 class ArticleSetUploadForm(upload.UploadForm):
-    default_choices = [(k, k) for k, _ in amcat.scripts.article_upload.upload_plugin.get_upload_plugins().items()]
+    default_choices = [(k, k) for k, _ in get_upload_plugins().items()]
     script = forms.ChoiceField(choices=default_choices, help_text='Choose the file parser script to use. More script '
                                                                   'plugins can be enabled in the project settings.')
     file = forms.FileField(help_text='Uploading very large files can take a long time. '
@@ -81,7 +82,7 @@ class ArticleSetUploadForm(upload.UploadForm):
                 self.fields.pop(field)
 
     def get_script_choices(self, project):
-        return [(k, k) for k, _ in amcat.scripts.article_upload.upload_plugin.get_project_plugins(project).items()]
+        return [(k, k) for k, _ in get_project_plugins(project).items()]
 
 
 # Place 'file' field back on top, makes it a bit more intuitive.
@@ -189,11 +190,17 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
         return list(self.script_class.get_fields(self.upload['filename'], self.upload['encoding']))
 
     @property
+    @functools.lru_cache()
+    def plugin(self) -> UploadPlugin:
+        return get_upload_plugin(self.upload['script'])
+
+    @property
     def upload_id(self):
         return UUID(bytes=base64.urlsafe_b64decode(self.request.GET["upload_id"]))
 
     def get_context_data(self, **kwargs):
-        kwargs['script_name'] = self.script_class.__name__
+        kwargs['plugin_name'] = self.plugin.name
+        kwargs['plugin_label'] = self.plugin.label
         return super().get_context_data(**kwargs)
 
     def initial_data(self):
@@ -235,8 +242,7 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
 
     @property
     def script_class(self):
-        plugin = amcat.scripts.article_upload.upload_plugin.get_upload_plugin(self.upload['script'])
-        cls = plugin.script_cls
+        cls = self.plugin.script_cls
         return cls
 
 

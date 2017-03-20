@@ -81,10 +81,6 @@ class Project(AmcatModel):
     # Temporary field enabling R plugins in the query screen
     r_plugins_enabled = models.BooleanField(default=False)
 
-    # A mapping of {name: enabled} key-value pairs for upload plugins. If the plugin is labeled as default, this
-    # defaults to true, otherwise it defaults to false.
-    upload_plugins = JSONField(blank=True, default={}, validators=[DictValidator(str, bool)])
-
     # Coding fields
     codingschemas = models.ManyToManyField("amcat.CodingSchema", related_name="projects_set")
     codebooks = models.ManyToManyField("amcat.Codebook", related_name="projects_set")
@@ -258,3 +254,15 @@ class RecentProject(AmcatModel):
         unique_together = ("user", "project")
         app_label = "amcat"
         ordering = ["date_visited"]
+
+
+class ProjectUploadPlugin(AmcatModel):
+    name = models.CharField(max_length=200, editable=False)
+    project = models.ForeignKey("amcat.Project", related_name="upload_plugins", editable=False)
+    enabled = models.BooleanField()
+    presets = JSONField(null=True)
+
+    class Meta:
+        app_label = 'amcat'
+        db_table = 'projects_plugins'
+        unique_together = ("name", "project")

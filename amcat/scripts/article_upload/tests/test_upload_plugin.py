@@ -1,18 +1,18 @@
 import amcat.scripts
 from amcat.scripts.article_upload.upload import UploadScript
-from amcat.scripts.article_upload.upload_plugin import UploadPlugin, get_upload_plugin, get_upload_plugins, PluginError
+from amcat.scripts.article_upload.upload_plugins import UploadPlugin, get_upload_plugin, get_upload_plugins, PluginError
 from amcat.tools import amcattest
 
 
 class TestUploadPlugin(amcattest.AmCATTestCase):
     def setUp(self):
         from amcat.scripts.article_upload import upload
-        self.pre_plugins = amcat.scripts.article_upload.upload_plugin._registered_plugins.copy()
-        amcat.scripts.article_upload.upload_plugin._registered_plugins.clear()
+        self.pre_plugins = amcat.scripts.article_upload.upload_plugins._registered_plugins.copy()
+        amcat.scripts.article_upload.upload_plugins._registered_plugins.clear()
 
     def tearDown(self):
         from amcat.scripts.article_upload import upload
-        amcat.scripts.article_upload.upload_plugin._registered_plugins = self.pre_plugins.copy()
+        amcat.scripts.article_upload.upload_plugins._registered_plugins = self.pre_plugins.copy()
 
     def test_plugin_registration(self):
         @UploadPlugin(name="PluginName", label="My UploadPlugin")

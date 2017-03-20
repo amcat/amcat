@@ -49,7 +49,7 @@ import logging
 
 from amcat.models import Article
 from amcat.scripts.article_upload.upload import UploadScript
-from amcat.scripts.article_upload.upload_plugin import UploadPlugin
+from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.tools.toolkit import read_date
 
 log = logging.getLogger(__name__)

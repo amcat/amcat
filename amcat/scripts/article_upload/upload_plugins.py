@@ -49,6 +49,9 @@ class UploadPlugin:
         return plugin_cls
 
     @property
+    def __name__(self):
+        return self.name
+    @property
     def label(self):
         """
         A human readable label.
@@ -76,7 +79,7 @@ def get_project_plugins(project: Project) -> Mapping[str, UploadPlugin]:
     """
     all_plugins = get_upload_plugins()
     enabled_plugins = {k: v.default for k, v in all_plugins.items()}
-    enabled_plugins.update(project.upload_plugins)
+    enabled_plugins.update((p.name, p.enabled) for p in project.upload_plugins.all())
     return OrderedDict((k, v) for k, v in all_plugins.items() if enabled_plugins[k])
 
 
@@ -88,7 +91,7 @@ def get_upload_plugins() -> Mapping[str, UploadPlugin]:
     if not _registered_plugins:
         # noinspection PyUnresolvedReferences
         import amcat.scripts.article_upload.plugins
-        _registered_plugins = OrderedDict(sorted(_registered_plugins.items()))
+        _registered_plugins = OrderedDict(sorted(_registered_plugins.items(), key=lambda x: x[1].label.lower()))
     return _registered_plugins
 
 
