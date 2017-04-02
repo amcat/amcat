@@ -264,5 +264,5 @@ class ProjectUploadPlugin(AmcatModel):
 
     class Meta:
         app_label = 'amcat'
-        db_table = 'projects_plugins'
+        db_table = 'projects_uploadplugins'
         unique_together = ("name", "project")

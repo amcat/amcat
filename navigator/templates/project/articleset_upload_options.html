@@ -2,9 +2,9 @@
 {% load staticfiles %}
 {% block javascript %}
     <script>
-    window.project = {{ project.id }};
-    window.upload_plugin = "{{ plugin_name }}";
-    require(["amcat/uploader"]);
+        window.project = {{ project.id }};
+        window.upload_plugin = "{{ plugin_name }}";
+        require(["amcat/uploader"]);
     </script>
 {% endblock %}
 
@@ -41,7 +41,7 @@
         {% endif %}
     {% endif %}
 
-    <legend> Uploading articles using <i>{{ plugin_label }}</i> </legend>
+    <legend> Uploading articles using <i>{{ plugin_label }}</i></legend>
     <div class="row">
         <div class="col-md-8">
             <p>Step 2 of 2</p>
@@ -49,7 +49,7 @@
         <div class="col-md-4 text-right">
             <div class="btn-group text-left">
                 <div class="btn-group">
-                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
+                    <button class="btn btn-sm btn-default dropdown-toggle" type="button" data-toggle="dropdown">
                         Load preset
                         <span class="caret"></span>
                     </button>
@@ -60,7 +60,7 @@
                         <li class="dropdown-header" id="presets-divider">Project Presets:</li>
                     </ul>
                 </div>
-                <button class="btn btn-default" data-toggle="collapse" data-target="#input-group-save-collapse">
+                <button class="btn btn-sm btn-default" data-toggle="collapse" data-target="#input-group-save-collapse">
                     Save preset...
                 </button>
 
@@ -81,7 +81,7 @@
         <div class="panel panel-default">
             <div class="panel-heading">Specify fields:</div>
             {% if form.non_form_errors %}
-            <div class="panel-body">{{ form.non_form_errors }}</div>
+                <div class="panel-body">{{ form.non_form_errors }}</div>
             {% endif %}
             <table id="table-fieldmap" class="table table-striped">
                 <colgroup>
@@ -102,11 +102,13 @@
                 </thead>
                 <tbody>
                 {% for fieldform in form %} {# form is a formset, each fieldform is a django form #}
-                    {% if fieldform.label.value %}
-                    <tr class="field-row" data-fieldname="{{ fieldform.label.value }}">
-                    {% else %}
-                    <tr class="field-row">
-                    {% endif %}
+
+                    <tr class="field-row"
+                        {% if fieldform.label.value %}
+                        data-fieldname="{{ fieldform.label.value }}"
+                        {% else %}
+                        data-literal="literal"
+                        {% endif %}>
                         <td>
                             {% if fieldform.label.value %}
                                 <label for="{{ fieldform.destination.auto_id }}">{{ fieldform.label.value }}</label>
@@ -145,7 +147,7 @@
                         <td>
                             {{ fieldform.non_field_errors }}
                         </td>
-                    </tr>
+                    </tr> <!-- /.field-row -->
                 {% endfor %}
                 </tbody>
             </table>
