@@ -2,6 +2,9 @@
 import datetime
 import json
 import os
+import tempfile
+import shutil
+from typing import Tuple
 
 from django.core.files import File
 
@@ -19,13 +22,27 @@ def _rmcache(fn):
     return fn
 
 
+def _mktempcopy(src_dir: str) -> str:
+    """
+    Makes a temporary copy of a directory. The directory will have the same name as the source directory,
+    but will be located inside a temporary directory.
+
+    @param src_dir: The directory path
+    @return: the parent temporary directory and the copy of the directory.
+    """
+    tmpdir = tempfile.mkdtemp(prefix="amcattest_tmp")
+    target = os.path.join(tmpdir, os.path.split(src_dir)[-1])
+    shutil.copytree(src_dir, target)
+    return target
+
+
 class TestLexisNexis(amcattest.AmCATTestCase):
     def setUp(self):
-        self.dir = os.path.join(os.path.dirname(__file__), 'test_files', 'lexisnexis')
+        self.dir = _mktempcopy(os.path.join(os.path.dirname(__file__), 'test_files', 'lexisnexis'))
 
-        self.test_file = _rmcache(os.path.join(self.dir, 'test.txt'))
+        self.test_file = os.path.join(self.dir, 'test.txt')
         self.test_text = open(self.test_file, encoding="utf-8").read()
-        self.test_file2 = _rmcache(os.path.join(self.dir, 'test2.txt'))
+        self.test_file2 = os.path.join(self.dir, 'test2.txt')
         self.test_text2 = open(self.test_file2, encoding="utf-8").read()
         self.test_text3 = open(os.path.join(self.dir, 'test3.txt'), encoding="utf-8").read()
 
@@ -95,7 +112,7 @@ class TestLexisNexis(amcattest.AmCATTestCase):
                     if f != a:
                         print("i:", i, "Key:", key, " found:", repr(f), " actual:", repr(a))
             self.assertEqual(fkeys, akeys)
-            self.assertEquals(found, actual)
+            self.assertDictEqual(found, actual)
 
 
     def test_get_query(self):

@@ -37,13 +37,13 @@ tblib
 tqdm
 django-redis==4.6.0
 ruamel.yaml==0.12.18
-dateparser
+dateparser>=0.6,<0.7
 anyjson
 billiard==3.3.0.23
 six
 pytz
 KafNafParserPy
-nlpipe
+nlpipe==0.30
 rpy2
 iso8601
 

@@ -202,7 +202,11 @@ def read_date(datestr: str):
         pass
 
     datestr = datestr.replace("Maerz", "März")  # Needed in LN parser?
-    settings = {'PREFER_DAY_OF_MONTH': 'first'}
+    settings = {
+        'PREFER_DAY_OF_MONTH': 'first',
+        "RETURN_AS_TIMEZONE_AWARE": False
+    }
+
     if RE_ISO.match(datestr):
         settings['DATE_ORDER'] = 'YMD'  # ISO-like but not quite ISO
     else:
