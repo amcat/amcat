@@ -5,7 +5,7 @@ from celery.exceptions import TimeoutError
 
 from amcat.amcatcelery import status
 from amcat.tools.amcates import ES
-from git import Repo
+from git import Repo, InvalidGitRepositoryError
 import time
 import logging
 
@@ -43,7 +43,11 @@ def git_status():
     def date2iso(date):
         return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(date))
     # there is probably a better place for this!
-    repo = Repo()
+    try:
+        repo = Repo()
+    except InvalidGitRepositoryError:
+        return None #Not a git repo
+
     return {
         "active_branch": str(repo.active_branch),
         "last_commit": {
