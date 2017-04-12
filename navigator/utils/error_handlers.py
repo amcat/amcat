@@ -41,6 +41,15 @@ def handler500(request):
 
     return _build_response(request, locals())
 
+def handler400(request):
+    """
+    404 error handler which includes a normal request context.
+    """
+    status = 400
+    title = header = "400 : Bad Request"
+    description = """The request was malformed."""
+    issue_title = """Bad request: {}""".format(request.path)
+    return _build_response(request, locals())
 
 def handler404(request):
     """
