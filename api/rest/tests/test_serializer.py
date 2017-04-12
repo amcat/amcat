@@ -63,7 +63,6 @@ class TestSerializer(ApiTestCase):
             'last_visited_at': "Never",
             'favourite': False,
             "r_plugins_enabled": False,
-            "upload_plugins": {}
         }
 
         expected_meta = {

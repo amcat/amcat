@@ -12,7 +12,7 @@ from amcat.models import Project
 
 
 class TestDatatable(amcattest.AmCATTestCase):
-    PROJECT_FIELDS = {'id', 'name', 'description', 'insert_date', 'owner', 'r_plugins_enabled', 'upload_plugins',
+    PROJECT_FIELDS = {'id', 'name', 'description', 'insert_date', 'owner', 'r_plugins_enabled',
                       'insert_user', 'guest_role', 'active', 'favourite', 'last_visited_at'}
 
     def test_viewset(self):
@@ -44,7 +44,6 @@ class TestDatatable(amcattest.AmCATTestCase):
 
         d = Datatable(TestResource)
         self.assertEqual(('name', 'description', 'id'), tuple(d.fields))
-
 
     def test_hide(self):
         d = Datatable(ProjectResource)

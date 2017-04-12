@@ -25,26 +25,19 @@ import json
 import logging
 import os.path
 import zipfile
-from typing import Any, Iterable, Tuple, Sequence
 from collections import OrderedDict
-from typing import Mapping, Iterable
+from typing import Any, Iterable, Mapping, Sequence, Tuple
 
 import chardet
-
-from io import TextIOWrapper
 from actionform import ActionForm
-
 from django import forms
 from django.contrib.postgres.forms import JSONField
-from django.core.files import File
 from django.core.files.utils import FileProxyMixin
 from django.core.serializers.json import DjangoJSONEncoder
 from django.forms.widgets import HiddenInput
-from os.path import dirname
 
 from amcat.models import Article, ArticleSet, Project
 from amcat.models.articleset import create_new_articleset
-from amcat.scripts.article_upload.plugins import load_plugins
 from amcat.tools import amcates
 from amcat.tools.progress import NullMonitor
 
@@ -322,6 +315,7 @@ def _set_project(art, project):
 
 _registered_plugins = {}
 
+
 class Plugin:
     """
     A callable class decorator that registeres the plugin to AmCAT. This decorator is required for the plugin
@@ -353,7 +347,7 @@ class Plugin:
         self.script_cls = plugin_cls
         if self.name in _registered_plugins:
             raise Exception("Name '{}' is not unique.".format(self.name))
-        assert(self.name is not None)
+        assert (self.name is not None)
         _registered_plugins[self.name] = self
         return plugin_cls
 
@@ -376,6 +370,7 @@ def get_project_plugins(project: Project) -> Mapping[str, Plugin]:
     enabled_plugins.update(project.upload_plugins)
     return OrderedDict((k, v) for k, v in all_plugins.items() if enabled_plugins[k])
 
+
 def get_upload_plugins() -> Mapping[str, Plugin]:
     global _registered_plugins
     if not _registered_plugins:
@@ -389,6 +384,6 @@ def get_upload_plugins() -> Mapping[str, Plugin]:
 def get_upload_plugin(name: str) -> Plugin:
     return get_upload_plugins()[name]
 
+
 def get_default_plugins() -> Iterable[Plugin]:
     return (plugin for plugin in get_upload_plugins().values() if plugin.default)
-
