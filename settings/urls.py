@@ -43,7 +43,8 @@ urlpatterns = patterns(
     (r'^navigator/', include('navigator.urls', namespace="navigator")),
     (r'^api/', include('api.urls', namespace="api")),
     (r'^annotator/', include('annotator.urls', namespace="annotator")),
-    url(r'^restframework', include('rest_framework.urls', namespace='rest_framework'))
+    url(r'^restframework', include('rest_framework.urls', namespace='rest_framework')),
+    url(r'^request_token$', 'navigator.views.request_token.request_token', name='request_token') #located in root for 3.5 compatibility
     )
 
 # Static files
