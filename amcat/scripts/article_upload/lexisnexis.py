@@ -40,7 +40,6 @@ log = logging.getLogger(__name__)
 # Regular expressions used for parsing document
 class RES:
     # Match at least 20 whitespace characters or at least 7 tabs, followed by # of # DOCUMENTS.
-    DOCUMENT_COUNT = re.compile("( {20,}|\t{7,})(FOCUS -)? *\d* (of|OF) \d* DOCUMENTS?")
     DOCUMENT_COUNT = re.compile("\s*(FOCUS -)? *\d* (of|OF) \d* DOCUMENTS?")
 
     # Header meta information group match
@@ -106,7 +105,8 @@ def split_header(doc):
             break
 
         header.append(line)
-
+    else:
+        raise ParseError("No header found")
     # Add rest to body
     body = "\n".join(splitted[i:])
 
@@ -552,6 +552,18 @@ def get_query(header):
             return header[key]
 
 
+def split_file(text):
+    try:
+        header, body = split_header(text)
+    except ParseError:
+        query = None
+        fragments = [text]
+    else:
+        query = get_query(parse_header(header))
+        fragments = list(split_body(body))
+    return query, fragments
+
+
 class LexisNexis(UploadScript):
     """
     Script for importing files from Lexis Nexis. The files should be in plain text
@@ -565,10 +577,8 @@ class LexisNexis(UploadScript):
     name = 'Lexis Nexis'
 
     def split_file(self, file):
-
-        header, body = split_header(file.text)
-        self.ln_query = get_query(parse_header(header))
-        fragments = list(split_body(body))
+        query, fragments = split_file(file.text)
+        self.ln_query = query
         return fragments
 
     def get_provenance(self, file, articles):
