@@ -60,7 +60,7 @@ class Factivia(UploadScript):
             divs.remove(author_field)
 
         # Strip everything before headline
-        headline_field = document.cssselect("b.deHeadline")[0].getparent()
+        headline_field = document.cssselect("#hd")[0]
         divs = divs[divs.index(headline_field):]
 
         # Parse metadata. Loop through each 'div' within an article, along with
