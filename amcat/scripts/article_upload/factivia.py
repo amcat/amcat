@@ -24,7 +24,7 @@ from amcat.models import Medium, Article
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.tools import toolkit
 
-META = ["headline", "length", "date", "medium", None, "pagenr"]
+META = ["section", "headline", "length", "date", "medium", None, "pagenr"]
 
 PROCESSORS = {
     "length": lambda l: int(l.rstrip("words")),
@@ -38,7 +38,6 @@ class Factivia(UploadScript):
     def split_file(self, file):
         # Parses HTML file (bytes) to a more convienient lxml representation
         document = html.fromstring(file.read())
-
         # Selects all elements with class=article
         return document.cssselect(".article")
 
@@ -61,7 +60,11 @@ class Factivia(UploadScript):
 
         # Strip everything before headline
         headline_field = document.cssselect("#hd")[0]
-        divs = divs[divs.index(headline_field):]
+        headline_idx = divs.index(headline_field)
+        if headline_idx == 0:
+            metadata = metadata[1:]
+        else:
+            divs = divs[headline_idx - 1:]
 
         # Parse metadata. Loop through each 'div' within an article, along with
         # its field name according to META (thus based on its position)
