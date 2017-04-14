@@ -2,8 +2,9 @@ from rest_framework import pagination
 from amcat.tools import amcates
 
 from rest_framework.response import Response
-from django.core.urlresolvers import reverse 
+from django.core.urlresolvers import reverse
 from rest_framework.utils.urls import replace_query_param
+
 
 class ScrollingPaginator(pagination.BasePagination):
     def paginate_queryset(self, queryset, request, view=None):
@@ -21,9 +22,8 @@ class ScrollingPaginator(pagination.BasePagination):
         for hit in res['hits']['hits']:
             item = {'id': hit['_id']}
             if 'fields' in hit:
-                item.update({k: v[0] for (k,v) in hit['fields'].iteritems()})
+                item.update({k: v[0] for (k, v) in hit['fields'].items()})
             yield item
-
 
     def get_paginated_response(self, data):
         return Response({
@@ -31,8 +31,6 @@ class ScrollingPaginator(pagination.BasePagination):
             'results': data,
             'total': self.total,
         })
-
-
 
     def get_next_link(self):
         if not self.done:

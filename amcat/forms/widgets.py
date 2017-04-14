@@ -22,12 +22,12 @@ Replacement for the standard Django forms.widgets module. It contains all
 standard widgets plus extra (amcat-specific) widgets.
 """
 
-from django.forms import widgets
+from django import forms
 
 __all__ = ["BootstrapSelect", "BootstrapMultipleSelect"]
 
 
-class BootstrapSelect(widgets.Select):
+class BootstrapSelect(forms.widgets.Select):
     def _build_attrs(self, attrs=None, **kwargs):
         attrs = dict() if attrs is None else attrs
         attrs.update(kwargs)
@@ -38,16 +38,16 @@ class BootstrapSelect(widgets.Select):
         return super(BootstrapSelect, self).render(name, value, attrs=attrs)
 
 
-class BootstrapMultipleSelect(BootstrapSelect, widgets.SelectMultiple):
+class BootstrapMultipleSelect(BootstrapSelect, forms.widgets.SelectMultiple):
     def render(self, name, value, attrs=None, **kwargs):
         attrs = self._build_attrs(attrs, multiple='multiple')
         return super(BootstrapMultipleSelect, self).render(name, value, attrs=attrs)
 
 def _convert_widget(widget):
-    if isinstance(widget, widgets.SelectMultiple):
+    if isinstance(widget, forms.widgets.SelectMultiple):
         return BootstrapMultipleSelect(attrs=widget.attrs, choices=widget.choices)
 
-    if isinstance(widget, widgets.Select):
+    if isinstance(widget, forms.widgets.Select):
         return BootstrapSelect(attrs=widget.attrs, choices=widget.choices)
 
     return widget
@@ -56,3 +56,9 @@ def _convert_widget(widget):
 def convert_to_bootstrap_select(form):
     for field in form.fields:
         form.fields[field].widget = _convert_widget(form.fields[field].widget)
+
+def add_bootstrap_classes(field: forms.Field):
+    classlist = [x for x in (field.widget.attrs.get('class'),) if x is not None]
+    classlist += ["form-control"]
+    field.widget.attrs['class'] = " ".join(classlist)
+    return field

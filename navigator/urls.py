@@ -32,6 +32,7 @@ from navigator.views.codingjob_views import *  # noqa
 from navigator.views.codingschema_views import *  # noqa
 from navigator.views.project_views import *  # noqa
 from navigator.views.query import *  # noqa
+from navigator.views.remote_import import * # noqa
 from navigator.views.task import TaskDetailsView, TaskListView, clean_ready, clean_stuck, uuid_redirect
 from navigator.views.user_views import *  # noqa
 
@@ -83,6 +84,8 @@ _views = [
     CodingJobExportSelectView, CodingJobExportView,
 
     ProjectUserListView, ProjectUserAddView,
+
+    RemoteArticleSetImportView,
 
     TaskDetailsView, TaskListView,
     MultipleArticleSetDestinationView,

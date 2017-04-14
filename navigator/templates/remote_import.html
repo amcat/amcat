@@ -1,0 +1,32 @@
+{% extends "script_base.html" %}
+
+
+{% block javascript %}
+    <script>
+    require(['jquery'], function($){
+
+        function invalidUrl(){
+
+        }
+
+        function requestToken(){
+            let remoteHostField = $('#id_remote_host');
+            let remoteHost = remoteHostField.val();
+            if(!remoteHost.startsWith("http")){
+                remoteHost = "http://" + remoteHost;
+            }
+            let originUrl = new URL(remoteHost);
+
+            let origin = originUrl.origin;
+            let tokenField = $("#id_remote_token");
+            let returnUrl = tokenField.data('return-url').replace("REMOTE_HOST", remoteHost);
+            let requestUrl = tokenField.data('request-url');
+            let url = requestUrl.replace("REQUEST_ORIGIN", origin).replace("RETURN_URL", encodeURIComponent(returnUrl));
+            let yes = window.confirm("Request token from '" + origin + "' ? You will be redirected to their website.");
+            if(yes) window.location.href = url;
+        }
+        let token_button = $("#remote_token-request-token");
+        token_button.click(requestToken);
+    });
+    </script>
+{% endblock %}
