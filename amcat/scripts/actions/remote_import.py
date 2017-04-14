@@ -1,11 +1,19 @@
 import requests
-from amcatclient.amcatclient import AmcatAPI
+from amcatclient.amcatclient import AmcatAPI, APIError
 from django import forms
 from django.utils.html import format_html
 
 from amcat.forms.widgets import add_bootstrap_classes as bt
 from amcat.models import Article, ArticleSet, Project
 from amcat.scripts.script import Script
+
+API_ERRORS = {
+    401: "You are not authorized to access the remote server. Incorrect token?",
+    403: "You are not authorized to access the requested articleset.",
+    404: "The requested articleset was not found.",
+    500: "An internal error occured while accessing the remote server.",
+    -1: "An error occured while accessing the remote server.",
+}
 
 COPY_SET_FIELDS = {"name", "provenance", "featured"}
 
@@ -66,23 +74,31 @@ class RemoteQuery:
 class RemoteArticleSetImport(Script):
     options_form = RemoteArticleSetImportForm
 
-    def _run(self, local_project, remote_host, remote_token, remote_project_id, remote_articleset_id):
-        page_size = 1000
-        query = RemoteQuery(remote_host, remote_token, remote_project_id, remote_articleset_id, page_size=page_size)
-        set = {k: v for k, v in query.get_articleset().items() if k in COPY_SET_FIELDS}
-        set.update(project=local_project)
-        set = ArticleSet.objects.create(**set)
-        for page in query:
-            articles_hashes = [(self.create_article(x, local_project), x["hash"]) for x in page]
-            hashmap = {old_hash: article.hash for article, old_hash in articles_hashes}
-            articles, _ = zip(*articles_hashes)
-            articles = list(articles)
-            for article in articles:
-                if article.parent_hash in hashmap:
-                    article.parent_hash = hashmap[article.parent_hash]
+    def handleError(self, error: APIError):
+        s = error.http_status
+        msg = API_ERRORS.get(s, API_ERRORS[-1])
+        raise Exception(msg + " (status code: {})".format(s))
 
-            Article.create_articles(articles, articleset=set)
-        return set.id
+    def _run(self, local_project, remote_host, remote_token, remote_project_id, remote_articleset_id):
+        try:
+            page_size = 1000
+            query = RemoteQuery(remote_host, remote_token, remote_project_id, remote_articleset_id, page_size=page_size)
+            set = {k: v for k, v in query.get_articleset().items() if k in COPY_SET_FIELDS}
+            set.update(project=local_project)
+            set = ArticleSet.objects.create(**set)
+            for page in query:
+                articles_hashes = [(self.create_article(x, local_project), x["hash"]) for x in page]
+                hashmap = {old_hash: article.hash for article, old_hash in articles_hashes}
+                articles, _ = zip(*articles_hashes)
+                articles = list(articles)
+                for article in articles:
+                    if article.parent_hash in hashmap:
+                        article.parent_hash = hashmap[article.parent_hash]
+
+                Article.create_articles(articles, articleset=set)
+            return set.id
+        except APIError as e:
+            self.handleError(e)
 
     def _map_es_type(self, key, value):
         if key in ARTICLE_FIELDS:
