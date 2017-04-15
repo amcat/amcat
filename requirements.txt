@@ -51,3 +51,4 @@ django-formtools
 django-hash-field
 
 actionform
+amcatclient>=3.4
