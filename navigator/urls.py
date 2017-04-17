@@ -22,8 +22,8 @@ from django.contrib.auth.views import password_change, password_change_done
 
 import navigator.views.codingjob
 import navigator.views.index
-import navigator.views.user
 import navigator.views.request_token
+import navigator.views.user
 from navigator.views.article_views import *  # noqa
 from navigator.views.articleset_upload_views import * # noqa
 from navigator.views.articleset_views import *  # noqa
@@ -62,7 +62,7 @@ urlpatterns = [
     url(r'^projects/(?P<project>[0-9]+)/tasks/clean_stuck', clean_stuck, name='task-clean-stuck'),
     url(r'^projects/(?P<project>[0-9]+)/tasks/(?P<uuid>%s)' % UUID_RE, uuid_redirect, name='task-uuid'),
     url(r'^to_object$', navigator.views.index.to_object, name='to_object'),
-    url(r'^request_token$', navigator.views.request_token.request_token, name='request_token'),
+    url(r'^request_token$', navigator.views.request_token.RequestTokenView.as_view(), name='request_token'),
 ]
 
 _views = [

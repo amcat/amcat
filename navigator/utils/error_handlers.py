@@ -43,7 +43,7 @@ def handler500(request):
 
 def handler400(request):
     """
-    404 error handler which includes a normal request context.
+    400 error handler which includes a normal request context.
     """
     status = 400
     title = header = "400 : Bad Request"
