@@ -32,7 +32,7 @@ import logging; log = logging.getLogger(__name__)
 
 from navigator.utils.error_handlers import handler404, handler500, handler403, handler503
 from navigator.views.index import IndexRedirect
-
+from navigator.views.request_token import RequestTokenView
 admin.autodiscover() 
 
 urlpatterns = patterns(
@@ -44,7 +44,7 @@ urlpatterns = patterns(
     (r'^api/', include('api.urls', namespace="api")),
     (r'^annotator/', include('annotator.urls', namespace="annotator")),
     url(r'^restframework', include('rest_framework.urls', namespace='rest_framework')),
-    url(r'^request_token$', 'navigator.views.request_token.request_token', name='request_token') #located in root for 3.5 compatibility
+    url(r'^request_token$', RequestTokenView.as_view(), name='request_token') #located in root for 3.5 compatibility
     )
 
 # Static files

@@ -7,6 +7,8 @@
         amcat (domain: <i>{{ request.get_host }}</i>).
     </p>
     <p><em>Only click the button below if you're sure that {{ remote_domain }} can be trusted.</em></p>
-
-    <a class="btn btn-primary" href="{{ url }}">Give permission</a>
+    <form method="post">
+    {% csrf_token %}
+    <button class="btn btn-primary">Give permission</button>
+    </form>
 {% endblock %}
