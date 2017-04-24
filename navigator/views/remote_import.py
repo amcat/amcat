@@ -17,7 +17,7 @@ class RemoteImportHandler(ScriptHandler):
 class RemoteArticleSetImportView(ProjectScriptView):
     script = RemoteArticleSetImport
     parent = ProjectDetailsView
-    url_fragment = "remote-import-set"
+    url_fragment = "import"
     view_name = "articleset-remote-import"
     template_name = "remote_import.html"
 
