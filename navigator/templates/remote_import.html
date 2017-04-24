@@ -11,10 +11,20 @@
 
         function requestToken(){
             let remoteHostField = $('#id_remote_host');
+
+            // guess http if no scheme provided
             let remoteHost = remoteHostField.val();
             if(!remoteHost.startsWith("http")){
-                remoteHost = "http://" + remoteHost;
+                remoteHostField.val("http://" + remoteHost);
             }
+            remoteHost = remoteHostField.val();
+
+            // show error if user provided an invalid url
+            if(!remoteHostField[0].reportValidity()){
+                return;
+            }
+
+
             let originUrl = new URL(remoteHost);
 
             let origin = originUrl.origin;

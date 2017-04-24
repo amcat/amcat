@@ -62,6 +62,6 @@ class RequestTokenView(TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        return_url = str(self.request.GET['return'])
+        return_url = str(self.request.GET.get('return'))
         ctx['remote_domain'] = parse.urlsplit(return_url)[1]
         return ctx
