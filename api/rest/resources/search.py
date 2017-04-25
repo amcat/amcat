@@ -138,7 +138,7 @@ class KWICField(CharField):
         if obj is None:
             return None
 
-        hl = obj.highlight.get('title')
+        hl = obj.highlight.get('title', ())
         hl = filter(lambda h: re.search(r"<mark>.*</mark>", h), hl)
         if not hl:
             hl = obj.highlight.get('text')
