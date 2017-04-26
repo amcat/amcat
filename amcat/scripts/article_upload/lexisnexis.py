@@ -45,12 +45,12 @@ class RES:
     DOCUMENT_COUNT = re.compile("\s*(FOCUS -)? *\d* (of|OF) \d* DOCUMENTS?")
 
     # Header meta information group match
-    HEADER_META = re.compile("([\w -]*): (.*)", re.UNICODE)
+    HEADER_META = re.compile("([\w -]*):(.*)", re.UNICODE)
 
     # Body meta information. This is the same as HEADER_META, but does not include
     # lower_case characters
-    BODY_META = re.compile("([A-Z-]+): (.*)$", re.UNICODE)
-    
+    BODY_META = re.compile("([^0-9a-z: ]+):(.*)$", re.UNICODE)
+
     # End of body: a line like 'UPDATE: 2. September 2011' or 'PUBLICATION_TYPE: ...'
     BODY_END = r"[^0-9a-z: ]+:.*[ -]\d{4}$|^PUBLICATION-TYPE:|^SECTION:|^LENGTH:[^:]*$|^LANGUE:[^:]*$|^RUBRIK:"
     # Copyright notice
@@ -116,7 +116,8 @@ def split_header(doc):
             break
 
         header.append(line)
-
+    else:
+        raise ParseError("No header found")
     # Add rest to body
     body = "\n".join(splitted[i:])
 
@@ -217,24 +218,20 @@ def _is_date(string):
 def parse_online_article(art):
     # First, test for online articles with specific format
     blocks = re.split("\n *\n\s*", _strip_article(art))
-
     if len(blocks) != 6:
         return
-    
     medium, url, datestr, title, nwords, lead = blocks
     if not (url.startswith("http://") or url.startswith("https://")):
         return
-    if lead.startswith("Bewaar artikel lees artikel"):
-        lead = lead[len("Bewaar artikel lees artikel"):]
+    if lead.startswith("Bewaar lees artikel"):
+        lead = lead[len("Bewaar lees artikel"):]
 
-    
-    m = re.search("(\d+) (words|woorden)", nwords)
+    m = re.match("(\d+) words", nwords)
     if not m:
         return
     nwords = int(m.group(1))
     date = toolkit.read_date(datestr)
-    
-    medium = '{medium} (online)'.format(medium=medium)
+
     return dict(title=title.strip(), text=lead.strip(), date=date, medium=medium, length_int=nwords, url=url)
 
 
@@ -308,8 +305,7 @@ def parse_article(art):
         if not lines: return False
         if not lines[0].strip(): return True  # blank line
         if lines[0].startswith(" "): return True  # indented line
-        
-    
+
     def _get_header(lines) -> dict:
         """Consume and return all lines that are indented (ie the list is changed in place)"""
         while _in_header(lines):
@@ -347,7 +343,7 @@ def parse_article(art):
         return (re.sub("\s+", " ", " ".join(x)) if x else None
                 for x in (headline, byline))
 
-    def _get_meta(lines, done_keys=[]) -> dict:
+    def _get_meta(lines) -> dict:
         """
         Return meta key-value pairs. Stop if body start criterion is found
         (eg two blank lines or non-meta line)
@@ -363,20 +359,15 @@ def parse_article(art):
                 # indicate start of body, so end of meta
                 break
             del lines[0]
-
             if meta_match:
                 key, val = meta_match.groups()
                 key = key.lower()
                 key = BODY_KEYS_MAP.get(key, key)
-                
                 # multi-line meta: add following non-blank lines
                 while lines and lines[0].strip():
                     val += " " + lines.pop(0)
                 val = re.sub("\s+", " ", val)
-                
-                if not key in done_keys:
-                    yield key, val.strip()
-                done_keys.append(key)
+                yield key, val.strip()
 
 
     def _get_body(lines):
@@ -389,7 +380,7 @@ def parse_article(art):
             return lines, []
 
     lines = _strip_article(art).split("\n")
-    
+
     header = list(_get_header(lines))
     if not lines:
         # Something is wrong with this article, skip it
@@ -414,11 +405,8 @@ def parse_article(art):
 
     body, lines = _get_body(lines)
 
-            
-
     meta.update(dict(_get_meta(lines)))
     def _get_source(lines, i):
-        
         source = lines[0 if i>0 else 1]
         if source.strip() in ("PCM Uitgevers B.V.", "De Persgroep Nederland BV") and i > 2 and lines[i-1].strip():
             source = lines[i-1]
@@ -429,29 +417,21 @@ def parse_article(art):
         if _is_date(line):
             date = line
             dateline = i
-            if len(header) > 1: 
-                source = _get_source(header, i)
-            else:
-                source = 'missing'
-                
+            source = _get_source(header, i)
+            break
+
     if date is None:  # try looking for only month - year notation by preprending a 1
         for i, line in enumerate(header):
             line = "1 {line}".format(**locals())
             if _is_date(line):
                 date = line
-                if len(header) > 1: 
-                    source = _get_source(header, i)
-                else:
-                    source = 'missing'
+                source = _get_source(header, i)
     if date is None:  # try looking for season names
         #TODO: Hack, reimplement more general!
         for i, line in enumerate(header):
             if line.strip() == "Winter 2008/2009":
                 date = "2009-01-01"
-                if len(header) > 1: 
-                    source = _get_source(header, i)
-                else:
-                    source = 'missing'
+                source = _get_source(header, i)
 
     def find_re_in(pattern, lines):
         for line in lines:
@@ -459,8 +439,7 @@ def parse_article(art):
             if m: return m
 
     if date is None:
-        #yearmatch = find_re_in("(.*)(\d{4})$", header) ## keep for reference. Cases where this is required might pop up
-        yearmatch = find_re_in("(.*)(\\b\d{4}\\b)", header) ## more inclusive, and does not match numbers of length > 4
+        yearmatch = find_re_in("(.*)(\d{4})$", header)
         if yearmatch:
             month, year = yearmatch.groups()
             month = MONTHS.get(month.replace(",", "").strip().lower(), 1)
@@ -471,7 +450,7 @@ def parse_article(art):
             if issuematch:
                 meta['issue'] = issuematch.group(0)
 
-        elif [x.strip() for x in header] in (["India Today"], ["Business Today"], ['The Gazette (Montreal, Quebec)']):
+        elif [x.strip() for x in header] in (["India Today"], ["Business Today"]):
             date = meta.pop("load-date")
             source = header[0]
         else:
@@ -513,7 +492,6 @@ def parse_article(art):
             title += "; %s" % byline
         byline = meta.pop('byline')
 
-
     if 'length' in meta:
         meta['length_int'] = meta.pop('length')
     if 'length_int' in meta:
@@ -531,10 +509,14 @@ def get_query(header):
 
 
 def split_file(text):
-    header, body = split_header(text)
-    query = get_query(parse_header(header))
-
-    fragments = list(split_body(body))
+    try:
+        header, body = split_header(text)
+    except ParseError:
+        query = None
+        fragments = [text]
+    else:
+        query = get_query(parse_header(header))
+        fragments = list(split_body(body))
     return query, fragments
 
 
