@@ -10,7 +10,7 @@ from django.core.files import File
 
 from amcat.models import ArticleSet
 from amcat.scripts.article_upload.lexisnexis import split_header, split_body, parse_header, \
-    parse_article, get_query, LexisNexis, split_file
+    parse_article, get_query, LexisNexis
 from amcat.scripts.article_upload.upload import UploadForm
 from amcat.tools import amcattest
 
@@ -45,7 +45,6 @@ class TestLexisNexis(amcattest.AmCATTestCase):
         self.test_file2 = os.path.join(self.dir, 'test2.txt')
         self.test_text2 = open(self.test_file2, encoding="utf-8").read()
         self.test_text3 = open(os.path.join(self.dir, 'test3.txt'), encoding="utf-8").read()
-        self.test_text4 = open(os.path.join(self.dir, 'test4.txt'), encoding="utf-8").read()
 
         self.test_body_sols = json.load(open(os.path.join(self.dir, 'test_body_sols.json')))
         self.test_header_sols = json.load(open(os.path.join(self.dir, 'test_header_sols.json')))
@@ -136,13 +135,6 @@ class TestLexisNexis(amcattest.AmCATTestCase):
         self.assertFalse(bool(header))
 
         n_found = len(list(split_body(body)))
-        self.assertEqual(n_found, 1)
-
-    def test_parse_no_documentcount(self):
-        query, fragments = split_file(self.test_text4)
-        self.assertIsNone(query)
-
-        n_found = len(list(fragments))
         self.assertEqual(n_found, 1)
 
     @amcattest.use_elastic

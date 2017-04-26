@@ -116,8 +116,7 @@ def split_header(doc):
             break
 
         header.append(line)
-    else:
-        raise ParseError("No header found")
+
     # Add rest to body
     body = "\n".join(splitted[i:])
 
@@ -509,14 +508,10 @@ def get_query(header):
 
 
 def split_file(text):
-    try:
-        header, body = split_header(text)
-    except ParseError:
-        query = None
-        fragments = [text]
-    else:
-        query = get_query(parse_header(header))
-        fragments = list(split_body(body))
+    header, body = split_header(text)
+    query = get_query(parse_header(header))
+
+    fragments = list(split_body(body))
     return query, fragments
 
 
