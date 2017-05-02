@@ -47,9 +47,10 @@ import re
 import string
 import time
 from contextlib import contextmanager
-from typing import Sequence
+from typing import Sequence, Tuple, Iterable, Callable
 
 import dateparser
+from dateparser.languages.detection import AutoDetectLanguage
 from iso8601 import iso8601
 
 log = logging.getLogger(__name__)
@@ -63,7 +64,9 @@ def synchronized_with(lock):
         def synced_func(*args, **kws):
             with lock:
                 return func(*args, **kws)
+
         return synced_func
+
     return decorator
 
 
@@ -140,7 +143,6 @@ ACCENTS_MAP = {'a': '\xe0\xe1\xe2\xe3\xe4\xe5',
                'ae': '\xe6',
                'AE': '\xc6',
 
-
                '?': '\xbf',
                "'": '\x91\x92\x82\u2018\u2019\u201a\u201b\xab\xbb\xb0',
                '"': '\x93\x94\x84\u201c\u201d\u201e\u201f\xa8',
@@ -152,8 +154,8 @@ ACCENTS_MAP = {'a': '\xe0\xe1\xe2\xe3\xe4\xe5',
                '\n': '\r',
                "2": '\xb2',
                "3": '\xb3',
-               #u"(c)" : u'\xa9',
-}
+               # u"(c)" : u'\xa9',
+               }
 
 REV_ACCENTS_MAP = {}
 for to, from_characters in ACCENTS_MAP.items():
@@ -194,8 +196,40 @@ def temp_locale(category, loc=(None, None)):
     finally:
         locale.setlocale(category, _old)
 
+
+dateparser_lang_aliases = dict(alias
+                               for l in dateparser.languages.default_language_loader.get_languages()
+                               for alias in ((l.shortname, l), (l.info['name'].lower(), l)))
+
+
 @functools.lru_cache()
-def read_date(datestr: str):
+def _get_dateparser(lang_pool: Tuple[str] = None, settings: Tuple[tuple] = None) -> Callable[[str], datetime.datetime]:
+    settings = dict(settings)
+    if lang_pool is not None:
+        lang_pool = set(dateparser_lang_aliases[lang]
+                        for lang in lang_pool
+                        if lang in dateparser_lang_aliases)
+
+    if not lang_pool:
+        def parse(datestr: str, date_formats=None):
+            return dateparser.parse(datestr, date_formats=date_formats, settings=settings)
+
+        return parse
+
+    parser = dateparser.DateDataParser(settings=settings)
+    lang_detector = AutoDetectLanguage(list(lang_pool), allow_redetection=True)
+    parser.language_detector = lang_detector
+
+    def parse(datestr: str, date_formats=None):
+        data = parser.get_date_data(datestr, date_formats=date_formats)
+        if data:
+            return data['date_obj']
+
+    return parse
+
+
+@functools.lru_cache()
+def read_date(datestr: str, lang_pool: Iterable[str] = None):
     try:
         return iso8601.parse_date(datestr, default_timezone=None)
     except iso8601.ParseError:
@@ -212,7 +246,11 @@ def read_date(datestr: str):
     else:
         settings['DATE_ORDER'] = 'DMY'  # MDY is studid!
     with temp_locale(locale.LC_TIME):
-        date = dateparser.parse(datestr, settings=settings)
+        if lang_pool:
+            parser = _get_dateparser(lang_pool=tuple(lang_pool), settings=tuple(settings.items()))
+        else:
+            parser = _get_dateparser(settings=tuple(settings.items()))
+        date = parser(datestr)
     if date is None:
         raise ValueError("Could not parse datestr: {datestr!r}".format(**locals()))
     return date

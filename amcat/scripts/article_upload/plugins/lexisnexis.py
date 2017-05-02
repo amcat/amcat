@@ -92,6 +92,12 @@ BODY_KEYS_MAP = {
     "name": "byline"
 }
 
+NATIVE_LANGUAGE_MAP = {
+    # only bother recognizing the language of language tags, because if these tags are missing it's a pointless exercise
+    "language": "en",
+    "sprache": "de",
+    "langue": "fr"
+}
 
 def clean_property_key(key):
     key_parts = RES.VALID_PROPERTY_NAME_PARTS.findall(key)
@@ -204,11 +210,11 @@ def _strip_article(art):
     return "\n".join(art).replace("\r", "")
 
 
-def _is_date(string):
+def _is_date(string, lang_pool=None):
     if not re.search("\d", string):
         return False  # no number = no date, optimizatino because dateparse is very slow on non-matches
     try:
-        toolkit.read_date(string)
+        toolkit.read_date(string, lang_pool=lang_pool)
     except ValueError:
         return False
 
@@ -413,8 +419,16 @@ def parse_article(art):
         return source
 
     date, dateline, source = None, None, None
+    article_lang = tuple(lang.lower().strip() for lang in meta.get('language', "").split(";") if lang != "")
+    metadata_lang = "en" # TODO: recognize other metadata languages
+
+    lang_pool = None if metadata_lang is None or not article_lang else article_lang + (metadata_lang,)
+    if lang_pool is None:
+        log.debug("Not using language pool")
+    else:
+        log.debug("Language pool: {}".format(lang_pool))
     for i, line in enumerate(header):
-        if _is_date(line):
+        if _is_date(line, lang_pool=lang_pool):
             date = line
             dateline = i
             source = _get_source(header, i)
@@ -423,7 +437,7 @@ def parse_article(art):
     if date is None:  # try looking for only month - year notation by preprending a 1
         for i, line in enumerate(header):
             line = "1 {line}".format(**locals())
-            if _is_date(line):
+            if _is_date(line, lang_pool=lang_pool):
                 date = line
                 source = _get_source(header, i)
     if date is None:  # try looking for season names
