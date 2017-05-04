@@ -38,20 +38,15 @@ this organisation!
 
 import collections
 import datetime
-import functools
 import itertools
-import locale
 import logging
 import random
 import re
 import string
 import time
-from contextlib import contextmanager
-from typing import Sequence, Tuple, Iterable, Callable
+from typing import Sequence
 
-import dateparser
-from dateparser.languages.detection import AutoDetectLanguage
-from iso8601 import iso8601
+import amcat.tools.dateparsing
 
 log = logging.getLogger(__name__)
 
@@ -186,75 +181,7 @@ def strip_accents(s):
 ###########################################################################
 RE_ISO = re.compile(r'\d{4}-\d{2}-\d{2}')
 
-
-@contextmanager
-def temp_locale(category, loc=(None, None)):
-    _old = locale.getlocale(category)
-    try:
-        locale.setlocale(category, loc)
-        yield
-    finally:
-        locale.setlocale(category, _old)
-
-
-dateparser_lang_aliases = dict(alias
-                               for l in dateparser.languages.default_language_loader.get_languages()
-                               for alias in ((l.shortname, l), (l.info['name'].lower(), l)))
-
-
-@functools.lru_cache()
-def _get_dateparser(lang_pool: Tuple[str] = None, settings: Tuple[tuple] = None) -> Callable[[str], datetime.datetime]:
-    settings = dict(settings)
-    if lang_pool is not None:
-        lang_pool = set(dateparser_lang_aliases[lang]
-                        for lang in lang_pool
-                        if lang in dateparser_lang_aliases)
-
-    if not lang_pool:
-        def parse(datestr: str, date_formats=None):
-            return dateparser.parse(datestr, date_formats=date_formats, settings=settings)
-
-        return parse
-
-    parser = dateparser.DateDataParser(settings=settings)
-    lang_detector = AutoDetectLanguage(list(lang_pool), allow_redetection=True)
-    parser.language_detector = lang_detector
-
-    def parse(datestr: str, date_formats=None):
-        data = parser.get_date_data(datestr, date_formats=date_formats)
-        if data:
-            return data['date_obj']
-
-    return parse
-
-
-@functools.lru_cache()
-def read_date(datestr: str, lang_pool: Iterable[str] = None):
-    try:
-        return iso8601.parse_date(datestr, default_timezone=None)
-    except iso8601.ParseError:
-        pass
-
-    datestr = datestr.replace("Maerz", "März")  # Needed in LN parser?
-    settings = {
-        'PREFER_DAY_OF_MONTH': 'first',
-        "RETURN_AS_TIMEZONE_AWARE": False
-    }
-
-    if RE_ISO.match(datestr):
-        settings['DATE_ORDER'] = 'YMD'  # ISO-like but not quite ISO
-    else:
-        settings['DATE_ORDER'] = 'DMY'  # MDY is studid!
-    with temp_locale(locale.LC_TIME):
-        if lang_pool:
-            parser = _get_dateparser(lang_pool=tuple(lang_pool), settings=tuple(settings.items()))
-        else:
-            parser = _get_dateparser(settings=tuple(settings.items()))
-        date = parser(datestr)
-    if date is None:
-        raise ValueError("Could not parse datestr: {datestr!r}".format(**locals()))
-    return date
-
+read_date = amcat.tools.dateparsing.read_date
 
 def to_datetime(date):
     """Convert datetime.date object to datetime.datetime"""

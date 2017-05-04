@@ -214,7 +214,7 @@ def _is_date(string, lang_pool=None):
     if not re.search("\d", string):
         return False  # no number = no date, optimizatino because dateparse is very slow on non-matches
     try:
-        toolkit.read_date(string, lang_pool=lang_pool)
+        toolkit.read_date(string, language_pool=lang_pool)
     except ValueError:
         return False
 
