@@ -179,8 +179,8 @@ def strip_accents(s):
 ###########################################################################
 ##                     Date(time) functions                              ##
 ###########################################################################
-RE_ISO = re.compile(r'\d{4}-\d{2}-\d{2}')
 
+# retain read_date reference for backwards compatibility
 read_date = amcat.tools.dateparsing.read_date
 
 def to_datetime(date):
