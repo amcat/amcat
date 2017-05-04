@@ -124,8 +124,8 @@ class Text(UploadScript):
                 return _read(file, encoding)
             if value == 'Path':
                 return path
-            if value.startswith('Filename-'):
-                n = int(value.split("-")[-1])
+            if value.startswith('Filename part '):
+                n = int(value.replace("Filename part ", ""))
                 return filename.split("_")[n-1]  # filename-n is 1 based index
             raise ValueError("Can't parse field {value}".format(**locals()))
 

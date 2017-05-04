@@ -29,9 +29,9 @@ def _test(field_map, text="test_text", fn_prefix=None):
 class TestUploadText(amcattest.AmCATTestCase):
     @amcattest.use_elastic
     def test_article(self):
-        field_map = dict(title={"type": "field", "value": "filename"},
+        field_map = dict(title={"type": "field", "value": "Filename"},
                          date={"type": "literal", "value": "2016-01-01"},
-                         text={"type": "field", "value": "text"},
+                         text={"type": "field", "value": "Text"},
                          custom={"type": "literal", "value": "test"})
         fn, (a,) = _test(field_map, text="test")
         self.assertEqual(a.title, fn)
@@ -45,9 +45,9 @@ class TestUploadText(amcattest.AmCATTestCase):
         date = "1999-12-31"
         name = "\u0409\u0429\u0449\u04c3"
 
-        field_map = dict(title={"type": "field", "value": "filename-2"},
-                         date={"type": "field", "value": "filename-1"},
-                         text={"type": "field", "value": "text"})
+        field_map = dict(title={"type": "field", "value": "Filename part 2"},
+                         date={"type": "field", "value": "Filename part 1"},
+                         text={"type": "field", "value": "Text"})
         _, (a,) = _test(field_map, text, fn_prefix="{date}_{name}_".format(**locals()))
         self.assertEqual(a.title, name)
         self.assertEqual(a.date.isoformat()[:10], date)
