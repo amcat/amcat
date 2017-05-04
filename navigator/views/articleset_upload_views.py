@@ -15,7 +15,8 @@ from django.shortcuts import redirect
 from django.utils.datastructures import MultiValueDict
 from django.views.generic import FormView
 
-from amcat.models import Plugin
+from amcat.scripts.article_upload.upload_plugins import get_upload_plugin, get_upload_plugins, get_project_plugins, \
+    UploadPlugin
 from amcat.scripts.article_upload import upload
 from amcat.scripts.article_upload.upload import ArticleField, REQUIRED
 from amcat.tools.amcates import ARTICLE_FIELDS, is_valid_property_name
@@ -66,15 +67,23 @@ class ArticleSetUploadScriptHandler(ScriptHandler):
 
 
 class ArticleSetUploadForm(upload.UploadForm):
-    script = forms.ModelChoiceField(queryset=Plugin.objects.all())
+    default_choices = [(k, k) for k, _ in get_upload_plugins().items()]
+    script = forms.ChoiceField(choices=default_choices, help_text='Choose the file parser script to use. More script '
+                                                                  'plugins can be enabled in the project settings.')
     file = forms.FileField(help_text='Uploading very large files can take a long time. '
                                      'If you encounter timeout problems, consider uploading smaller files')
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, project = None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['script'].choices = self.get_script_choices(project)
+
         for field in list(self.fields):
             if field not in ("file", "articleset", "articleset_name", "encoding", "script"):
                 self.fields.pop(field)
+
+    def get_script_choices(self, project):
+        return [(k, k) for k, _ in get_project_plugins(project).items()]
+
 
 # Place 'file' field back on top, makes it a bit more intuitive.
 ArticleSetUploadForm.base_fields.move_to_end('file', last=False)
@@ -96,7 +105,7 @@ class ArticleSetUploadView(BaseMixin, FormView):
         self.request.session[session_key] = {"project": self.project.id,
                                              "upload_id": upload_id,
                                              "encoding": encoding,
-                                             "script": script.id,
+                                             "script": script,
                                              "filename": file_path,
                                              "articleset": articleset and articleset.id,
                                              "articleset_name": articleset_name,
@@ -109,6 +118,10 @@ class ArticleSetUploadView(BaseMixin, FormView):
         redirect_url = reverse("navigator:articleset-upload-options", args=(self.project.id,))
         return redirect("{}?upload_id={}".format(redirect_url, upload_id_urlsafe))
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['project'] = self.project
+        return kwargs
 
 def validate_property_name(value, type):
     if type != "default":
@@ -177,11 +190,17 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
         return list(self.script_class.get_fields(self.upload['filename'], self.upload['encoding']))
 
     @property
+    @functools.lru_cache()
+    def plugin(self) -> UploadPlugin:
+        return get_upload_plugin(self.upload['script'])
+
+    @property
     def upload_id(self):
         return UUID(bytes=base64.urlsafe_b64decode(self.request.GET["upload_id"]))
 
     def get_context_data(self, **kwargs):
-        kwargs['script_name'] = self.script_class.__name__
+        kwargs['plugin_name'] = self.plugin.name
+        kwargs['plugin_label'] = self.plugin.label
         return super().get_context_data(**kwargs)
 
     def initial_data(self):
@@ -223,8 +242,8 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
 
     @property
     def script_class(self):
-        script = Plugin.objects.get(id=self.upload['script']).get_class()
-        return script
+        cls = self.plugin.script_cls
+        return cls
 
 
     def get_script_form_kwargs(self, upload, fieldmap):

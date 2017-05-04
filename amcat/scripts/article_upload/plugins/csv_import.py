@@ -24,18 +24,16 @@ import csv
 import datetime
 import itertools
 import logging
+from collections import defaultdict
 from operator import itemgetter
+from typing import Optional, Tuple
 
 import iso8601
 
-from io import TextIOWrapper
-from collections import defaultdict
-from typing import Optional, Tuple
-
-
 from amcat.contrib.oset import OrderedSet
 from amcat.models import Article, get_property_primitive_type
-from amcat.scripts.article_upload.upload import UploadScript, ArticleField, _open
+from amcat.scripts.article_upload.upload import ArticleField, UploadScript, _open
+from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.tools.amcates import ARTICLE_FIELDS
 from amcat.tools.toolkit import read_date
 
@@ -142,7 +140,7 @@ def guess_destination_and_type(field_name: str, sample_value: Optional[str]) -> 
 
     return field_name, "default"
 
-
+@UploadPlugin(default=True)
 class CSV(UploadScript):
     """
     Upload CSV files to AmCAT.

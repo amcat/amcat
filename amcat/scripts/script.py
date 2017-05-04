@@ -29,7 +29,6 @@ a command line script.
 from django import forms
 from django.http import QueryDict, HttpResponse
 from amcat.forms import validate
-from amcat.models.plugin import Plugin, PluginType
 from amcat.tools.progress import ProgressMonitor
 
 try:
@@ -144,28 +143,6 @@ class Script(object):
     @classmethod
     def module(cls):
         return cls.__module__
-
-    @classmethod
-    def get_plugin(cls):
-        """
-        Get the Plugin object corresponding to this class
-        """
-        qualified_name = ".".join([cls.__module__, cls.__name__])
-        return Plugin.objects.get(class_name=qualified_name)
-
-    @classmethod
-    def get_plugin_type(cls):
-        """
-        Get the PluginType object corresponding to this class, if any
-        If the corresponding plugin has a Type, return it.
-        If not, check whether it 'is' a type, e.g. there is a type defined by this plugin
-        """
-        try:
-            return cls.get_plugin().plugin_type
-        except Plugin.DoesNotExist:
-            # maybe we are the 'plugintype' instead of a plugin?
-            qualified_name = ".".join([cls.__module__, cls.__name__])
-            return PluginType.objects.get(class_name=qualified_name)
 
     @classmethod
     def run_script(cls, *args, **kargs):

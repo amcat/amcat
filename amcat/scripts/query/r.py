@@ -54,7 +54,7 @@ for path in glob.glob(os.path.join(system_dir, "*.r")):
     create_action(path)
 
 # Get plugins from user directories
-user_dir = os.path.expanduser("~/amcat_r_plugins")
+user_dir = os.path.expanduser("~/amcat_plugins/r")
 for path in glob.glob(os.path.join(user_dir, "*.r")):
     create_action(path)
 

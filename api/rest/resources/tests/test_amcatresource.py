@@ -27,7 +27,6 @@ from amcat.models import Project
 
 class TestAmCATResource(ApiTestCase):
     def test_get_field_names(self):
-
         # Test order of fields.
         class TestSerializer(AmCATModelSerializer):
             class Meta:
@@ -54,7 +53,6 @@ class TestAmCATResource(ApiTestCase):
             serializer_class = TestSerializer
 
         self.assertTrue('id' not in TestResource.get_field_names())
-
 
     def test_page_size(self):
         from api.rest.resources import ProjectResource

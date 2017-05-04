@@ -33,6 +33,7 @@ from django import forms
 
 from amcat.models.article import Article
 from amcat.scripts.article_upload.upload import UploadScript, UploadForm, ArticleField, _read
+from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.tools import toolkit
 
 log = logging.getLogger(__name__)
@@ -73,7 +74,7 @@ def _convert_multiple(file, convertors):
         return convertor(file)
     raise Exception("\n".join(errors))
 
-
+@UploadPlugin(label="Plain Text", default=True)
 class Text(UploadScript):
     """
     Plain text uploader.

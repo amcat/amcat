@@ -6,7 +6,7 @@ from tempfile import NamedTemporaryFile
 from django.core.files import File
 
 from amcat.models import ArticleSet
-from amcat.scripts.article_upload.text import Text
+from amcat.scripts.article_upload.plugins.text import Text
 from amcat.tools import amcattest
 
 

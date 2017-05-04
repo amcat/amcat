@@ -293,12 +293,6 @@ def  create_test_codebook_with_codes():
         codebook.add_code(codes[code], codes.get(parent))
     return codebook, codes
 
-def create_test_plugin(**kargs):
-    from amcat.models import Plugin, PluginType
-    if "id" not in kargs: kargs["id"] = _get_next_id()
-    if "class_name" not in kargs: kargs["class_name"] = "amcat.tools.amcattest.AmCATTestCase"
-    if "plugin_type" not in kargs: kargs["plugin_type"] = PluginType.objects.get(pk=1)
-    return Plugin.objects.create(**kargs)
 
 class AmCATTestCase(TestCase):
     fixtures = ['_initial_data.json',]

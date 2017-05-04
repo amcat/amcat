@@ -2,7 +2,9 @@
 {% load staticfiles %}
 {% block javascript %}
     <script>
-    require(["amcat/uploader"]);
+        window.project = {{ project.id }};
+        window.upload_plugin = "{{ plugin_name }}";
+        require(["amcat/uploader"]);
     </script>
 {% endblock %}
 
@@ -39,17 +41,49 @@
         {% endif %}
     {% endif %}
 
-    <legend> Uploading articles using {{ script_name }} </legend>
-    <p>Step 2 of 2</p>
+    <legend> Uploading articles using <i>{{ plugin_label }}</i></legend>
+    <div class="row">
+        <div class="col-md-8">
+            <p>Step 2 of 2</p>
+        </div>
+        <div class="col-md-4 text-right">
+            <div class="btn-group text-left">
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-default dropdown-toggle" type="button" data-toggle="dropdown">
+                        Load preset
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" id="presets-select-list">
+                        <li class="dropdown-header">AmCAT Presets:</li>
+                        <li><a href="#" id="preset-load-suggested">Suggested</a></li>
+                        <li><a href="#" id="preset-load-clear">Clear All</a></li>
+                        <li class="dropdown-header" id="presets-divider">Project Presets:</li>
+                    </ul>
+                </div>
+                <button class="btn btn-sm btn-default" data-toggle="collapse" data-target="#input-group-save-collapse">
+                    Save preset...
+                </button>
+
+            </div>
+            <div class="collapse" id="input-group-save-collapse">
+                <div class="input-group" id="input-group-save">
+                    <input id="preset-save-name" class="form-control" placeholder="Preset name...">
+                    <span class="input-group-btn">
+                    <button class="btn btn-primary" id="preset-save">Save</button>
+                    </span>
+                </div>
+            </div>
+        </div> <!--/.col-md-4 -->
+    </div> <!-- /.row -->
     <form method="POST" enctype="multipart/form-data" action="">
         {% csrf_token %}
         {{ form.management_form }}
         <div class="panel panel-default">
             <div class="panel-heading">Specify fields:</div>
             {% if form.non_form_errors %}
-            <div class="panel-body">{{ form.non_form_errors }}</div>
+                <div class="panel-body">{{ form.non_form_errors }}</div>
             {% endif %}
-            <table class="table">
+            <table id="table-fieldmap" class="table table-striped">
                 <colgroup>
                     <col id="col-field">
                     <col id="col-known-properties">
@@ -68,7 +102,13 @@
                 </thead>
                 <tbody>
                 {% for fieldform in form %} {# form is a formset, each fieldform is a django form #}
-                    <tr class="field-row">
+
+                    <tr class="field-row"
+                        {% if fieldform.label.value %}
+                        data-fieldname="{{ fieldform.label.value }}"
+                        {% else %}
+                        data-literal="literal"
+                        {% endif %}>
                         <td>
                             {% if fieldform.label.value %}
                                 <label for="{{ fieldform.destination.auto_id }}">{{ fieldform.label.value }}</label>
@@ -107,16 +147,7 @@
                         <td>
                             {{ fieldform.non_field_errors }}
                         </td>
-                    </tr>
-                    <tr class="description-row hidden">
-                        <td colspan="3">
-                            {% if fieldform.values.value %}
-                                <small>
-                                    e.g.: {{ fieldform.values.value }}
-                                </small>
-                            {% endif %}
-                        </td>
-                    </tr>
+                    </tr> <!-- /.field-row -->
                 {% endfor %}
                 </tbody>
             </table>

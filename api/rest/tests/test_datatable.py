@@ -45,7 +45,6 @@ class TestDatatable(amcattest.AmCATTestCase):
         d = Datatable(TestResource)
         self.assertEqual(('name', 'description', 'id'), tuple(d.fields))
 
-
     def test_hide(self):
         d = Datatable(ProjectResource)
 

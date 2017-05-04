@@ -29,10 +29,11 @@ import re
 from lxml import etree
 
 from amcat.scripts.article_upload.upload import UploadScript
+from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.models.article import Article
 from amcat.tools import toolkit
 
-
+@UploadPlugin(name="DeFacto Student", default=True)
 class DeFactoStudent(UploadScript):
     def split_file(self, f):
         html = get_html(to_buffer(f))

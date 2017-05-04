@@ -27,12 +27,12 @@ Plugin for uploading mediargus text files
 
 
 from amcat.scripts.article_upload.upload import UploadScript
+from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 
 from amcat.models.article import Article
-from amcat.models.medium import Medium
 from amcat.tools.toolkit import read_date
 
-
+@UploadPlugin()
 class Mediargus(UploadScript):
 
     def split_file(self, file):

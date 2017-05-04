@@ -2,7 +2,7 @@ import csv
 import json
 import unittest
 
-from amcat.scripts.article_upload.csv_import import CSV
+from amcat.scripts.article_upload.plugins.csv_import import CSV
 from amcat.scripts.article_upload.upload import UploadForm
 from amcat.tools import amcattest
 from settings import ES_MAPPING_TYPE_PRIMITIVES

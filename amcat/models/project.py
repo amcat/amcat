@@ -23,6 +23,7 @@ import itertools
 from datetime import datetime
 
 from django.conf import settings
+from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.db.models import Q
 from typing import Union, Set
@@ -36,6 +37,7 @@ from amcat.models.article import Article
 from amcat.models.articleset import ArticleSetArticle, ArticleSet
 
 from amcat.models.authorisation import Role, ROLE_PROJECT_READER
+from amcat.tools.validators import DictValidator
 
 LITTER_PROJECT_ID = 1
 
@@ -252,3 +254,15 @@ class RecentProject(AmcatModel):
         unique_together = ("user", "project")
         app_label = "amcat"
         ordering = ["date_visited"]
+
+
+class ProjectUploadPlugin(AmcatModel):
+    name = models.CharField(max_length=200, editable=False)
+    project = models.ForeignKey("amcat.Project", related_name="upload_plugins", editable=False)
+    enabled = models.BooleanField()
+    presets = JSONField(null=True)
+
+    class Meta:
+        app_label = 'amcat'
+        db_table = 'projects_uploadplugins'
+        unique_together = ("name", "project")

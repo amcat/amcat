@@ -3,7 +3,7 @@ from datetime import datetime
 from os import path
 from django.core.files.uploadedfile import SimpleUploadedFile
 from amcat.models import ArticleSet
-from amcat.scripts.article_upload.factivia import Factivia
+from amcat.scripts.article_upload.plugins.factivia import Factivia
 from amcat.tools import amcattest
 
 

@@ -22,6 +22,8 @@ from django.core.urlresolvers import reverse
 from django.views.generic.list import ListView
 from django.views.generic.edit import UpdateView
 
+from amcat.forms.widgets import BootstrapMultipleSelect
+from amcat.scripts.article_upload.upload_plugins import get_project_plugins, get_upload_plugins
 from navigator.views.datatableview import DatatableMixin
 from amcat.models import Project
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
@@ -112,6 +114,16 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
     def _get_breadcrumb_url(cls, kwargs, view):
         return reverse("navigator:articleset-list", args=(kwargs['project'],))
 
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.initial['upload_plugins'] = [k for k, v in get_project_plugins(self.project).items()]
+        return form
+
+    def form_valid(self, form:forms.Form):
+        response = super().form_valid(form)
+        for name, enabled in form.cleaned_data['upload_plugins'].items():
+            self.project.upload_plugins.update_or_create(name=name, defaults={"enabled": enabled})
+        return response
 
     class form_class(forms.ModelForm):
         class Meta:
@@ -121,6 +133,14 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
                                             help_text="What level of access should people who are not added to the "
                                             "project have? If you select None, the project and its contents will "
                                             "not be visible to non-members")
+        upload_plugins = forms.MultipleChoiceField(choices=[(k, v.label) for k, v in get_upload_plugins().items()],
+                                                   widget=BootstrapMultipleSelect)
+
+        def clean_upload_plugins(self):
+            plugins = {f: False for f, _ in self.fields['upload_plugins'].choices}
+            plugins.update({f: True for f in self.cleaned_data['upload_plugins']})
+            return plugins
+
 
 class ProjectAddView(BreadCrumbMixin, ScriptView):
     template_name = "script_base.html"

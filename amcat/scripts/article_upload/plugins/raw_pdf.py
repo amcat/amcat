@@ -26,17 +26,18 @@ from django import forms
 from datetime import date
 
 from amcat.scripts.article_upload.upload import UploadScript, UploadForm
-from amcat.scripts.article_upload.pdf import PDFParser
+from amcat.scripts.article_upload.upload_plugins import UploadPlugin
+from .pdf import PDFParser
 from amcat.models.article import Article
-from amcat.models.medium import Medium
 
 class RawPDFForm(UploadForm):
     pdf_password = forms.CharField(required = False)
-    medium = forms.ModelChoiceField(queryset=Medium.objects.all())
+    medium = forms.CharField(required = False)
     headline = forms.CharField(required=False, help_text='If left blank, use filename (without extension and optional date prefix) as headline')
     date = forms.DateField(required=False, help_text='If left blank, use current date')
     section = forms.CharField(required=False)
 
+@UploadPlugin(label="Raw PDF")
 class RawPDFScraper(UploadScript):
     options_form = RawPDFForm
     def _scrape_unit(self, _file):

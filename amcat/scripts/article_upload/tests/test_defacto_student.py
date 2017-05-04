@@ -1,6 +1,6 @@
 import datetime
 import os
-from amcat.scripts.article_upload.defacto_student import get_html, split_html, get_article, \
+from amcat.scripts.article_upload.plugins.defacto_student import get_html, split_html, get_article, \
     get_meta, get_title, get_section, get_body
 from amcat.tools import amcattest
 
