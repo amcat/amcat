@@ -94,13 +94,14 @@ class Text(UploadScript):
         date = forms.DateField(required=False)
          
     @classmethod
-    def get_fields(cls, file, encoding):
-        path, fn = os.path.split(file.name)
+    def get_fields(cls, file: str, encoding: str):
+        path, fn = os.path.split(file)
         fn, ext = os.path.splitext(fn)
         yield ArticleField("Filename", "title", values=[fn])
         # FIXME encoding, and probably don't read the whole file?
-        yield ArticleField("Text", "text", values=[file.read().decode("ascii")]) 
-        if path: yield ArticleField("path", "section", values=[path])
+        yield ArticleField("Text", "text", values=[_read(file, encoding=encoding, n=100)])
+        if path:
+            yield ArticleField("Path", "section", values=[path])
         if "_" in fn:
             for i, elem in enumerate(fn.split("_")):
                 yield ArticleField("Filename part {i}".format(**locals()), values=[elem])
@@ -111,17 +112,19 @@ class Text(UploadScript):
         return hl
 
     def parse_file(self, file, encoding, _data):
-        dirname, filename = os.path.split(file)
+        path, filename = os.path.split(file)
         filename, ext = os.path.splitext(filename)
 
         def parse_field(file, type, value):
             if type == 'literal':
                 return value
-            if value == 'filename':
+            if value == 'Filename':
                 return filename
-            if value == 'text':
+            if value == 'Text':
                 return _read(file, encoding)
-            if value.startswith('filename-'):
+            if value == 'Path':
+                return path
+            if value.startswith('Filename-'):
                 n = int(value.split("-")[-1])
                 return filename.split("_")[n-1]  # filename-n is 1 based index
             raise ValueError("Can't parse field {value}".format(**locals()))

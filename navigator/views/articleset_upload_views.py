@@ -273,6 +273,8 @@ class ArticlesetUploadOptionsView(BaseMixin, FormView):
 
     def get_field_map(self, form):
         for i, field in enumerate(form):
+            if not field.cleaned_data:
+                continue
             label = field.cleaned_data['label']
             destination = field.cleaned_data['destination']
             if label and destination == "new_field":
