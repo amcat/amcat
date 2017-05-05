@@ -28,14 +28,12 @@ import logging
 
 from django.core.serializers.json import json, DjangoJSONEncoder
 
-
 from amcat.scripts.article_upload.upload import UploadScript, ParseError, ArticleField, _read
 from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.tools import toolkit
 from amcat.models.article import Article
 
 from io import StringIO
-
 
 log = logging.getLogger(__name__)
 
@@ -59,6 +57,9 @@ class RES:
     BODY_END_OR_COPYRIGHT = re.compile("|".join([BODY_END, COPYRIGHT]), re.UNICODE)
 
     VALID_PROPERTY_NAME_PARTS = re.compile("[A-Za-z][A-Za-z0-9]*")
+
+    SPLIT_LANGUAGES = re.compile("[^\w ]")
+
 
 MONTHS = dict(spring=3,
               summer=6,
@@ -86,18 +87,21 @@ BODY_KEYS_MAP = {
 
     "longueur": "length_int",
     "length": "length_int",
-    
+
     "titre": "title",
-    
+
     "name": "byline"
 }
 
-NATIVE_LANGUAGE_MAP = {
-    # only bother recognizing the language of language tags, because if these tags are missing it's a pointless exercise
-    "language": "en",
+METADATA_LANGUAGE_MAP = {
+    "rubrik": "de",
     "sprache": "de",
+    "section": "en",
+    "language": "en",
+    "rubrique": "fr",
     "langue": "fr"
 }
+
 
 def clean_property_key(key):
     key_parts = RES.VALID_PROPERTY_NAME_PARTS.findall(key)
@@ -210,11 +214,11 @@ def _strip_article(art):
     return "\n".join(art).replace("\r", "")
 
 
-def _is_date(string, lang_pool=None):
+def _is_date(string, language_pool=None):
     if not re.search("\d", string):
         return False  # no number = no date, optimizatino because dateparse is very slow on non-matches
     try:
-        toolkit.read_date(string, language_pool=lang_pool)
+        toolkit.read_date(string, language_pool=language_pool)
     except ValueError:
         return False
 
@@ -261,6 +265,7 @@ def parse_article(art):
         return online
     header, title, meta, body = [], [], [], []
     header_headline = []
+    metadata_lang = None
 
     def next_is_indented(lines, skipblank=True):
         if len(lines) <= 1: return False
@@ -354,6 +359,7 @@ def parse_article(art):
         Return meta key-value pairs. Stop if body start criterion is found
         (eg two blank lines or non-meta line)
         """
+        nonlocal metadata_lang
         while lines:
             line = lines[0].strip()
             next_line = lines[1].strip() if len(lines) >= 2 else None
@@ -368,13 +374,17 @@ def parse_article(art):
             if meta_match:
                 key, val = meta_match.groups()
                 key = key.lower()
+
+                # detect language before mapping to English
+                if metadata_lang is None and key in METADATA_LANGUAGE_MAP:
+                    metadata_lang = METADATA_LANGUAGE_MAP[key]
+
                 key = BODY_KEYS_MAP.get(key, key)
                 # multi-line meta: add following non-blank lines
                 while lines and lines[0].strip():
                     val += " " + lines.pop(0)
                 val = re.sub("\s+", " ", val)
                 yield key, val.strip()
-
 
     def _get_body(lines):
         """split lines into body and postmatter"""
@@ -412,23 +422,35 @@ def parse_article(art):
     body, lines = _get_body(lines)
 
     meta.update(dict(_get_meta(lines)))
+
     def _get_source(lines, i):
-        source = lines[0 if i>0 else 1]
-        if source.strip() in ("PCM Uitgevers B.V.", "De Persgroep Nederland BV") and i > 2 and lines[i-1].strip():
-            source = lines[i-1]
+        source = lines[0 if i > 0 else 1]
+        if source.strip() in ("PCM Uitgevers B.V.", "De Persgroep Nederland BV") and i > 2 and lines[i - 1].strip():
+            source = lines[i - 1]
         return source
 
-    date, dateline, source = None, None, None
-    article_lang = tuple(lang.lower().strip() for lang in meta.get('language', "").split(";") if lang != "")
-    metadata_lang = "en" # TODO: recognize other metadata languages
+    def _get_date_languages(meta, metadata_lang, body):
+        article_langs = [lang.lower().strip()
+                         for lang in RES.SPLIT_LANGUAGES.split(meta.get('language', ""))
+                         if lang != ""]
 
-    lang_pool = None if metadata_lang is None or not article_lang else article_lang + (metadata_lang,)
-    if lang_pool is None:
-        log.debug("Not using language pool")
-    else:
-        log.debug("Language pool: {}".format(lang_pool))
+        if metadata_lang is None:
+            log.debug("Failed to detect metadata language. Falling back to defaults")
+            return None
+
+        if not article_langs:
+            # failed to guess language, fall back to default
+            return None
+
+        article_langs.append(metadata_lang)
+        return tuple(article_langs)
+
+    lang_pool = _get_date_languages(meta, metadata_lang, body)
+
+    date, dateline, source = None, None, None
+
     for i, line in enumerate(header):
-        if _is_date(line, lang_pool=lang_pool):
+        if _is_date(line, language_pool=lang_pool):
             date = line
             dateline = i
             source = _get_source(header, i)
@@ -437,11 +459,11 @@ def parse_article(art):
     if date is None:  # try looking for only month - year notation by preprending a 1
         for i, line in enumerate(header):
             line = "1 {line}".format(**locals())
-            if _is_date(line, lang_pool=lang_pool):
+            if _is_date(line, language_pool=lang_pool):
                 date = line
                 source = _get_source(header, i)
     if date is None:  # try looking for season names
-        #TODO: Hack, reimplement more general!
+        # TODO: Hack, reimplement more general!
         for i, line in enumerate(header):
             if line.strip() == "Winter 2008/2009":
                 date = "2009-01-01"
@@ -490,7 +512,6 @@ def parse_article(art):
     if 'graphic' in meta and (not text):
         text = meta.pop('graphic')
 
-
     if title is None:
         if 'headline' in meta and 'title' not in meta:
             meta['title'] = meta.pop('headline')
@@ -529,6 +550,7 @@ def split_file(text):
     fragments = list(split_body(body))
     return query, fragments
 
+
 @UploadPlugin(label="Lexis Nexis", default=True)
 class LexisNexis(UploadScript):
     """
@@ -544,7 +566,6 @@ class LexisNexis(UploadScript):
         arts = (parse_article(doc) for doc in fragments)
         arts = [art for art in arts if art]
         return query, arts
-
 
     @classmethod
     def get_fields(cls, file, encoding):
@@ -579,4 +600,3 @@ class LexisNexis(UploadScript):
         if self.ln_query:
             provenance = "{provenance}; LexisNexis query: {self.ln_query!r}".format(**locals())
         return provenance
-
