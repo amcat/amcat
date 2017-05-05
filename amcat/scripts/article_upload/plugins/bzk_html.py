@@ -35,7 +35,7 @@ from amcat.tools.toolkit import read_date
 log = logging.getLogger(__name__)
 from .bzk_aliases import BZK_ALIASES as MEDIUM_ALIASES
 
-@UploadPlugin("BZK HTML")
+@UploadPlugin(name="BZK_HTML", label="BZK HTML")
 class BZK(UploadScript):
 
     @classmethod
