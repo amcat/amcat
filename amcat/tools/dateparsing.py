@@ -44,12 +44,34 @@ def read_date(datestr: str, language_pool: Iterable[str] = None) -> Union[None, 
                              - the ISO 639-1 code
                              - the English name
                              - the local name, as known by Django's translation library
-    @return None
+    @return: The resulting datetime
     """
     if language_pool is not None:
         language_pool = tuple(language_pool)
 
     return _read_date(datestr, language_pool)
+
+
+@functools.lru_cache()
+def _read_date(datestr: str, language_pool: Tuple[str, ...]):
+    try:
+        return iso8601.parse_date(datestr, default_timezone=None)
+    except iso8601.ParseError:
+        pass
+
+    datestr = datestr.replace("Maerz", "März")  # Needed in LN parser?
+
+    if RE_ISO.match(datestr):
+        date_order = 'YMD'  # ISO-like but not quite ISO
+    else:
+        date_order = 'DMY'  # MDY is studid!
+
+    with _temp_locale(locale.LC_TIME):
+        language_pool = None if language_pool is None else tuple(language_pool)
+        date = _parse_with_language_pool(datestr, language_pool=language_pool, DATE_ORDER=date_order)
+    if date is None:
+        raise ValueError("Could not parse datestr: {datestr!r}".format(**locals()))
+    return date
 
 
 @functools.lru_cache()
@@ -75,20 +97,6 @@ def _get_dateparser(language_pool: Tuple[str, ...], settings: Hashable = None) -
 
 
 def _parse_with_language_pool(datestr: str, language_pool: Tuple[str, ...], **settings_kwargs) -> datetime.datetime:
-    """
-    Gets a DateDataParser with an AutoDetectLanguage language detector using the given language pool.
-
-    @param datestr:         The date string that should be parsed.
-    @param language_pool:   A tuple of language names. The names are case insensitive. A name should be one of:
-                                - the ISO 639-1 code
-                                - the English name
-                                - the local name, as known by Django's translation library
-
-    @param settings_kwargs: These kwargs are added to DateParser's settings dict. See the documentation of
-                            the DateParser library for details.
-
-    @return: The parsed date
-    """
     settings = tuple(dict(DEFAULT_DATEPARSER_SETTINGS, **settings_kwargs).items())
     dateparser = _get_dateparser(language_pool, settings)
     date = dateparser.get_date_data(datestr)
@@ -104,25 +112,3 @@ def _temp_locale(category, loc=(None, None)):
         yield
     finally:
         locale.setlocale(category, _old)
-
-
-@functools.lru_cache()
-def _read_date(datestr: str, language_pool: Tuple[str, ...]):
-    try:
-        return iso8601.parse_date(datestr, default_timezone=None)
-    except iso8601.ParseError:
-        pass
-
-    datestr = datestr.replace("Maerz", "März")  # Needed in LN parser?
-
-    if RE_ISO.match(datestr):
-        date_order = 'YMD'  # ISO-like but not quite ISO
-    else:
-        date_order = 'DMY'  # MDY is studid!
-
-    with _temp_locale(locale.LC_TIME):
-        language_pool = None if language_pool is None else tuple(language_pool)
-        date = _parse_with_language_pool(datestr, language_pool=language_pool, DATE_ORDER=date_order)
-    if date is None:
-        raise ValueError("Could not parse datestr: {datestr!r}".format(**locals()))
-    return date
