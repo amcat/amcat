@@ -18,43 +18,61 @@ class TestUploadPlugin(amcattest.AmCATTestCase):
         @UploadPlugin(name="PluginName", label="My UploadPlugin")
         class MyTestPlugin(UploadScript):
             pass
+
         plugin = get_upload_plugin("PluginName")
+
+        self.assertTrue(hasattr(MyTestPlugin, "plugin_info"))
+        self.assertEqual(plugin, MyTestPlugin.plugin_info)
         self.assertEqual(plugin.name, "PluginName")
         self.assertEqual(plugin.label, "My UploadPlugin")
         self.assertEqual(plugin.script_cls, MyTestPlugin)
 
-    def test_plugin_defaults(self):
+    def test_name_autoresolve(self):
+        # use cls.__name__ if no name is given
         @UploadPlugin()
-        class MyTestPlugin(UploadScript):
+        class MyPlugin(UploadScript):
             pass
 
-        self.assertIn(MyTestPlugin.__name__, get_upload_plugins())
-        plugin = get_upload_plugin(MyTestPlugin.__name__)
+        plugin1 = MyPlugin
+        plugin1_expected_name = plugin1.__name__
 
-        # Name and label default to class.__name__
-        self.assertEqual(plugin.name, MyTestPlugin.__name__)
-        self.assertEqual(plugin.label, MyTestPlugin.__name__)
+        # fall back to {cls.__module__}.{cls.__name__} in case of conflict.
+        @UploadPlugin()
+        class MyPlugin(UploadScript):
+            pass
+
+        plugin2 = MyPlugin
+        plugin2_expected_name = "{cls.__module__}.{cls.__name__}".format(cls=plugin2)
+
+        self.assertEqual(plugin1.plugin_info.name, plugin1_expected_name)
+        self.assertEqual(plugin2.plugin_info.name, plugin2_expected_name)
+        self.assertEqual(plugin1.plugin_info.label, plugin1_expected_name)
+        self.assertEqual(plugin2.plugin_info.label, plugin2_expected_name)
+
 
     def test_plugin_uniqueness(self):
         with self.assertRaises(PluginError):
-            @UploadPlugin()
+            @UploadPlugin(name="NonUnique")
             class DuplicatePlugin(UploadScript):
                 pass
 
-            @UploadPlugin()
+            @UploadPlugin(name="NonUnique")
             class DuplicatePlugin(UploadScript):
                 pass
+
 
     def test_plugin_names(self):
         @UploadPlugin(name="A")
         class MyTestPlugin(UploadScript):
             pass
+
         plugin_a = get_upload_plugin('A')
         plugin_cls_a = MyTestPlugin
 
         @UploadPlugin(name="B")
         class MyTestPlugin(UploadScript):
             pass
+
         plugin_b = get_upload_plugin('B')
         plugin_cls_b = MyTestPlugin
 

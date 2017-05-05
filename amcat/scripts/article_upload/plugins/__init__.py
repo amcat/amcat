@@ -15,12 +15,12 @@ def _init():
     __all__ = []
 
     for _, module, _ in pkgutil.iter_modules(__path__):
-        log.debug("Importing plugin module {}".format(module))
         try:
             importlib.import_module("." + module, __package__)
             __all__.append(module)
         except Exception as e:
             log.error("An error occured while importing plugin '{module}': {e}.".format(**locals()))
 
+    log.debug("Imported plugin modules {}".format(__all__))
 
 _init()

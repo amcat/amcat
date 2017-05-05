@@ -1,10 +1,11 @@
+import logging
 from collections import OrderedDict
-from typing import Mapping, Iterable
-
-import functools
+from typing import Mapping, Type
 
 from amcat.models import Project
 from amcat.scripts.article_upload.upload import UploadScript
+
+log = logging.getLogger(__name__)
 
 _registered_plugins = {}
 
@@ -24,35 +25,51 @@ class UploadPlugin:
         >>>     ...
     """
 
-    def __init__(self, label: str = None, name: str = None, default: bool = False):
+    def __init__(self, *noargs, label: str = None, name: str = None, default: bool = False):
         """
         @param label:    A human readable name. If not given, the `name` will be used.
         @param name:    A name to be used as unique identifier. Must be unique.
                          If not given, the __name__ attribute of the class will be used.
         @param default: Whether to use this as a default uploader in a new project.
         """
+
+        if noargs:
+            if type(noargs[0]) is type and issubclass(noargs[0], UploadScript):
+                raise self._get_error("construct_first")
+            raise self._get_error("constructor_args")
         self._label = label
         self._name = name
         self.default = default
         self.script_cls = None
 
-    def __call__(self, plugin_cls: type) -> type:
+    def __call__(self, plugin_cls: Type[UploadScript]) -> Type[UploadScript]:
         if self.script_cls is not None:
-            raise PluginError("A class was already registered.")
+            raise self._get_error("already_registered")
         if not issubclass(plugin_cls, UploadScript):
-            raise PluginError("{} is not a subclass of UploadScript".format(plugin_cls))
+            raise self._get_error("not_an_uploadscript", script_cls=plugin_cls)
 
         self.script_cls = plugin_cls
+        setattr(plugin_cls, 'plugin_info', self)
+
+        # name self after script class if name doesn't exist yet
+        if self.name is None:
+            if self.script_cls.__name__ in _registered_plugins:
+                # use module prefix in case of conflict
+                self._name = "{0.__module__}.{0.__name__}".format(self.script_cls)
+            else:
+                self._name = self.script_cls.__name__
+
         if self.name in _registered_plugins:
-            raise PluginError("A plugin with name '{}' was already registered.".format(self.name))
+            raise self._get_error("duplicate_name")
         _registered_plugins[self.name] = self
         return plugin_cls
 
     @property
-    def __name__(self):
+    def __name__(self) -> str:
         return self.name
+
     @property
-    def label(self):
+    def label(self) -> str:
         """
         A human readable label.
         """
@@ -61,13 +78,35 @@ class UploadPlugin:
         return self._label
 
     @property
-    def name(self):
+    def name(self) -> str:
         """
         A unique name that serves as the identifier of the plugin.
         """
-        if self._name is None:
-            self._name = self.script_cls.__name__
         return self._name
+
+    _errors = {
+        "construct_first": (TypeError, "{cls.__name__} object must be constructed before calling it as decorator"),
+        "constructor_args": (TypeError, "{cls.__name__} constructor only takes kwargs"),
+
+        "already_registered": (PluginError, "A class was already registered to this plugin: "
+                                            "'{self.script_cls.__module__}.{self.script_cls.__name__}'."),
+
+        "not_an_uploadscript": (PluginError, "Class '{script_cls.__module__}.{script_cls.__name__}' "
+                                             "is not a subclass of UploadScript"),
+
+        "duplicate_name": (PluginError, "A plugin with name '{self.name}' was already registered: "
+                                        "'{self.script_cls.__module__}.{self.script_cls.__name__}'")
+    }
+
+    def _get_error(self, message_key, **kwargs):
+        format_kwargs = {
+            "self": self,
+            "cls": self.__class__,
+            **kwargs
+        }
+        err_cls, msg = self._errors[message_key]
+        msg = msg.format(**format_kwargs)
+        return err_cls(msg)
 
 
 def get_project_plugins(project: Project) -> Mapping[str, UploadPlugin]:
@@ -88,10 +127,14 @@ def get_upload_plugins() -> Mapping[str, UploadPlugin]:
     Returns all known plugins.
     """
     global _registered_plugins
+
     if not _registered_plugins:
         # noinspection PyUnresolvedReferences
         import amcat.scripts.article_upload.plugins
         _registered_plugins = OrderedDict(sorted(_registered_plugins.items(), key=lambda x: x[1].label.lower()))
+        log.debug("Registered {} plugins".format(len(_registered_plugins)))
+        log.debug(list(_registered_plugins.keys()))
+
     return _registered_plugins
 
 
@@ -100,4 +143,3 @@ def get_upload_plugin(name: str) -> UploadPlugin:
     Gets an upload plugin by name, and returns the UploadPlugin object.
     """
     return get_upload_plugins()[name]
-

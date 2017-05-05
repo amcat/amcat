@@ -26,7 +26,7 @@ import itertools
 import logging
 from collections import defaultdict
 from operator import itemgetter
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Type, TypeVar, Callable, Any
 
 import iso8601
 
@@ -44,28 +44,27 @@ REQUIRED = tuple(
 
 PARSERS = {
     datetime.datetime: read_date,
-    int: int,
-    str: str,
-    float: float
+    set: lambda s: {tag for tag in (part.strip() for part in s.split(",")) if tag},
 }
 
-
-def get_required():
-    return REQUIRED
+FieldType = TypeVar("FieldType")
 
 
-def get_fields():
-    return ARTICLE_FIELDS
+def get_parser(field_type: Type[FieldType]) -> Callable[[Any], FieldType]:
+    return PARSERS.get(field_type, lambda x: field_type(x))
 
 
-def get_parser(field_type):
-    return PARSERS.get(field_type, lambda x: x)
+def parse_value(property: str, value: str):
+    t = get_property_primitive_type(property)
+    parser = get_parser(t)
+    return parser(value)
 
 
 def get_fieldname_tuple(field_name: str, suggested_type: str):
     if field_name.endswith("_" + suggested_type):
         return field_name, suggested_type
     return "{}_{}".format(field_name, suggested_type), suggested_type
+
 
 def to_valid_field_name(field_name: str) -> str:
     """
@@ -81,6 +80,7 @@ def to_valid_field_name(field_name: str) -> str:
         if not char.isalnum():
             field_name = field_name.replace(char, "")
     return field_name
+
 
 def guess_destination_and_type(field_name: str, sample_value: Optional[str]) -> Tuple:
     if field_name == "id":
@@ -140,6 +140,7 @@ def guess_destination_and_type(field_name: str, sample_value: Optional[str]) -> 
 
     return field_name, "default"
 
+
 @UploadPlugin(default=True)
 class CSV(UploadScript):
     """
@@ -173,9 +174,6 @@ class CSV(UploadScript):
         "parse_value": 'Failed to parse value "{}". Expected type: {}.'
     }
 
-    def run(self, *args, **kargs):
-        return super(CSV, self).run(*args, **kargs)
-
     def parse_value(self, property, value):
         t = get_property_primitive_type(property)
         parser = PARSERS[t]
@@ -187,7 +185,7 @@ class CSV(UploadScript):
             art_dict = self.map_article(unmapped_dict)
             properties = {}
             for k, v in art_dict.items():
-                v = self.parse_value(k, v)
+                v = parse_value(k, v)
                 properties[k] = v
             yield Article.fromdict(properties)
 
@@ -224,9 +222,13 @@ class CSV(UploadScript):
                 value = None
 
             suggested_destination, suggested_type = guess_destination_and_type(filtered_field_name, value)
-            yield ArticleField(field_name, suggested_destination, list(itertools.islice(sample_data[field_name], 0, 5)), None, suggested_type)
+            yield ArticleField(field_name,
+                               destination=suggested_destination,
+                               values=list(itertools.islice(sample_data[field_name], 0, 5)),
+                               suggested_type=suggested_type)
 
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
+
     cli.run_cli(CSV)

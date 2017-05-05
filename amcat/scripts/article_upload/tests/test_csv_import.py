@@ -40,18 +40,20 @@ class TestCSV(amcattest.AmCATTestCase):
 
     @amcattest.use_elastic
     def test_types(self):
-        header = ('kop', 'datum', 'tekst', 'age', 'length', 'now')
-        data = [('kop1', '2001-01-01', '', 7, 1.5, "1 mei 2012")]
+        header = ('kop', 'datum', 'tekst', 'age', 'length', 'now', "categories")
+        data = [('kop1', '2001-01-01', '', 7, 1.5, "1 mei 2012", "a,category ,  or, two ")]
         articles = _run_test_csv(header, data, _get_field_map(text="tekst",
                                                               title="kop",
                                                               date="datum",
                                                               age_int="age",
                                                               length_num="length",
-                                                              now_date="now"))
+                                                              now_date="now",
+                                                              category_tag="categories"))
         self.assertEqual(len(articles), 1)
         self.assertIsInstance(articles[0].properties['age_int'], ES_MAPPING_TYPE_PRIMITIVES['int'])
         self.assertIsInstance(articles[0].properties['length_num'], ES_MAPPING_TYPE_PRIMITIVES['num'])
         self.assertIsInstance(articles[0].properties['now_date'], ES_MAPPING_TYPE_PRIMITIVES['date'])
+        self.assertIsInstance(articles[0].properties['category_tag'], ES_MAPPING_TYPE_PRIMITIVES['tag'])
 
     @amcattest.use_elastic
     def test_literals(self):
