@@ -49,7 +49,7 @@ require(["jquery"], function($){
 
 // TODO: Remove annotator as global variable. At the moment widgets.js, autoomplete.js still need it.
 annotator = null;
-
+var stack_bottomright = {"dir1": "up", "dir2": "left"};
 
 define([
     "jquery",
@@ -556,6 +556,9 @@ define([
 
     self.copy_to_netviz_error = function copy_to_netviz_error(){
         new PNotify({
+                "addclass": "stack-bottomright",
+                "stack":  stack_bottomright,
+
             "type": "error",
             "text": "Failed to copy data to clipboard. Please use CTRL+C.",
             "delay": 15000
@@ -906,6 +909,7 @@ define([
     self.warn_for_unfinished = function warn_for_unfinished(){
         if (self.state.coded_article.status !== self.STATUS.IN_PROGRESS){
             new PNotify({
+
                 "type": "warning",
                 "text": "Setting status to 'unfinished' while field validation failed."
             });
@@ -980,6 +984,7 @@ define([
 
             if (expected_n_codings != response.saved_codings){
                 new PNotify({
+
                     "title": "Unexpected number of saved codings!",
                     "text": "We sent {0} codings to the server, but server saved only {1}. Press F12 and click 'console'. Copy the messages and open a bug report. Thanks!".format(
                         expected_n_codings, response.saved_codings
@@ -1006,6 +1011,8 @@ define([
             // END BUG
 
             new PNotify({
+		"addclass": "stack-bottomright",
+		"stack":  stack_bottomright,
                 "title" : "Done",
                 "text" : "Codings saved succesfully. Server replied: saved {0} codings with {1} values.".format(
                     response.saved_codings, response.saved_values
