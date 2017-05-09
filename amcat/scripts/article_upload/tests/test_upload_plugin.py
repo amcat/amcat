@@ -14,6 +14,22 @@ class TestUploadPlugin(amcattest.AmCATTestCase):
         from amcat.scripts.article_upload import upload
         amcat.scripts.article_upload.upload_plugins._registered_plugins = self.pre_plugins.copy()
 
+    def test_plugin_constructor(self):
+        kwargs = dict(name="PluginName", label="My UploadPlugin", default=True)
+        plugin = UploadPlugin(**kwargs)
+        for k, v in kwargs.items():
+            self.assertEqual(getattr(plugin, k), v)
+
+        with self.assertRaises(TypeError):
+            # assert that the UploadPlugin constructor raises a TypeError if accidentally used as decorator before
+            # being constructed
+            # noinspection PyArgumentList
+            @UploadPlugin
+            class C(UploadScript):
+                pass
+
+
+
     def test_plugin_registration(self):
         @UploadPlugin(name="PluginName", label="My UploadPlugin")
         class MyTestPlugin(UploadScript):

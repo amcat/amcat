@@ -16,7 +16,7 @@ class PluginError(Exception):
 
 class UploadPlugin:
     """
-    A callable class decorator that registeres the plugin to AmCAT. This decorator is required for the plugin
+    A callable class decorator that registers the plugin to AmCAT. This decorator is required for the plugin
     in order for it to be registered as an uploader.
 
     Example Usage:
@@ -25,31 +25,40 @@ class UploadPlugin:
         >>>     ...
     """
 
-    def __init__(self, *noargs, label: str = None, name: str = None, default: bool = False):
+    def __init__(self, *,
+                 label: str = None,
+                 name: str = None,
+                 default: bool = False):
         """
-        @param label:    A human readable name. If not given, the `name` will be used.
+        @param author:  The author of this plugin. Not required, but it could be useful.
+        @param label:   A human readable name. If not given, the `name` will be used.
         @param name:    A name to be used as unique identifier. Must be unique.
                          If not given, the __name__ attribute of the class will be used.
         @param default: Whether to use this as a default uploader in a new project.
         """
-
-        if noargs:
-            if type(noargs[0]) is type and issubclass(noargs[0], UploadScript):
-                raise self._get_error("construct_first")
-            raise self._get_error("constructor_args")
-        self._label = label
-        self._name = name
         self.default = default
         self.script_cls = None
 
-    def __call__(self, plugin_cls: Type[UploadScript]) -> Type[UploadScript]:
+        self._label = label
+        self._name = name
+
+    def __call__(self, script_cls: Type[UploadScript]) -> Type[UploadScript]:
+        """
+        Registers the class as a plugin. The class has to be a subclass of UploadScript.
+        Sets self as the class' 'plugin_info' attribute.
+
+        @param script_cls: The script class.
+        @return: The script class itself.
+        """
         if self.script_cls is not None:
             raise self._get_error("already_registered")
-        if not issubclass(plugin_cls, UploadScript):
-            raise self._get_error("not_an_uploadscript", script_cls=plugin_cls)
+        if not issubclass(script_cls, UploadScript):
+            raise self._get_error("not_an_uploadscript", script_cls=script_cls)
 
-        self.script_cls = plugin_cls
-        setattr(plugin_cls, 'plugin_info', self)
+        self.script_cls = script_cls
+
+        if not hasattr(script_cls, 'plugin_info'):
+            setattr(script_cls, 'plugin_info', self)
 
         # name self after script class if name doesn't exist yet
         if self.name is None:
@@ -62,7 +71,7 @@ class UploadPlugin:
         if self.name in _registered_plugins:
             raise self._get_error("duplicate_name")
         _registered_plugins[self.name] = self
-        return plugin_cls
+        return script_cls
 
     @property
     def __name__(self) -> str:
@@ -84,9 +93,8 @@ class UploadPlugin:
         """
         return self._name
 
+
     _errors = {
-        "construct_first": (TypeError, "{cls.__name__} object must be constructed before calling it as decorator"),
-        "constructor_args": (TypeError, "{cls.__name__} constructor only takes kwargs"),
 
         "already_registered": (PluginError, "A class was already registered to this plugin: "
                                             "'{self.script_cls.__module__}.{self.script_cls.__name__}'."),
