@@ -31,9 +31,6 @@ requirejs.config({
         "jquery.scrollTo": "jquery.scrollTo/jquery.scrollTo",
         "jquery-ui": "jquery-ui/ui/jquery-ui",
         "jquery.tablednd": "TableDnD/js/jquery.tablednd.0.7.min",
-        "jshashset": "jshashtable/hashset",
-        "jshashtable": "jshashtable/hashtable",
-        "URIjs": "uri.js/src",
         "clipboard": "clipboard/dist/clipboard"
     },
     shim:{

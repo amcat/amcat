@@ -19,8 +19,6 @@
     "renderjson": "",
     "requirejs": "",
     "amcat-query-js": "git://github.com/amcat/amcat-query-js.git#master",
-    "jshashtable": "git://github.com/timdown/jshashtable.git",
-    "uri.js": "",
     "clipboard": "1.6.0"
   },
   "resolutions": {
