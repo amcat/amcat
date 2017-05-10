@@ -17,6 +17,7 @@ class UploadPluginSerializer(AmCATProjectModelSerializer):
 class UploadPluginViewSet(ProjectViewSetMixin, AmCATFilterMixin, ModelViewSet):
     model = ProjectUploadPlugin
     model_key = "upload_plugin"
+    basename = "project-upload_plugins"
     queryset = ProjectUploadPlugin.objects.all()
     serializer_class = UploadPluginSerializer
     search_fields = ordering_fields = ("name", "enabled", "id")
