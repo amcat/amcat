@@ -21,19 +21,17 @@
 """
 This module contains a (semi-machine readable) lexisnexis parser.
 """
-import os
-import re
 import collections
+import datetime
 import logging
+import re
+from io import StringIO
 
-from django.core.serializers.json import json, DjangoJSONEncoder
-
-from amcat.scripts.article_upload.upload import UploadScript, ParseError, ArticleField, _read
+from amcat.models.article import Article
+from amcat.scripts.article_upload.upload import ArticleField, ParseError, UploadScript, _read
 from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.tools import toolkit
-from amcat.models.article import Article
-
-from io import StringIO
+from amcat.tools.amcates import get_property_primitive_type
 
 log = logging.getLogger(__name__)
 
@@ -589,9 +587,12 @@ class LexisNexis(UploadScript):
         for data in arts:
             art = {}
             for field, setting in self.options['field_map'].items():
+                datatype = get_property_primitive_type(field)
                 value, typ = setting['value'], setting['type']
                 val = data.get(value) if typ == 'field' else value
                 if val:
+                    if datatype is datetime.datetime:
+                        val = toolkit.read_date(val)
                     art[field] = val
             yield Article(**art)
 
