@@ -591,7 +591,7 @@ class LexisNexis(UploadScript):
                 value, typ = setting['value'], setting['type']
                 val = data.get(value) if typ == 'field' else value
                 if val:
-                    if datatype is datetime.datetime:
+                    if datatype is datetime.datetime and type(val) is str:
                         val = toolkit.read_date(val)
                     art[field] = val
             yield Article(**art)
