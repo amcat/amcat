@@ -37,7 +37,12 @@ tblib
 tqdm
 django-redis==4.6.0
 ruamel.yaml==0.12.18
-dateparser>=0.6,<0.7
+
+# dateparser with a performance patch
+https://github.com/CJStuart/dateparser/archive/v0.6.0-patch0.tar.gz
+# TODO: check if dateparser has been fixed ( https://github.com/scrapinghub/dateparser/pull/315 )
+# dateparser>=0.6.0,<0.7
+
 anyjson
 billiard==3.3.0.23
 six
