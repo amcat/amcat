@@ -81,7 +81,7 @@ def aggregate(query=None, filters=None, categories=(), objects=True, es=None, fl
         raise ValueError("You need to specify at least one category.")
 
     body = dict(build_query(query, filters, categories))
-    raw_result = (es or ES()).search(body, search_type="count")
+    raw_result = (es or ES()).search(body, size=0)
     aggregation = list(flatten(raw_result["aggregations"], list(categories)))
 
     if not filter_zeros:

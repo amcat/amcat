@@ -132,7 +132,7 @@ class Association(object):
     def _get_query_arguments(self, query):
         return {
             "score": self.weighted,
-            "fields": self.fields,
+            "_source": self.fields,
             "filters": self.filters,
             "query": query.query
         }

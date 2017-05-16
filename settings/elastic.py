@@ -57,12 +57,12 @@ ES_MAPPING_TYPES = {
     'int': {"type": "long"},
     'date': {"format": "dateOptionalTime", "type": "date"},
     'num': {"type": "double"},
-    'url': {"index": "not_analyzed", "type": "string"},
-    'id': {"index": "not_analyzed", "type": "string"},
-    'text': {"type": "string"},
-    'tag': {"type": "string", "analyzer": "tag"},
-    'default': {"type": "string",
-                 "fields": {"raw":   { "type": "string", "index": "not_analyzed", "ignore_above": 256}}}
+    'url': {"type": "keyword"},
+    'id': {"type": "keyword"},
+    'text': {"type": "text"},
+    'tag': {"type": "text", "analyzer": "tag"},
+    'default': {"type": "text",
+                 "fields": {"raw":   { "type": "keyword", "ignore_above": 256}}}
     }
 
 ES_MAPPING = {

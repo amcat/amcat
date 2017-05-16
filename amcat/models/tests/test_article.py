@@ -154,7 +154,7 @@ class TestArticle(amcattest.AmCATTestCase):
         Article.create_articles([a])
         db_a = Article.objects.get(pk=a.id)
         amcates.ES().refresh()
-        es_a = list(amcates.ES().query(filters={'ids': [a.id]}, fields=["date", "title", "hash"]))[0]
+        es_a = list(amcates.ES().query(filters={'ids': [a.id]}, _source=["date", "title", "hash"]))[0]
         self.assertEqual(a.hash, db_a.hash)
         self.assertEqual(a.hash, es_a.hash)
         self.assertEqual(a.title, db_a.title)

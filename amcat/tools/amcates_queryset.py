@@ -24,7 +24,7 @@ import regex
 import html
 import iso8601
 
-from collections import ChainMap
+from collections import ChainMap, defaultdict
 from typing import Iterable, Any, Union, Sequence, Dict, Tuple, List
 from typing import Optional
 
@@ -61,6 +61,7 @@ def merge_highlighted(original_text, highlighted_texts: Sequence[str], markers: 
     """
 
     """
+    print(original_text)
     tokens = [html.escape(token) for token in TOKENIZER.split(original_text) if token]
     delimiters = TOKENIZER_INV.split(original_text)
     highlighted_tokens = zip(*(tokenize_highlighted_text(text, marker) for text, marker in zip(highlighted_texts, markers)))
@@ -311,8 +312,9 @@ class Highlight:
 
 
 def _to_flat_dict(d: Dict[str, List[Any]]):
-    for key in list(d.keys()):
-        d[key] = d[key][0]
+    for k, v in list(d.items()):
+        if v is not None and isinstance(v, list) and v:
+            d[k] = v[0]
 
 
 class ESQuerySet:
@@ -332,7 +334,9 @@ class ESQuerySet:
         @param seed: seed used for random ordering
         """
         if articlesets is None:
-            self.articlesets = ArticleSet.objects.only("id")
+            self.articlesets = ArticleSet.objects.all().only("id")
+            self.articlesets = None
+            print("q", ArticleSet.objects.all())
             self.used_properties = ES().get_properties()
         else:
             self.articlesets = articlesets.only("id")
@@ -364,14 +368,14 @@ class ESQuerySet:
             # Case 1: no highlighters
             hits = ES().search(self.get_query())["hits"]["hits"]
             for hit in hits:
-                _to_flat_dict(hit["fields"])
-                yield ESArticle(self.fields, hit["fields"])
+                _to_flat_dict(hit["_source"])
+                yield ESArticle(self.fields, hit["_source"])
         else:
             # Case 2: at least one highlighter present. We need to execute a query for every
             # highlighter plus one for the original text.
             original_texts = self._do_query(self.get_query())["hits"]["hits"]
             for hit in original_texts:
-                _to_flat_dict(hit["fields"])
+                _to_flat_dict(hit["_source"])
 
             # Order might be unreliable, so we make mappings
             unordered = self.order_by(None)
@@ -385,9 +389,9 @@ class ESQuerySet:
 
             markers = [h.mark for h in self.highlights]
             for text in original_texts:
-                highlighted = [h.get(text["_id"], text["fields"]) for h in highlighted_texts]
-                merged = dict(merge_highlighted_document(text["fields"], highlighted, markers))
-                yield HighlightedESArticle(self.fields, ChainMap(merged, text["fields"]))
+                highlighted = [h.get(text["_id"], text["_source"]) for h in highlighted_texts]
+                merged = dict(merge_highlighted_document(text["_source"], highlighted, markers))
+                yield HighlightedESArticle(self.fields, ChainMap(merged, text["_source"]))
 
     @functools.lru_cache()
     def __len__(self):
@@ -473,11 +477,15 @@ class ESQuerySet:
     def get_query(self, highlight: Optional[Highlight]=None) -> dict:
         """Return elasticsearch query based on a specific highlighter (or None). A highlighter
         will force a query (if specified) to run as a filter."""
-        aset_ids = [aset.id for aset in self.articlesets]
+        aset_ids = [aset.id for aset in self.articlesets] if self.articlesets is not None else None
+        if aset_ids is None:
+            aset_filter = {}
+        else:
+            aset_filter = {"filter": [get_filter_clause("sets", "overlap", aset_ids)] }
 
         query = {
             "track_scores": True if "?" in self.ordering else self.track_scores,
-            "fields": tuple(set(self.fields) | {"_doc"}),
+            "_source": tuple(set(self.fields) | {"_doc"}),
             "size": self.size,
             "from": self.offset,
             "query": {
@@ -485,15 +493,17 @@ class ESQuerySet:
                     "query": {
                         # Using filtered allows us to combine a filter context (boolean query) with
                         # a query context (allowing highlighting and scoring)
-                        "filtered": {
-                            "filter": [
-                                get_filter_clause("sets", "overlap", aset_ids)
-                            ]
-                        },
-                    },
-                    "random_score": {
-                        "seed": self.get_seed()
-                    }
+                        "bool": dict({
+                            "must": [],
+                            "must_not": [],
+                            "should": [],
+                            "filter": [],
+                        }, **aset_filter),
+                    } ,
+                    "functions": [
+                        {"random_score": {"seed": self.get_seed()}}
+                    ],
+                    "boost_mode": "replace"
                 }
 
             },
@@ -510,13 +520,13 @@ class ESQuerySet:
             query["highlight"]["pre_tags"][0] = "<{}>".format(highlight.mark)
             query["highlight"]["post_tags"][0] = "</{}>".format(highlight.mark)
 
-            query["fields"] = ("id",)
+            query["_source"] = ("id",)
 
             # Highlighting is a bit tricky: the query needs to filter on *all* available fields
             # on the document, but the highlighter can only work on specific fields. We therefore
             # specify the query as a filter and the highlighter on specific fields
-            query["query"]["function_score"]["query"]["filtered"]["filter"].append(highlight.query.get_dsl())
-            query["query"]["function_score"]["query"]["filtered"]["query"] = {
+            query["query"]["function_score"]["query"]["bool"]["filter"].append(highlight.query.get_dsl())
+            query["query"]["function_score"]["query"]["bool"]["must"] = {
                 "query_string": {
                     "fields": highlight.fields,
                     "query": highlight.query_raw
@@ -531,15 +541,15 @@ class ESQuerySet:
 
             if self._query:
                 # Add query as filter if we are highlighting
-                query["query"]["function_score"]["query"]["filtered"]["filter"].append(self._query.get_dsl())
+                query["query"]["function_score"]["query"]["bool"]["filter"].append(self._query.get_dsl())
         elif self._query:
             # No highlighter present, only a query
-            query["query"]["function_score"]["query"]["filtered"]["query"] = self._query.get_dsl()
+            query["query"]["function_score"]["query"]["bool"]["must"] = self._query.get_dsl()
 
         # Filters do not calculate scores. On filter is always present (due to filtering
         # on articlesets), so we can safely extend the list even if the user specified
         # no filters
-        query["query"]["function_score"]["query"]["filtered"]["filter"].extend(self.filters)
+        query["query"]["function_score"]["query"]["bool"]["filter"].extend(self.filters)
 
         # Sorting
         if self.ordering:
@@ -595,7 +605,7 @@ class ESQuerySet:
         # Parse result
         articles = collections.OrderedDict()
         for hit in new._do_query(dsl)["hits"]["hits"]:
-            articles[hit["fields"]["id"][0]] = {
+            articles[hit["_source"]["id"]] = {
                 field: hit["highlight"][field] for field in fields
             }
 
