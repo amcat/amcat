@@ -24,8 +24,13 @@ This module contains a (semi-machine readable) lexisnexis parser.
 import collections
 import datetime
 import logging
+import os
 import re
+from collections import OrderedDict
 from io import StringIO
+from typing import Tuple, Iterable
+
+from ruamel import yaml
 
 from amcat.models.article import Article
 from amcat.scripts.article_upload.upload import ArticleField, ParseError, UploadScript, _read
@@ -64,41 +69,13 @@ MONTHS = dict(spring=3,
               fall=9,
               winter=12)
 
-WELL_KNOWN_BODY_KEYS = ["AUTOR", "RUBRIK", "L\xc4NGE", "UPDATE", "SPRACHE",
-                        "PUBLICATION-TYPE", "CODE-REVUE", "AUTEUR", "RUBRIQUE",
-                        "LANGUE", "DATE-CHARGEMENT", "TYPE-PUBLICATION",
-                        "LONGUEUR", "LOAD-DATE"]
+LN_CFG = yaml.safe_load(open(os.path.join(os.path.dirname(__file__), "lexisnexis_config.yml")))
 
-BODY_KEYS_MAP = {
-    # LexisNexis --> Article model
-    "author": "author",
-    "autor": "author",
-    "auteur": "author",
+WELL_KNOWN_BODY_KEYS = set(LN_CFG["meta_fields"])
 
-    "section": "section",
-    "rubrique": "section",
-    "rubrik": "section",
-    "l\xe4nge": "length_int",
-    "sprache": "language",
-    "langue": "language",
-    "language": "language",
+BODY_KEYS_MAP = LN_CFG["body_keys_map"]
 
-    "longueur": "length_int",
-    "length": "length_int",
-
-    "titre": "title",
-
-    "name": "byline"
-}
-
-METADATA_LANGUAGE_MAP = {
-    "rubrik": "de",
-    "sprache": "de",
-    "section": "en",
-    "language": "en",
-    "rubrique": "fr",
-    "langue": "fr"
-}
+METADATA_LANGUAGE_MAP = LN_CFG["metadata_language_map"]
 
 
 def clean_property_key(key):
@@ -352,7 +329,7 @@ def parse_article(art):
         return (re.sub("\s+", " ", " ".join(x)) if x else None
                 for x in (headline, byline))
 
-    def _get_meta(lines) -> dict:
+    def _get_meta(lines) -> Iterable[Tuple[str, str, str]]:
         """
         Return meta key-value pairs. Stop if body start criterion is found
         (eg two blank lines or non-meta line)
@@ -371,6 +348,7 @@ def parse_article(art):
             del lines[0]
             if meta_match:
                 key, val = meta_match.groups()
+                orig_key = key
                 key = key.lower()
 
                 # detect language before mapping to English
@@ -382,7 +360,7 @@ def parse_article(art):
                 while lines and lines[0].strip():
                     val += " " + lines.pop(0)
                 val = re.sub("\s+", " ", val)
-                yield key, val.strip()
+                yield orig_key, key, val.strip()
 
     def _get_body(lines):
         """split lines into body and postmatter"""
@@ -410,7 +388,12 @@ def parse_article(art):
             title = title.split(":", 1)[1]
     else:
         title, byline = _get_headline(lines)
-    meta = dict(_get_meta(lines))
+
+    head_meta_fields = list(((ok, k), (k, v)) for ok, k, v in _get_meta(lines))
+    orig_keys, meta = zip(*head_meta_fields) if head_meta_fields else ((), ())
+    orig_keys = OrderedDict(orig_keys)
+    meta = dict(meta)
+
     if title is None:
         if 'title' in meta:
             title = meta.pop('title')
@@ -419,7 +402,7 @@ def parse_article(art):
 
     body, lines = _get_body(lines)
 
-    meta.update(dict(_get_meta(lines)))
+    meta.update({k: v for _, k, v in _get_meta(lines)})
 
     def _get_source(lines, i):
         source = lines[0 if i > 0 else 1]
@@ -518,7 +501,13 @@ def parse_article(art):
             if ";" in title and not byline:
                 title, byline = [x.strip() for x in title.split(";", 1)]
         else:
-            title = "No title found!"
+            # test if title was mistakenly parsed as a meta fields.
+            title_mistake = next(iter(orig_keys.items()))
+            if title_mistake[0].lower() not in WELL_KNOWN_BODY_KEYS:
+                val = meta.pop(title_mistake[1])
+                title = "{}: {}".format(title_mistake[1], val)
+            else:
+                title = "No title found!"
 
     if 'byline' in meta:
         if byline:

@@ -1,0 +1,65 @@
+meta_fields:
+  # en
+  - author
+  - byline
+  - bio
+  - dateline
+  - journal-code
+  - headline
+  - language
+  - length
+  - load-date
+  - name
+  - pub-type
+  - pub-subject
+  - publication-type
+  - type-publication
+  - section
+  - title
+  - upload
+  - update
+
+  # fr
+  - auteur
+  - rubrique
+  - langue
+  - longueur
+  - titre
+
+  # de
+  - autor
+  - rubrik
+  - l\xe4nge
+  - sprache
+
+  # nl
+  - auteur
+  - kop
+  - lengte
+  - taal
+
+body_keys_map:
+  # LexisNexis --> Article model
+  author: author
+  autor: author
+  auteur: author
+  section: section
+  rubrique: section
+  rubrik: section
+  länge: length_int
+  sprache: language
+  langue: language
+  language: language
+  longueur: length_int
+  length: length_int
+  titre: title
+  name: byline
+
+metadata_language_map:
+  rubrik: de
+  sprache: de
+  section: en
+  language: en
+  rubrique: fr
+  langue: fr
+
