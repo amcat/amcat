@@ -974,7 +974,7 @@ def build_body(query=None, filters=EMPTY_RO_DICT, query_as_filter=False):
             query_body["bool"]["must"] = terms.get_dsl()
 
     if filters:
-        query_body["bool"]["filter"] = combine_filters(filters)
+        query_body["bool"]["filter"] = filters
 
     return {"query": query_body}
 
