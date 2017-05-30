@@ -1,13 +1,16 @@
-from rest_framework.views import APIView
+import time
+import os
+
+from celery.exceptions import TimeoutError
+from git import InvalidGitRepositoryError, Repo
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK
-from celery.exceptions import TimeoutError
+from rest_framework.views import APIView
 
+import amcat
 from amcat.amcatcelery import status
 from amcat.tools.amcates import ES
-from git import Repo, InvalidGitRepositoryError
-import time
-import logging
+
 
 class StatusView(APIView):
     def get(self, request):
@@ -44,7 +47,8 @@ def git_status():
         return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(date))
     # there is probably a better place for this!
     try:
-        repo = Repo()
+        amcat_dir = os.path.dirname(amcat.__path__[0])
+        repo = Repo(amcat_dir)
     except InvalidGitRepositoryError:
         return None #Not a git repo
 
