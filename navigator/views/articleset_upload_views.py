@@ -82,7 +82,7 @@ class ArticleSetUploadForm(upload.UploadForm):
                 self.fields.pop(field)
 
     def get_script_choices(self, project):
-        return [(k, k) for k, _ in get_project_plugins(project).items()]
+        return [(k, v.label) for k, v in get_project_plugins(project).items()]
 
 
 # Place 'file' field back on top, makes it a bit more intuitive.
