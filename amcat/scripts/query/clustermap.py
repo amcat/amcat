@@ -72,7 +72,11 @@ class ClusterMapAction(QueryAction):
         queries = selection.get_article_ids_per_query()
 
         if form.cleaned_data["output_type"] == "application/json+clustermap":
-            clusters, articles = zip(*get_clusters(queries).items())
+            try:
+                clusters, articles = zip(*get_clusters(queries).items())
+            except ValueError as e:
+                raise ValueError("Cannot build clustermap of empty query result.")
+
             cluster_queries = get_cluster_queries(clusters)
             image, html = get_clustermap_image(queries)
             coords = tuple(clustermap_html_to_coords(html))
