@@ -44,7 +44,7 @@ define([
 
 
     var DEFAULT_SCRIPT = "summary";
-    var SAVED_QUERY_API_URL = "/api/v4/projects/{project_id}/querys/{query_id}";
+    var SAVED_QUERY_API_URL = "/api/v4/projects/{project_id}/querys/{query_id}/";
     var CODEBOOK_LANGUAGE_API_URL = "/api/v4/projects/{project_id}/codebooks/{codebook_id}/languages/";
     var SELECTION_FORM_FIELDS = [
         "include_all", "articlesets", "mediums", "article_ids",
