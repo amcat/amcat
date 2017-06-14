@@ -27,8 +27,8 @@ from rest_framework.viewsets import ModelViewSet
 from amcat.models import Query, ROLE_PROJECT_WRITER
 from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
+from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets import ProjectViewSetMixin, ProjectPermission
-
 
 __all__ = ("QuerySerializer", "QueryViewSet")
 
@@ -60,13 +60,16 @@ class QuerySerializer(AmCATModelSerializer):
         model = Query
 
 
-
-class QueryViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
+class QueryViewSetMixin(AmCATViewSetMixin):
     model = Query
     model_key = "query"
+    search_fields = ordering_fields = ("id", "name", "user__username")
+    queryset = Query.objects.all()
+
+
+class QueryViewSet(ProjectViewSetMixin, QueryViewSetMixin, DatatablesMixin, ModelViewSet):
     serializer_class = QuerySerializer
     queryset = QuerySerializer.Meta.model.objects.all()
-    search_fields = ordering_fields = ("id", "name", "user__username")
     http_method_names = ("get", "options", "post", "put", "patch", "delete")
     permission_classes = (ProjectPermission,)
     permission_map = {
@@ -84,4 +87,3 @@ class QueryViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     def filter_queryset(self, queryset):
         queryset = super(QueryViewSet, self).filter_queryset(queryset)
         return queryset.filter(project__id=self.project.id)
-
