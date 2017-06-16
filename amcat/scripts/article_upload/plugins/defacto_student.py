@@ -28,25 +28,36 @@ import re
 
 from lxml import etree
 
-from amcat.scripts.article_upload.upload import UploadScript
+from amcat.scripts.article_upload.upload import UploadScript, ArticleField, _read, _open
 from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.models.article import Article
 from amcat.tools import toolkit
 
 @UploadPlugin(name="DeFacto Student", default=True)
 class DeFactoStudent(UploadScript):
+    @classmethod
+    def get_fields(cls, file: str, encoding: str):
+        #todo: add values
+        yield ArticleField("title", "title")
+        yield ArticleField("date", "date")
+        yield ArticleField("text", "text")
+        yield ArticleField("page", "page", suggested_type="int")
+        yield ArticleField("medium", "medium")
+        yield ArticleField("section", "section")
+
+    def parse_file(self, file: str, encoding: str, _data):
+        for file, encoding, _ in self._get_files(file, encoding):
+            for item in self.split_file(_open(file, encoding)):
+                for art_dict in self._scrape_unit(item):
+                    mapped_dict = {k: v for k, v in self.map_article(art_dict).items() if v is not None}
+                    yield Article(**mapped_dict)
+
     def split_file(self, f):
-        html = get_html(to_buffer(f))
+        html = get_html(f)
         return split_html(html)
 
     def _scrape_unit(self, element):
         yield get_article(element)
-
-
-def to_buffer(file):
-    if hasattr(file, "read"):
-        return file.read()
-    return file
 
 
 def get_article(e):
@@ -55,18 +66,14 @@ def get_article(e):
     medium, date, page = get_meta(e)
     section = get_section(e)
 
-    article = Article(title=title, text=body, date=date)
-
-    if page is not None:
-        article.set_property("page_num", page)
-
-    if section is not None:
-        article.set_property("section", section)
-
-    if medium is not None:
-        article.set_property("medium", medium)
-
-    return article
+    return {
+        'title': title,
+        'text': body,
+        'date': date,
+        "page": page,
+        "section": section,
+        "medium": medium
+    }
 
 
 def parse_ressort(text):
@@ -98,8 +105,8 @@ def parse_meta(text):
 
 
 def get_html(html_bytes):
-    parser = etree.HTMLParser()
-    return etree.parse(io.BytesIO(html_bytes), parser)
+    parser = etree.HTMLParser(encoding="utf-8")
+    return etree.parse(html_bytes, parser)
 
 
 def split_html(html):

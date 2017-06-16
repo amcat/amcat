@@ -4,10 +4,14 @@ from os import path
 from django.core.files.uploadedfile import SimpleUploadedFile
 from amcat.models import ArticleSet
 from amcat.scripts.article_upload.plugins.factivia import Factivia
+from amcat.scripts.article_upload.tests.test_upload import temporary_zipfile
 from amcat.tools import amcattest
 
 
 class FactiviaTest(amcattest.AmCATTestCase):
+
+    default_file = path.join(path.dirname(__file__), "test_files/factivia/factivia.htm")
+
     def get_file(self, filename):
         return path.join(path.dirname(__file__), "test_files/factivia", filename)
 
@@ -17,13 +21,13 @@ class FactiviaTest(amcattest.AmCATTestCase):
         self.assertIn("date", fnames)
         self.assertIn("title", fnames)
 
-    def get_articles(self, filename="factivia.htm"):
+    def get_articles(self, filename=default_file):
         articleset = amcattest.create_test_set().id
         fields = ['date', 'page_int', 'title', 'author', 'text', 'length_int', 'medium']
         field_map = {k: {"type": "field", "value": k.split("_")[0]} for k in fields}
         form = dict(project=amcattest.create_test_project().id,
                     articleset=articleset, field_map=json.dumps(field_map), encoding='UTF-8',
-                    filename=self.get_file(filename))
+                    filename=filename)
         Factivia(**form).run()
         return ArticleSet.objects.get(pk=articleset).articles.all()
 
@@ -47,16 +51,16 @@ class FactiviaTest(amcattest.AmCATTestCase):
     @amcattest.use_elastic
     def test_az01(self):
         # Just check for errorlessness
-        self.get_articles("az01.htm")
+        self.get_articles(self.get_file("az01.htm"))
 
     @amcattest.use_elastic
     def test_so00(self):
         # Just check for errorlessness
-        self.get_articles("SO00.htm")
+        self.get_articles(self.get_file("SO00.htm"))
 
     @amcattest.use_elastic
     def test_ww04(self):
-        articles = self.get_articles("ww04.htm")
+        articles = self.get_articles(self.get_file("ww04.htm"))
 
         article = articles.get(title="Vor dieser Stadt wird gewarnt")
         self.assertEqual(datetime(2012, 6, 28), article.date)
@@ -65,7 +69,7 @@ class FactiviaTest(amcattest.AmCATTestCase):
 
     @amcattest.use_elastic
     def test_zt04(self):
-        articles = self.get_articles("zt04.htm")
+        articles = self.get_articles(self.get_file("zt04.htm"))
 
         article = articles.get(title="Das ganze volle Leben in der Zeitung")
         self.assertEqual(datetime(2011, 8, 10), article.date)
@@ -73,3 +77,15 @@ class FactiviaTest(amcattest.AmCATTestCase):
         self.assertEqual("Zofinger Tagblatt", article.properties['medium'])
         self.assertEqual(None, article.properties.get('page_int'))
 
+    @amcattest.use_elastic
+    def test_zip(self):
+        files = [
+            self.get_file("ww04.htm"),
+            self.get_file("zt04.htm")
+        ]
+        with temporary_zipfile(files) as f:
+            articles = self.get_articles(f)
+
+        # test existence
+        articles.get(title="Vor dieser Stadt wird gewarnt") # from ww04
+        articles.get(title="Das ganze volle Leben in der Zeitung") # from zt04

@@ -83,6 +83,10 @@ class ArticleField(object):
         return "<ArticleField(label={self.label}, suggested_destination={self.suggested_destination}, " \
                "suggested_type={self.suggested_type})> ".format(self=self)
 
+    def as_fieldname(self):
+        if self.suggested_type:
+            return "{self.suggested_destination}_{self.suggested_type}".format(self=self)
+        return self.suggested_destination
 
 class ParseError(Exception):
     pass

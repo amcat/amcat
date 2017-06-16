@@ -11,6 +11,7 @@ from django.core.files import File
 from amcat.models import ArticleSet
 from amcat.scripts.article_upload.plugins.lexisnexis import (split_header, split_body, parse_header,
     parse_article, get_query, LexisNexis, split_file)
+from amcat.scripts.article_upload.tests.test_upload import temporary_zipfile
 from amcat.scripts.article_upload.upload import UploadForm
 from amcat.tools import amcattest
 
@@ -137,19 +138,22 @@ class TestLexisNexis(amcattest.AmCATTestCase):
         n_found = len(list(split_body(body)))
         self.assertEqual(n_found, 1)
 
-    @amcattest.use_elastic
-    def test_upload(self):
-        """Test uploading with file map works and provenance is set correctly"""
-        import os.path
-        from django.core.files import File
 
+    def get_articleset(self, file):
         fields = ["date", "title", "length_int", "text", "section", "medium"]
         field_map = {f: dict(type='field', value=f) for f in fields}
         form = dict(project=amcattest.create_test_project().id,
                     encoding="UTF-8",
                     field_map=json.dumps(field_map),
                     articleset_name="test set lexisnexis")
-        aset = LexisNexis(filename=self.test_file, **form).run()
+        aset = LexisNexis(filename=file, **form).run()
+        return aset
+
+    @amcattest.use_elastic
+    def test_upload(self):
+        """Test uploading with file map works and provenance is set correctly"""
+
+        aset = self.get_articleset(self.test_file)
 
         articleset = ArticleSet.objects.get(pk=aset.id)
         arts = articleset.articles.all()
@@ -165,9 +169,18 @@ class TestLexisNexis(amcattest.AmCATTestCase):
         self.assertEqual(a['length_int'], b.properties['length_int'])
         self.assertEqual(a['medium'], b.properties['medium'])
 
-        aset = LexisNexis(filename = self.test_file2, **form).run()
+        aset = self.get_articleset(self.test_file2)
 
         articleset = ArticleSet.objects.get(pk=aset.id)
 
         # no query so provenance is the 'standard' message
         self.assertTrue(articleset.provenance.endswith("test2.txt' using LexisNexis"))
+
+    @amcattest.use_elastic
+    def test_zip(self):
+        with temporary_zipfile([self.test_file, self.test_file2]) as f:
+            aset = self.get_articleset(f)
+        arts = aset.articles.all()
+        testfile_n = len(self.test_body_sols)
+        testfile2_n = 1
+        self.assertEqual(len(arts), testfile_n + testfile2_n)
