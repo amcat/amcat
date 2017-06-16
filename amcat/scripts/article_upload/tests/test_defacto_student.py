@@ -4,6 +4,7 @@ import os
 from amcat.scripts.article_upload.plugins.defacto_student import get_html, split_html, get_article, \
     get_meta, get_title, get_section, get_body, DeFactoStudent
 from amcat.scripts.article_upload.tests.test_upload import temporary_zipfile
+from amcat.scripts.article_upload.upload import _open
 from amcat.tools import amcattest
 from amcat.tools.amcattest import create_test_project
 
@@ -12,9 +13,9 @@ class TestDeFactoStudent(amcattest.AmCATTestCase):
     def setUp(self):
         self.test_dir = os.path.join(os.path.dirname(__file__), 'test_files', 'defacto')
         self.test1 = os.path.join(self.test_dir, 'DeFacto-Campus - Ausdruck1.htm')
-        self.test1_html = get_html(open(self.test1, "rb"))
+        self.test1_html = get_html(_open(self.test1, "autodetect"))
         self.test2 = os.path.join(self.test_dir, 'DeFacto-Campus - Ausdruck2.htm')
-        self.test2_html = get_html(open(self.test2, "rb"))
+        self.test2_html = get_html(_open(self.test2, "autodetect"))
 
     def test_split(self):
         elems = split_html(self.test1_html)
@@ -23,8 +24,8 @@ class TestDeFactoStudent(amcattest.AmCATTestCase):
     def test_articles(self):
         arts = [get_article(x) for x in split_html(self.test1_html)]
         arts2 = [get_article(x) for x in split_html(self.test2_html)]
-        self.assertEqual(arts2[-1].title, 'Cafe Puls News 08:00 (08:00) - Peter Kaiser wird angelobt')
-        self.assertEqual(arts2[-1].date, datetime.datetime(2013,4,2,8,0))
+        self.assertEqual(arts2[-1]['title'], 'Cafe Puls News 08:00 (08:00) - Peter Kaiser wird angelobt')
+        self.assertEqual(arts2[-1]['date'], datetime.datetime(2013,4,2,8,0))
 
     def test_parse(self):
         elems = split_html(self.test1_html)

@@ -25,6 +25,7 @@ of the popup window as HTML.
 """
 import io
 import re
+from typing import TextIO
 
 from lxml import etree
 
@@ -103,10 +104,9 @@ def parse_meta(text):
 
     return medium, date, page
 
-
-def get_html(html_bytes):
+def get_html(html_file: TextIO):
     parser = etree.HTMLParser(encoding="utf-8")
-    return etree.parse(html_bytes, parser)
+    return etree.parse(html_file, parser)
 
 
 def split_html(html):
