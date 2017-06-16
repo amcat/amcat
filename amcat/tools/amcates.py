@@ -145,17 +145,19 @@ HIGHLIGHT_OPTIONS = {
         'text': {
             "fragment_size": 100,
             "number_of_fragments": 3,
-            'no_match_size': 100
+            'no_match_size': 100,
+            "require_field_match": False
         },
         'title': {
-            'no_match_size': 100
+            'no_match_size': 100,
+            "require_field_match": False
         }
     }
 }
 
-LEAD_SCRIPT_FIELD = "amcat_lead"
-UPDATE_SCRIPT_REMOVE_FROM_SET = "amcat_remove_from_set"
-UPDATE_SCRIPT_ADD_TO_SET = "amcat_add_to_set"
+LEAD_SCRIPT_FIELD = {"file": "amcat_lead", "lang": "groovy"}
+UPDATE_SCRIPT_REMOVE_FROM_SET = {"file": "amcat_remove_from_set", "lang": "groovy"}
+UPDATE_SCRIPT_ADD_TO_SET = {"file": "amcat_add_to_set", "lang": "groovy"}
 
 
 def _get_bulk_body(articles, action):
@@ -207,14 +209,15 @@ class Result(object):
     def from_hit(cls, searchresult, row, fields, score=True):
         """@param hit: elasticsearch hit dict"""
         field_dict = {f: None for f in fields}
-        if '_source' in row:
-            for (k, v) in row['_source'].items():
-                if k != "sets":
-                    # elastic 1.0 always returns arrays, we only want
-                    # sets in a list, the rest should be 'scalarized'
-                    if isinstance(v, list):
-                        v = v[0]
-                field_dict[k] = v
+        for result_store in ('_source', 'fields'):
+            if result_store in row:
+                for (k, v) in row[result_store].items():
+                    if k != "sets":
+                        # elastic 1.0 always returns arrays, we only want
+                        # sets in a list, the rest should be 'scalarized'
+                        if isinstance(v, list):
+                            v = v[0]
+                    field_dict[k] = v
         field_dict['id'] = int(row['_id'])
         result = Result(_searchresult=searchresult, **field_dict)
         if score: result.score = int(row['_score'])
@@ -454,7 +457,7 @@ class _ES(object):
             else:
                 body['highlight'] = HIGHLIGHT_OPTIONS
         if lead or False and query == "" and highlight:
-            body['script_fields'] = {"lead": {"script": {"file": LEAD_SCRIPT_FIELD}}}
+            body['script_fields'] = {"lead": {"script": LEAD_SCRIPT_FIELD}}
 
         result = self.search(body, _source=_source, **kwargs)
         return SearchResult(result, _source, score, body, query=query)
@@ -602,7 +605,7 @@ class _ES(object):
         """
         Execute a bulk update script with the given params on the given article ids.
         """
-        payload = serialize({"script": {"lang": "groovy", "file": script, "params": params}})
+        payload = serialize({"script": dict(script, params=params)})
         body = get_bulk_body({aid: payload for aid in article_ids}, action="update")
         resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
 
