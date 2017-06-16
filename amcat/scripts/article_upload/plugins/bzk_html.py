@@ -40,16 +40,18 @@ class BZK(UploadScript):
 
     @classmethod
     def get_fields(cls, file, encoding):
-        values = defaultdict(list)
-        for art_dict in cls._scrape_unit(_read(file, encoding)):
-            for k, v in art_dict.items():
-                values[k].append(v)
-        for k, v in values.items():
-            yield ArticleField(k, k, v[:5])
+        for file, encoding, huh in cls._get_files(file, encoding):
+            values = defaultdict(list)
+            for art_dict in cls._scrape_unit(_read(file, encoding)):
+                for k, v in art_dict.items():
+                    values[k].append(v)
+            for k, v in values.items():
+                yield ArticleField(k, k, v[:5])
         
     def parse_file(self, file, encoding, _data):
-        for art_dict in self._scrape_unit(_read(file, encoding)):
-            yield Article.fromdict(self.map_article(art_dict))
+        for file, encoding, huh in self._get_files(file, encoding):
+            for art_dict in self._scrape_unit(_read(file, encoding)):
+                yield Article.fromdict(self.map_article(art_dict))
 
     @classmethod
     def _scrape_unit(cls, _file):
@@ -169,6 +171,8 @@ class BZK(UploadScript):
     @classmethod
     def parse_dateline(cls, text, article):
         bits = text.split()
+        if not bits:
+            raise ParseError("Couldn't find date in article: {}".format(article['title']))
         if "-" in bits[-1]:
             article["date"] = read_date(bits[-1])
             article["medium"] = cls.get_medium(" ".join(bits[:-1]))
