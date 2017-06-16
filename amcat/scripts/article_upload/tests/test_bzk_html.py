@@ -4,6 +4,7 @@ import os.path
 import unittest
 from amcat.models import ArticleSet
 from amcat.scripts.article_upload.plugins.bzk_html import BZK
+from amcat.scripts.article_upload.tests.test_upload import temporary_zipfile
 from amcat.tools import amcattest
 
 def _rmcache(fn):
@@ -62,6 +63,14 @@ class TestBZK(amcattest.AmCATTestCase):
         Tests the parsing of a file using the scrape_1 format.
         """
         self._test_parse_file(self.file_scrape1, 45)
+
+    @amcattest.use_elastic
+    def test_parse_file_zipfile(self):
+        """
+        Tests the parsing of a zipfile using the scrape_1 and scrape_2 formats.
+        """
+        with temporary_zipfile([self.file_scrape1, self.file_scrape2]) as f:
+            self._test_parse_file(f, 45 + 51)
 
     @amcattest.use_elastic
     def test_parse_file_scrape2(self):

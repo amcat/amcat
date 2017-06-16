@@ -1,6 +1,23 @@
+import os
 import zipfile
+from contextlib import contextmanager
+
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.tools import amcattest
+
+@contextmanager
+def temporary_zipfile(files):
+    from tempfile import mkstemp
+    _, zipfn = mkstemp(prefix="upload_test", suffix=".zip")
+    try:
+        with zipfile.ZipFile(zipfn, mode="w") as f:
+            for file in files:
+                arcname = os.path.split(file)[-1]
+                f.write(file, arcname=arcname)
+        yield zipfn
+    finally:
+        os.remove(zipfn)
+
 
 
 class TestUpload(amcattest.AmCATTestCase):
