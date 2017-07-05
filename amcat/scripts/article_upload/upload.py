@@ -215,6 +215,8 @@ class UploadScript(ActionForm):
             path = os.path.dirname(file)
             zf = zipfile.ZipFile(file)
             for member in zf.namelist():
+                if member.endswith('/'):
+                    continue
                 fn = os.path.join(path, member)
                 if not os.path.exists(fn):
                     zf.extract(member, path=path)

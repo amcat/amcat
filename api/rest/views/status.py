@@ -21,7 +21,10 @@ class StatusView(APIView):
             data['celery_worker'] = status.delay().wait(timeout=3)
         except TimeoutError:
             data['celery_worker'] = {"Error": "Timeout on getting worker status"}
-        data['celery_queues'] = queue_status()
+        try:
+            data['celery_queues'] = queue_status()
+        except Exception as e:
+            data['celery_queues'] = e
         
         return Response(data, status=HTTP_200_OK)
 
