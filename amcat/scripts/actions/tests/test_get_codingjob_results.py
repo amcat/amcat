@@ -6,7 +6,7 @@ from io import StringIO
 
 from amcat.models import Language, CodingSchemaField, CodingJob
 from amcat.scripts.actions.get_codingjob_results import _get_field_prefix, CodingJobResultsForm, \
-    GetCodingJobResults, _get_rows, CODING_LEVEL_BOTH, log
+    GetCodingJobResults, _get_rows, CODING_LEVEL_BOTH, log, ARTICLE_FIELDS
 from amcat.tools import amcattest
 from amcat.tools.amcattest import create_test_coding
 from amcat.tools.sbd import get_or_create_sentences
@@ -25,11 +25,12 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         jobs = list(jobs)
 
         data = {
-            "codingjobs": [job.id for job in jobs],
+            "codingjobs": [str(job.id) for job in jobs],
             "export_format": [export_format],
             "export_level": [str(export_level)],
             "include_uncoded_articles": "1" if include_uncoded_articles else "",
-            "include_uncoded_sentences": "1" if include_uncoded_sentences else ""
+            "include_uncoded_sentences": "1" if include_uncoded_sentences else "",
+            "meta_article_fields": ARTICLE_FIELDS.copy()
         }
 
         for field, opts in options.items():

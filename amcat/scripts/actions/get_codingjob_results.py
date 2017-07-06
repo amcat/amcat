@@ -143,7 +143,9 @@ class CodingJobResultsForm(CodingjobListForm):
         if codingjobs is None:  # is this necessary?
             data = self.data.getlist("codingjobs", codingjobs)
             codingjobs = self.fields["codingjobs"].clean(data)
-        codingjobs = list(codingjobs)
+
+        if not isinstance(codingjobs[0], CodingJob):
+            codingjobs = [CodingJob.objects.get(pk=pk) for pk in codingjobs]
 
         if export_level is None:
             export_level = int(self.fields["export_level"].clean(self.data['export_level']))
@@ -157,7 +159,7 @@ class CodingJobResultsForm(CodingjobListForm):
         # add article meta fields
         properties = set()
         for job in codingjobs:
-            aset = CodingJob.objects.get(pk=job).articleset
+            aset = job.articleset
             properties.update(aset.get_used_properties())
         choices = [(k, k) for k in ARTICLE_FIELDS + list(properties)]
         self.fields["meta_article_fields"] = forms.MultipleChoiceField(choices=choices, initial=list(ARTICLE_FIELDS),
