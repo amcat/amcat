@@ -32,8 +32,10 @@
             let returnUrl = tokenField.data('return-url').replace("REMOTE_HOST", remoteHost);
             let requestUrl = tokenField.data('request-url');
             let url = requestUrl.replace("REQUEST_ORIGIN", origin).replace("RETURN_URL", encodeURIComponent(returnUrl));
-            let yes = window.confirm("Request token from '" + origin + "' ? You will be redirected to their website.");
-            if(yes) window.location.href = url;
+            setTimeout(()=>{
+                let yes = window.confirm("Request token from '" + origin + "' ? You will be redirected to their website.");
+                if(yes) window.location.href = url;
+            }, 50);
         }
         let token_button = $("#remote_token-request-token");
         token_button.click(requestToken);

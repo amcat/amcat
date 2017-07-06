@@ -208,8 +208,9 @@ class CodingJobExportView(ProjectScriptView):
         jobs, level = self.read_get()
         return dict(codingjobs=jobs, export_level=level)
 
-    def get_context_data(self, form, **kwargs):
-        context = super(CodingJobExportView, self).get_context_data(form=form, **kwargs)
+    def get_context_data(self, **kwargs):
+        context = super(CodingJobExportView, self).get_context_data(**kwargs)
+        form = self.get_form()
 
         # Add fields for schema fields
         # section : [(id, field, subfields) ..]

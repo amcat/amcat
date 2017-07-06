@@ -45,7 +45,7 @@ class TokenWidget(forms.TextInput):
 
 
 class RemoteArticleSetImportForm(forms.Form):
-    remote_host = bt(forms.URLField())
+    remote_host = bt(forms.URLField(widget=forms.TextInput(attrs={"type": "url", "placeholder": "http://"})))
     remote_token = bt(forms.CharField(label="Access token", widget=TokenWidget))
     remote_project_id = bt(forms.IntegerField())
     remote_articleset_id = bt(forms.IntegerField())

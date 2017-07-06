@@ -22,20 +22,21 @@ import datetime
 import logging
 
 from io import StringIO
+from typing import Iterable
 
 from django import forms
 from django.forms import ModelChoiceField, BooleanField
 from django.utils.datastructures import MultiValueDict
 from django.db.models import Q
 
+from amcat.forms.widgets import BootstrapMultipleSelect
 from amcat.scripts.forms import ModelMultipleChoiceFieldWithIdLabel
 from amcat.models import CodingJob, CodingSchemaField, CodingSchema, Project, Codebook, Language
 from amcat.models import Article, Sentence
 from amcat.scripts.script import Script
 from amcat.tools.table import table3
 from amcat.tools.table.tableoutput import table2csv
-from amcat.tools.progress import NullMonitor
-
+from amcat.tools.progress import NullMonitor, ProgressMonitor
 
 log = logging.getLogger(__name__)
 
@@ -79,12 +80,6 @@ EXPORT_FORMATS = (
 _MetaField = collections.namedtuple("MetaField", ["object", "attr", "label"])
 
 _METAFIELDS = [
-    _MetaField("article", "id", "Article ID"),
-    _MetaField("article", "title", "Title"),
-    _MetaField("article", "byline", "Byline"),
-    _MetaField("article", "medium", "Medium"),
-    _MetaField("article", "medium_id", "Medium ID"),
-    _MetaField("article", "date", "Date"),
     _MetaField("job", "id", "Codingjob ID"),
     _MetaField("job", "name", "Codingjob Name"),
     _MetaField("job", "coder", "Coder"),
@@ -99,6 +94,7 @@ _METAFIELDS = [
     _MetaField("coded_article", "status", "Status"),
 ]
 
+ARTICLE_FIELDS = ["id", "title", "date"]
 
 class CodingjobListForm(forms.Form):
     codingjobs = ModelMultipleChoiceFieldWithIdLabel(queryset=CodingJob.objects.all(), required=True)
@@ -135,19 +131,20 @@ class CodingJobResultsForm(CodingjobListForm):
     export_format = forms.ChoiceField(tuple((c.label, c.label) for c in EXPORT_FORMATS))
     date_format = forms.CharField(initial="%Y-%m-%d %H-%M-%S", required=False)
 
-    def __init__(self, data=None, files=None, **kwargs):
+    def __init__(self, data=None, files=None, codingjobs: Iterable[str] = None, **kwargs):
         """
 
         @param project: Restrict list of codingjobs to this project
         @type project: models.Project
         """
-        codingjobs = kwargs.pop("codingjobs", None)
         export_level = kwargs.pop("export_level", None)
         super(CodingJobResultsForm, self).__init__(data, files, **kwargs)
 
         if codingjobs is None:  # is this necessary?
             data = self.data.getlist("codingjobs", codingjobs)
             codingjobs = self.fields["codingjobs"].clean(data)
+        codingjobs = list(codingjobs)
+
         if export_level is None:
             export_level = int(self.fields["export_level"].clean(self.data['export_level']))
 
@@ -156,6 +153,17 @@ class CodingJobResultsForm(CodingjobListForm):
         self.fields["export_level"].widget = forms.HiddenInput()
 
         subsentences = CodingSchema.objects.filter(codingjobs_unit__in=codingjobs, subsentences=True).exists()
+
+        # add article meta fields
+        properties = set()
+        for job in codingjobs:
+            aset = CodingJob.objects.get(pk=job).articleset
+            properties.update(aset.get_used_properties())
+        choices = [(k, k) for k in ARTICLE_FIELDS + list(properties)]
+        self.fields["meta_article_fields"] = forms.MultipleChoiceField(choices=choices, initial=list(ARTICLE_FIELDS),
+                                                                       widget=BootstrapMultipleSelect,
+                                                                       label="Include article fields")
+
 
         # Add meta fields
         for field in _METAFIELDS:
@@ -246,8 +254,12 @@ CodingRow = collections.namedtuple('CodingRow',
                                    ['job', 'coded_article', 'article', 'sentence', 'article_coding', 'sentence_coding'])
 
 
-def _get_rows(jobs, include_sentences=False, include_multiple=True, include_uncoded_articles=False, include_uncoded_sentences=False,
-              progress_monitor=NullMonitor()):
+def _get_rows(jobs,
+              include_sentences: bool = False,
+              include_multiple: bool = True,
+              include_uncoded_articles: bool = False,
+              include_uncoded_sentences: bool = False,
+              progress_monitor: ProgressMonitor = NullMonitor()):
     """
     @param jobs: output rows for these jobs. Make sure this is a QuerySet object with .prefetch_related("codings__values")
     @param include_sentences: include sentence level codings (if False, row.sentence and .sentence_coding are always None)
@@ -268,7 +280,6 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
 
     # Articles that have been seen in a codingjob already (so we can skip duplicate codings on the same article)
     seen_articles = set()
-
     for i, job in enumerate(jobs):
         # Get all codings in dicts for later lookup
         coded_articles = set()
@@ -457,7 +468,7 @@ class GetCodingJobResults(Script):
                 continue
 
             codebook.cache()
-     
+
             table.add_column(MappingMetaColumn(
                 _MetaField("article", field_name, field_name + " aggregation"),
                 codebook.get_aggregation_mapping(), not_found
@@ -502,7 +513,7 @@ class GetCodingJobResults(Script):
                 "encoding": "base64",
                 "content_type": format.mimetype,
                 "filename": filename,
-                "data": base64.b64encode(result)
+                "data": base64.b64encode(result).decode("ascii")
             }
 
         self.progress_monitor.update(5, "Results file ready")
