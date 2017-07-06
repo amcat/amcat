@@ -22,18 +22,16 @@ import functools
 import logging
 import os
 import re
-import warnings
-
 from collections import namedtuple
 from hashlib import sha224 as hash_class
 from json import dumps as serialize
 from multiprocessing.pool import ThreadPool
 from types import MappingProxyType
-from typing import Union, List, Sequence
+from typing import Union
 
 from django.conf import settings
 from elasticsearch import Elasticsearch, NotFoundError
-from elasticsearch.helpers import scan, bulk
+from elasticsearch.helpers import bulk, scan
 
 import amcat.models
 from amcat.tools import queryparser, toolkit
@@ -982,6 +980,7 @@ def build_body(query=None, filters=EMPTY_RO_DICT, query_as_filter=False):
         query_body["bool"]["filter"] = filters
 
     return {"query": query_body}
+
 
 if __name__ == '__main__':
     ES().check_index()
