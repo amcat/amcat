@@ -24,7 +24,7 @@ import regex
 import html
 import iso8601
 
-from collections import ChainMap, defaultdict
+from collections import ChainMap
 from typing import Iterable, Any, Union, Sequence, Dict, Tuple, List
 from typing import Optional
 
@@ -61,7 +61,6 @@ def merge_highlighted(original_text, highlighted_texts: Sequence[str], markers: 
     """
 
     """
-    print(original_text)
     tokens = [html.escape(token) for token in TOKENIZER.split(original_text) if token]
     delimiters = TOKENIZER_INV.split(original_text)
     highlighted_tokens = zip(*(tokenize_highlighted_text(text, marker) for text, marker in zip(highlighted_texts, markers)))
@@ -335,8 +334,6 @@ class ESQuerySet:
         """
         if articlesets is None:
             self.articlesets = ArticleSet.objects.all().only("id")
-            self.articlesets = None
-            print("q", ArticleSet.objects.all())
             self.used_properties = ES().get_properties()
         else:
             self.articlesets = articlesets.only("id")
@@ -491,8 +488,7 @@ class ESQuerySet:
             "query": {
                 "function_score": {
                     "query": {
-                        # Using filtered allows us to combine a filter context (boolean query) with
-                        # a query context (allowing highlighting and scoring)
+                        # instantiate all bool subclauses to empty lists so clauses can be added incrementally
                         "bool": dict({
                             "must": [],
                             "must_not": [],
