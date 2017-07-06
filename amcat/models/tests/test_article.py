@@ -24,15 +24,15 @@ from amcat.models import Article, word_len
 from amcat.models import PropertyMapping
 from amcat.tools import amcattest
 from amcat.tools import amcates
-from amcat.tools.amcattest import create_test_article
+from amcat.tools.amcattest import create_test_article, create_test_set
 
 import datetime
 import random
 
 def _setup_highlighting():
     from amcat.tools.amcates import ES
-
-    article = create_test_article(text="<p>foo</p>", title="<p>bar</p>")
+    articleset = create_test_set() # ESQuerySet expects articles to be in a set
+    article = create_test_article(articleset=articleset, text="<p>foo</p>", title="<p>bar</p>")
     ES().refresh()
     return article
 
