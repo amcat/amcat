@@ -406,8 +406,10 @@ class _ES(object):
         """
         Perform a 'raw' search on the underlying ES index
         """
+        import pprint
         kargs = dict(index=self.index, doc_type=self.doc_type)
         kargs.update(options)
+        log.debug("Search with body:\n {}".format(pprint.pformat(body)))
         return self.es.search(body=body, **kargs)
 
     def scan(self, query, **kargs):

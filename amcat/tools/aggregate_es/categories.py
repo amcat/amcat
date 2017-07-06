@@ -195,7 +195,7 @@ class TermCategory(Category):
 
     def get_aggregation(self):
         for label, body in zip(self.terms.keys(), self.bodies):
-            yield label, {"filter": {"constant_score": body}}
+            yield label, {"filter": body["query"]}
 
     def parse_aggregation_result(self, result):
         for label in self.terms:
