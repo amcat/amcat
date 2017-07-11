@@ -154,7 +154,7 @@ def get_aggregation_choice(property: str) -> Tuple:
     if ptype is str:
         return (property + "_str", basename)
     elif ptype in (int, float):
-        value = "{}_{}".format(property, ptype.__name__)
+        value = "{}_{}".format(basename, ptype.__name__)
         label = "{} ({})".format(basename, HUMAN_READABLE_TYPES[ptype])
         return (value, label)
     elif ptype is datetime.datetime:
