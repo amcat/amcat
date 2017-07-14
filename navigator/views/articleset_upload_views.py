@@ -147,11 +147,11 @@ class ArticleUploadFieldForm(forms.Form):
         cleaned_data = super().clean()
         if self._errors:
             return cleaned_data
-        if (cleaned_data['destination'] == NEW_FIELD) and not cleaned_data['new_name']:
-            raise forms.ValidationError("Fieldname required for new field")
-
-        if cleaned_data['new_name']:
+        if cleaned_data['destination'] == NEW_FIELD:
+            if not cleaned_data['new_name']:
+                raise forms.ValidationError("Fieldname required for new field")
             validate_property_name(cleaned_data['new_name'], cleaned_data['type'])
+
         return cleaned_data
 
 
