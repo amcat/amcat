@@ -158,7 +158,7 @@ def _read(file, encoding, n=None):
     """Read the file, guessing encoding if needed"""
     binary_content = open(file, mode='rb').read(n)
     encoding = _get_encoding(encoding, binary_content)
-    return binarycontent.decode(encoding)
+    return binary_content.decode(encoding)
 
 
 class UploadScript(ActionForm):
