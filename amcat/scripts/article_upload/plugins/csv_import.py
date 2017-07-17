@@ -24,6 +24,7 @@ import csv
 import datetime
 import itertools
 import logging
+import os
 from collections import defaultdict
 from operator import itemgetter
 from typing import Optional, Tuple, Type, TypeVar, Callable, Any
@@ -141,7 +142,33 @@ def guess_destination_and_type(field_name: str, sample_value: Optional[str]) -> 
     return field_name, "default"
 
 
-@UploadPlugin(default=True)
+class CsvDictReader(csv.DictReader):
+    extensions = ["csv", "txt"]
+    require_binary = False
+
+
+class XlsxDictReader:
+    """
+    xlsx reader that is iterable and yields dicts.
+    """
+    extensions = ["xlsx"]
+    require_binary = True
+
+    def __init__(self, fp):
+        from openpyxl import load_workbook
+        self.fp = fp
+        workbook = load_workbook(fp)
+        self.worksheet = workbook.worksheets[0]
+        self.fieldnames = [cell.value for cell in self.worksheet.rows[0]]
+
+    def __iter__(self):
+        rows = (x for i, x in enumerate(self.worksheet.iter_rows()) if i != 0)
+        for row in rows:
+            data = dict((k, str(v.value) if v.value is not None else "") for k, v in zip(self.fieldnames, row) if k)
+            yield data
+
+
+@UploadPlugin(label="CSV / XLSX", default=True)
 class CSV(UploadScript):
     """
     Upload CSV files to AmCAT.
@@ -168,6 +195,8 @@ class CSV(UploadScript):
     is to upload it to dropbox or a file sharing website and paste the link into the issue.
     """
 
+    readers = {extension: reader for reader in (CsvDictReader, XlsxDictReader) for extension in reader.extensions}
+
     _errors = {
         "empty_col": 'Expected non-empty value in table column "{}" for required field "{}".',
         "empty_val": 'Expected non-empty value for required field "{}".',
@@ -179,8 +208,18 @@ class CSV(UploadScript):
         parser = PARSERS[t]
         return parser(value)
 
+    @classmethod
+    def get_reader(cls, file, encoding):
+        _, extension = os.path.splitext(file)
+        reader = cls.readers[extension[1:]]
+        if reader.require_binary:
+            file = open(file, "rb")
+        else:
+            file = _open(file, encoding)
+        return reader(file)
+
     def parse_file(self, file, encoding, _data):
-        reader = csv.DictReader(_open(file, encoding))
+        reader = self.get_reader(file, encoding)
         for unmapped_dict in reader:
             art_dict = self.map_article(unmapped_dict)
             properties = {}
@@ -201,8 +240,7 @@ class CSV(UploadScript):
         sample_data = defaultdict(OrderedSet)
 
         for f, enc, _ in UploadScript._get_files(file, encoding):
-            csvf = _open(f, encoding)
-            reader = csv.DictReader(csvf)
+            reader = cls.get_reader(f, encoding)
             for row in itertools.islice(reader, 0, 5):
                 for field_name, value in row.items():
                     if value.strip():

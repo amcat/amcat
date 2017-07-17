@@ -31,6 +31,27 @@ class TestCSV(amcattest.AmCATTestCase):
         self.assertTrue('1980-03-10' in {date1, date2})
 
     @amcattest.use_elastic
+    def test_xlsx(self):
+        header = ('kop', 'datum', 'tekst', 'pagina')
+        data = [('kop1', '2001-01-01', 'text1', '12'), ('kop2', '10 maart 1980', 'text2', None)]
+        field_map = _get_field_map(
+            title="kop",
+            date="datum",
+            text="tekst",
+            page="pagina"
+        )
+        articles = _run_test_xlsx(header, data, field_map)
+        self.assertEqual(len(articles), 2)
+
+        # Scraper is not guaranteed to return articles in order.
+        self.assertEqual({articles[0].title, articles[1].title}, {'kop1', 'kop2'})
+        self.assertEqual({articles[0].properties['page'], articles[1].properties['page']}, {"12", ''})
+
+        date1 = articles[0].date.isoformat()[:10]
+        date2 = articles[1].date.isoformat()[:10]
+        self.assertTrue('1980-03-10' in {date1, date2})
+
+    @amcattest.use_elastic
     def test_text(self):
         header = ('kop', 'datum', 'tekst')
         data = [('kop1', '2001-01-01', '')]
@@ -89,19 +110,47 @@ class TestCSV(amcattest.AmCATTestCase):
 
 
 def _get_field_map(**kwargs):
-    return dict((k, {"value":  v, "type": "field"}) for k, v in kwargs.items())
+    return dict((k, {"value": v, "type": "field"}) for k, v in kwargs.items())
 
 
 def _run_test_csv(header, rows, field_map, **options):
     project = amcattest.create_test_project()
 
     from tempfile import NamedTemporaryFile
-    from django.core.files import File
 
     with NamedTemporaryFile(suffix=".txt", mode="w", encoding="utf-8") as f:
         w = csv.writer(f)
         for row in [header] + list(rows):
             w.writerow([field and field for field in row])
+        f.flush()
+        form = UploadForm(
+            data={
+                "project": project.id,
+                "field_map": json.dumps(field_map),
+                "encoding": "UTF-8",
+                "filename": f.name,
+            }
+        )
+        form.full_clean()
+        if not form.is_valid():
+            raise Exception(form.errors)
+        set = CSV(form).run()
+
+    return set.articles.all()
+
+
+def _run_test_xlsx(header, rows, field_map, **options):
+    project = amcattest.create_test_project()
+
+    from tempfile import NamedTemporaryFile
+    from openpyxl import Workbook
+    with NamedTemporaryFile(suffix=".xlsx", mode="wb", delete=False) as f:
+        wb = Workbook()
+        ws = wb.get_active_sheet()
+
+        for row in [header] + list(rows):
+            ws.append([field for field in row])
+        wb.save(f.name)
         f.flush()
         form = UploadForm(
             data={
