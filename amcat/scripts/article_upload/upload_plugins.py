@@ -2,7 +2,10 @@ import logging
 from collections import OrderedDict
 from typing import Mapping, Type
 
-from amcat.models import Project
+from django.db import models
+from django.dispatch import receiver
+
+from amcat.models import Project, ProjectUploadPlugin
 from amcat.scripts.article_upload.upload import UploadScript
 
 log = logging.getLogger(__name__)
@@ -93,7 +96,6 @@ class UploadPlugin:
         """
         return self._name
 
-
     _errors = {
 
         "already_registered": (PluginError, "A class was already registered to this plugin: "
@@ -151,3 +153,11 @@ def get_upload_plugin(name: str) -> UploadPlugin:
     Gets an upload plugin by name, and returns the UploadPlugin object.
     """
     return get_upload_plugins()[name]
+
+
+@receiver(models.signals.post_save, sender=Project)
+def add_project_plugins(sender, instance, created, *args, **kwargs):
+    if not created:
+        return
+    for name, plugin in get_upload_plugins().items():
+        ProjectUploadPlugin.objects.create(enabled=plugin.default, name=name, presets="{}", project=instance)
