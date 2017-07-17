@@ -88,7 +88,7 @@ class TestLexisNexis(amcattest.AmCATTestCase):
     def test_parse_article(self):
         splitted = self.split()
         texts = split_body(splitted[1])
-        #texts = [list(texts)[24]]; self.test_body_sols = [self.test_body_sols[23]]
+        #texts = [list(texts)[2]]; self.test_body_sols = [self.test_body_sols[2]]  # note body_sols=text-1 from i>X
         arts = []
         for t in texts:
             art = parse_article(t)
@@ -112,7 +112,7 @@ class TestLexisNexis(amcattest.AmCATTestCase):
                     a = actual.get(key)
                     if f != a:
                         print("i:", i, "Key:", key, " found:", repr(f), " actual:", repr(a))
-            self.assertEqual(fkeys, akeys)
+            self.assertEqual(set(fkeys), set(akeys))
             self.assertDictEqual(found, actual)
 
 

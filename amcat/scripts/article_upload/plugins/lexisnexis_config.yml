@@ -18,6 +18,8 @@ meta_fields:
   - title
   - upload
   - update
+  - graphic
+  - highlight
 
   # fr
   - auteur
@@ -25,11 +27,13 @@ meta_fields:
   - langue
   - longueur
   - titre
+  - signature
+  - chapeau
 
   # de
   - autor
   - rubrik
-  - l\xe4nge
+  - länge
   - sprache
 
   # nl

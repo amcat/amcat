@@ -329,7 +329,7 @@ def parse_article(art):
         return (re.sub("\s+", " ", " ".join(x)) if x else None
                 for x in (headline, byline))
 
-    def _get_meta(lines) -> Iterable[Tuple[str, str, str]]:
+    def _get_meta(lines, after_body=False) -> Iterable[Tuple[str, str, str]]:
         """
         Return meta key-value pairs. Stop if body start criterion is found
         (eg two blank lines or non-meta line)
@@ -345,6 +345,21 @@ def parse_article(art):
                 # either two blank lines or a non-meta line
                 # indicate start of body, so end of meta
                 break
+            if meta_match and not after_body:
+                # if the key is not known, and the next non-empty line is body, treat this line as part of body
+                key, val = meta_match.groups()
+                if val.strip() and not key.lower() in WELL_KNOWN_BODY_KEYS:
+                    def next_block(lines):
+                        found_blank = False
+                        for l in lines:
+                            l = l.strip()
+                            if not l:
+                                found_blank = True
+                            elif found_blank:
+                                return l
+                    next_line = next_block(lines)
+                    if next_line and not RES.BODY_META.match(next_line):
+                        break
             del lines[0]
             if meta_match:
                 key, val = meta_match.groups()
@@ -402,7 +417,7 @@ def parse_article(art):
 
     body, lines = _get_body(lines)
 
-    meta.update({k: v for _, k, v in _get_meta(lines)})
+    meta.update({k: v for _, k, v in _get_meta(lines, after_body=True)})
 
     def _get_source(lines, i):
         source = lines[0 if i > 0 else 1]

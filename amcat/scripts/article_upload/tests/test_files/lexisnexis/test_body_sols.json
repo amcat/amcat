@@ -277,5 +277,17 @@
         "date": "2015-05-01 00:00:00", 
         "company": "RBS HOLDINGS NV (83%)", 
         "subject": "Commercial Banking (92%); Takeovers (88%); Mergers & Acquisitions (85%); Central Banks (80%)"
+    },
+    {
+        "medium": "Politiken & Politiken Weekly",
+        "title": "Debat: På kro med racisme på værelset",
+        "text": "OFFERROLLER: Jeg har lært at droppe og ignorere racisme, fordi risikoen for, at\nden dræner mig for energi, styrke og selvtillid, er alt for stor. Og jeg ønsker\nikke at være et offer.\n\nJEG HAR været indvandrer i Danmark i godt og vel 25 år, heraf de 20 år som dansk\nstatsborger, så jeg er vel kvalificeret til at udtale mig om racisme.\n\nKroejeren havde ganske enkelt tildelt alle kursister med danske navne de gode\nluksusværelser.",
+        "date": "2010-01-06 00:00:00",
+        "language":"DANISH; DANSK",
+        "length_int": 850,
+        "byline": "Medhat Khattab Speciallæge",
+        "load-date": "January 6, 2010",
+        "publication-type": "Newspaper"
+
     }
 ]
