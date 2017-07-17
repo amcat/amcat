@@ -139,21 +139,26 @@ class UploadForm(forms.Form):
     def validate(self):
         return self.is_valid()
 
+
+def _get_encoding(encoding, binary_content):
+    if encoding.lower() == "autodetect":
+        encoding = chardet.detect(binary_content)["encoding"]
+        if encoding == "ascii":
+            encoding = "utf-8"
+        log.info("Guessed encoding: {encoding}".format(**locals()))
+    return encoding
+
 def _open(file, encoding):
     """Open the file in str (unicode) mode, guessing encoding if needed"""
-    if encoding.lower() == 'autodetect':
-        bytes = open(file, mode='rb').read(1000)
-        encoding = chardet.detect(bytes)["encoding"]
-        log.info("Guessed encoding: {encoding}".format(**locals()))
+    binary_content = open(file, mode='rb').read(1000)
+    encoding = _get_encoding(encoding, binary_content)
     return open(file, encoding=encoding)
 
 def _read(file, encoding, n=None):
     """Read the file, guessing encoding if needed"""
-    bytes = open(file, mode='rb').read(n)
-    if encoding.lower() == 'autodetect':
-        encoding = chardet.detect(bytes[:1000])["encoding"]
-        log.info("Guessed encoding: {encoding}".format(**locals()))
-    return bytes.decode(encoding)
+    binary_content = open(file, mode='rb').read(n)
+    encoding = _get_encoding(encoding, binary_content)
+    return binarycontent.decode(encoding)
 
 
 class UploadScript(ActionForm):
