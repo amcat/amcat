@@ -117,11 +117,11 @@ class DeduplicateSet(Script):
         x = amcates.ES().scan(query={"query": {"constant_score": {"filter": {"term": {"sets": articleset.id}}}}},
                               fields=fields)
         for x in amcates.ES().scan(query={"query": {"constant_score": {"filter": {"term": {"sets": articleset.id}}}}},
-                                   fields=fields):
+                                   _source=fields):
             if not ignore_fields:
-                yield int(x['_id']), x['fields']['hash'][0]
+                yield int(x['_id']), x['_source']['hash']
                 continue
-            art_tuple = tuple(str(x['fields'].get(k, [None])[0]) for k in fields)
+            art_tuple = tuple(str(x['_source'].get(k, [None])) for k in fields)
             hash = hash_class(repr(art_tuple).encode()).hexdigest()
             yield int(x['_id']), hash
 

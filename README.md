@@ -63,15 +63,14 @@ createdb amcat
 AmCAT uses elasticsearch for searching articles. Elasticsearch is provided as a debian package, but it does need some extra plugins to be ready for AmCAT.
 
 ```sh
-wget https://download.elastic.co/elasticsearch/release/org/elasticsearch/distribution/deb/elasticsearch/2.3.4/elasticsearch-2.3.4.deb
-sudo dpkg -i elasticsearch-2.3.4.deb
-rm elasticsearch-2.3.4.deb
+wget -O /tmp/elasticsearch-5.4.0.deb https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.4.0.deb
+sudo dpkg -i /tmp/elasticsearch-5.4.0.deb
+rm /tmp/elasticsearch-5.4.0.deb
 
 # Install plugins
 cd /usr/share/elasticsearch
-sudo bin/plugin install mobz/elasticsearch-head
-sudo bin/plugin install analysis-icu
-sudo bin/plugin install amcat/hitcount/2.3.4
+sudo bin/elasticsearch-plugin install analysis-icu
+sudo bin/elasticsearch-plugin install https://github.com/amcat/hitcount/releases/download/5.4.0/hitcount-5.4.0-plugin.zip
 
 # Install scripts (scripts can also be found in config/elasticsearch
 sudo wget -q https://raw.githubusercontent.com/amcat/amcat/master/config/elasticsearch/amcat_remove_from_set.groovy -O /etc/elasticsearch/scripts/amcat_remove_from_set.groovy

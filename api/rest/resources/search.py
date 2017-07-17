@@ -90,7 +90,7 @@ class LazyES(object):
         result = self.es.query(
             query=self.query,
             filters=self.filters,
-            fields=fields,
+            _source=fields,
             size=stop - start,
             sort=["id"],
             from_=start,

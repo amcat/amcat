@@ -38,11 +38,8 @@ def c(s):
     return s.lower()
 
 
-def query_filter(dsl, cache=False):
-    if cache:
-        return {"fquery": {"query": dsl, "_cache": True}}
-    else:
-        return {"query": dsl}
+def query_filter(dsl):
+    return dsl
 
 
 class ParseError(ValueError):

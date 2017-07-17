@@ -22,7 +22,6 @@ import functools
 import logging
 import os
 import re
-
 from collections import namedtuple
 from hashlib import sha224 as hash_class
 from json import dumps as serialize
@@ -32,7 +31,7 @@ from typing import Union
 
 from django.conf import settings
 from elasticsearch import Elasticsearch, NotFoundError
-from elasticsearch.helpers import scan, bulk
+from elasticsearch.helpers import bulk, scan
 
 import amcat.models
 from amcat.tools import queryparser, toolkit
@@ -43,7 +42,6 @@ from amcat.tools.toolkit import multidict, splitlist
 log = logging.getLogger(__name__)
 
 _clean_re = re.compile('[\x00-\x08\x0B\x0C\x0E-\x1F]')
-
 
 EMPTY_RO_DICT = MappingProxyType({})
 
@@ -79,7 +77,7 @@ def get_property_primitive_type(name) -> Union[int, float, str, set, datetime.da
         return set
 
     if "_" in name:
-        return settings.ES_MAPPING_TYPE_PRIMITIVES[name[name.rfind("_")+1:]]
+        return settings.ES_MAPPING_TYPE_PRIMITIVES[name[name.rfind("_") + 1:]]
 
     # Return type specified in ES_MAPPING
     if name in settings.ES_MAPPING["properties"]:
@@ -116,8 +114,10 @@ def get_article_dict(article, sets=None):
     d["sets"] = sets
     return d
 
+
 def _escape_bytes(b):
     return b.replace(b"\\", b"\\\\").replace(b",", b"\\,")
+
 
 def _hash_dict(d):
     c = hash_class()
@@ -126,6 +126,7 @@ def _hash_dict(d):
         c.update(_escape_bytes(_encode_field(d[fn])))
         c.update(b",")
     return c.hexdigest()
+
 
 def _encode_field(object, encoding="utf-8"):
     if isinstance(object, datetime.datetime):
@@ -142,28 +143,34 @@ HIGHLIGHT_OPTIONS = {
         'text': {
             "fragment_size": 100,
             "number_of_fragments": 3,
-            'no_match_size': 100
+            'no_match_size': 100,
+            "require_field_match": False
         },
         'title': {
-            'no_match_size': 100
+            'no_match_size': 100,
+            "require_field_match": False
         }
     }
 }
 
-LEAD_SCRIPT_FIELD = "amcat_lead"
-UPDATE_SCRIPT_REMOVE_FROM_SET = "amcat_remove_from_set"
-UPDATE_SCRIPT_ADD_TO_SET = "amcat_add_to_set"
+LEAD_SCRIPT_FIELD = {"file": "amcat_lead", "lang": "groovy"}
+UPDATE_SCRIPT_REMOVE_FROM_SET = {"file": "amcat_remove_from_set", "lang": "groovy"}
+UPDATE_SCRIPT_ADD_TO_SET = {"file": "amcat_add_to_set", "lang": "groovy"}
+
 
 def _get_bulk_body(articles, action):
     for article_id, article in articles.items():
         yield serialize({action: {'_id': article_id}})
         yield article
 
+
 def get_bulk_body(articles, action="index"):
     return "\n".join(_get_bulk_body(articles, action)) + "\n"
 
+
 class SearchResult(object):
     """Iterable collection of results that also has total"""
+
     def __init__(self, results, fields, score, body, query=None):
         "@param results: the raw results dict from elasticsearch::search"
         self._results = results
@@ -192,6 +199,7 @@ class SearchResult(object):
         """Return the results as fieldname : value dicts"""
         return [r.__dict__ for r in self]
 
+
 class Result(object):
     """Simple class to hold arbitrary values"""
 
@@ -199,16 +207,17 @@ class Result(object):
     def from_hit(cls, searchresult, row, fields, score=True):
         """@param hit: elasticsearch hit dict"""
         field_dict = {f: None for f in fields}
-        if 'fields' in row:
-            for (k, v) in row['fields'].items():
-                if k != "sets":
-                    # elastic 1.0 always returns arrays, we only want
-                    # sets in a list, the rest should be 'scalarized'
-                    if isinstance(v, list):
-                        v = v[0]
-                field_dict[k] = v
-
-        result = Result(id=int(row['_id']), _searchresult=searchresult, **field_dict)
+        for result_store in ('_source', 'fields'):
+            if result_store in row:
+                for (k, v) in row[result_store].items():
+                    if k != "sets":
+                        # elastic 1.0 always returns arrays, we only want
+                        # sets in a list, the rest should be 'scalarized'
+                        if isinstance(v, list):
+                            v = v[0]
+                    field_dict[k] = v
+        field_dict['id'] = int(row['_id'])
+        result = Result(_searchresult=searchresult, **field_dict)
         if score: result.score = int(row['_score'])
         if 'highlight' in row: result.highlight = row['highlight']
         if hasattr(result, 'date'):
@@ -227,8 +236,8 @@ class Result(object):
             result.start_date, result.end_date = None, None
         else:
             f = get_date if date else int
-            result.min=f(stats['min'])
-            result.max=f(stats['max'])
+            result.min = f(stats['min'])
+            result.max = f(stats['max'])
         return result
 
     def to_dict(self):
@@ -243,13 +252,15 @@ class Result(object):
         items = ("{}={!r}".format(k, self.__dict__[k]) for k in keys)
         return "{}({})".format(type(self).__name__, ", ".join(items))
 
+
 def get_highlight_query(query, fieldname):
     query = queryparser.parse(query, fieldname)
     return {"highlight_query": query, "number_of_fragments": 0}
 
+
 def delete_test_indices():
     es = ES()
-    indices = es.es.indices.get_aliases().keys()
+    indices = es.es.indices.get_alias().keys()
     test_indices = filter(lambda i: i.startswith("test_"), indices)
     for test_index in test_indices:
         ES(index=test_index).delete_index()
@@ -330,7 +341,7 @@ class _ES(object):
 
     def create_index(self, shards=5, replicas=1):
         es_settings = settings.ES_SETTINGS.copy()
-        es_settings.update({"number_of_shards" : shards,
+        es_settings.update({"number_of_shards": shards,
                             "number_of_replicas": replicas})
 
         body = {
@@ -368,7 +379,7 @@ class _ES(object):
                 "index": self.index,
                 "index_health": self.es.cluster.health(self.index),
                 "transport_hosts": self.es.transport.hosts,
-            }
+                }
 
     def get(self, id, **options):
         """
@@ -385,7 +396,7 @@ class _ES(object):
         """
         if parents is None: parents = [None] * len(ids)
         if doc_type is None: doc_type = self.doc_type
-        getdocs = [{"_index" : self.index, "_id" : id, "_parent" : parent, "_type" : doc_type}
+        getdocs = [{"_index": self.index, "_id": id, "_parent": parent, "_type": doc_type}
                    for (id, parent) in zip(ids, parents)]
         return self.es.mget({"docs": getdocs})['docs']
 
@@ -393,8 +404,10 @@ class _ES(object):
         """
         Perform a 'raw' search on the underlying ES index
         """
+        import pprint
         kargs = dict(index=self.index, doc_type=self.doc_type)
         kargs.update(options)
+        log.debug("Search with body:\n {}".format(pprint.pformat(body)))
         return self.es.search(body=body, **kargs)
 
     def scan(self, query, **kargs):
@@ -418,12 +431,12 @@ class _ES(object):
         if body is None:
             body = dict(build_body(query, filters, query_as_filter=True))
         for i, a in enumerate(scan(self.es, query=body, index=self.index, doc_type=self.doc_type,
-                                   size=(limit or 1000), fields="")):
+                                   size=(limit or 1000), _source=())):
             if limit and i >= limit:
                 return
             yield int(a['_id'])
 
-    def query(self, query=None, filters=EMPTY_RO_DICT, highlight=False, lead=False, fields=(), score=True, **kwargs):
+    def query(self, query=None, filters=EMPTY_RO_DICT, highlight=False, lead=False, _source=(), score=True, **kwargs):
         """
         Execute a query for the given fields with the given query and filter
         @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
@@ -444,10 +457,10 @@ class _ES(object):
             else:
                 body['highlight'] = HIGHLIGHT_OPTIONS
         if lead or False and query == "" and highlight:
-            body['script_fields'] = {"lead": {"script": {"file": LEAD_SCRIPT_FIELD}}}
+            body['script_fields'] = {"lead": {"script": LEAD_SCRIPT_FIELD}}
 
-        result = self.search(body, fields=fields, **kwargs)
-        return SearchResult(result, fields, score, body, query=query)
+        result = self.search(body, _source=_source, **kwargs)
+        return SearchResult(result, _source, score, body, query=query)
 
     def query_all(self, *args, **kargs):
         kargs.update({"from_": 0})
@@ -500,7 +513,7 @@ class _ES(object):
         Add the given article_ids to the index. This is done in batches, so there
         is no limit on the length of article_ids (which can be a generator).
         """
-        #WvA: remove redundancy with create_articles
+        # WvA: remove redundancy with create_articles
         if not article_ids: return
         from amcat.models import Article, ArticleSetArticle
 
@@ -534,8 +547,8 @@ class _ES(object):
 
         nbatches = len(batches)
         for i, batch in enumerate(batches):
-            monitor.update(message="Adding batch {iplus}/{nbatches}..".format(iplus=i+1, nbatches=nbatches))
-            self.bulk_update(batch, UPDATE_SCRIPT_ADD_TO_SET, params={'set' : setid})
+            monitor.update(message="Adding batch {iplus}/{nbatches}..".format(iplus=i + 1, nbatches=nbatches))
+            self.bulk_update(batch, UPDATE_SCRIPT_ADD_TO_SET, params={'set': setid})
 
     def get_tokens(self, aid: int, fields=["text", "title"]):
         """
@@ -545,7 +558,8 @@ class _ES(object):
         :return: a sequence of (field, position, term) tuples
         """
         fieldstr = ",".join(fields)
-        data = self.es.termvectors(self.index, self.doc_type, aid, fields=fieldstr, field_statistics=False, payloads=False, offsets=False)
+        data = self.es.termvectors(self.index, self.doc_type, aid, fields=fieldstr, field_statistics=False,
+                                   payloads=False, offsets=False)
         for field in fields:
             if field in data['term_vectors']:
                 for term, info in data['term_vectors'][field]['terms'].items():
@@ -560,7 +574,7 @@ class _ES(object):
         monitor = monitor.submonitor(total=len(batches))
         nbatches = len(batches)
         for i, batch in enumerate(batches):
-            monitor.update(1, "Adding batch {iplus}/{nbatches}".format(iplus=i+1, **locals()))
+            monitor.update(1, "Adding batch {iplus}/{nbatches}".format(iplus=i + 1, **locals()))
             props, articles = set(), {}
             for d in batch:
                 props |= (set(d.keys()) - ALL_FIELDS)
@@ -591,7 +605,7 @@ class _ES(object):
         """
         Execute a bulk update script with the given params on the given article ids.
         """
-        payload = serialize({"script": {"file": script, "params": params}})
+        payload = serialize({"script": dict(script, params=params)})
         body = get_bulk_body({aid: payload for aid in article_ids}, action="update")
         resp = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
 
@@ -622,10 +636,10 @@ class _ES(object):
             to_add_set = (db_ids & solr_ids) - solr_set_ids
 
         log.warning("Refreshing index, full_refresh={full_refresh},"
-                 "|solr_set_ids|={nsolrset}, |db_set_ids|={ndb}, |solr_ids|={nsolr} "
-                 "|to_add| = {nta}, |to_add_set|={ntas}, |to_remove_set|={ntr}"
-                 .format(nsolr=len(solr_ids), nsolrset=len(solr_set_ids), ndb=len(db_ids),
-                         nta=len(to_add_docs), ntas=len(to_add_set), ntr=len(to_remove), **locals()))
+                    "|solr_set_ids|={nsolrset}, |db_set_ids|={ndb}, |solr_ids|={nsolr} "
+                    "|to_add| = {nta}, |to_add_set|={ntas}, |to_remove_set|={ntr}"
+                    .format(nsolr=len(solr_ids), nsolrset=len(solr_set_ids), ndb=len(db_ids),
+                            nta=len(to_add_docs), ntas=len(to_add_set), ntr=len(to_remove), **locals()))
 
         log.info("Removing {} articles".format(len(to_remove)))
         self.remove_from_set(aset.id, to_remove)
@@ -655,7 +669,7 @@ class _ES(object):
         """
         body = dict(query={"filtered": dict(build_body(query, filters, query_as_filter=True))},
                     aggregations={"aggregation": aggregation})
-        result = self.search(body, size=0, search_type="count", **options)
+        result = self.search(body, size=0, **options)
         return result['aggregations']['aggregation']
 
     def _parse_terms_aggregate(self, aggregate, group_by, terms, sets):
@@ -701,14 +715,14 @@ class _ES(object):
                     'date_histogram': {
                         'field': group,
                         'interval': date_interval,
-                        "min_doc_count" : 1
+                        "min_doc_count": 1
                     }
                 }
             }
         elif group == 'terms':
             aggregation = {
                 term.label: {
-                    'filter': dict(build_body(term.query))
+                    'filter': dict(build_body(term.query))['query']
                 } for term in terms
             }
         else:
@@ -806,7 +820,7 @@ class _ES(object):
         if not ids: return
         for batch in splitlist(ids, itemsperbatch=10000):
             result = self.es.mget(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE,
-                                  body={"ids": batch}, fields=[])
+                                  body={"ids": batch}, _source=[])
             for doc in result['docs']:
                 if doc['found']: yield int(doc['_id'])
 
@@ -819,7 +833,7 @@ class _ES(object):
         @return: A (possibly empty) sequence of results with .id and .sets
         """
         hash = get_article_dict(article).hash
-        return self.query(filters={'hashes': hash}, fields=["sets"], score=False)
+        return self.query(filters={'hashes': hash}, _source=["sets"], score=False)
 
     def _get_purge_actions(self, query):
         for id in self.query_ids(body=query):
@@ -832,7 +846,7 @@ class _ES(object):
 
     def purge_orphans(self):
         """Remove all articles without set from the index"""
-        query =  {"query": {"constant_score": {"filter": {"missing": {"field": "sets"}}}}}
+        query = {"query": {"bool": {"must_not": {"exists": {"field": "sets"}}}}}
         return bulk(self.es, self._get_purge_actions(query))
 
     def get_child_type_counts(self, **filters):
@@ -841,21 +855,23 @@ class _ES(object):
         filter = {"has_parent": {"parent_type": self.doc_type, "filter": filters['filter']}}
         aggs = {"module": {"terms": {"field": "_type"}}}
         body = {"aggs": {"prep": {"filter": filter, "aggs": aggs}}}
-        r = self.es.search(index=self.index, search_type="count", body=body)
+        r = self.es.search(index=self.index, size=0, body=body)
         for b in r['aggregations']['prep']['module']['buckets']:
-            yield b['key'], b['doc_count']   
+            yield b['key'], b['doc_count']
 
     def get_articles_without_child(self, child_doctype, limit=None, **filters):
         """Return the ids of all articles without a child of the given doctype"""
-        nochild =  {"not" : {"has_child" : { "type": child_doctype,
-                                             "query" : {"match_all" : {}}}}}        
+        nochild = {"not": {"has_child": {"type": child_doctype,
+                                         "query": {"match_all": {}}}}}
         filter = dict(build_body(filters=filters))['filter']
-        body = {"filter": {"bool" : {"must" : [filter, nochild]}}}
+        body = {"filter": {"bool": {"must": [filter, nochild]}}}
         return self.query_ids(body=body, limit=limit)
 
 
 _singletons = {}
-def ES(index:str=None, doc_type:str=None, host:str=None, port:int=None) -> _ES:
+
+
+def ES(index: str = None, doc_type: str = None, host: str = None, port: int = None) -> _ES:
     if index is None:
         index = settings.ES_INDEX
         if settings.TESTING:
@@ -913,22 +929,20 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
         elif singular in filters:
             f[singular] = filters.pop(singular)
 
-
     for k, v in filters.items():
         yield {'terms': {k: _list(v, number=False)}}
 
     if 'set' in f: yield dict(terms={'sets': _list(f['set'])})
     if 'id' in f: yield dict(ids={'values': _list(f['id'])})
-    if 'hash' in f: yield dict(terms={'hash' : _list(f['hash'], number=False)})
+    if 'hash' in f: yield dict(terms={'hash': _list(f['hash'], number=False)})
 
     date_range = {}
     if start_date: date_range['gte'] = parse_date(start_date)
     if end_date: date_range['lt'] = parse_date(end_date)
     if date_range: yield dict(range={'date': date_range})
-    if on_date: date_range={"gte": parse_date(on_date),
-                            "lt": parse_date(on_date)+"||+1d"}
-    if date_range: yield dict(range={'date' : date_range})
-
+    if on_date: date_range = {"gte": parse_date(on_date),
+                              "lt": parse_date(on_date) + "||+1d"}
+    if date_range: yield dict(range={'date': date_range})
 
 
 def combine_filters(filters):
@@ -953,18 +967,20 @@ def build_body(query=None, filters=EMPTY_RO_DICT, query_as_filter=False):
     @param filters: field filter DSL query dict, defaults to build_filter(**filters)
     @param query_as_filter: if True, use the query as a filter (faster but not score/relevance)
     """
+    query_body = {"bool": {}}
     filters = list(get_filter_clauses(**filters))
     if query:
         terms = queryparser.parse_to_terms(query)
         if query_as_filter:
             filters.append(terms.get_filter_dsl())
         else:
-            yield ('query', terms.get_dsl())
+            query_body["bool"]["must"] = terms.get_dsl()
 
     if filters:
-        yield ('filter', combine_filters(filters))
+        query_body["bool"]["filter"] = filters
+
+    return {"query": query_body}
 
 
 if __name__ == '__main__':
     ES().check_index()
-

@@ -24,15 +24,15 @@ from amcat.models import Article, word_len
 from amcat.models import PropertyMapping
 from amcat.tools import amcattest
 from amcat.tools import amcates
-from amcat.tools.amcattest import create_test_article
+from amcat.tools.amcattest import create_test_article, create_test_set
 
 import datetime
 import random
 
 def _setup_highlighting():
     from amcat.tools.amcates import ES
-
-    article = create_test_article(text="<p>foo</p>", title="<p>bar</p>")
+    articleset = create_test_set() # ESQuerySet expects articles to be in a set
+    article = create_test_article(articleset=articleset, text="<p>foo</p>", title="<p>bar</p>")
     ES().refresh()
     return article
 
@@ -154,7 +154,7 @@ class TestArticle(amcattest.AmCATTestCase):
         Article.create_articles([a])
         db_a = Article.objects.get(pk=a.id)
         amcates.ES().refresh()
-        es_a = list(amcates.ES().query(filters={'ids': [a.id]}, fields=["date", "title", "hash"]))[0]
+        es_a = list(amcates.ES().query(filters={'ids': [a.id]}, _source=["date", "title", "hash"]))[0]
         self.assertEqual(a.hash, db_a.hash)
         self.assertEqual(a.hash, es_a.hash)
         self.assertEqual(a.title, db_a.title)

@@ -70,7 +70,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(all_ids, set(ES().query_ids()))
 
         # Delete but do not purge orphans, query again
-        missing_query =  {"query": {"constant_score": {"filter": {"missing": {"field": "sets"}}}}}
+        missing_query =  {"query": {"constant_score": {"filter": {"bool": {"must_not": {"exists": {"field": "sets"}}}}}}}
         s1.delete(purge_orphans=False)
         ES().refresh()
         self.assertEqual(all_ids, set(ES().query_ids()))
@@ -195,7 +195,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         """Do query and query_ids work properly?"""
         a = amcattest.create_test_article(title="bla", text="artikel artikel een", date="2001-01-01")
         ES().refresh()
-        es_a, = ES().query("een", fields=["date", "title"])
+        es_a, = ES().query("een", _source=["date", "title"])
         self.assertEqual(es_a.title, "bla")
         self.assertEqual(es_a.id, a.id)
         ids = set(ES().query_ids(filters=dict(title='bla')))
@@ -291,7 +291,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         s.refresh_index()
 
         def q(query):
-            result = ES().query(query, filters={'sets': s.id}, fields=["title"])
+            result = ES().query(query, filters={'sets': s.id}, _source=["title"])
             return {a.title: a.score for a in result}
 
         self.assertEqual(q("test"), {"a": 1})
@@ -393,7 +393,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         hash = get_article_dict(article)['hash']
         Article.create_articles([article], articleset=amcattest.create_test_set())
         ES().refresh()
-        es_articles = ES().query_all(filters={"ids": [article.id]}, fields=["hash"])
+        es_articles = ES().query_all(filters={"ids": [article.id]}, _source=["hash"])
         es_articles = list(es_articles)
         es_article = list(es_articles)[0]
 
