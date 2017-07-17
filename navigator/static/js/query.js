@@ -402,7 +402,7 @@ define([
         if (method === "PATCH"){
             url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: saved_query.id});
         } else {
-            url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: ''})
+            url = SAVED_QUERY_API_URL.format({project_id: PROJECT, query_id: ''}).replace("//", "/");
         }
 
         var data = serializeForm($("#query-form"), JOBS, SETS);

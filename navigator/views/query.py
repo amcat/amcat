@@ -20,6 +20,8 @@
 import json
 import logging
 
+from django.shortcuts import redirect
+
 from amcat.scripts.query import get_r_queryactions
 from amcat.scripts.query.queryaction import is_valid_cache_key
 from django import conf
@@ -35,7 +37,7 @@ from amcat.tools import amcates
 from api.rest.datatable import Datatable
 from api.rest.viewsets import QueryViewSet, FavouriteArticleSetViewSet, CodingJobViewSet
 from navigator.views.project_views import ProjectDetailsView
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, BaseMixin
 
 log = logging.getLogger(__name__)
 
@@ -80,18 +82,20 @@ class SavedQueryRedirectView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumb
 
         return url
 
-
-class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, TemplateView):
-    context_category = 'Query'
+class QuerySetSelectionView(BaseMixin, TemplateView):
+    view_name = "query_select"
+    url_fragment = "queryselect"
     parent = ProjectDetailsView
-    url_fragment = 'query'
-    view_name = 'query'
+
+    def get_query_url(self, suffix=""):
+        return reverse("navigator:query", args=[self.project.id]) + suffix
+
 
     def get_saved_queries_table(self):
         table = Datatable(
             QueryViewSet,
             url_kwargs={"project": self.project.id},
-            rowlink="{id}"
+            rowlink=self.get_query_url("{id}")
         )
         table = table.hide("last_saved", "parameters", "project")
         return table
@@ -100,7 +104,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         table = Datatable(
             FavouriteArticleSetViewSet,
             url_kwargs={"project": self.project.id},
-            rowlink="?sets={id}",
+            rowlink=self.get_query_url("?sets={id}"),
             checkboxes=True
         )
 
@@ -111,10 +115,29 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         table = Datatable(
             CodingJobViewSet,
             url_kwargs={"project": self.project.id},
-            rowlink="?jobs={id}",
+            rowlink=self.get_query_url("?jobs={id}"),
             checkboxes=True
         ).filter(archived=False).hide("articleset", "archived", "insertuser")
         return table
+
+    def get_context_data(self, **kwargs):
+        saved_queries_table = self.get_saved_queries_table()
+        articlesets_table = self.get_articlesets_table()
+        codingjobs_table = self.get_codingjobs_table()
+        return dict(super().get_context_data(**kwargs), **locals())
+
+
+class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, TemplateView):
+    context_category = 'Query'
+    parent = ProjectDetailsView
+    url_fragment = 'query'
+    view_name = 'query'
+
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        if not (context["articleset_ids"] or context["codingjob_ids"]):
+            return redirect(reverse("navigator:query_select", args=[self.project.id]))
+        return self.render_to_response(context)
 
     def _get_ids(self, key):
         return set(map(int, filter(str.isdigit, self.request.GET.get(key, "").split(","))))
@@ -143,10 +166,6 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         articlesets_names = (aset.name for aset in articlesets)
         articleset_ids_json = json.dumps(list(articleset_ids))
         codebooks = self.project.get_codebooks().order_by("name").only("id", "name")
-
-        saved_queries_table = self.get_saved_queries_table()
-        articlesets_table = self.get_articlesets_table()
-        codingjobs_table = self.get_codingjobs_table()
 
         form = SelectionForm(
             project=self.project,

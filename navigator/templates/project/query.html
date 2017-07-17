@@ -8,7 +8,6 @@
     <link href="{% static 'components/bootstrap-multiselect/dist/css/bootstrap-multiselect.css' %}" rel="stylesheet" type="text/css" media="screen" />
 {% endblock %}
 {% block javascript %}
-  {% if articlesets %}
     {% block base_javascript %}{% endblock %}
 
     <script>
@@ -19,7 +18,6 @@
           document.getElementById("requirejs-error-notification").style.display = "";
       });
     </script>
-  {% endif %}
 {% endblock %}
 
 {% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
@@ -33,44 +31,40 @@
         </div>
     </div>
 
-  {% if not articlesets %}
-      {% include "project/query/no_articlesets.html" %}
-  {% else %}
-      <form data-jobs="{{ codingjob_ids_json }}" data-sets="{{ articleset_ids_json }}" data-user="{{ user_id }}" data-query="{{ query_id }}" id="query-form">
-          {% csrf_token %}
-          <input name="project" type="hidden" value="{{ project.id }}" />
-          {% include "project/query/form.html" %}
-      </form>
+    <form data-jobs="{{ codingjob_ids_json }}" data-sets="{{ articleset_ids_json }}" data-user="{{ user_id }}" data-query="{{ query_id }}" id="query-form">
+      {% csrf_token %}
+      <input name="project" type="hidden" value="{{ project.id }}" />
+      {% include "project/query/form.html" %}
+    </form>
 
-      <div class="row">
-          <div class="col-md-12">
-              <div id="result">
-                  <div class="panel panel-default">
-                      <div class="panel-heading">
-                        <div class="row">
-                          <div class="col-sm-4">Results</div>
-                          <div style="text-align: right; display: none;" class="cache-clearing col-sm-8">
-                            <small>Clearing..</small>
-                          </div>
-                          <div style="text-align: right; display: none;" class="cache-message col-sm-8">
-                            <small>
-                              These results are cached (<span class="cache-timestamp">7 minutes ago</span>).
-                              <a class="cache-clear" href="#">Clear cache.</a>
-                            </small>
-                          </div>
-                        </div>
+    <div class="row">
+      <div class="col-md-12">
+          <div id="result">
+              <div class="panel panel-default">
+                  <div class="panel-heading">
+                    <div class="row">
+                      <div class="col-sm-4">Results</div>
+                      <div style="text-align: right; display: none;" class="cache-clearing col-sm-8">
+                        <small>Clearing..</small>
                       </div>
-                      <div class="panel-body"><i>No results yet</i></div>
+                      <div style="text-align: right; display: none;" class="cache-message col-sm-8">
+                        <small>
+                          These results are cached (<span class="cache-timestamp">7 minutes ago</span>).
+                          <a class="cache-clear" href="#">Clear cache.</a>
+                        </small>
+                      </div>
+                    </div>
                   </div>
+                  <div class="panel-body"><i>No results yet</i></div>
               </div>
           </div>
       </div>
+    </div>
 
-      {% include "project/modal_add_to_set.html" %}
-      {% include "project/query/loading_dialog.html" %}
-      {% include "project/query/articlelist_dialog.html" %}
-      {% include "project/query/save_dialog.html" %}
-      {% include "project/query/confirm_dialog.html" %}
-      {% include "project/query/change_articlesets_dialog.html" %}
-  {% endif %}
+    {% include "project/modal_add_to_set.html" %}
+    {% include "project/query/loading_dialog.html" %}
+    {% include "project/query/articlelist_dialog.html" %}
+    {% include "project/query/save_dialog.html" %}
+    {% include "project/query/confirm_dialog.html" %}
+    {% include "project/query/change_articlesets_dialog.html" %}
 {% endblock %}

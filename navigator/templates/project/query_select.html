@@ -1,0 +1,24 @@
+{% extends "project/base.html" %}
+{% load staticfiles %}
+
+
+{% block css %}
+    <link href="{% static 'css/selection.css' %}" rel="stylesheet" type="text/css" media="screen" />
+    <link href="{% static 'components/bootstrap-datepicker/dist/css/bootstrap-datepicker3.css' %}" rel="stylesheet" type="text/css" media="screen" />
+    <link href="{% static 'components/bootstrap-multiselect/dist/css/bootstrap-multiselect.css' %}" rel="stylesheet" type="text/css" media="screen" />
+{% endblock %}
+
+{% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
+
+{% block content %}
+
+    <div class="panel panel-danger" style="display:none" id="requirejs-error-notification">
+        <div class="panel-heading">An error occured while loading Javascript modules, and this page might not
+            work as expected. This could be due to an adblocker inadvertedly blocking one or more javascript files.
+            Try <a href="">refreshing the page</a>, and make sure adblockers are disabled for this site.
+        </div>
+    </div>
+
+    {% include "project/query/no_articlesets.html" %}
+
+{% endblock %}
