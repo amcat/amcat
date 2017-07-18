@@ -1,4 +1,5 @@
 from amcat.models import Language
+from amcat.scripts.article_upload.upload_plugins import get_upload_plugins
 from amcat.tools import amcattest
 from amcat.tools.amcattest import require_postgres
 from amcat.tools.djangotoolkit import list_queries, db_supports_distinct_on, \
@@ -11,7 +12,7 @@ class TestDjangoToolkit(amcattest.AmCATTestCase):
         u = amcattest.create_test_user()
         with list_queries() as l:
             amcattest.create_test_project(owner=u)
-        self.assertEquals(len(l), 2) # create project, create role for owner
+        self.assertEquals(len(l), 2 + len(get_upload_plugins())) # create project, create role for owner, create plugin settings
 
     def test_db_supports_distinct_on(self):
         self.assertTrue(db_supports_distinct_on() in (True, False))
