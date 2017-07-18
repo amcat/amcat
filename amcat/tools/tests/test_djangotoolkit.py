@@ -12,7 +12,7 @@ class TestDjangoToolkit(amcattest.AmCATTestCase):
         u = amcattest.create_test_user()
         with list_queries() as l:
             amcattest.create_test_project(owner=u)
-        self.assertEquals(len(l), 2 + len(get_upload_plugins())) # create project, create role for owner, create plugin settings
+        self.assertEquals(len(l), 3) # create project, create role for owner, create plugin settings
 
     def test_db_supports_distinct_on(self):
         self.assertTrue(db_supports_distinct_on() in (True, False))
