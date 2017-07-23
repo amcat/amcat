@@ -109,6 +109,7 @@ class Command(BaseCommand):
         self.copy_data(options['articles'], media)
         if not self.dry:
             self.create_constraints()
+        logging.info("Done!")
 
     def get_media(self, fn):
         for line in csv.DictReader(open(fn)):
@@ -138,6 +139,7 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
         conn().commit()
                     
     def create_article_table(self):
+        logging.info("Creating constraints")
         with conn().cursor() as c:
             c.execute('''
             CREATE TABLE "articles" ("article_id" serial NOT NULL PRIMARY KEY, "date" timestamp with time zone NOT NULL, "title" text NOT NULL, "url" text NULL, "text" text NOT NULL, "hash" bytea NOT NULL, "parent_hash" bytea NULL, "properties" jsonb NULL, "project_id" integer NOT NULL);''')
@@ -203,25 +205,26 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
 
         if self._continue:
             logging.info("Continuing from previous migration, getting state from DB")
-            c = conn().cursor('migration-continue')
-            c.itersize = 10000 # how much records to buffer on a client
-            c.execute("SELECT article_id, hash FROM articles")
-            i = 0
-            while True:
-                rows = c.fetchmany(10000)
-                if not rows:
-                    break
-                i += len(rows)
-                if not i % 1000000:
-                    logging.info("Retrieved {i} rows...")
-                for (aid, hash) in rows:
-                    offset = (aid - 1) * 28
-                    hashes[offset:offset+28] = hash
+            with conn().cursor('migration-continue') as c:
+                c.itersize = 10000 # how much records to buffer on a client
+                c.execute("SELECT article_id, hash FROM articles")
+                i = 0
+                while True:
+                    rows = c.fetchmany(10000)
+                    if not rows:
+                        break
+                    i += len(rows)
+                    if not i % 1000000:
+                        logging.info("Retrieved {i} rows...".format(**locals()))
+                    for (aid, hash) in rows:
+                        offset = (aid - 1) * 28
+                        hashes[offset:offset+28] = hash
             self.n_rows -= i
-            logging.info("Continuing migration, {i} articles retrieved, {self.n_rows} to go".format(**locals()))
+            logging.info("Continuing migration, {i} articles retrieved, up to {self.n_rows} to go".format(**locals()))
         
         while orphans:
-            logging.info("*** Pass {passno}, #orphans {orphans}".format(**locals()))
+            norphans = len(orphans) if isinstance(orphans, list) else orphans
+            logging.info("*** Pass {passno}, #orphans {norphans}".format(**locals()))
             passno += 1
 
             if orphans == "PLENTY":
@@ -232,8 +235,13 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
                 todo = orphans
             
             orphans = []
+            MAX_ORPHANS_BUFFER = 50000
+            
+            for i, row in enumerate(todo):
+                if not i % 1000000:
+                    norphans = len(orphans) if isinstance(orphans, list) else orphans
+                    logging.info("Row {i}, #orphans: {norphans}".format(**locals()))
 
-            for row in todo:
                 aid = int(row[AID])
                 
                 offset = (aid - 1) * 28
