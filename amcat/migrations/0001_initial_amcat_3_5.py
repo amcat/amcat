@@ -42,7 +42,7 @@ class Migration(migrations.Migration):
                 ('text', models.TextField()),
                 ('hash', django_hash_field.HashField(db_index=True, max_length=16, unique=True)),
                 ('parent_hash', django_hash_field.HashField(blank=True, db_index=True, max_length=16, null=True)),
-                ('properties', django.contrib.postgres.fields.jsonb.JSONField(blank=True, null=True, default={})),
+                ('properties', django.contrib.postgres.fields.jsonb.JSONField(blank=True, null=True)),
             ],
             options={
                 'db_table': 'articles',

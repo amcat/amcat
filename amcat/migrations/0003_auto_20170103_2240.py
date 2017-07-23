@@ -26,6 +26,11 @@ class Migration(migrations.Migration):
             field=amcat.models.article.PropertyField(default='{}'),
         ),
         migrations.AlterField(
+            model_name='query',
+            name='parameters',
+            field=django.contrib.postgres.fields.jsonb.JSONField(default={}),
+        ),
+        migrations.AlterField(
             model_name='task',
             name='arguments',
             field=jsonfield.fields.JSONField(default=dict),
