@@ -21,11 +21,6 @@ class Migration(migrations.Migration):
             field=models.BooleanField(default=False),
         ),
         migrations.AlterField(
-            model_name='article',
-            name='properties',
-            field=amcat.models.article.PropertyField(default='{}'),
-        ),
-        migrations.AlterField(
             model_name='query',
             name='parameters',
             field=django.contrib.postgres.fields.jsonb.JSONField(default={}),
