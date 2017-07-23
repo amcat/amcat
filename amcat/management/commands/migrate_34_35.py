@@ -198,7 +198,7 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
 
         hashes = ctypes.create_string_buffer(max_id*28)
         NULL_HASH = b'\x00' * 28
-        orphans = "N/A"
+        orphans = "PLENTY"
         passno = 1
 
         if self._continue:
@@ -223,12 +223,17 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
         while orphans:
             logging.info("*** Pass {passno}, #orphans {orphans}".format(**locals()))
             passno += 1
-            orphans = 0
-            
-            r = csv.reader(open(fn))
-            next(r) # skip header
 
-            for row in r:
+            if orphans == "PLENTY":
+                r = csv.reader(open(fn))
+                next(r) # skip header
+                todo = r
+            else:
+                todo = orphans
+            
+            orphans = []
+
+            for row in todo:
                 aid = int(row[AID])
                 
                 offset = (aid - 1) * 28
@@ -243,7 +248,12 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
                     poffset = (parent_id - 1) * 28
                     parent_hash = hashes[poffset:poffset+28]
                     if parent_hash == NULL_HASH:
-                        orphans += 1
+                        # it's an orphan, can't process it now, so either buffer or re-iterate
+                        if orphans != "PLENTY": # try to buffer
+                            if len(orphans) > MAX_ORPHANS_BUFFER:
+                                orphans = "PLENTY"
+                            else:
+                                orphans.append(row)
                         continue
                     parent_hash = binascii.hexlify(parent_hash).decode("ascii")
                 else:
@@ -251,7 +261,7 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
 
                 date = row[index['date']]
                 date = date.split("+")[0]
-                date = datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
+                date = datetime.strptime(date[:19], '%Y-%m-%d %H:%M:%S')
 
                 
                 a = Article(
