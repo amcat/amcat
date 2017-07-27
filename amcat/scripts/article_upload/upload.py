@@ -269,6 +269,7 @@ class UploadScript(ActionForm):
     def run(self):
         monitor = self.progress_monitor
 
+        root_dir = os.path.dirname(self.options['upload'].filepath)
         filename = self.options['upload'].filename
         file_shortname = os.path.basename(filename)
         monitor.update(10, u"Importing {self.__class__.__name__} from {file_shortname} into {self.project}"
@@ -279,7 +280,8 @@ class UploadScript(ActionForm):
         files = list(self._get_files(self.options['upload'].filepath, encoding))
         nfiles = len(files)
         for i, (file, encoding, data) in enumerate(files):
-            monitor.update(20 / nfiles, "Parsing file {i}/{nfiles}: {file}".format(**locals()))
+            rel_name = file.replace(root_dir, ".")
+            monitor.update(20 / nfiles, "Parsing file {i}/{nfiles}: {rel_name}".format(**locals()))
             articles += list(self.parse_file(file, encoding, data))
 
         for article in articles:
