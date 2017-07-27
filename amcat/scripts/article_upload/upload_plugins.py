@@ -31,7 +31,8 @@ class UploadPlugin:
     def __init__(self, *,
                  label: str = None,
                  name: str = None,
-                 default: bool = False):
+                 default: bool = False,
+                 mime_types: tuple = None):
         """
         @param author:  The author of this plugin. Not required, but it could be useful.
         @param label:   A human readable name. If not given, the `name` will be used.
@@ -44,6 +45,7 @@ class UploadPlugin:
 
         self._label = label
         self._name = name
+        self._mime_types = set(mime_types) if mime_types is not None else None
 
     def __call__(self, script_cls: Type[UploadScript]) -> Type[UploadScript]:
         """
@@ -75,6 +77,11 @@ class UploadPlugin:
             raise self._get_error("duplicate_name")
         _registered_plugins[self.name] = self
         return script_cls
+
+    def supports_mime_type(self, mime):
+        if self._mime_types is None:
+            return None
+        return mime in self._mime_types
 
     @property
     def __name__(self) -> str:

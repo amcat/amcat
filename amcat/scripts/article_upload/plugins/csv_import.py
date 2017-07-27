@@ -168,7 +168,8 @@ class XlsxDictReader:
             yield data
 
 
-@UploadPlugin(label="CSV / XLSX", default=True)
+@UploadPlugin(label="CSV / XLSX", default=True,
+              mime_types=("text/plain", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
 class CSV(UploadScript):
     """
     Upload CSV files to AmCAT.

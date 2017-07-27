@@ -7,6 +7,7 @@ from django.core.files import File
 
 from amcat.models import ArticleSet
 from amcat.scripts.article_upload.plugins.text import Text
+from amcat.scripts.article_upload.tests.test_upload import create_test_upload
 from amcat.tools import amcattest
 
 
@@ -16,9 +17,11 @@ def _test(field_map, text="test_text", fn_prefix=None):
         f.write(text.encode('utf-8'))
         f.flush()
         aset = amcattest.create_test_set().id
-        form = dict(project=amcattest.create_test_project().id,
-                    filename=File(open(f.name)),
-                    encoding='UTF-8',
+        project = amcattest.create_test_project()
+        upload = create_test_upload(f.name, project, project.owner)
+        form = dict(project=project.id,
+                    upload=upload.id,
+                    encoding='utf-8',
                     field_map=json.dumps(field_map),
                     articleset=aset)
         Text(**form).run()

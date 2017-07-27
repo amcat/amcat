@@ -15,6 +15,7 @@ class TestBZK(amcattest.AmCATTestCase):
                        articleset = amcattest.create_test_set().id)
         self.result = self.bzk.run()
 
+        ## These tests are defined inside setUp() and don't actually run. is this intended?
 
         def test_scrape_unit(self):
             if amcattest.skip_slow_tests(): return

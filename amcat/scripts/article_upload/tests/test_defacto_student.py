@@ -1,12 +1,14 @@
 import datetime
 import json
 import os
+
+from amcat.models import UploadedFile
 from amcat.scripts.article_upload.plugins.defacto_student import get_html, split_html, get_article, \
     get_meta, get_title, get_section, get_body, DeFactoStudent
-from amcat.scripts.article_upload.tests.test_upload import temporary_zipfile
+from amcat.scripts.article_upload.tests.test_upload import temporary_zipfile, create_test_upload
 from amcat.scripts.article_upload.upload import _open
 from amcat.tools import amcattest
-from amcat.tools.amcattest import create_test_project
+from amcat.tools.amcattest import create_test_project, create_test_user
 
 
 class TestDeFactoStudent(amcattest.AmCATTestCase):
@@ -54,10 +56,11 @@ class TestDeFactoStudent(amcattest.AmCATTestCase):
             field_mapping = {field.as_fieldname(): {'type': 'field',
                                            'value': field.label}
                              for field in DeFactoStudent.get_fields(f, "autodetect")}
+            project = create_test_project()
             aset = DeFactoStudent(
-                filename=f,
-                project=create_test_project().pk,
-                encoding="Autodetect",
+                upload=create_test_upload(f, project, project.owner).id,
+                project=project.id,
+                encoding="autodetect",
                 field_map=json.dumps(field_mapping)
             ).run()
 

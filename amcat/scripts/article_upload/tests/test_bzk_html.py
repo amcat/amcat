@@ -4,8 +4,9 @@ import os.path
 import unittest
 from amcat.models import ArticleSet
 from amcat.scripts.article_upload.plugins.bzk_html import BZK
-from amcat.scripts.article_upload.tests.test_upload import temporary_zipfile
+from amcat.scripts.article_upload.tests.test_upload import temporary_zipfile, create_test_upload
 from amcat.tools import amcattest
+
 
 def _rmcache(fn):
     cachefn = fn + "__upload_cache.json"
@@ -41,7 +42,8 @@ class TestBZK(amcattest.AmCATTestCase):
         @param expected_articles    A sequence of {field: value} dicts, each with at least a 'title' field.
         """
         field_map = self._create_id_field_map("title", "text", "medium", "date")
-        script = BZK(field_map=field_map, filename=file, project=self.project.id, encoding="UTF-8")
+        upload = create_test_upload(file, self.project, self.project.owner)
+        script = BZK(field_map=field_map, upload=upload.id, project=self.project.id, encoding="utf-8")
         result_set = script.run()
         self.assertIsInstance(result_set, ArticleSet)
         articles = list(result_set.articles.all())

@@ -4,7 +4,7 @@ from os import path
 from django.core.files.uploadedfile import SimpleUploadedFile
 from amcat.models import ArticleSet
 from amcat.scripts.article_upload.plugins.factivia import Factivia
-from amcat.scripts.article_upload.tests.test_upload import temporary_zipfile
+from amcat.scripts.article_upload.tests.test_upload import temporary_zipfile, create_test_upload
 from amcat.tools import amcattest
 
 
@@ -22,12 +22,14 @@ class FactiviaTest(amcattest.AmCATTestCase):
         self.assertIn("title", fnames)
 
     def get_articles(self, filename=default_file):
+        project = amcattest.create_test_project()
+        upload = create_test_upload(filename, project, project.owner)
         articleset = amcattest.create_test_set().id
         fields = ['date', 'page_int', 'title', 'author', 'text', 'length_int', 'medium']
         field_map = {k: {"type": "field", "value": k.split("_")[0]} for k in fields}
         form = dict(project=amcattest.create_test_project().id,
-                    articleset=articleset, field_map=json.dumps(field_map), encoding='UTF-8',
-                    filename=filename)
+                    articleset=articleset, field_map=json.dumps(field_map), encoding='utf-8',
+                    upload=upload.id)
         Factivia(**form).run()
         return ArticleSet.objects.get(pk=articleset).articles.all()
 

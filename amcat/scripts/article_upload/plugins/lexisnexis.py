@@ -553,7 +553,7 @@ def split_file(text):
     return query, fragments
 
 
-@UploadPlugin(label="Lexis Nexis", default=True)
+@UploadPlugin(label="Lexis Nexis", default=True, mime_types=("text/plain",))
 class LexisNexis(UploadScript):
     """
     Script for importing files from Lexis Nexis. The files should be in plain text
@@ -584,7 +584,7 @@ class LexisNexis(UploadScript):
                 name, suggested_type = k.rsplit("_", 1)
             else:
                 name, suggested_type = k, None
-            yield ArticleField(name, name, values[:5], suggested_type=suggested_type)
+            yield ArticleField(k, name, values[:5], suggested_type=suggested_type)
 
     def parse_file(self, file, encoding, data):
         self.ln_query, arts = data

@@ -70,6 +70,7 @@ _views = [
     ArticleSetArticleDetailsView, ProjectArticleDetailsView, ArticleRemoveFromSetView,
     ArticleSetUploadView, ArticlesetUploadOptionsView, ClearQueryCacheView, QuerySetSelectionView, QueryView,
     SavedQueryRedirectView, ArticleSetSampleView,
+    ArticlesSetFileUploadView, UploadListView,
     ArticleSetEditView, ArticleSetImportView, ArticleSetRefreshView,
     ArticleSetDeleteView, ArticleSetUnlinkView, ArticleSetDeduplicateView, 
     ArticleSplitView,

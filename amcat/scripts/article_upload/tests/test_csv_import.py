@@ -3,6 +3,7 @@ import json
 import unittest
 
 from amcat.scripts.article_upload.plugins.csv_import import CSV
+from amcat.scripts.article_upload.tests.test_upload import create_test_upload
 from amcat.scripts.article_upload.upload import UploadForm
 from amcat.tools import amcattest
 from settings import ES_MAPPING_TYPE_PRIMITIVES
@@ -123,12 +124,13 @@ def _run_test_csv(header, rows, field_map, **options):
         for row in [header] + list(rows):
             w.writerow([field and field for field in row])
         f.flush()
+        u = create_test_upload(f.name, project, project.owner)
         form = UploadForm(
             data={
                 "project": project.id,
                 "field_map": json.dumps(field_map),
-                "encoding": "UTF-8",
-                "filename": f.name,
+                "encoding": "utf-8",
+                "upload": u.id,
             }
         )
         form.full_clean()
@@ -152,12 +154,13 @@ def _run_test_xlsx(header, rows, field_map, **options):
             ws.append([field for field in row])
         wb.save(f.name)
         f.flush()
+        u = create_test_upload(f.name, project, project.owner)
         form = UploadForm(
             data={
                 "project": project.id,
                 "field_map": json.dumps(field_map),
-                "encoding": "UTF-8",
-                "filename": f.name,
+                "encoding": "utf-8",
+                "upload": u.id,
             }
         )
         form.full_clean()

@@ -11,7 +11,7 @@ from django.core.files import File
 from amcat.models import ArticleSet
 from amcat.scripts.article_upload.plugins.lexisnexis import (split_header, split_body, parse_header,
     parse_article, get_query, LexisNexis, split_file)
-from amcat.scripts.article_upload.tests.test_upload import temporary_zipfile
+from amcat.scripts.article_upload.tests.test_upload import temporary_zipfile, create_test_upload
 from amcat.scripts.article_upload.upload import UploadForm
 from amcat.tools import amcattest
 
@@ -140,13 +140,15 @@ class TestLexisNexis(amcattest.AmCATTestCase):
 
 
     def get_articleset(self, file):
+        project = amcattest.create_test_project()
         fields = ["date", "title", "length_int", "text", "section", "medium"]
         field_map = {f: dict(type='field', value=f) for f in fields}
-        form = dict(project=amcattest.create_test_project().id,
-                    encoding="UTF-8",
+        form = dict(project=project.id,
+                    encoding="utf-8",
                     field_map=json.dumps(field_map),
                     articleset_name="test set lexisnexis")
-        aset = LexisNexis(filename=file, **form).run()
+        upload = create_test_upload(file, project, project.owner)
+        aset = LexisNexis(upload=upload.id, **form).run()
         return aset
 
     @amcattest.use_elastic

@@ -52,3 +52,4 @@ django-hash-field
 
 actionform
 amcatclient>=3.4
+filemagic>=1.6.0,<1.7

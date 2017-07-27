@@ -1,0 +1,30 @@
+{% extends "project/base.html" %}
+{% load static %}
+
+{% block content %}
+
+<form action="" method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+   <legend>Upload a new file.</legend>
+
+   {% if form.is_valid and not form.errors %}
+   <div class="alert alert-success">
+       Successfully updated 
+       <a href="{% url "navigator:articleset" context.id articleset.id %}">{{ articleset.name }}</a>
+        in project
+        <a href="{% url "navigator:project" context.id %}">{{ context.name }}</a>.
+   </div>
+   {% endif %}
+
+   <table>
+    {{ form.as_table }}
+   </table>
+ 
+   <div class="form-actions">
+    <input class="btn btn-primary" type="submit" value="Save"></input>
+    <a href="{% url "navigator:project" context.id %}" class="btn">Cancel</a>
+   </div>
+</form>
+
+
+{% endblock %}

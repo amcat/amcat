@@ -28,6 +28,7 @@ from amcat.models.sentence import *
 from amcat.models.amcat import *
 from amcat.models.task import *
 from amcat.models.query import *
+from amcat.models.uploadedfile import *
 
 from amcat.models.coding.codedarticle import *
 from amcat.models.coding.codingschema import *
