@@ -322,13 +322,13 @@ class UploadScript(ActionForm):
 
 class PreprocessForm(UploadForm):
     upload = forms.ModelChoiceField(UploadedFile.objects.all())
-    plugin = forms.MultipleChoiceField(choices=())
-    encoding = forms.ChoiceField(choices=[(x.lower(), x) for x in ["Autodetect", "ISO-8859-15", "UTF-8", "Latin-1"]])
+    script = forms.ChoiceField(choices=())
+    field_map = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from amcat.scripts.article_upload.upload_plugins import get_upload_plugins
-        self.fields['plugin'].choices = [(k, k) for k in get_upload_plugins().keys()]
+        self.fields['script'].choices = [(k, k) for k in get_upload_plugins().keys()]
 
 class PreprocessScript(ActionForm):
     form_class = PreprocessForm
@@ -338,8 +338,10 @@ class PreprocessScript(ActionForm):
         self.progress_monitor = NullMonitor()
 
     def run(self):
+        from amcat.scripts.article_upload.upload_plugins import get_upload_plugin
         self.progress_monitor.update(0, "Preprocessing files")
-        plugin = self.form.cleaned_data['plugin']
+        plugin_name = self.form.cleaned_data['script']
+        plugin = get_upload_plugin(plugin_name)
         upload = self.form.cleaned_data['upload']
         encoding = self.form.cleaned_data['encoding']
         if not hasattr(plugin.script_cls, "_preprocess"):

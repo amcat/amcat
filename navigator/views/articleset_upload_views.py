@@ -18,14 +18,14 @@ from django.views.generic import CreateView, FormView, ListView
 from amcat.models import Project, UploadedFile, User
 from amcat.scripts.article_upload import upload
 from amcat.scripts.article_upload import magic
-from amcat.scripts.article_upload.upload import ArticleField, REQUIRED
+from amcat.scripts.article_upload.upload import ArticleField, REQUIRED, PreprocessScript
 from amcat.scripts.article_upload.upload_plugins import UploadPlugin, get_project_plugins, get_upload_plugin, \
     get_upload_plugins
 from amcat.tools.amcates import ARTICLE_FIELDS, is_valid_property_name
 from navigator.views.datatableview import DatatableMixin
 from navigator.views.project_views import ProjectDetailsView
 from navigator.views.projectview import BaseMixin, BreadCrumbMixin, HierarchicalViewMixin, ProjectViewMixin
-from navigator.views.scriptview import ScriptHandler, get_temporary_file_dict
+from navigator.views.scriptview import ScriptHandler, get_temporary_file_dict, ScriptView
 from settings import ES_MAPPING_TYPES
 
 log = logging.getLogger(__name__)
@@ -56,7 +56,24 @@ def get_destination_choices(project=None):
     return choices
 
 
-class ArticleSetUploadScriptHandler(ScriptHandler):
+class ActionFormHandler(ScriptHandler):
+
+    def get_script(self):
+        script_cls = self.task.get_class()
+        kwargs = self.get_form_kwargs()
+        form = script_cls.form_class(**kwargs)
+        return script_cls(form)
+
+class PreprocessScriptHandler(ActionFormHandler):
+    def get_redirect(self):
+        formdata = self.task.arguments['data']
+        pass_data = {k: formdata[k] for k in ArticleSetUploadView.pass_fields}
+        redirect_url = reverse("navigator:articleset-upload-options", args=(self.task.project.id, formdata["upload"]))
+        redirect = "{}?{}".format(redirect_url, urllib.parse.urlencode(pass_data))
+        print(redirect)
+        return redirect, "Continue"
+
+class ArticleSetUploadScriptHandler(ActionFormHandler):
     def get_redirect(self):
         aset_id = self.task._get_raw_result()
         return reverse("navigator:articleset-details", args=[self.task.project.id, aset_id]), "View set"
@@ -176,10 +193,27 @@ class ArticleSetUploadView(UploadViewMixin, FormView):
     view_name = "articleset-upload"
     pass_fields = ("encoding", "articleset_name", "articleset", "script")
 
+    def _run_preprocess_task(self, form_data, redirect_url):
+        data = dict(form_data, project=self.project.id, upload=self.upload.id)
+        preprocess_task = PreprocessScriptHandler.call(
+            target_class=PreprocessScript,
+            arguments={"data": data},
+            user=self.request.user,
+            project=self.project)
+        url = reverse("navigator:task-details", args=[self.project.id, preprocess_task.task.id])
+        next = urllib.parse.urlencode({"next": redirect_url})
+        return redirect("{url}".format(**locals()), permanent=False)
+
+
     def form_valid(self, form):
-        get_data = {k: form.data[k] for k in self.pass_fields}
+        pass_data = {k: form.data[k] for k in self.pass_fields}
+        script = get_upload_plugin(form.cleaned_data['script']).script_cls
+        has_preprocess = hasattr(script, "_preprocess")
         redirect_url = reverse("navigator:articleset-upload-options", args=(self.project.id, self.upload.id))
-        return redirect("{}?{}".format(redirect_url, urllib.parse.urlencode(get_data)))
+        redirect_url = "{}?{}".format(redirect_url, urllib.parse.urlencode(pass_data))
+        if has_preprocess:
+            return redirect(redirect_url)
+        return self._run_preprocess_task(pass_data, redirect_url)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
