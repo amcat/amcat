@@ -218,7 +218,7 @@ class UploadScript(ActionForm):
         @return: An iterable of (file, encoding, preprocessed_data_or_None)
         """
         if file.endswith(".zip"):
-            path = "{}/extract".format(os.path.dirname(file))
+            path = "{}/{}".format(os.path.dirname(file), os.path.splitext(os.path.basename(file))[0])
             os.makedirs(path, exist_ok=True)
             zf = zipfile.ZipFile(file)
             monitor.update(0, "Unpacking and preprocessing files.")
