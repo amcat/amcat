@@ -262,7 +262,7 @@ class CSV(UploadScript):
 
             suggested_destination, suggested_type = guess_destination_and_type(filtered_field_name, value)
             yield ArticleField(field_name,
-                               destination=suggested_destination,
+                               suggested_destination=suggested_destination,
                                values=list(itertools.islice(sample_data[field_name], 0, 5)),
                                suggested_type=suggested_type)
 

@@ -27,6 +27,7 @@ import logging
 import os
 import re
 from collections import OrderedDict
+from functools import lru_cache
 from io import StringIO
 from typing import Tuple, Iterable
 
@@ -562,7 +563,7 @@ class LexisNexis(UploadScript):
     """
 
     @classmethod
-    def _preprocess(cls, file, encoding):
+    def _preprocess(cls, file, encoding) -> Tuple[any, any]:
         text = _read(file, encoding)
         query, fragments = split_file(text)
         arts = (parse_article(doc) for doc in fragments)
@@ -570,6 +571,7 @@ class LexisNexis(UploadScript):
         return query, arts
 
     @classmethod
+    @lru_cache()
     def get_fields(cls, file, encoding):
         fields = collections.OrderedDict()
         for (file, encoding, (query, arts)) in cls._get_files(file, encoding):

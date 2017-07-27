@@ -2,6 +2,8 @@ import os
 import zipfile
 from contextlib import contextmanager
 
+from django.core.files.uploadedfile import SimpleUploadedFile
+
 from amcat.models.uploadedfile import UploadedFile, upload_storage
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.tools import amcattest
@@ -23,8 +25,8 @@ def temporary_zipfile(files):
 def create_test_upload(file, project, user):
     if type(file) in (str, bytes):
         file = open(file, mode='rb')
-    fn = upload_storage.save(os.path.basename(file.name), file)
-    upload = UploadedFile(file=fn, filename=file.name, user=user, project=project)
+    file = SimpleUploadedFile(os.path.basename(file.name), file.read())
+    upload = UploadedFile(file=file, filename=file.name, user=user, project=project)
     upload.save()
     return upload
 

@@ -15,7 +15,7 @@ from django.shortcuts import Http404, redirect
 from django.utils.datastructures import MultiValueDict
 from django.views.generic import CreateView, FormView, ListView
 
-from amcat.models import Project, UploadedFile, User
+from amcat.models import Project, UploadedFile, User, Task
 from amcat.scripts.article_upload import upload
 from amcat.scripts.article_upload import magic
 from amcat.scripts.article_upload.upload import ArticleField, REQUIRED, PreprocessScript
@@ -68,9 +68,9 @@ class PreprocessScriptHandler(ActionFormHandler):
     def get_redirect(self):
         formdata = self.task.arguments['data']
         pass_data = {k: formdata[k] for k in ArticleSetUploadView.pass_fields}
+        pass_data['task'] = self.task.id
         redirect_url = reverse("navigator:articleset-upload-options", args=(self.task.project.id, formdata["upload"]))
         redirect = "{}?{}".format(redirect_url, urllib.parse.urlencode(pass_data))
-        print(redirect)
         return redirect, "Continue"
 
 class ArticleSetUploadScriptHandler(ActionFormHandler):
@@ -211,7 +211,7 @@ class ArticleSetUploadView(UploadViewMixin, FormView):
         has_preprocess = hasattr(script, "_preprocess")
         redirect_url = reverse("navigator:articleset-upload-options", args=(self.project.id, self.upload.id))
         redirect_url = "{}?{}".format(redirect_url, urllib.parse.urlencode(pass_data))
-        if has_preprocess:
+        if not has_preprocess:
             return redirect(redirect_url)
         return self._run_preprocess_task(pass_data, redirect_url)
 
@@ -283,6 +283,9 @@ class ArticlesetUploadOptionsView(UploadViewMixin, FormView):
     @property
     @functools.lru_cache()
     def script_fields(self) -> List[ArticleField]:
+        if "task" in self.request.GET:
+            task = Task.objects.get(id=self.request.GET["task"])
+            return [ArticleField(**kwargs) for kwargs in task._get_raw_result()]
         return list(self.script_class.get_fields(self.upload.file.file.name, self.parent_form.cleaned_data['encoding']))
 
     @property

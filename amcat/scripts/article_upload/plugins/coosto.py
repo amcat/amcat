@@ -129,7 +129,7 @@ class CoostoUpload(UploadScript):
 
         for source, (destination, values) in fields.items():
             dest_name = ESFIELDS[destination]
-            yield ArticleField(source, destination=dest_name, values=values)
+            yield ArticleField(source, suggested_destination=dest_name, values=values)
 
     def parse_file(self, file: str, encoding: str, _: None):
         self.queries = set()

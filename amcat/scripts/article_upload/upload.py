@@ -35,7 +35,7 @@ from django.core.files.utils import FileProxyMixin
 from django.core.serializers.json import DjangoJSONEncoder
 from django.forms.widgets import HiddenInput
 
-from amcat.models import Article, ArticleSet, Project, UploadedFile
+from amcat.models import Article, ArticleSet, Project, UploadedFile, upload_storage
 from amcat.models.articleset import create_new_articleset
 from amcat.tools import amcates
 from amcat.tools.progress import NullMonitor
@@ -71,9 +71,9 @@ class ArticleField(object):
     in order to build the 'upload options' page
     """
 
-    def __init__(self, label, destination=None, values=None, possible_types=None, suggested_type=None):
+    def __init__(self, label, suggested_destination=None, values=None, possible_types=None, suggested_type=None):
         self.label = label  # name in uploaded file
-        self.suggested_destination = destination  # suggested destination model field
+        self.suggested_destination = suggested_destination  # suggested destination model field
         self.values = values  # top X values  
         self.possible_types = possible_types  # allowed article property types (text, date, number, integer)
         self.suggested_type = suggested_type  # suggested article property type
@@ -337,6 +337,11 @@ class PreprocessScript(ActionForm):
         super().__init__(*args, **kwargs)
         self.progress_monitor = NullMonitor()
 
+    def _articlefield_as_kwargs(self, article_field: ArticleField):
+        return {k: getattr(article_field, k)
+             for k in ("label", "suggested_destination", "values", "possible_types", "suggested_type")}
+
+
     def run(self):
         from amcat.scripts.article_upload.upload_plugins import get_upload_plugin
         self.progress_monitor.update(0, "Preprocessing files")
@@ -344,12 +349,18 @@ class PreprocessScript(ActionForm):
         plugin = get_upload_plugin(plugin_name)
         upload = self.form.cleaned_data['upload']
         encoding = self.form.cleaned_data['encoding']
-        if not hasattr(plugin.script_cls, "_preprocess"):
-            return
-        filesmonitor = self.progress_monitor.submonitor(100, weight=99)
-        for _ in plugin.script_cls._get_files(upload.filepath, encoding, monitor=filesmonitor):
-            pass
+        if hasattr(plugin.script_cls, "_preprocess"):
+            filesmonitor = self.progress_monitor.submonitor(100, weight=49)
+            for _ in plugin.script_cls._get_files(upload.filepath, encoding, monitor=filesmonitor):
+                pass
+        else:
+            self.progress_monitor.update(49)
+        self.progress_monitor.update(0, "Collecting fields")
+        fields = [self._articlefield_as_kwargs(field) for field in
+                  plugin.script_cls.get_fields(upload.filepath, encoding)]
+
         self.progress_monitor.update(1, "Done")
+        return fields
 
 def _set_project(art, project):
     try:
