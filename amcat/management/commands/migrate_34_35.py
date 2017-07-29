@@ -30,7 +30,9 @@ And provide these csv files as arguments to migrate_34_35
 The DB migration will do the following:
 - drop and re-create the articles table
 - copy the data from the csv file (in multiple passes to fix parents)
-- add UNIQUE and FK contraints
+
+The migration will nog add indices, add UNIQUE and FK contraints, or update the auto-increment, 
+so this needs to be done before the db is ready. 
 
 As this *will* delete all data, please make sure that you have a backup before running this!
 
