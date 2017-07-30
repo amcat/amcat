@@ -95,6 +95,7 @@ class Command(BaseCommand):
         parser.add_argument('media', help="CSV file containing the media dump")
         parser.add_argument('--dry-run', action='store_true', help="Don't alter the database")
         parser.add_argument('--continue', action='store_true', help="Continue an aborted migration")
+        parser.add_argument('--constraints-only', action='store_true', help="Only do the post-migration cleanup")
         parser.add_argument('--max-id', type=int, help="Manually set highest ID, should be at least the actual max_id")
 
         
@@ -102,6 +103,11 @@ class Command(BaseCommand):
         self.n_rows = "?"
         self.maxid = options['max_id']
         self.dry = options['dry_run']
+        if options['constraints_only']:
+            logging.info("Only creating constraints")
+            self.create_constraints(self.maxid)
+            logging.info("Done!")
+            return
         self._continue = options['continue']
         if not (self.dry or self._continue):
             self.drop_old()
@@ -110,7 +116,7 @@ class Command(BaseCommand):
         logging.info("Read {} media".format(len(media)))
         self.copy_data(options['articles'], media)
         if not self.dry:
-            self.create_constraints()
+            self.create_constraints(self.maxid)
         logging.info("Done!")
 
     def get_media(self, fn):
@@ -197,7 +203,8 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
                 self.n_rows += 1
                 if not self.n_rows  % 10000000:
                     logging.info(".. scanned {self.n_rows} rows".format(**locals()))
-                    
+            self.maxid = max_id
+            
         logging.info("{self.n_rows} rows, max ID {max_id}, allocating memory for hashes".format(**locals()))
 
         hashes = ctypes.create_string_buffer(max_id*28)
@@ -293,5 +300,19 @@ WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='articles'""")
                 yield (a.project_id, aid, a.date, a.title, a.url, a.text,
                        hash2binary(hash), hash2binary(a.parent_hash), props)
             
-    def create_constraints(self):
-        pass
+    def create_constraints(self, max_id=None):
+        def run(sql):
+            logging.debug(sql)
+            with conn() as cn:
+                with cn.cursor() as c:
+                    c.execute(sql)
+        run('CREATE INDEX "articles_aa984503" ON "articles" ("parent_hash");')
+        run('ALTER TABLE "articlesets_articles" ADD CONSTRAINT "articlesets_articles_article_id_1e47b2f5_fk_articles_article_id" FOREIGN KEY ("article_id") REFERENCES "articles" ("article_id") DEFERRABLE INITIALLY DEFERRED;')
+        run('ALTER TABLE "coded_articles" ADD CONSTRAINT "coded_articles_article_id_cade318d_fk_articles_article_id" FOREIGN KEY ("article_id") REFERENCES "articles" ("article_id") DEFERRABLE INITIALLY DEFERRED;')
+        run('ALTER TABLE "sentences" ADD CONSTRAINT "sentences_article_id_d603aacc_fk_articles_article_id" FOREIGN KEY ("article_id") REFERENCES "articles" ("article_id") DEFERRABLE INITIALLY DEFERRED;')
+        run('CREATE INDEX "articles_b098ad43" ON "articles" ("project_id");')
+        run('ALTER TABLE "articles" ADD CONSTRAINT "articles_project_id_8b0c0c86_fk_projects_project_id" FOREIGN KEY ("project_id") REFERENCES "projects" ("project_id") DEFERRABLE INITIALLY DEFERRED;')
+        
+        if max_id is not None:
+            run('ALTER SEQUENCE articles_article_id_seq RESTART WITH {}'.format(max_id+1))
+        run('CREATE UNIQUE INDEX "articles_hash_index" ON "articles" ("hash");')
