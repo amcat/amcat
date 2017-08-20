@@ -38,7 +38,7 @@ We usually create a virtual environment within the amcat folder, but of course y
 git clone https://github.com/amcat/amcat.git
 cd amcat
 pyvenv env
-env/bin/pip install wheel -r amcat/requirements.txt
+env/bin/pip install wheel -r requirements.txt
 ```
 
 ### Elastic
