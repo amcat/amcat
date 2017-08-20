@@ -25,7 +25,7 @@ To install stable releases, please use the link above.
 Most of the (python) prerequisites for AmCAT are automatically installed using pip (see below). To install the non-python requirements, you can use the following (on Ubuntu 15.10 or 16.04):
 
 ```sh
-sudo apt-get install antiword unrtf rabbitmq-server python3-pip postgresql postgresql-contrib python3-venv git postgresql-server-dev-9.5 python3-dev libxml2-dev libxslt-dev graphviz pspp redis-server r-base python3-lxml python3-amqplib python3-psycopg2 python3-requests python3-pygments
+sudo apt-get install antiword unrtf rabbitmq-server python3-pip postgresql postgresql-contrib python3-venv git postgresql-server-dev-9.5 python3-dev libxml2-dev libxslt-dev graphviz pspp redis-server r-base python3-lxml python3-amqplib python3-psycopg2 python3-requests python3-pygments docker.io
 ```
 
 
@@ -48,7 +48,10 @@ AmCAT uses elasticsearch for searching articles. The easiest way to install elas
 ```sh
 docker run --name elastic -dp 9200:9200 amcat/amcat-elastic-docker:5.4.3
 ```
-Note: This is fine for testing, but absolutely not suitable for production use! For production, install elastic normally, preferably on more than 1 node, or see https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html for more information on installing elastic through docker on production systems. 
+
+Note: depending on your system settings, you might have to run docker with `sudo docker ...`
+
+Note 2: This is fine for testing, but *absolutely not suitable for production* use! For production, install elastic normally, preferably on more than 1 node, or see https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html for more information on installing elastic through docker on production systems. 
 
 For configuring elastic for AmCAT, see the [Dockerfile](https://github.com/amcat/amcat-elastic-docker/blob/master/Dockerfile)
 
@@ -59,13 +62,13 @@ Whichever way you installed AmCAT, you need to call the migrate command to popul
 ```sh
 sudo -u postgres createuser -s $USER
 createdb amcat
-python -m amcat.manage migrate
+env/bin/python -m amcat.manage migrate
 ```
 
 You can create a superuser by running:
 
 ```sh
-python -m amcat.manage createsuperuser
+env/bin/python -m amcat.manage createsuperuser
 ```
 
 ### Collecting static files
@@ -89,7 +92,7 @@ bower install
 For debugging, it is easiest to start amcat using runserver:
 
 ```sh
-python -m amcat.manage runserver
+env/bin/python -m amcat.manage runserver
 ```
 
 ### Start celery worker
@@ -97,7 +100,7 @@ python -m amcat.manage runserver
 Finally, to use the query screen you need to start a celery worker. In a new terminal, type:
 
 ```sh
-DJANGO_SETTINGS_MODULE=settings celery -A amcat.amcatcelery worker -l info -Q amcat
+env/bin/python -m amcat.manage celery worker -l info -Q amcat
 ```
 
 (if you are using a virtual environment, make sure to `activate` that first)
