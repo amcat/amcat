@@ -32,7 +32,8 @@ sudo apt-get install antiword unrtf rabbitmq-server python3-pip postgresql postg
 ### Installing AmCAT 
 
 Clone the project from github and pip install the requirements. 
-We usually create a virtual environment within the amcat folder, but of course you can change the location if you wish:
+
+(Note: We usually create a virtual environment within the amcat folder and use `env/bin/python` instead of activating the envirtonment, but of course you can change that if you wish)
 
 ```sh
 git clone https://github.com/amcat/amcat.git
