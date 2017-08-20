@@ -28,13 +28,17 @@ Most of the (python) prerequisites for AmCAT are automatically installed using p
 sudo apt-get install antiword unrtf rabbitmq-server python3-pip postgresql postgresql-contrib python3-venv git postgresql-server-dev-9.5 python3-dev libxml2-dev libxslt-dev graphviz pspp redis-server r-base python3-lxml python3-amqplib python3-psycopg2 python3-requests python3-pygments
 ```
 
-### Database
 
-AmCAT requires a database to store its documents in. The default settings look for a postgres database 'amcat' on localhost. To set up the current user as a superuser in postgres and create the database, use:
+### Installing AmCAT 
+
+Clone the project from github and pip install the requirements. 
+We usually create a virtual environment within the amcat folder, but of course you can change the location if you wish:
 
 ```sh
-sudo -u postgres createuser -s $USER
-createdb amcat
+git clone https://github.com/amcat/amcat.git
+cd amcat
+pyvenv env
+env/bin/pip install wheel -r amcat/requirements.txt
 ```
 
 ### Elastic
@@ -48,16 +52,20 @@ Note: This is fine for testing, but absolutely not suitable for production use! 
 
 For configuring elastic for AmCAT, see the [Dockerfile](https://github.com/amcat/amcat-elastic-docker/blob/master/Dockerfile)
 
-### Installing AmCAT 
+### Setting up the database
 
-Clone the project from github and pip install the requirements. 
-We usually create a virtual environment within the amcat folder, but of course you can change the location if you wish:
+Whichever way you installed AmCAT, you need to call the migrate command to populate the database and set the elasticsearch mapping:
 
 ```sh
-git clone https://github.com/amcat/amcat.git
-cd amcat
-pyvenv env
-env/bin/pip install wheel -r amcat/requirements.txt
+sudo -u postgres createuser -s $USER
+createdb amcat
+python -m amcat.manage migrate
+```
+
+You can create a superuser by running:
+
+```sh
+python -m amcat.manage createsuperuser
 ```
 
 ### Collecting static files
@@ -75,19 +83,6 @@ Then, in the top-directory of AmCAT itself run:
 bower install
 ```
 
-### Setting up the database
-
-Whichever way you installed AmCAT, you need to call the migrate command to populate the database and set the elasticsearch mapping:
-
-```sh
-python -m amcat.manage migrate
-```
-
-You can create a superuser by running:
-
-```sh
-python -m amcat.manage createsuperuser
-```
 
 ### Start AmCAT web server
 
