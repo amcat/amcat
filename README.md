@@ -51,7 +51,7 @@ docker run --name elastic -dp 9200:9200 amcat/amcat-elastic-docker:5.4.3
 
 Note: depending on your system settings, you might have to run docker with `sudo docker ...`
 
-Note 2: This is fine for testing, but *absolutely not suitable for production* use! For production, install elastic normally, preferably on more than 1 node, or see https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html for more information on installing elastic through docker on production systems. 
+Note 2: This is fine for testing/developing, but *absolutely not suitable for production* use! For production, install elastic normally, preferably on more than 1 node, or see https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html for more information on installing elastic through docker on production systems. 
 
 For configuring elastic for AmCAT, see the [Dockerfile](https://github.com/amcat/amcat-elastic-docker/blob/master/Dockerfile)
 
