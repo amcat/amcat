@@ -30,3 +30,6 @@ class Language(AmcatModel):
     class Meta():
         db_table = 'languages'
         app_label = 'amcat'
+
+    def natural_key(self):
+        return (self.label, )

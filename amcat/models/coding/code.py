@@ -63,6 +63,9 @@ class Code(AmcatModel):
         self._labelcache = {}
         self._all_labels_cached = False
 
+    def natural_key(self):
+        return (unicode(self.uuid), )
+        
     def get_label(self, language):
         """Get the label (string) for the given language object, or raise label.DoesNotExist"""
         if type(language) != int: language = language.id
@@ -133,3 +136,5 @@ class Label(AmcatModel):
         unique_together = ('code', 'language')
         ordering = ("language__id",)
 
+    def natural_key(self):
+        return self.code.natural_key() + self.language.natural_key()

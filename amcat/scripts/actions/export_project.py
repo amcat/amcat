@@ -35,7 +35,7 @@ from django.core import serializers
 from django.core.serializers.json import DjangoJSONEncoder
 
 from amcat.scripts.script import Script
-from amcat.models import Project, Article, ArticleSetArticle, Medium
+from amcat.models import Project, Article, ArticleSetArticle, Medium, CodebookCode, Code, Label, Codebook
 from amcat.tools.amcates import ES
 from amcat.tools.toolkit import splitlist
 
@@ -111,28 +111,52 @@ class ExportProject(Script):
         os.mkdir(output)
         logging.info("Exporting project {project.id}:{project} to {output}".format(**locals()))
 
-        self.serializer = serializers.get_serializer("json")()
         self.project = project
         
         self.export_articlesets()
         self.export_articles()
         self.export_articlesets_articles()
 
+        self.export_codebooks()
+
+        logging.info("Done")
+
     @contextmanager
-    def _output_file(self, fn):
-        fn = os.path.join(self.options['output'], "{fn}.json".format(**locals()))
+    def _output_file(self, fn, extension="json"):
+        fn = os.path.join(self.options['output'], ".".join([fn, extension]))
         with open(fn, "w") as f:
             yield f
 
     def _write_json_lines(self, fn, dicts, logmessage=None):
         if logmessage is None:
             logmessage = fn
-        with self._output_file(fn) as f:
+        with self._output_file(fn, extension="jsonl") as f:
             logging.info("Writing {logmessage} to {f.name}".format(**locals()))
             for d in dicts:
                 json.dump(d, f, cls=DjangoJSONEncoder)
                 f.write("\n")
-            
+
+    def _serialize(self, fn, queryset, logmessage=None):
+        if logmessage is None:
+            logmessage = fn
+        if not queryset.exists():
+            logging.info("No {logmessage} objects to serialize".format(**locals()))
+        with self._output_file(fn, extension="json") as f:
+            logging.info("Writing {} {logmessage} to {f.name}".format(len(queryset), **locals()))
+            ser = serializers.get_serializer("json")()
+            ser.serialize(queryset, stream=f, use_natural_primary_keys=True, use_natural_foreign_keys=True)
+
+                
+    def export_codebooks(self):
+        from django.db import connection, reset_queries
+        self._serialize("codes", Code.objects.filter(codebook_codes__codebook__project=self.project).distinct())
+        self._serialize("labels", Label.objects.filter(code__codebook_codes__codebook__project=self.project)
+                        .select_related("code__uuid").select_related("language__label").distinct())
+
+        self._serialize("codebooks", Codebook.objects.filter(project=self.project).distinct())
+
+        self._serialize("codebookcodes", CodebookCode.objects.filter(codebook__project=self.project).distinct())
+        
     def export_articlesets(self):
         self.sets = list(self.project.articlesets_set.all())
         favs = set(self.project.favourite_articlesets.values_list("pk", flat=True))
@@ -185,6 +209,7 @@ class ExportProject(Script):
 if __name__ == '__main__':
     import django
     django.setup()
+    
     from amcat.scripts.tools import cli
     result = cli.run_cli()
 
