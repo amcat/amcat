@@ -382,7 +382,7 @@ class ES(object):
         """
         return scan(self.es, index=self.index, doc_type=self.doc_type, query=query, **kargs)
         
-    def query_ids(self, query=None, filters={}, body=None, limit=None, **kwargs):
+    def query_ids(self, query=None, filters={}, body=None, limit=None, field=None, **kwargs):
         """
         Query the index returning a sequence of article ids for the mathced articles
 
@@ -395,13 +395,19 @@ class ES(object):
         """
         if body is None:
             body = dict(build_body(query, filters, query_as_filter=True))
+        fields = "" if field is None else [field]
         for i, a in enumerate(scan(self.es, query=body, index=self.index, doc_type=self.doc_type,
-                                   size=(limit or 1000), fields="")):
+                                   size=(limit or 1000), fields=fields)):
             if limit and i >= limit:
                 return
-            yield int(a['_id'])
+            aid = int(a['_id'])
+            if fields:
+                yield aid, a['fields'][field]
+            else:
+                yield aid
 
-
+    query_field = query_ids
+            
     def query(self, query=None, filters={}, highlight=False, lead=False, fields=[], score=True, **kwargs):
         """
         Execute a query for the given fields with the given query and filter
