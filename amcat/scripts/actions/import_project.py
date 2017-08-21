@@ -3,35 +3,73 @@ from zipfile import ZipFile
 import logging
 
 from django import forms
+import django
+from django.core import serializers
 
-import django;
 django.setup()
 
-from amcat.models.article import Article
+from amcat.models import Article, ArticleSet, Project, Code, Label, CodebookCode
 from amcat.tools import toolkit
-from amcat.models.articleset import ArticleSet
 from amcat.scripts.script import Script
 
 
 class ImportProject(Script):
     class options_form(forms.Form):
         file = forms.FileField()
+        project = forms.ModelChoiceField(queryset=Project.objects.all(), required=False)
 
-    def _run(self, file):
+    def _run(self, file, project):
         from amcat.models import Project
         self.setids = {}  # old_id -> new_id
         self.articles = {}  # old_id -> new_id
+        self.codebooks = {}  # old_id -> new_id
         self.zipfile = ZipFile(file.file.name)
-        self.project = Project.objects.create(name=file.file.name, owner_id=1)
+        self.project = project if project else Project.objects.create(name=file.file.name, owner_id=1)
+        logging.info("Importing {file.file.name} into project {self.project.id}:{self.project.name}"
+                          .format(**locals()))
         self.import_articlesets()
         self.import_articles()
         self.import_articlesets_articles()
+        self.import_codes()
+        self.import_codebooks()
+        self.import_codebookcodes()
         logging.info("Done!")
 
     def _get_dicts(self, fn):
-        logging.info("Reading {fn}".format(**locals()))
-        for line in self.zipfile.open(fn):
-            yield json.loads(line.decode("utf-8"))
+        if fn not in self.zipfile.namelist():
+            logging.info("No {fn}".format(**locals()))
+        else:
+            logging.info("Reading {fn}".format(**locals()))
+            for line in self.zipfile.open(fn):
+                yield json.loads(line.decode("utf-8"))
+
+    def _deserialize(self, fn):
+        if fn not in self.zipfile.namelist():
+            logging.info("No {fn}".format(**locals()))
+            return []
+        else:
+            result = list(serializers.deserialize("json", self.zipfile.open(fn)))
+            logging.info("Read {} entries from {fn}".format(len(result), **locals()))
+            return result
+
+    def import_codes(self):
+        Code.objects.bulk_create(c.object for c in self._deserialize("codes.json") if not c.object.pk)
+        Label.objects.bulk_create(c.object for c in self._deserialize("labels.json") if not c.object.pk)
+
+    def import_codebooks(self):
+        for c in self._deserialize("codebooks.json"):
+            old_id = c.object.pk
+            c.object.pk = None
+            c.object.project_id = self.project.id
+            c.save()
+            self.codebooks[old_id] = c.object.pk
+
+    def import_codebookcodes(self):
+        cbcodes = [c.object for c in self._deserialize("codebookcodes.json")]
+        for c in cbcodes:
+            c.codebook_id = self.codebooks[c.codebook_id]
+            c.pk = None
+        CodebookCode.objects.bulk_create(cbcodes)
 
     def import_articlesets(self):
         for a in self._get_dicts("articlesets.json"):

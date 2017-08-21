@@ -56,6 +56,14 @@ class Code(AmcatModel):
         db_table = 'codes'
         app_label = 'amcat'
 
+    class _Manager(models.Manager):
+        def get_by_natural_key(self, uuid):
+            return Code.objects.get(uuid=uuid)
+    objects = _Manager()
+
+    def natural_key(self):
+        return str(self.uuid),
+
 
     def __init__(self, *args, **kargs):
         super(Code, self).__init__(*args, **kargs)
@@ -132,3 +140,10 @@ class Label(AmcatModel):
         unique_together = ('code', 'language')
         ordering = ("language__id",)
 
+    class _Manager(models.Manager):
+        def get_by_natural_key(self, code_uuid, lang):
+            return Label.objects.get(code__uuid=code_uuid, language__label=lang)
+    objects = _Manager()
+
+    def natural_key(self):
+        return self.code.natural_key() + self.language.natural_key()

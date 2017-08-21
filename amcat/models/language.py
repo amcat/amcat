@@ -29,3 +29,12 @@ class Language(AmcatModel):
     class Meta():
         db_table = 'languages'
         app_label = 'amcat'
+
+    class _Manager(models.Manager):
+        def get_by_natural_key(self, label):
+            l, _created = Language.objects.get_or_create(label=label)
+            return l
+    objects = _Manager()
+
+    def natural_key(self):
+        return self.label,
