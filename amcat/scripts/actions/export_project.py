@@ -35,7 +35,7 @@ from django.core import serializers
 from django.core.serializers.json import DjangoJSONEncoder
 
 from amcat.scripts.script import Script
-from amcat.models import Project, Article, ArticleSetArticle, Medium, CodebookCode, Code, Label, Codebook
+from amcat.models import *
 from amcat.tools.amcates import ES
 from amcat.tools.toolkit import splitlist
 
@@ -118,37 +118,20 @@ class ExportProject(Script):
         self.export_articlesets_articles()
 
         self.export_codebooks()
-
+        self.export_codingschemas()
+        self.export_codingjobs()
+        
         logging.info("Done")
 
-    @contextmanager
-    def _output_file(self, fn, extension="json"):
-        fn = os.path.join(self.options['output'], ".".join([fn, extension]))
-        with open(fn, "w") as f:
-            yield f
-
-    def _write_json_lines(self, fn, dicts, logmessage=None):
-        if logmessage is None:
-            logmessage = fn
-        with self._output_file(fn, extension="jsonl") as f:
-            logging.info("Writing {logmessage} to {f.name}".format(**locals()))
-            for d in dicts:
-                json.dump(d, f, cls=DjangoJSONEncoder)
-                f.write("\n")
-
-    def _serialize(self, fn, queryset, logmessage=None):
-        if logmessage is None:
-            logmessage = fn
-        if not queryset.exists():
-            logging.info("No {logmessage} objects to serialize".format(**locals()))
-        with self._output_file(fn, extension="json") as f:
-            logging.info("Writing {} {logmessage} to {f.name}".format(len(queryset), **locals()))
-            ser = serializers.get_serializer("json")()
-            ser.serialize(queryset, stream=f, use_natural_primary_keys=True, use_natural_foreign_keys=True)
-
-                
+    def export_codingjobs(self):
+        self._serialize("codingjobs", CodingJob.objects.filter(project=self.project))
+        self._serialize("codedarticles", CodedArticle.objects.filter(codingjob__project=self.project))
+        
+    def export_codingschemas(self):
+        self._serialize("codingschemas", CodingSchema.objects.filter(project=self.project))
+        self._serialize("codingschemafields", CodingSchemaField.objects.filter(codingschema__project=self.project))
+        
     def export_codebooks(self):
-        from django.db import connection, reset_queries
         self._serialize("codes", Code.objects.filter(codebook_codes__codebook__project=self.project).distinct())
         self._serialize("labels", Label.objects.filter(code__codebook_codes__codebook__project=self.project)
                         .select_related("code__uuid").select_related("language__label").distinct())
@@ -206,6 +189,32 @@ class ExportProject(Script):
                 yield self._generate_article(a, media[a.medium_id])
             
         
+    @contextmanager
+    def _output_file(self, fn, extension="json"):
+        fn = os.path.join(self.options['output'], ".".join([fn, extension]))
+        with open(fn, "w") as f:
+            yield f
+
+    def _write_json_lines(self, fn, dicts, logmessage=None):
+        if logmessage is None:
+            logmessage = fn
+        with self._output_file(fn, extension="jsonl") as f:
+            logging.info("Writing {logmessage} to {f.name}".format(**locals()))
+            for d in dicts:
+                json.dump(d, f, cls=DjangoJSONEncoder)
+                f.write("\n")
+
+    def _serialize(self, fn, queryset, logmessage=None):
+        if logmessage is None:
+            logmessage = fn
+        if not queryset.exists():
+            logging.info("No {logmessage} objects to serialize".format(**locals()))
+        with self._output_file(fn, extension="json") as f:
+            logging.info("Writing {} {logmessage} to {f.name}".format(len(queryset), **locals()))
+            ser = serializers.get_serializer("json")()
+            ser.serialize(queryset, stream=f, use_natural_primary_keys=True, use_natural_foreign_keys=True)
+
+                
 if __name__ == '__main__':
     import django
     django.setup()
