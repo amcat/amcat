@@ -25,7 +25,7 @@ from django.views.generic.edit import UpdateView
 from amcat.forms.widgets import BootstrapMultipleSelect
 from amcat.scripts.article_upload.upload_plugins import get_project_plugins, get_upload_plugins
 from navigator.views.datatableview import DatatableMixin
-from amcat.models import Project
+from amcat.models import Project, ArticleSet
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
 from navigator.views.scriptview import ScriptView
 from amcat.scripts.actions.add_project import AddProject
@@ -117,6 +117,8 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         form.initial['upload_plugins'] = [k for k, v in get_project_plugins(self.project).items()]
+        form.fields['display_properties'].choices = [(k, k) for k in self.project.get_used_properties()]
+        x = self.project.get_used_properties()
         return form
 
     def form_valid(self, form:forms.Form):
@@ -136,10 +138,17 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         upload_plugins = forms.MultipleChoiceField(choices=[(k, v.label) for k, v in get_upload_plugins().items()],
                                                    widget=BootstrapMultipleSelect)
 
+        display_properties = forms.MultipleChoiceField(choices=[], widget=BootstrapMultipleSelect, required=False)
+
         def clean_upload_plugins(self):
             plugins = {f: False for f, _ in self.fields['upload_plugins'].choices}
             plugins.update({f: True for f in self.cleaned_data['upload_plugins']})
             return plugins
+
+        def clean_display_properties(self):
+            if not self.cleaned_data['display_properties']:
+                return []
+            return self.cleaned_data['display_properties']
 
 
 class ProjectAddView(BreadCrumbMixin, ScriptView):

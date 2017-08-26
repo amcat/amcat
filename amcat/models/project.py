@@ -21,23 +21,22 @@
 
 import itertools
 from datetime import datetime
+from typing import Set, Union
 
 from django.conf import settings
 from django.contrib.postgres.fields import JSONField
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
-from typing import Union, Set
 
 import amcat.models
 from amcat.models import ProjectRole
-from amcat.tools.model import AmcatModel
+from amcat.models.article import Article
+from amcat.models.articleset import ArticleSet, ArticleSetArticle
+from amcat.models.authorisation import ROLE_PROJECT_READER, Role
 from amcat.models.coding.codebook import Codebook
 from amcat.models.coding.codingschema import CodingSchema
-from amcat.models.article import Article
-from amcat.models.articleset import ArticleSetArticle, ArticleSet
-
-from amcat.models.authorisation import Role, ROLE_PROJECT_READER
-from amcat.tools.validators import DictValidator
+from amcat.tools.model import AmcatModel
 
 LITTER_PROJECT_ID = 1
 
@@ -45,6 +44,11 @@ LAST_VISITED_FIELD_NAME = "last_visited_at"
 
 import logging; log = logging.getLogger(__name__)
 
+def strlist_validator(value):
+    if not isinstance(value, list):
+        raise ValidationError
+    if not all(isinstance(item, str) for item in value):
+        raise ValidationError
 
 class Project(AmcatModel):
     """Model for table projects.
@@ -81,6 +85,8 @@ class Project(AmcatModel):
     # Temporary field enabling R plugins in the query screen
     r_plugins_enabled = models.BooleanField(default=False)
 
+    display_properties = JSONField(validators=[strlist_validator], default=["medium"])
+
     # Coding fields
     codingschemas = models.ManyToManyField("amcat.CodingSchema", related_name="projects_set")
     codebooks = models.ManyToManyField("amcat.Codebook", related_name="projects_set")
@@ -88,7 +94,8 @@ class Project(AmcatModel):
     favourite_articlesets = models.ManyToManyField("amcat.articleset", related_name="favourite_of_projects")
 
     def get_used_properties(self, only_favourites=False) -> Set[str]:
-        articlesets = (self.favourite_articlesets if only_favourites else self.articlesets).all().only("id")
+        all_sets = ArticleSet.objects.filter(Q(projects_set=self) | Q(project=self))
+        articlesets = (self.favourite_articlesets if only_favourites else all_sets).all().only("id")
         return set(itertools.chain.from_iterable(aset.get_used_properties() for aset in articlesets))
 
     def get_display_properties(self) -> Set[str]:
@@ -96,7 +103,7 @@ class Project(AmcatModel):
         """
         Gets the properties that should be displayed in article tables.
         """
-        return {"medium", "byline", "length_int"}
+        return set(self.display_properties)
 
     def get_codingschemas(self):
         """
