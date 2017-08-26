@@ -1,0 +1,6 @@
+# These magic files are imported by the magic library
+# For the file format specification, see `man magic`.
+# The following convention is used for mime types that can directly be linked to an upload script plugin:
+#    application/x.amcat-<scriptname>
+#
+# Mime types in this format are parsed by amcat, and the given script will be selected.

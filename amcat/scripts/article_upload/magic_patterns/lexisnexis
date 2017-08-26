@@ -1,15 +1,11 @@
-# mime-type naming-convention: x.amcat-<scriptname>
+# mime-type naming-convention: text/x.amcat-<scriptname>
 
-0 search/10 Download\ Request: LexisNexis
-!:mime text/x.amcat-LexisNexis
+0 search/100 Download\ Request: LexisNexis
+!:mime application/x.amcat-LexisNexis
 
-0 search/10 Printopdracht: LexisNexis
-!:mime text/x.amcat-LexisNexis
+0 search/100 Printopdracht: LexisNexis
+!:mime application/x.amcat-LexisNexis
 
 0 search/1000 OF
 >&2 search/10 DOCUMENT LexisNexis
-!:mime text/x.amcat-LexisNexis
-
-0 search/1000 of
->&2 search/10 DOCUMENT LexisNexis
-!:mime text/x.amcat-LexisNexis
+!:mime application/x.amcat-LexisNexis

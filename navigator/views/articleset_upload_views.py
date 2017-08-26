@@ -164,8 +164,8 @@ class ArticleSetUploadForm(upload.UploadForm):
         if mime is None:
             return [(k, v.label) for k, v in list(plugins.items())]
 
-        if mime.startswith("text/x.amcat-"):
-            name = mime.replace("text/x.amcat-", "")
+        if mime.startswith("application/x.amcat-"):
+            name = mime.replace("application/x.amcat-", "")
             plugin = plugins.pop(name)
             suggested = [(name, plugin.label)]
             other = [(k, v.label) for k, v in list(plugins.items())]

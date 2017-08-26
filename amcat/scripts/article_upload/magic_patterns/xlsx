@@ -1,0 +1,11 @@
+# Fix for LibreOffice XLSX detection
+
+# Test if this is a zip file
+0		string		PK\003\004
+
+# Office documents always start with one of these files
+>0x1E		regex		\\[Content_Types\\]\\.xml|_rels/\\.rels
+
+# search for XLSX's xl/ directory
+>>&(18.l+49)    search/5000 xl\/  XSLX
+!:mime application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
