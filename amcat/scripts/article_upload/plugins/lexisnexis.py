@@ -574,6 +574,7 @@ class LexisNexis(UploadScript):
     @lru_cache()
     def get_fields(cls, file, encoding):
         fields = collections.OrderedDict()
+        remainder_fields = []
         for (file, encoding, (query, arts)) in cls._get_files(file, encoding):
             for meta in arts:
                 if meta:
@@ -586,7 +587,11 @@ class LexisNexis(UploadScript):
                 name, suggested_type = k.rsplit("_", 1)
             else:
                 name, suggested_type = k, None
-            yield ArticleField(k, name, values[:5], suggested_type=suggested_type)
+            if name in LN_CFG['meta_fields'] or name in ("text", "date", "title", "url"):
+                yield ArticleField(k, name, values[:5], suggested_type=suggested_type)
+            else:
+                remainder_fields.append(ArticleField(k, values=values[:5]))
+        yield from remainder_fields
 
     def parse_file(self, file, encoding, data):
         self.ln_query, arts = data
