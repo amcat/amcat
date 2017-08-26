@@ -77,4 +77,13 @@
         <div class="alert alert-info" style="white-space:pre-wrap">{{ script_doc }}</div>
     {% endif %}
 
+    <script language="javascript">
+        require(['jquery', 'bootstrap-multiselect'], $ => {
+            $('.multiselect').multiselect({
+                enableFiltering: true,
+                enableCaseInsensitiveFiltering: true,
+                maxHeight: 400
+            })
+        })
+    </script>
 {% endblock %}

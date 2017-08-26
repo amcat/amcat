@@ -33,8 +33,10 @@ from django import forms
 from django.contrib.postgres.forms import JSONField
 from django.core.files.utils import FileProxyMixin
 from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import Q
 from django.forms.widgets import HiddenInput
 
+from amcat.forms.widgets import BootstrapSelect
 from amcat.models import Article, ArticleSet, Project, UploadedFile, upload_storage
 from amcat.models.articleset import create_new_articleset
 from amcat.tools import amcates
@@ -100,7 +102,8 @@ class UploadForm(forms.Form):
         queryset=ArticleSet.objects.all(), required=False,
         help_text="If you choose an existing articleset, the articles will be "
                   "appended to that set. If you leave this empty, a new articleset will be "
-                  "created using either the name given below, or using the file name")
+                  "created using either the name given below, or using the file name",
+        widget=BootstrapSelect)
 
     articleset_name = forms.CharField(
         max_length=ArticleSet._meta.get_field('name').max_length,

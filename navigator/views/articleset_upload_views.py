@@ -9,13 +9,14 @@ from typing import List
 from django import forms
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
+from django.db.models import Q
 from django.db.models.fields.files import FieldFile
 from django.http import QueryDict
 from django.shortcuts import Http404, redirect
 from django.utils.datastructures import MultiValueDict
 from django.views.generic import CreateView, FormView, ListView
 
-from amcat.models import Project, UploadedFile, User, Task
+from amcat.models import Project, UploadedFile, User, Task, ArticleSet
 from amcat.scripts.article_upload import upload
 from amcat.scripts.article_upload import magic
 from amcat.scripts.article_upload.upload import ArticleField, REQUIRED, PreprocessScript
@@ -148,6 +149,9 @@ class ArticleSetUploadForm(upload.UploadForm):
         for field in list(self.fields):
             if field not in ("articleset", "articleset_name", "encoding", "script"):
                 self.fields.pop(field)
+
+        self.fields['articleset'].queryset = ArticleSet.objects.filter(
+            Q(project=project) | Q(projects_set=project))
 
     def clean_articleset_name(self):
         if not (self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
