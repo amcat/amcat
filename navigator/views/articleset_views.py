@@ -195,8 +195,9 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
 
     def get_datatable_kwargs(self):
         display_props = self.project.get_display_properties()
-        props = [("properties", prop) for prop in self.object.get_used_properties() if prop in display_props]
-        return {"checkboxes": True, "extra_args": props}
+        fields = [("col", prop) for prop in self.resource.serializer_class._declared_fields.keys()]
+        props = [("col", prop) for prop in self.object.get_used_properties() if prop in self.project.get_display_properties()]
+        return {"checkboxes": True, "extra_args": fields + props}
 
     def filter_table(self, table):
         return table.filter(sets=self.object.id, project=self.project.id)

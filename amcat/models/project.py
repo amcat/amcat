@@ -96,7 +96,7 @@ class Project(AmcatModel):
         """
         Gets the properties that should be displayed in article tables.
         """
-        return self.get_used_properties(True)
+        return ["medium", "byline", "length_int"]
 
     def get_codingschemas(self):
         """

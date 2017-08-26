@@ -43,12 +43,14 @@ def article_property(property_name):
 class CodedArticleSerializer(AmCATModelSerializer):
     title = serializers.SerializerMethodField()
     date = serializers.SerializerMethodField()
+    medium = serializers.SerializerMethodField()
     pagenr = serializers.SerializerMethodField()
     length = serializers.SerializerMethodField()
     article_id = serializers.SerializerMethodField()
 
     get_title = article_property("title")
     get_date = article_property("date")
+    get_medium = article_property("medium")
     get_pagenr = article_property("pagenr_int")
     get_length = article_property("length_int")
     get_article_id = article_property("id")

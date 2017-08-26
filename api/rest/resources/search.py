@@ -21,13 +21,12 @@ import copy
 import functools
 import itertools
 import re
-from typing import Container, Mapping
+from typing import Container
 
 from django.http import QueryDict
 from django_filters import filters, filterset
 from rest_framework.exceptions import ParseError, NotFound, PermissionDenied
 from rest_framework.fields import CharField, IntegerField, DateTimeField
-from rest_framework import fields
 from rest_framework.serializers import Serializer
 
 from amcat.models import Project, Article, ROLE_PROJECT_METAREADER
@@ -42,16 +41,6 @@ FILTER_ID_FIELDS = frozenset({"ids", "pk"})
 
 RE_KWIC = re.compile("(?P<left>.*?)<mark>(?P<keyword>.*?)</mark>(?P<right>.*)", re.DOTALL)
 
-TYPE_FIELDS = {
-    "default": fields.CharField,
-    "int": fields.IntegerField,
-    "num": fields.FloatField,
-    "date": fields.DateTimeField,
-    "url": fields.CharField,
-    "id": fields.IntegerField,
-    "tag": fields.CharField,
-    "text": fields.CharField
-}
 
 class LazyES(object):
     def __init__(self, user=None, queries=None, filters=None, fields=None, hits=False):
@@ -185,13 +174,6 @@ class ScoreField(IntegerField):
         source = self.source
         return obj.get(source, 0)
 
-class DictValueField(CharField):
-    def __init__(self, key, **kwargs):
-        super().__init__(**kwargs)
-        self.key = key
-
-    def to_representation(self, value):
-        return super().to_representation(value[self.key])
 
 class SearchResourceSerialiser(Serializer):
     id = IntegerField()
@@ -231,35 +213,6 @@ class SearchResourceSerialiser(Serializer):
             self.fields['left'] = KWICField(kwic='left')
             self.fields['keyword'] = KWICField(kwic='keyword')
             self.fields['right'] = KWICField(kwic='right')
-
-        self.property_fields = self.get_property_fields(ctx.get("properties", []))
-
-    def _split_property_name(self, property: str):
-        try:
-            name, dt = property.split('_')
-            return name, dt
-        except ValueError:
-            return property, "default"
-
-    def get_property_fields(self, properties) -> Mapping[str, fields.Field]:
-        fields = {}
-        for property in properties:
-            name, dt = self._split_property_name(property)
-            fields[property] = TYPE_FIELDS[dt]()
-        return fields
-
-    def get_fields(self):
-        fields = super().get_fields()
-        fields.update((k, v) for k, v in self.property_fields.items() if k not in fields)
-        return fields
-
-    def to_representation(self, instance: Article):
-        rep = super().to_representation(instance)
-        for property, field in self.property_fields.items():
-            if property in rep:
-                continue
-            rep[property] = field.to_representation(instance.properties.get(property))
-        return rep
 
     class Meta:
         model = Article
@@ -320,11 +273,6 @@ class SearchResource(AmCATResource):
     @cached
     def columns(self):
         return self.params.getlist("col")
-
-    @property
-    @cached
-    def properties(self):
-        return self.params.getlist("properties")
 
     @property
     @cached
@@ -401,12 +349,11 @@ class SearchResource(AmCATResource):
         ctx = super(SearchResource, self).get_serializer_context()
         ctx["queries"] = self.queries
         ctx["columns"] = self.columns
-        ctx["properties"] = self.properties
         ctx["minimal"] = self.params.get('minimal')
         return ctx
 
     @classmethod
-    def _extra_fields(cls, cols, queries, properties):
+    def _extra_fields(cls, cols, queries):
         if 'hits' in cols:
             for q in queries:
                 q = keywordsearch.SearchQuery.from_string(q)
@@ -422,16 +369,12 @@ class SearchResource(AmCATResource):
             if col not in ("id", "title", "date", "url"):
                 yield col
 
-        for property in properties:
-            yield property
-
     @classmethod
     def extra_fields(cls, args):
         """Used by datatable.py for dynamic fields. Hack?"""
         queries = [val for (name, val) in args if name == "q"]
         cols = [val for (name, val) in args if name == "col"]
-        properties = [val for (name, val) in args if name == "properties"]
-        return list(cls._extra_fields(cols, queries, properties))
+        return list(cls._extra_fields(cols, queries))
 
     class Meta:
         model = Article
