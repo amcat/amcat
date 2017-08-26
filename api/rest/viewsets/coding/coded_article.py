@@ -19,9 +19,10 @@
 from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
-from amcat.models import Sentence, CodedArticle, Article, ROLE_PROJECT_READER
+from amcat.models import Sentence, CodedArticle, Article, ROLE_PROJECT_READER, CodingJob, Project
 from amcat.tools.caching import cached
 from amcat.tools import sbd
+from api.rest.metadata import AmCATMetadata
 from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
@@ -40,24 +41,44 @@ def article_property(property_name):
     return inner
 
 
-class CodedArticleSerializer(AmCATModelSerializer):
-    # Evil hack alert:
-    # The metadata for this serializer are overridden for CodedArticleViewSet. If you're baffled because things
-    # that you add here fail to show up, update /api/rest/metadata_coded_article.py accordingly.
+class PropertyField(serializers.CharField):
 
+    def __init__(self, prop, **kwargs):
+        super().__init__(**kwargs)
+        self.prop = prop
+
+    def get_attribute(self, instance):
+        return instance.article.properties[self.prop]
+
+class CodedArticleSerializer(AmCATModelSerializer):
     title = serializers.SerializerMethodField()
     date = serializers.SerializerMethodField()
-    medium = serializers.SerializerMethodField()
-    pagenr = serializers.SerializerMethodField()
-    length = serializers.SerializerMethodField()
     article_id = serializers.SerializerMethodField()
 
     get_title = article_property("title")
     get_date = article_property("date")
-    get_medium = article_property("medium")
-    get_pagenr = article_property("pagenr_int")
-    get_length = article_property("length_int")
     get_article_id = article_property("id")
+
+
+    def _split_property_name(self, prop):
+        try:
+            name, dt = prop.split("_")
+            return name, dt
+        except ValueError:
+            return prop, "default"
+
+    def _get_properties(self):
+        view = self.context["view"]
+        proj = Project.objects.get(pk=view.kwargs["project"])
+        codingjob = CodingJob.objects.get(pk=view.kwargs["codingjob"])
+        for prop in codingjob.articleset.get_used_properties() & proj.get_display_properties():
+            name, dt = self._split_property_name(prop)
+            yield name, PropertyField(prop)
+
+    def get_fields(self):
+        fields = super().get_fields()
+        fields.update(self._get_properties())
+        return fields
 
     def _get_coded_articles(self):
         view = self.context["view"]

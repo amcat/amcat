@@ -69,10 +69,6 @@ class AmCATMetadata(SimpleMetadata):
         if self._get_model(view) is None:
             return metadata
 
-        if view.__class__.__name__ == 'CodedArticleViewSet':
-            # This is a hack de la grande, please see metadata_coded_article.py
-            return dict(metadata, **CODED_ARTICLE_METADATA)
-
         metadata['label'] = self.get_label(view)
 
         try:
