@@ -192,9 +192,11 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
             return HttpResponse("OK", status=200)
 
         return HttpResponseBadRequest(str(dict(form.errors)))
-    
+
     def get_datatable_kwargs(self):
-        return {"checkboxes": True}
+        display_props = self.project.get_display_properties()
+        props = [("properties", prop) for prop in self.object.get_used_properties() if prop in display_props]
+        return {"checkboxes": True, "extra_args": props}
 
     def filter_table(self, table):
         return table.filter(sets=self.object.id, project=self.project.id)

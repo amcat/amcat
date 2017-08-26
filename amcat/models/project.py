@@ -91,6 +91,13 @@ class Project(AmcatModel):
         articlesets = (self.favourite_articlesets if only_favourites else self.articlesets).all().only("id")
         return set(itertools.chain.from_iterable(aset.get_used_properties() for aset in articlesets))
 
+    def get_display_properties(self) -> Set[str]:
+        # TODO: make this a project setting.
+        """
+        Gets the properties that should be displayed in article tables.
+        """
+        return self.get_used_properties(True)
+
     def get_codingschemas(self):
         """
         Return all codingschemas connected to this project. This returns codingschemas

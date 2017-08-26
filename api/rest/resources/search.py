@@ -234,15 +234,18 @@ class SearchResourceSerialiser(Serializer):
 
         self.property_fields = self.get_property_fields(ctx.get("properties", []))
 
+    def _split_property_name(self, property: str):
+        try:
+            name, dt = property.split('_')
+            return name, dt
+        except ValueError:
+            return property, "default"
+
     def get_property_fields(self, properties) -> Mapping[str, fields.Field]:
         fields = {}
         for property in properties:
-            try:
-                name, dt = property.split('_')
-            except ValueError:
-                fields[property] = TYPE_FIELDS['default']()
-            else:
-                fields[name] = TYPE_FIELDS[dt]
+            name, dt = self._split_property_name(property)
+            fields[property] = TYPE_FIELDS[dt]()
         return fields
 
     def get_fields(self):
@@ -403,7 +406,7 @@ class SearchResource(AmCATResource):
         return ctx
 
     @classmethod
-    def _extra_fields(cls, cols, queries):
+    def _extra_fields(cls, cols, queries, properties):
         if 'hits' in cols:
             for q in queries:
                 q = keywordsearch.SearchQuery.from_string(q)
@@ -419,12 +422,16 @@ class SearchResource(AmCATResource):
             if col not in ("id", "title", "date", "url"):
                 yield col
 
+        for property in properties:
+            yield property
+
     @classmethod
     def extra_fields(cls, args):
         """Used by datatable.py for dynamic fields. Hack?"""
         queries = [val for (name, val) in args if name == "q"]
         cols = [val for (name, val) in args if name == "col"]
-        return list(cls._extra_fields(cols, queries))
+        properties = [val for (name, val) in args if name == "properties"]
+        return list(cls._extra_fields(cols, queries, properties))
 
     class Meta:
         model = Article
