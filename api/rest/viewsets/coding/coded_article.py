@@ -41,6 +41,10 @@ def article_property(property_name):
 
 
 class CodedArticleSerializer(AmCATModelSerializer):
+    # Evil hack alert:
+    # The metadata for this serializer are overridden for CodedArticleViewSet. If you're baffled because things
+    # that you add here fail to show up, update /api/rest/metadata_coded_article.py accordingly.
+
     title = serializers.SerializerMethodField()
     date = serializers.SerializerMethodField()
     medium = serializers.SerializerMethodField()

@@ -19,6 +19,7 @@ CODED_ARTICLE_METADATA = {
     "fields": {
         "status": "ModelChoiceField", # Real
         "title": "SerializerMethodField",
+        "medium": "SerializerMethodField",
         "codingjob": "ModelChoiceField", # Real
         "comments": "CharField", # Real
         "length": "SerializerMethodField",

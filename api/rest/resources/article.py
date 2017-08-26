@@ -49,6 +49,7 @@ class ArticleMetaSerializer(AmCATModelSerializer):
 
 class ArticleMetaResource(AmCATResource):
     model = Article
+    queryset = Article.objects.all()
     serializer_class = ArticleMetaSerializer
     filter_class = ArticleMetaFilter
 
