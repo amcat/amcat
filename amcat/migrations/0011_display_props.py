@@ -17,6 +17,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='project',
             name='display_properties',
-            field=django.contrib.postgres.fields.jsonb.JSONField(default=['medium'], validators=[amcat.models.project.strlist_validator]),
+            field=django.contrib.postgres.fields.jsonb.JSONField(default=('medium',), validators=[amcat.models.project.strlist_validator]),
         ),
     ]
