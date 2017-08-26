@@ -16,10 +16,13 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import datetime
+
 from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from amcat.models import Sentence, CodedArticle, Article, ROLE_PROJECT_READER, CodingJob, Project
+from amcat.tools.amcates import get_property_primitive_type
 from amcat.tools.caching import cached
 from amcat.tools import sbd
 from api.rest.metadata import AmCATMetadata
@@ -34,6 +37,12 @@ __all__ = (
     "CodedArticleSerializer", "CodedArticleViewSetMixin", "CodedArticleViewSet",
     "CodedArticleSentenceViewSet")
 
+TYPE_FIELDS = {
+    str: serializers.CharField,
+    int: serializers.IntegerField,
+    float: serializers.FloatField,
+    datetime.datetime: serializers.DateTimeField
+}
 
 def article_property(property_name):
     def inner(self, coded_article):
@@ -41,14 +50,15 @@ def article_property(property_name):
     return inner
 
 
-class PropertyField(serializers.CharField):
+def get_property_field_cls(property):
+    type = get_property_primitive_type(property)
+    base_field = TYPE_FIELDS[type]
 
-    def __init__(self, prop, **kwargs):
-        super().__init__(**kwargs)
-        self.prop = prop
+    class PropertyField(base_field):
+        def get_attribute(self, instance):
+            return instance.article.properties[property]
 
-    def get_attribute(self, instance):
-        return instance.article.properties[self.prop]
+    return PropertyField
 
 class CodedArticleSerializer(AmCATModelSerializer):
     title = serializers.SerializerMethodField()
@@ -72,8 +82,8 @@ class CodedArticleSerializer(AmCATModelSerializer):
         proj = Project.objects.get(pk=view.kwargs["project"])
         codingjob = CodingJob.objects.get(pk=view.kwargs["codingjob"])
         for prop in codingjob.articleset.get_used_properties() & proj.get_display_properties():
-            name, dt = self._split_property_name(prop)
-            yield name, PropertyField(prop)
+            name, _ = self._split_property_name(prop)
+            yield name, get_property_field_cls(prop)()
 
     def get_fields(self):
         fields = super().get_fields()

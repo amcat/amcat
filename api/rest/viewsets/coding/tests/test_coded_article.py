@@ -30,7 +30,6 @@ class TestCodedArticleSerializer(amcattest.AmCATTestCase):
 
         self.assertEqual(a.title, s.get_title(ca))
         self.assertEqual(a.date, s.get_date(ca))
-        self.assertEqual(a.get_property("pagenr_int"), s.get_pagenr(ca))
 
     def test_n_queries(self):
         c = amcattest.create_test_job(10)
@@ -42,4 +41,3 @@ class TestCodedArticleSerializer(amcattest.AmCATTestCase):
             s.get_title(ca2)
             s.get_title(ca3)
             s.get_date(ca3)
-            s.get_pagenr(ca3)
