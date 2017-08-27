@@ -87,6 +87,11 @@ class CodedArticleSerializer(AmCATModelSerializer):
     def get_fields(self):
         fields = super().get_fields()
         fields.update(self._get_properties())
+
+        # hide these two fields in the annotator. Nobody really needs them anywhere else anyway.
+        fields.pop("codingjob", None)
+        fields.pop("article", None)
+
         return fields
 
     def _get_coded_articles(self):
