@@ -82,7 +82,8 @@ class LazyES(object):
         query_kargs = {}
         if self.query and ("lead" in self.fields or "title" in self.fields):
             query_kargs["highlight"] = True
-        elif "lead" in self.fields:
+
+        if "lead" in self.fields:
             query_kargs["lead"] = True
 
         fields = [f for f in self.fields if f != "lead"]
@@ -139,7 +140,7 @@ class KWICField(CharField):
             return None
 
         hl = obj.highlight.get('title', ())
-        hl = filter(lambda h: re.search(r"<mark>.*</mark>", h), hl)
+        hl = list(filter(lambda h: re.search(r"<mark>.*</mark>", h), hl))
         if not hl:
             hl = obj.highlight.get('text')
 

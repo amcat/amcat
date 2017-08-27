@@ -61,14 +61,13 @@ def get_property_field_cls(property):
     return PropertyField
 
 class CodedArticleSerializer(AmCATModelSerializer):
+    article_id = serializers.SerializerMethodField()
     title = serializers.SerializerMethodField()
     date = serializers.SerializerMethodField()
-    article_id = serializers.SerializerMethodField()
 
     get_title = article_property("title")
     get_date = article_property("date")
     get_article_id = article_property("id")
-
 
     def _split_property_name(self, prop):
         try:
