@@ -111,6 +111,9 @@ class ExportProject(Script):
         os.mkdir(output)
         logging.info("Exporting project {project.id}:{project} to {output}".format(**locals()))
 
+        self.codebook_fields = set()  # which fields do we need to serialize to uuid?
+        self.codes = {}  # code_id -> uuid
+        
         self.project = project
         
         self.export_articlesets()
@@ -123,16 +126,45 @@ class ExportProject(Script):
         
         logging.info("Done")
 
+    def _get_codingjob_values(self, ca_ids, batch_size=1000):
+        def serialize_coding_value(cv):
+            result = dict(codingschemafield_id=cv.field_id, intval=cv.intval, strval=cv.strval)
+            if cv.field_id in self.codebook_fields:
+                result["code"] = self.codes[result.pop("intval")]
+            return result
+        
+        def get_values_dict(coding):
+            s = coding.sentence
+            return dict(sentence=(s and [s.sentnr, s.parnr] or None),
+                        start=coding.start, end=coding.end,
+                        values=[serialize_coding_value(cv) for cv in coding.values.all()])
+                    
+        for i, batch in enumerate(toolkit.splitlist(ca_ids, itemsperbatch=batch_size)):
+            logging.info("... batch {i}/{n}".format(n=len(ca_ids)//batch_size, **locals()))
+            codings_per_article = collections.defaultdict(list)
+            for c in Coding.objects.filter(coded_article_id__in=batch).prefetch_related("values").select_related("sentence"):
+                codings_per_article[c.coded_article_id].append(c)
+            for caid, codings in codings_per_article.items():
+                yield dict(coded_article_id=caid, codings=[get_values_dict(c) for c in codings])
+                
+        
     def export_codingjobs(self):
         self._serialize("codingjobs", CodingJob.objects.filter(project=self.project))
-        self._serialize("codedarticles", CodedArticle.objects.filter(codingjob__project=self.project))
+        cas = CodedArticle.objects.filter(codingjob__project=self.project)
+        coded_articles = self._serialize("codedarticles", cas)
+        ca_ids = [ca.id for ca in coded_articles]
+        self._write_json_lines("codingvalues", self._get_codingjob_values(ca_ids))
         
+            
     def export_codingschemas(self):
         self._serialize("codingschemas", CodingSchema.objects.filter(project=self.project))
-        self._serialize("codingschemafields", CodingSchemaField.objects.filter(codingschema__project=self.project))
+        for f in self._serialize("codingschemafields", CodingSchemaField.objects.filter(codingschema__project=self.project)):
+            if f.fieldtype_id == FIELDTYPE_IDS.CODEBOOK:
+                self.codebook_fields.add(f.id)
         
     def export_codebooks(self):
-        self._serialize("codes", Code.objects.filter(codebook_codes__codebook__project=self.project).distinct())
+        for c in self._serialize("codes", Code.objects.filter(codebook_codes__codebook__project=self.project).distinct()):
+            self.codes[c.pk] = unicode(c.uuid)
         self._serialize("labels", Label.objects.filter(code__codebook_codes__codebook__project=self.project)
                         .select_related("code__uuid").select_related("language__label").distinct())
 
@@ -209,12 +241,29 @@ class ExportProject(Script):
             logmessage = fn
         if not queryset.exists():
             logging.info("No {logmessage} objects to serialize".format(**locals()))
+            return []
         with self._output_file(fn, extension="json") as f:
             logging.info("Writing {} {logmessage} to {f.name}".format(len(queryset), **locals()))
             ser = serializers.get_serializer("json")()
+            objects = list(queryset)
             ser.serialize(queryset, stream=f, use_natural_primary_keys=True, use_natural_foreign_keys=True)
+            return objects
 
-                
+
+@contextmanager        
+def _print_queries(msg=None):
+    from django.db import connection, reset_queries
+    import time
+    t = time.time()
+    reset_queries()
+    try:
+        print("------------------- START {} --------------".format(msg or ""))
+        yield
+    finally:
+        for q in connection.queries:
+            print("- {time} - {sql}".format(**q))
+        print("------------------- {:.3f}s END {} --------------".format(time.time() - t, msg or ""))
+        
 if __name__ == '__main__':
     import django
     django.setup()
