@@ -57,7 +57,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
 
 
     def get_datatable_kwargs(self):
-        return {"checkboxes": True}
+        return {"checkboxes": True, "hidden": ["display_columns", "r_plugins_enabled"]}
 
     def get_context_data(self, **kwargs):
         context = super(ProjectListView, self).get_context_data(**kwargs)

@@ -107,7 +107,7 @@ class LazyES(object):
             filters = {'ids': list(result_dict)}
 
             for q in self.queries:
-                for hit in self.es.query_all(q.query, filters=filters, fields=[]):
+                for hit in self.es.query_all(q.query, filters=filters, _source=[]):
                     result_dict[hit.id].hits[q.label] = hit.score
 
         return result
@@ -186,7 +186,6 @@ class SearchResourceSerialiser(Serializer):
         ctx = kwargs.get("context", {})
         columns = set(ctx.get("columns", []))
         queries = ctx.get("queries", [])
-
         if ctx.get('minimal'):
             for fn in list(self.fields):
                 if fn != 'id' and fn not in columns:

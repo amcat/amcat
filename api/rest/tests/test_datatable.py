@@ -13,7 +13,7 @@ from amcat.models import Project
 
 class TestDatatable(amcattest.AmCATTestCase):
     PROJECT_FIELDS = {'id', 'name', 'description', 'insert_date', 'owner', 'r_plugins_enabled',
-                      'insert_user', 'guest_role', 'active', 'favourite', 'last_visited_at'}
+                      'insert_user', 'guest_role', 'active', 'favourite', 'last_visited_at', 'display_columns'}
 
     def test_viewset(self):
         """Can ViewSets also be used?"""

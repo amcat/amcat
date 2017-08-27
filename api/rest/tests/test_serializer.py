@@ -62,6 +62,7 @@ class TestSerializer(ApiTestCase):
             'id': p1.id,
             'last_visited_at': "Never",
             'favourite': False,
+            "display_columns": ["medium"],
             "r_plugins_enabled": False,
         }
 
