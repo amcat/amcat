@@ -1,7 +1,16 @@
 {% extends "project/base.html" %}
+{% load staticfiles %}
+{% block css %}
+    <link href="{% static 'css/sortselect.css' %}" rel="stylesheet" type="text/css"  />
+{% endblock %}
+
 {% block javascript %}
     <script lang="javascript">
         require(['jquery', 'bootstrap-multiselect'], $ => $('.multiselect').multiselect());
+
+        require(["jquery", "amcat/sortselect"], function($){
+            $("#id_display_columns").sortSelect();
+        })
     </script>
 {% endblock %}
 {% block content %}

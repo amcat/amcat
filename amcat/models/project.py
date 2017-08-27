@@ -21,7 +21,7 @@
 
 import itertools
 from datetime import datetime
-from typing import Set, Union
+from typing import Set, Union, List
 
 from django.conf import settings
 from django.contrib.postgres.fields import JSONField
@@ -85,7 +85,7 @@ class Project(AmcatModel):
     # Temporary field enabling R plugins in the query screen
     r_plugins_enabled = models.BooleanField(default=False)
 
-    display_properties = JSONField(validators=[strlist_validator], default=["medium"])
+    display_columns = JSONField(validators=[strlist_validator], default=("medium",))
 
     # Coding fields
     codingschemas = models.ManyToManyField("amcat.CodingSchema", related_name="projects_set")
@@ -98,12 +98,11 @@ class Project(AmcatModel):
         articlesets = (self.favourite_articlesets if only_favourites else all_sets).all().only("id")
         return set(itertools.chain.from_iterable(aset.get_used_properties() for aset in articlesets))
 
-    def get_display_properties(self) -> Set[str]:
-        # TODO: make this a project setting.
+    def get_display_columns(self) -> List[str]:
         """
         Gets the properties that should be displayed in article tables.
         """
-        return set(self.display_properties)
+        return list(self.display_columns)
 
     def get_codingschemas(self):
         """

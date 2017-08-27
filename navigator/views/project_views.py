@@ -75,7 +75,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
             return 'all'
         else:
             return self.kwargs.get('what', 'active')
-    
+
     def filter_table(self, table):
         table = table.rowlink_reverse('navigator:articleset-list', args=['{id}'])
         if self.what == 'all':
@@ -117,8 +117,6 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         form.initial['upload_plugins'] = [k for k, v in get_project_plugins(self.project).items()]
-        form.fields['display_properties'].choices = [(k, k) for k in self.project.get_used_properties()]
-        x = self.project.get_used_properties()
         return form
 
     def form_valid(self, form:forms.Form):
@@ -138,17 +136,29 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         upload_plugins = forms.MultipleChoiceField(choices=[(k, v.label) for k, v in get_upload_plugins().items()],
                                                    widget=BootstrapMultipleSelect)
 
-        display_properties = forms.MultipleChoiceField(choices=[], widget=BootstrapMultipleSelect, required=False)
+        display_columns = forms.MultipleChoiceField(choices=(), required=False, label="Display columns",
+                                                       help_text="These properties are shown in article tables in this project.")
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            selected = self.instance.display_columns
+            non_selected = [k for k in self.instance.get_used_properties() if k not in selected]
+            self.fields['display_columns'].choices = [(k, k) for k in selected + non_selected]
 
         def clean_upload_plugins(self):
             plugins = {f: False for f, _ in self.fields['upload_plugins'].choices}
             plugins.update({f: True for f in self.cleaned_data['upload_plugins']})
             return plugins
 
-        def clean_display_properties(self):
-            if not self.cleaned_data['display_properties']:
-                return []
-            return self.cleaned_data['display_properties']
+        def clean_display_columns(self):
+            if not self.cleaned_data['display_columns']:
+                return self.cleaned_data['display_columns']
+            return self.cleaned_data['display_columns']
+
+        def save(self, commit=True):
+            if not self.cleaned_data['display_columns']:
+                self.instance.display_columns = []
+            super().save(commit)
 
 
 class ProjectAddView(BreadCrumbMixin, ScriptView):

@@ -81,7 +81,7 @@ class CodedArticleSerializer(AmCATModelSerializer):
         view = self.context["view"]
         proj = Project.objects.get(pk=view.kwargs["project"])
         codingjob = CodingJob.objects.get(pk=view.kwargs["codingjob"])
-        for prop in codingjob.articleset.get_used_properties() & proj.get_display_properties():
+        for prop in [x for x in proj.get_display_columns() if x in codingjob.articleset.get_used_properties()]:
             name, _ = self._split_property_name(prop)
             yield name, get_property_field_cls(prop)()
 

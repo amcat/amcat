@@ -1,0 +1,23 @@
+.sort-select-container {
+    position: absolute;
+    width: 30em;
+    z-index: 1;
+}
+.sort-select-container .row {
+    max-height: 40em;
+    overflow-y: scroll;
+}
+.sort-select-container .drag-handle {
+  margin-left: -1.1em;
+  margin-right: 1.1em;
+  color: silver;
+  font-size: small;
+}
+.sort-select-container .select-target:after {
+    content: "\e234";
+    display: block;
+    text-align: center;
+    font-family: "Glyphicons Halflings";
+    color: silver;
+    border-top: 1px solid;
+}
