@@ -85,7 +85,7 @@ class Project(AmcatModel):
     # Temporary field enabling R plugins in the query screen
     r_plugins_enabled = models.BooleanField(default=False)
 
-    display_columns = JSONField(validators=[strlist_validator], default=("medium",))
+    display_columns = JSONField(validators=[strlist_validator], default=())
 
     # Coding fields
     codingschemas = models.ManyToManyField("amcat.CodingSchema", related_name="projects_set")
@@ -101,8 +101,10 @@ class Project(AmcatModel):
     def get_display_columns(self) -> List[str]:
         """
         Gets the properties that should be displayed in article tables.
+        If no user preference is given, defaults to all known properties in no particular order.
         """
-        return list(self.display_columns)
+        cols = list(self.display_columns)
+        return cols if cols else list(self.get_used_properties())
 
     def get_codingschemas(self):
         """

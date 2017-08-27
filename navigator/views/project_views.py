@@ -137,7 +137,9 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
                                                    widget=BootstrapMultipleSelect)
 
         display_columns = forms.MultipleChoiceField(choices=(), required=False, label="Display columns",
-                                                       help_text="These properties are shown in article tables in this project.")
+                                                    help_text="These properties are shown in article tables in this "
+                                                              "project. If left empty, all known fields in the set are "
+                                                              "shown.")
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
