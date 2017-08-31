@@ -60,5 +60,7 @@ ul.articles {padding-left: 0px}
 .hbreak {border-bottom: 1px dotted #e2e2e2;}
 .hbreak-before {border-top: 1px dotted #e2e2e2;}
 
-
+.form-container{
+    max-width: 36em;
+}
 

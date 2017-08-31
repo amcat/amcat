@@ -16,7 +16,8 @@ from django.shortcuts import Http404, redirect
 from django.utils.datastructures import MultiValueDict
 from django.views.generic import CreateView, FormView, ListView
 
-from amcat.models import Project, UploadedFile, User, Task, ArticleSet
+from amcat.forms.fields import StaticModelChoiceField
+from amcat.models import UploadedFile, Task, ArticleSet
 from amcat.scripts.article_upload import upload
 from amcat.scripts.article_upload import magic
 from amcat.scripts.article_upload.upload import ArticleField, REQUIRED, PreprocessScript
@@ -26,7 +27,7 @@ from amcat.tools.amcates import ARTICLE_FIELDS, is_valid_property_name
 from navigator.views.datatableview import DatatableMixin
 from navigator.views.project_views import ProjectDetailsView
 from navigator.views.projectview import BaseMixin, BreadCrumbMixin, HierarchicalViewMixin, ProjectViewMixin
-from navigator.views.scriptview import ScriptHandler, get_temporary_file_dict, ScriptView
+from navigator.views.scriptview import ScriptHandler, get_temporary_file_dict
 from settings import ES_MAPPING_TYPES
 
 log = logging.getLogger(__name__)
@@ -101,10 +102,6 @@ class UploadListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, D
 
 
 class ArticlesetFileUploadForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["project"] = forms.ModelChoiceField(queryset=Project.objects.all(), widget=forms.HiddenInput)
-        self.fields["user"] = forms.ModelChoiceField(queryset=User.objects.all(), widget=forms.HiddenInput)
 
     class Meta:
         model = UploadedFile
@@ -119,8 +116,8 @@ class ArticlesSetFileUploadView(BaseMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form()
-        form.fields['project'].initial = self.project
-        form.fields['user'].initial = self.request.user
+        form.fields['project'] = StaticModelChoiceField(self.project)
+        form.fields['user'] = StaticModelChoiceField(self.request.user)
         return form
 
     def form_valid(self, form):

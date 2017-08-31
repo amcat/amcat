@@ -36,6 +36,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Q
 from django.forms.widgets import HiddenInput
 
+from amcat.forms.fields import StaticModelChoiceField
 from amcat.forms.widgets import BootstrapSelect
 from amcat.models import Article, ArticleSet, Project, UploadedFile, upload_storage
 from amcat.models.articleset import create_new_articleset
@@ -132,8 +133,7 @@ class UploadForm(forms.Form):
     def get_empty(cls, project=None, post=None, files=None, **_options):
         f = cls(post, files) if post is not None else cls()
         if project:
-            f.fields['project'].initial = project.id
-            f.fields['project'].widget = HiddenInput()
+            f.fields['project'] = StaticModelChoiceField(project)
             f.fields['articlesets'].queryset = ArticleSet.objects.filter(project=project)
         return f
 

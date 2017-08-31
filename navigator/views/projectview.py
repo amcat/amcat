@@ -19,13 +19,14 @@
 
 import re
 
+from django.http import Http404
 from django.views.generic.base import RedirectView
 from django.views.generic.edit import FormView, UpdateView
 from django.views.generic.detail import DetailView
 from django.core.urlresolvers import reverse
 from django.core.exceptions import PermissionDenied
 
-from amcat.models import authorisation, Project
+from amcat.models import authorisation, Project, ArticleSet
 from amcat.models.project import RecentProject
 from navigator.views.scriptview import ScriptView
 
@@ -64,6 +65,7 @@ class ProjectViewMixin(object):
                                    (default: metareader)
     """
     project_id_url_kwarg = 'project'
+    articleset_id_url_kwarg = 'articleset'
     required_project_permission = authorisation.ROLE_PROJECT_METAREADER
     help_context = None
 
@@ -87,10 +89,29 @@ class ProjectViewMixin(object):
 
     def get_project(self):
         pid = self.kwargs.get(self.project_id_url_kwarg)
-        return Project.objects.get(pk=pid)
+        try:
+            return Project.objects.get(pk=pid)
+        except Project.DoesNotExist:
+            raise Http404("Project not found")
+
+    def get_articleset(self):
+        if self.articleset_id_url_kwarg not in self.kwargs:
+            # kwarg is not given, this view has no articleset.
+            return None
+
+        aset_id = self.kwargs[self.articleset_id_url_kwarg]
+        try:
+            return ArticleSet.objects.get(pk=aset_id)
+        except ArticleSet.DoesNotExist:
+            raise Http404("Articleset not found")
 
     def dispatch(self, request, *args, **kwargs):
         self.project = self.get_project()
+
+        articleset = self.get_articleset()
+        if articleset is not None:
+            self.articleset = articleset
+
         # HACK: remove query from session to prevent 'permanent' highlighting
         self.last_query = self.request.session.pop("query", None)
 

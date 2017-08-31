@@ -22,15 +22,17 @@
 Script add a project
 """
 
-import logging; log = logging.getLogger(__name__)
+import logging
 
 from django import forms
 
-from amcat.scripts.script import Script
-from amcat.models.user import User
+from amcat.forms.fields import StaticModelChoiceField
+from amcat.models.authorisation import ProjectRole, Role
 from amcat.models.project import Project
-from amcat.models.authorisation import Role, ProjectRole
+from amcat.models.user import User
+from amcat.scripts.script import Script
 
+log = logging.getLogger(__name__)
 PROJECT_ROLE_READER=11
 
 class AddProjectForm(forms.ModelForm):

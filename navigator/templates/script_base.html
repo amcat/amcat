@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load markdown %}
+{% load bootstrap %}
 
 {% block help_context %}{{help_context}}{% endblock %}
 
@@ -11,9 +12,8 @@
 <form action="" enctype="multipart/form-data" method="POST">
    {% csrf_token %}
    <legend>Please enter options for {{ script_name }} below.</legend>
-   <table>
-    {{ form.as_table }}
-   </table>
+
+   {% include "form_snippet.html" %}
 
    <div class="form-actions">
     <input class="btn btn-primary" type="submit" value="Save"></input>

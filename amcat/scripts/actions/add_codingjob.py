@@ -22,7 +22,11 @@
 Script add a project
 """
 
-import logging; log = logging.getLogger(__name__)
+import logging;
+
+from amcat.forms.fields import StaticModelChoiceField
+
+log = logging.getLogger(__name__)
 
 from django import forms
 from amcat.scripts.script import Script
@@ -43,8 +47,7 @@ class AddCodingJob(Script):
 
             if project:
                 schema_qs = project.get_codingschemas()
-                self.fields["project"].initial = project
-                self.fields["project"].widget = forms.HiddenInput()
+                self.fields["project"] = StaticModelChoiceField(project)
                 self.fields["coder"].queryset = User.objects.filter(projectrole__project=project)
                 self.fields["articleset"].queryset = project.all_articlesets()
             else:

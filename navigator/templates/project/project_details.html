@@ -20,9 +20,7 @@
 <form action="" method="POST">
 {% csrf_token %}
     <legend>Edit project details of project {{project.id}}: "{{ project.name }}"</legend>
-   <table>
-    {{ form.as_table }}
-   </table>
+   {% include "form_snippet.html" %}
 
    <div class="form-actions">
     <input class="btn btn-primary" type="submit" value="Save"></input>

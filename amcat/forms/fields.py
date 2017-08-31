@@ -120,3 +120,15 @@ class CSVField(forms.FileField):
 
     def to_python(self, data):
         return list(self._to_python(data))
+
+class StaticModelChoiceField(forms.ModelChoiceField):
+    """
+    A ModelChoiceField that only allows one instance to be selected.
+    """
+    def __init__(self, instance=None, *, widget=forms.HiddenInput, **kwargs):
+        self.instance = instance
+        kwargs.setdefault("initial", self.instance)
+
+        # cannot use type() here, SimpleLazyObject overrides __class__, but not type()
+        queryset = self.instance.__class__.objects.filter(pk=self.instance.pk)
+        super().__init__(queryset, widget=widget, **kwargs)

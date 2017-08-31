@@ -6030,14 +6030,20 @@ table.display thead, table.display tfoot {
 table.display tbody tr:hover, table.display tbody tr td.highlighted,
 table.display tr:hover td.sorting_1,
 table.display tr:hover td.sorting_2,
-table.display tr:hover td.sorting_3 {
-	background-color: #666;
+table.display tr:hover td.sorting_3,
+table.display tbody tr.odd:hover, table.display tbody tr.odd td.highlighted,
+table.display tr.odd:hover td.sorting_1,
+table.display tr.odd:hover td.sorting_2,
+table.display tr.odd:hover td.sorting_3,
+.table-striped > tbody > tr:hover:nth-child(odd) > td,
+.table-striped > tbody > tr:hover:nth-child(odd) > th{
+	background-color: #666!important;
 }
 
 table.display tr.odd,  tr.odd td.sorting_1 {
-	background-color: #444;
+	background-color: #333!important;
 }
 
 table.display tr.even, tr.even td.sorting_1{
-	background-color: #555;
+	background-color: #555!important;
 }

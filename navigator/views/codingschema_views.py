@@ -26,11 +26,11 @@ from django.views.generic.detail import DetailView
 from django.views.generic.base import RedirectView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 from django.core.urlresolvers import reverse
-from django.forms.widgets import HiddenInput
 from django.http import HttpResponse
 from django import forms
 import itertools
 from amcat.forms import widgets
+from amcat.forms.fields import StaticModelChoiceField
 from amcat.forms.widgets import convert_to_bootstrap_select
 
 from amcat.models import CodingSchema, authorisation, CodingSchemaField, CodingSchemaFieldType, CodingRule, Code, Project
@@ -158,8 +158,7 @@ class CodingSchemaCreateView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumb
 
     def get_form(self, form_class=None):
         form = super(CodingSchemaCreateView, self).get_form(form_class)
-        form.fields["project"].widget = HiddenInput()
-        form.fields["project"].initial = self.project
+        form.fields["project"] = StaticModelChoiceField(self.project)
         form.fields["highlighters"].required = False
         convert_to_bootstrap_select(form)
         return form

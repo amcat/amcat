@@ -24,12 +24,12 @@ from django import forms
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
 from django.db.models import Q
-from django.forms.widgets import HiddenInput
 from django.http import Http404
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import CreateView
 from django.views.generic.list import ListView
 
+from amcat.forms.fields import StaticModelChoiceField
 from amcat.models import Article
 from amcat.models import Project, ArticleSet
 from amcat.models.project import LITTER_PROJECT_ID
@@ -254,15 +254,24 @@ class ArticleSetSampleView(ProjectScriptView):
     script = SampleSet
     url_fragment = 'sample'
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     def get_success_url(self):
         return self.parent._get_breadcrumb_url({'project' : self.project.id, 'articleset' : self.result.id}, self)
 
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields['target_project'] = StaticModelChoiceField(self.project)
+        form.fields['articleset'] = StaticModelChoiceField(self.articleset)
+        return form
+
     def get_form_kwargs(self):
         kwargs = super(ArticleSetSampleView, self).get_form_kwargs()
-        kwargs['project'] = self.project
         return kwargs
+
     def success_message(self, result=None):
-        old = ArticleSet.objects.get(pk=self.kwargs['articleset'])
+        old = self.articleset
         old_name = escape(old.name)
         new_name = escape(self.result.name)
         old_url = reverse('navigator:articleset-details', kwargs=self.kwargs)
@@ -278,8 +287,7 @@ class ArticleSetDeduplicateView(ProjectScriptView):
 
     def get_form(self, form_class=None):
         form = super(ArticleSetDeduplicateView, self).get_form(form_class)
-        form.fields["articleset"].widget = HiddenInput()
-        form.fields["articleset"].initial = self.get_object()
+        form.fields["articleset"] = StaticModelChoiceField(self.get_object())
         return form
 
     def get_form_kwargs(self):
@@ -314,9 +322,11 @@ class ArticleSetCreateView(HierarchicalViewMixin, ProjectViewMixin, CreateView):
         if self.request.method == 'GET':
             if form_class is None:
                 form_class = self.get_form_class()
-            return form_class(initial={'project': self.project})
+            form = form_class(initial={'project': self.project})
         else:
-            return super(ArticleSetCreateView, self).get_form(form_class)
+            form = super(ArticleSetCreateView, self).get_form(form_class)
+        form.fields['project'] = StaticModelChoiceField(instance=self.project)
+        return form
 
     def get_success_url(self):
         return reverse("navigator:articleset-details", args=[self.project.id, self.object.id])

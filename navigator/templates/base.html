@@ -11,6 +11,7 @@
     <link rel="shortcut icon" href="{{ MEDIA_URL  }}img/amcat/favicon.png">
 
     <!-- Bower dependencies -->
+    <link href="{% static 'components/bootstrap-multiselect/dist/css/bootstrap-multiselect.css'%}" rel="stylesheet" type="text/css" />
     <link href="{% static 'components/bootstrap/dist/css/bootstrap.css' %}" rel="stylesheet" type="text/css"  />
     <link href="{% static 'components/datatables/media/css/jquery.dataTables.css' %}" rel="stylesheet" type="text/css"  />
     <link href="{% static 'components/pnotify/pnotify.core.css' %}" rel="stylesheet" type="text/css"  />
@@ -172,6 +173,9 @@
 	  {{ notification|markdown }}
 	</div>
 	{% endif %}
+      {% for message in messages %}
+      <p class="alert alert-{{ message.tags }}">{{ message }}</p>
+      {% endfor %}
 	{% endblock %}
       </div>
 

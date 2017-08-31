@@ -18,10 +18,12 @@
 ###########################################################################
 import json
 
+from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.views.generic.list import ListView
 from django.views.generic.edit import UpdateView
 
+from amcat.forms.fields import StaticModelChoiceField
 from amcat.forms.widgets import BootstrapMultipleSelect
 from amcat.scripts.article_upload.upload_plugins import get_project_plugins, get_upload_plugins
 from navigator.views.datatableview import DatatableMixin
@@ -123,6 +125,8 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         response = super().form_valid(form)
         for name, enabled in form.cleaned_data['upload_plugins'].items():
             self.project.upload_plugins.update_or_create(name=name, defaults={"enabled": enabled})
+
+        messages.success(self.request, 'Project details updated.')
         return response
 
     class form_class(forms.ModelForm):
@@ -175,12 +179,10 @@ class ProjectAddView(BreadCrumbMixin, ScriptView):
         return context
 
     def get_form(self, form_class=None):
-        if self.request.method == 'GET':
-            if form_class is None:
-                form_class = self.get_form_class()
-            return form_class.get_empty(user=self.request.user)
-        else:
-            return super(ProjectAddView, self).get_form(form_class)
+        form = super(ProjectAddView, self).get_form(form_class)
+        for field in ("owner", "insert_user"):
+            form.fields[field] = StaticModelChoiceField(self.request.user)
+        return form
 
     def get_success_url(self):
         log_request_usage(self.request, "project", "create", self.result)

@@ -3,7 +3,6 @@ from amcatclient.amcatclient import AmcatAPI, APIError
 from django import forms
 from django.utils.html import format_html
 
-from amcat.forms.widgets import add_bootstrap_classes as bt
 from amcat.models import Article, ArticleSet, Project
 from amcat.scripts.script import Script
 
@@ -45,10 +44,10 @@ class TokenWidget(forms.TextInput):
 
 
 class RemoteArticleSetImportForm(forms.Form):
-    remote_host = bt(forms.URLField(widget=forms.TextInput(attrs={"type": "url", "placeholder": "http://"})))
-    remote_token = bt(forms.CharField(label="Access token", widget=TokenWidget))
-    remote_project_id = bt(forms.IntegerField())
-    remote_articleset_id = bt(forms.IntegerField())
+    remote_host = forms.URLField(widget=forms.TextInput(attrs={"type": "url", "placeholder": "http://"}))
+    remote_token = forms.CharField(label="Access token", widget=TokenWidget)
+    remote_project_id = forms.IntegerField()
+    remote_articleset_id = forms.IntegerField()
     local_project = forms.ModelChoiceField(queryset=Project.objects.all(), widget=forms.HiddenInput)
 
 

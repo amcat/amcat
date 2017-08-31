@@ -63,7 +63,7 @@
                     {% endfor %}
                 </tbody>
             {% else %}
-            {{ form.as_table }}
+            {% include "form_snippet.html" %}
             {% endif %}
         </table>
         <div class="form-actions">
@@ -82,7 +82,8 @@
             $('.multiselect').multiselect({
                 enableFiltering: true,
                 enableCaseInsensitiveFiltering: true,
-                maxHeight: 400
+                maxHeight: 400,
+                buttonContainer: '<div class="btn-group">'
             })
         })
     </script>

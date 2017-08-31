@@ -25,6 +25,8 @@ Script to get queries for a codebook
 
 import logging
 
+from django.utils.safestring import mark_safe
+
 log = logging.getLogger(__name__)
 
 from django import forms
@@ -38,15 +40,12 @@ PLUGINTYPE_PARSER = 1
 class SampleSet(Script):
     class options_form(forms.Form):
         articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
-        sample = forms.CharField(help_text="Sample in absolute number or percentage")
+        sample = forms.CharField(label="Sample size", help_text="Sample size in absolute number or percentage.")
         target_articleset_name = forms.CharField(help_text="Name for the new articleset")
         target_project = forms.ModelChoiceField(queryset=Project.objects.all())
-        def __init__(self, project=None, **kwargs):
-            super(self.__class__, self).__init__(**kwargs)
 
-            if project:
-                self.fields['target_project'].initial = project
-                self.fields['target_project'].widget = forms.HiddenInput()
+        def __init__(self, **kwargs):
+            super(self.__class__, self).__init__(**kwargs)
 
         def clean_sample(self):
             sample = self.cleaned_data["sample"]

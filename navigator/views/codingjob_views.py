@@ -23,6 +23,7 @@ from django.views.generic.list import ListView
 from django import forms
 from django.core.urlresolvers import reverse
 
+from amcat.forms.fields import StaticModelChoiceField
 from api.rest.viewsets import CodingJobViewSet
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectActionRedirectView, ProjectEditView, ProjectDetailView, ProjectFormView
 from navigator.views.datatableview import DatatableMixin
@@ -137,8 +138,7 @@ class CodingJobAddView(ProjectScriptView):
 
     def get_form(self, form_class=None):
         form = super(CodingJobAddView, self).get_form(form_class)
-        form.fields['insertuser'].initial = self.request.user
-        form.fields["insertuser"].widget = forms.HiddenInput()
+        form.fields['insertuser'] = StaticModelChoiceField(self.request.user)
         convert_to_bootstrap_select(form)
         return form
 
