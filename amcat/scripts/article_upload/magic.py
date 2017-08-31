@@ -13,6 +13,8 @@ MAGIC_MIME_MAPPING = {
     "application/octet-stream": None # binary file, not otherwise specified
 }
 
+MIME_ZIP = "application/zip"
+
 def get_mime(filename: str) -> Tuple[str, str, bool]:
     """
     Guesses the mime-type and encoding of the file using libmagic. Uses magic patterns located in ./magic_patterns,
@@ -25,11 +27,16 @@ def get_mime(filename: str) -> Tuple[str, str, bool]:
         mime_enc = m.id_filename(filename)
     mime, enc = mime_enc.split(";")
     is_zip = False
-    if mime == "application/zip":
+    if mime == MIME_ZIP:
         with magic.Magic(paths=paths, flags=magic.MAGIC_MIME | magic.MAGIC_COMPRESS) as m:
             mime_enc = m.id_filename(filename)
             q = [part1 for part0 in mime_enc.split(" ") for part1 in part0.split(";") if part1]
-            mime, enc, _, _ = q
+            try:
+                mime, enc, _, _ = q
+            except ValueError:
+                # Magic did not return 4 values, so it failed to read the contents of the zip file.
+                # We report it as a non-zipped file of type application/zip.
+                return MIME_ZIP, "binary", False
         is_zip = True
 
     enc = enc.replace("charset=", "").strip()
