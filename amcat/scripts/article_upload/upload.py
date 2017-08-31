@@ -129,14 +129,6 @@ class UploadForm(forms.Form):
             raise forms.ValidationError("Please specify either articleset or articleset_name")
         return name
 
-    @classmethod
-    def get_empty(cls, project=None, post=None, files=None, **_options):
-        f = cls(post, files) if post is not None else cls()
-        if project:
-            f.fields['project'] = StaticModelChoiceField(project)
-            f.fields['articlesets'].queryset = ArticleSet.objects.filter(project=project)
-        return f
-
     def validate(self):
         return self.is_valid()
 

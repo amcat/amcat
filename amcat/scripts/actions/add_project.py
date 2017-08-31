@@ -43,19 +43,6 @@ class AddProjectForm(forms.ModelForm):
                                        initial=PROJECT_ROLE_READER)
     insert_user = forms.ModelChoiceField(queryset=User.objects.all(), required=False)
 
-    @classmethod
-    def get_empty(cls, user=None, **_options):
-        obj = cls()
-        try:
-            for field in ("owner", "insert_user"):
-                obj.fields[field].initial = user.id
-                obj.fields[field].queryset = User.objects.filter(id=user.id)
-                obj.fields[field].widget = forms.HiddenInput()
-        except AttributeError: #no user
-            pass
-
-        return obj
-
     class Meta:
         model = Project
         fields = ['name','description','active']
