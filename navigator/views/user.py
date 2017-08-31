@@ -53,9 +53,9 @@ def view(request, id=None, form=None):
                                               'success': success,
                                               'main_active': main_active})
 
-def edit(request, user):
+def edit(request, id):
     try:
-        user = User.objects.get(id=user)
+        user = User.objects.get(id=id)
     except User.DoesNotExist:
         return HttpResponse('User not found', status=404)
 
