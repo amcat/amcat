@@ -91,7 +91,11 @@ class UploadedFile(AmcatModel):
     @property
     def encoding(self) -> str:
         if not hasattr(self, "_encoding"):
-            content = open(self.file.file.name, mode='rb').read(1000)
+            if self.is_zip:
+                first_entry = next(m for m in self.zipfile.namelist() if not m.endswith("/"))
+                content = self.zipfile.read(first_entry)
+            else:
+                content = open(self.file.file.name, mode='rb').read(1000)
             self._encoding = self._guess_encoding(content)
         return self._encoding
 
