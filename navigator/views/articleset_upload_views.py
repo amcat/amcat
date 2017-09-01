@@ -139,7 +139,7 @@ class ArticleSetUploadForm(upload.UploadForm):
         mime, enc, zip = self.get_mime(upload.file)
         if enc == "binary":
             self.fields['encoding'].choices = (("binary", "-"),)
-            self.fields['encoding'].widget = forms.HiddenInput()
+            self.fields['encoding'].widget.attrs['readonly'] = "readonly"
         self.fields['encoding'].initial = enc
         self.fields['encoding'].help_text = mime
         self.fields['script'].choices = self.get_script_choices(project, mime)
@@ -152,7 +152,7 @@ class ArticleSetUploadForm(upload.UploadForm):
 
     def clean_articleset_name(self):
         if not (self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
-            fn = os.path.basename(self.upload.filename)
+            fn = os.path.basename(self.upload.basename)
             if fn:
                 return fn
         return super().clean_articleset_name()
@@ -171,9 +171,9 @@ class ArticleSetUploadForm(upload.UploadForm):
             suggested = [(name, plugin.label)]
             other = [(k, v.label) for k, v in list(plugins.items())]
             return ("Suggested", suggested), ("Other", other)
-
         suggested = [(k, v.label) for k, v in plugins.items() if v.supports_mime_type(mime)]
-        other = [(k, v.label) for k, v in plugins.items() if not v.supports_mime_type(mime)]
+        suggested_keys = set(k for k, v in suggested)
+        other = [(k, v.label) for k, v in plugins.items() if k not in suggested_keys]
         if not suggested:
             return other
         return ("Suggested", suggested), ("Other", other)
@@ -209,10 +209,9 @@ class ArticleSetUploadView(UploadViewMixin, FormView):
     def form_valid(self, form):
         pass_data = {k: form.data[k] for k in self.pass_fields}
         script = get_upload_plugin(form.cleaned_data['script']).script_cls
-        has_preprocess = hasattr(script, "_preprocess")
         redirect_url = reverse("navigator:articleset-upload-options", args=(self.project.id, self.upload.id))
         redirect_url = "{}?{}".format(redirect_url, urllib.parse.urlencode(pass_data))
-        if not has_preprocess:
+        if not script.has_preprocess():
             return redirect(redirect_url)
         return self._run_preprocess_task(pass_data, redirect_url)
 
@@ -287,7 +286,7 @@ class ArticlesetUploadOptionsView(UploadViewMixin, FormView):
         if "task" in self.request.GET:
             task = Task.objects.get(id=self.request.GET["task"])
             return [ArticleField(**kwargs) for kwargs in task._get_raw_result()]
-        return list(self.script_class.get_fields(self.upload.file.file.name, self.parent_form.cleaned_data['encoding']))
+        return list(self.script_class.get_fields(self.upload))
 
     @property
     @functools.lru_cache()

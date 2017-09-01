@@ -29,12 +29,14 @@ import re
 from collections import OrderedDict
 from functools import lru_cache
 from io import StringIO
-from typing import Tuple, Iterable
+from typing import Iterable, Tuple
 
+import django.core.files.uploadedfile
 from ruamel import yaml
 
+from amcat.models import UploadedFile as model_UploadedFile
 from amcat.models.article import Article
-from amcat.scripts.article_upload.upload import ArticleField, ParseError, UploadScript, _read
+from amcat.scripts.article_upload.upload import ArticleField, ParseError, UploadScript
 from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.tools import toolkit
 from amcat.tools.amcates import get_property_primitive_type
@@ -563,8 +565,8 @@ class LexisNexis(UploadScript):
     """
 
     @classmethod
-    def _preprocess(cls, file, encoding) -> Tuple[any, any]:
-        text = _read(file, encoding)
+    def _preprocess(cls, file: django.core.files.uploadedfile.UploadedFile) -> Tuple[any, any]:
+        text = file.read()
         query, fragments = split_file(text)
         arts = (parse_article(doc) for doc in fragments)
         arts = [art for art in arts if art]
@@ -572,10 +574,10 @@ class LexisNexis(UploadScript):
 
     @classmethod
     @lru_cache()
-    def get_fields(cls, file, encoding):
+    def get_fields(cls, upload: model_UploadedFile):
         fields = collections.OrderedDict()
         remainder_fields = []
-        for (file, encoding, (query, arts)) in cls._get_files(file, encoding):
+        for (file, (query, arts)) in cls._get_files(upload):
             for meta in arts:
                 if meta:
                     for k, v in meta.items():
@@ -593,7 +595,7 @@ class LexisNexis(UploadScript):
                 remainder_fields.append(ArticleField(k, values=values[:5]))
         yield from remainder_fields
 
-    def parse_file(self, file, encoding, data):
+    def parse_file(self, file: model_UploadedFile, data):
         self.ln_query, arts = data
         for data in arts:
             art = {}

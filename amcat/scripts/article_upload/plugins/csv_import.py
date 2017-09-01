@@ -24,16 +24,15 @@ import csv
 import datetime
 import itertools
 import logging
-import os
 from collections import defaultdict
 from operator import itemgetter
-from typing import Optional, Tuple, Type, TypeVar, Callable, Any
+from typing import Any, Callable, Optional, Tuple, Type, TypeVar
 
 import iso8601
 
 from amcat.contrib.oset import OrderedSet
 from amcat.models import Article, get_property_primitive_type
-from amcat.scripts.article_upload.upload import ArticleField, UploadScript, _open
+from amcat.scripts.article_upload.upload import ArticleField, UploadScript
 from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.tools.amcates import ARTICLE_FIELDS
 from amcat.tools.toolkit import read_date
@@ -143,7 +142,7 @@ def guess_destination_and_type(field_name: str, sample_value: Optional[str]) -> 
 
 
 class CsvDictReader(csv.DictReader):
-    extensions = ["csv", "txt"]
+    content_types = ["text/plain", "text/csv"]
     require_binary = False
 
 
@@ -151,7 +150,7 @@ class XlsxDictReader:
     """
     xlsx reader that is iterable and yields dicts.
     """
-    extensions = ["xlsx"]
+    content_types = ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/octet-stream"]
     require_binary = True
 
     def __init__(self, fp):
@@ -167,9 +166,10 @@ class XlsxDictReader:
             data = dict((k, str(v.value) if v.value is not None else "") for k, v in zip(self.fieldnames, row) if k)
             yield data
 
+readers = {content_type: reader for reader in (CsvDictReader, XlsxDictReader) for content_type in reader.content_types}
 
 @UploadPlugin(label="CSV / XLSX", default=True,
-              mime_types=("text/plain", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+              mime_types=tuple(readers.keys()))
 class CSV(UploadScript):
     """
     Upload CSV files to AmCAT.
@@ -196,7 +196,6 @@ class CSV(UploadScript):
     is to upload it to dropbox or a file sharing website and paste the link into the issue.
     """
 
-    readers = {extension: reader for reader in (CsvDictReader, XlsxDictReader) for extension in reader.extensions}
 
     _errors = {
         "empty_col": 'Expected non-empty value in table column "{}" for required field "{}".',
@@ -210,17 +209,17 @@ class CSV(UploadScript):
         return parser(value)
 
     @classmethod
-    def get_reader(cls, file, encoding):
-        _, extension = os.path.splitext(file)
-        reader = cls.readers[extension[1:]]
+    def get_reader(cls, file):
+
+        reader = readers[file.content_type]
         if reader.require_binary:
-            file = open(file, "rb")
+            file = open(file.file.name, "rb")
         else:
-            file = _open(file, encoding)
+            file = file
         return reader(file)
 
-    def parse_file(self, file, encoding, _data):
-        reader = self.get_reader(file, encoding)
+    def parse_file(self, file, _data):
+        reader = self.get_reader(file)
         for unmapped_dict in reader:
             art_dict = self.map_article(unmapped_dict)
             properties = {}
@@ -237,11 +236,11 @@ class CSV(UploadScript):
         return "Error in row {}: {}".format(article, error)
 
     @classmethod
-    def get_fields(cls, file, encoding):
+    def get_fields(cls, upload):
         sample_data = defaultdict(OrderedSet)
 
-        for f, enc, _ in UploadScript._get_files(file, encoding):
-            reader = cls.get_reader(f, encoding)
+        for f, _ in UploadScript._get_files(upload):
+            reader = cls.get_reader(f)
             for row in itertools.islice(reader, 0, 5):
                 for field_name, value in row.items():
                     if value.strip():

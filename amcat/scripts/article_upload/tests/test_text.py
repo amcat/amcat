@@ -18,7 +18,7 @@ def _test(field_map, text="test_text", fn_prefix=None):
         f.flush()
         aset = amcattest.create_test_set().id
         project = amcattest.create_test_project()
-        upload = create_test_upload(f.name, project, project.owner)
+        upload = create_test_upload(f.name, "utf-8", project, project.owner)
         form = dict(project=project.id,
                     upload=upload.id,
                     encoding='utf-8',

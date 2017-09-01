@@ -17,19 +17,20 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import collections
+
 from lxml import html
 
 from amcat.models import Article
-from amcat.scripts.article_upload.upload import UploadScript, ArticleField, _read
+from amcat.scripts.article_upload.upload import ArticleField, UploadScript
 from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.tools.toolkit import read_date
 
 META = ["title", "length", "date", "medium", None, "page"]
 
 
-def split_file(file, encoding):
+def split_file(file):
     # Parses HTML file (bytes) to a more convienient lxml representation
-    document = html.fromstring(_read(file, encoding))
+    document = html.fromstring(file.read())
 
     # Selects all elements with class=article
     return document.cssselect(".article")
@@ -77,18 +78,20 @@ def parse_doc(document):
     paragraphs = [p.text_content() for p in document.cssselect("p")]
     yield "text", ("\n\n".join(paragraphs)).strip()
 
-@UploadPlugin()
+@UploadPlugin(mime_types=("text/html",))
 class Factivia(UploadScript):
     @classmethod
-    def get_fields(cls, file, encoding):
+    def get_fields(cls, upload):
         fields = collections.OrderedDict()
-        for doc in split_file(file, encoding):
-            for k, v in parse_doc(doc):
-                fields[k] = fields.get(k, []) + [v]
-        return [ArticleField(k, k, values) for (k, values) in fields.items()]
+        for file, _ in cls._get_files(upload):
+            for doc in split_file(file):
+                for k, v in parse_doc(doc):
+                    fields[k] = (fields.get(k, []) + [v])[:5]
+        return [ArticleField(k, k, values, suggested_type=("int" if values and type(values[0]) is int else None))
+                for (k, values) in fields.items()]
 
-    def parse_file(self, file, encoding, _data):
-        for doc in split_file(file, encoding):
+    def parse_file(self, file, _data):
+        for doc in split_file(file):
             data = dict(parse_doc(doc))
 
             art = {}

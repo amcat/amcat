@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from os import path
+import os
 from django.core.files.uploadedfile import SimpleUploadedFile
 from amcat.models import ArticleSet
 from amcat.scripts.article_upload.plugins.factivia import Factivia
@@ -10,20 +10,22 @@ from amcat.tools import amcattest
 
 class FactiviaTest(amcattest.AmCATTestCase):
 
-    default_file = path.join(path.dirname(__file__), "test_files/factivia/factivia.htm")
+    default_file = os.path.join(os.path.dirname(__file__), "test_files/factivia/factivia.htm")
 
     def get_file(self, filename):
-        return path.join(path.dirname(__file__), "test_files/factivia", filename)
+        return os.path.join(os.path.dirname(__file__), "test_files/factivia", filename)
 
     def test_get_fields(self):
-        fields = Factivia.get_fields(self.get_file("factivia.htm"), "utf-8")
+        file = self.get_file("factivia.htm")
+        upload = create_test_upload(file, "utf-8")
+        fields = Factivia.get_fields(upload)
         fnames = {f.label for f in fields}
         self.assertIn("date", fnames)
         self.assertIn("title", fnames)
 
     def get_articles(self, filename=default_file):
         project = amcattest.create_test_project()
-        upload = create_test_upload(filename, project, project.owner)
+        upload = create_test_upload(filename, project=project)
         articleset = amcattest.create_test_set().id
         fields = ['date', 'page_int', 'title', 'author', 'text', 'length_int', 'medium']
         field_map = {k: {"type": "field", "value": k.split("_")[0]} for k in fields}

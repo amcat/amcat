@@ -40,7 +40,8 @@ def _mktempcopy(src_dir: str) -> str:
 class TestLexisNexis(amcattest.AmCATTestCase):
     def setUp(self):
         self.dir = _mktempcopy(os.path.join(os.path.dirname(__file__), 'test_files', 'lexisnexis'))
-
+        self.project = amcattest.create_test_project()
+        self.user = self.project.owner
         self.test_file = os.path.join(self.dir, 'test.txt')
         self.test_text = open(self.test_file, encoding="utf-8").read()
         self.test_file2 = os.path.join(self.dir, 'test2.txt')
@@ -80,7 +81,9 @@ class TestLexisNexis(amcattest.AmCATTestCase):
         self.assertEquals(meta, self.test_header_sols)
 
     def test_get_fields(self):
-        fields = list(LexisNexis.get_fields(self.test_file, "utf-8"))
+        test_upload = create_test_upload(file=os.path.join(self.dir, 'test.txt'), user=self.user, project=self.project)
+        test_upload.encoding_override("utf-8")
+        fields = list(LexisNexis.get_fields(test_upload))
         fields = {f.label for f in fields}
         known_fields = {"title", "text", "date", "section"}
         self.assertEqual(known_fields & fields, known_fields)
@@ -147,7 +150,7 @@ class TestLexisNexis(amcattest.AmCATTestCase):
                     encoding="utf-8",
                     field_map=json.dumps(field_map),
                     articleset_name="test set lexisnexis")
-        upload = create_test_upload(file, project, project.owner)
+        upload = create_test_upload(file, project=project)
         aset = LexisNexis(upload=upload.id, **form).run()
         return aset
 

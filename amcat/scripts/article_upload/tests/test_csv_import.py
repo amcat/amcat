@@ -124,7 +124,7 @@ def _run_test_csv(header, rows, field_map, **options):
         for row in [header] + list(rows):
             w.writerow([field and field for field in row])
         f.flush()
-        u = create_test_upload(f.name, project, project.owner)
+        u = create_test_upload(f.name, project=project)
         form = UploadForm(
             data={
                 "project": project.id,
@@ -142,8 +142,6 @@ def _run_test_csv(header, rows, field_map, **options):
 
 
 def _run_test_xlsx(header, rows, field_map, **options):
-    project = amcattest.create_test_project()
-
     from tempfile import NamedTemporaryFile
     from openpyxl import Workbook
     with NamedTemporaryFile(suffix=".xlsx", mode="wb", delete=False) as f:
@@ -154,10 +152,10 @@ def _run_test_xlsx(header, rows, field_map, **options):
             ws.append([field for field in row])
         wb.save(f.name)
         f.flush()
-        u = create_test_upload(f.name, project, project.owner)
+        u = create_test_upload(f.name)
         form = UploadForm(
             data={
-                "project": project.id,
+                "project": u.project.id,
                 "field_map": json.dumps(field_map),
                 "encoding": "utf-8",
                 "upload": u.id,

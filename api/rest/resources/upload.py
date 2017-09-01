@@ -12,7 +12,7 @@ class UploadSerializer(AmCATModelSerializer):
     filename = serializers.SerializerMethodField("_filename")
 
     def _filename(self, upload):
-        return upload.filename
+        return upload.basename
 
     def _expires_in(self, upload):
         time, unit = (upload.expires_at - datetime.datetime.now()).total_seconds() // 3600, "hour(s)"

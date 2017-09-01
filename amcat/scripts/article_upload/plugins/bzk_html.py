@@ -28,7 +28,7 @@ from collections import defaultdict
 from lxml import html
 
 from amcat.models.article import Article
-from amcat.scripts.article_upload.upload import UploadScript, ParseError, ArticleField, _read
+from amcat.scripts.article_upload.upload import ArticleField, ParseError, UploadScript
 from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.tools.toolkit import read_date
 
@@ -39,19 +39,18 @@ from .bzk_aliases import BZK_ALIASES as MEDIUM_ALIASES
 class BZK(UploadScript):
 
     @classmethod
-    def get_fields(cls, file, encoding):
-        for file, encoding, huh in cls._get_files(file, encoding):
+    def get_fields(cls, upload):
+        for file, _ in cls._get_files(upload):
             values = defaultdict(list)
-            for art_dict in cls._scrape_unit(_read(file, encoding)):
+            for art_dict in cls._scrape_unit(file.read()):
                 for k, v in art_dict.items():
                     values[k].append(v)
             for k, v in values.items():
                 yield ArticleField(k, k, v[:5])
         
-    def parse_file(self, file, encoding, _data):
-        for file, encoding, huh in self._get_files(file, encoding):
-            for art_dict in self._scrape_unit(_read(file, encoding)):
-                yield Article.fromdict(self.map_article(art_dict))
+    def parse_file(self, file, _):
+        for art_dict in self._scrape_unit(file.read()):
+            yield Article.fromdict(self.map_article(art_dict))
 
     @classmethod
     def _scrape_unit(cls, _file):

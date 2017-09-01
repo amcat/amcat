@@ -22,12 +22,18 @@ def temporary_zipfile(files):
         os.remove(zipfn)
 
 
-def create_test_upload(file, project, user):
+def create_test_upload(file, encoding=None, project=None, user=None):
+    if project is None:
+        project = amcattest.create_test_project()
+    if user is None:
+        user = project.owner
+
     if type(file) in (str, bytes):
         file = open(file, mode='rb')
     file = SimpleUploadedFile(os.path.basename(file.name), file.read())
-    upload = UploadedFile(file=file, filename=file.name, user=user, project=project)
+    upload = UploadedFile(file=file, user=user, project=project)
     upload.save()
+    upload.encoding_override(encoding)
     return upload
 
 class TestUpload(amcattest.AmCATTestCase):

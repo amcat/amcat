@@ -1,13 +1,12 @@
 import csv
 import datetime
-import json
 import os
-from io import BytesIO
-
 from collections import OrderedDict
 
+from django.core.files.uploadedfile import UploadedFile
+
 from amcat.models import Article
-from amcat.scripts.article_upload.upload import UploadScript, _open, ArticleField
+from amcat.scripts.article_upload.upload import ArticleField, UploadScript
 from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 
 # At least this many fields have to match in order to detect it as that language. Set to 3,
@@ -110,7 +109,7 @@ class CoostoForm(UploadScript.form_class):
     pass
 
 
-@UploadPlugin(label="Coosto")
+@UploadPlugin(label="Coosto", mime_types=("text/plain", "text/csv"))
 class CoostoUpload(UploadScript):
     """
     Upload Coosto files to AmCAT.    
@@ -119,11 +118,11 @@ class CoostoUpload(UploadScript):
     languages = (Lang_EN, Lang_NL)
 
     @classmethod
-    def get_fields(cls, file: str, encoding: str):
+    def get_fields(cls, upload):
         fields = OrderedDict()
         fieldMap = Language.reverseMap(cls.languages)
-        for file, encoding, _ in cls._get_files(file, encoding):
-            reader = csv.DictReader(_open(file, encoding), delimiter=";")
+        for file, _ in cls._get_files(upload):
+            reader = csv.DictReader(file, delimiter=";")
             rows = [row for row in reader]
             fields.update((k, (fieldMap[k], [row[k] for row in rows])) for k in reader.fieldnames)
 
@@ -131,9 +130,9 @@ class CoostoUpload(UploadScript):
             dest_name = ESFIELDS[destination]
             yield ArticleField(source, suggested_destination=dest_name, values=values)
 
-    def parse_file(self, file: str, encoding: str, _: None):
+    def parse_file(self, file: UploadedFile, _: None):
         self.queries = set()
-        rows = csv.DictReader(_open(file, encoding), delimiter=";")
+        rows = csv.DictReader(file, delimiter=";")
         self.lang = self._get_language(rows)
 
         yield from (self._scrape_unit(row) for row in rows)

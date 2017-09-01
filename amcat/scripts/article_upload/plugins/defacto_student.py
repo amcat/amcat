@@ -23,21 +23,22 @@ Plugin for uploading De Facto files (student edition) in HTML format
 To use this plugin, choose to  'print' the articles and save the source
 of the popup window as HTML.
 """
-import io
 import re
 from typing import TextIO
 
+from django.core.files.uploadedfile import UploadedFile
 from lxml import etree
 
-from amcat.scripts.article_upload.upload import UploadScript, ArticleField, _read, _open
-from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.models.article import Article
+from amcat.scripts.article_upload.upload import ArticleField, UploadScript
+from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.tools import toolkit
 
-@UploadPlugin(name="DeFacto Student", default=True)
+
+@UploadPlugin(name="DeFacto Student", mime_types=("text/html",))
 class DeFactoStudent(UploadScript):
     @classmethod
-    def get_fields(cls, file: str, encoding: str):
+    def get_fields(cls, *args):
         #todo: add values
         yield ArticleField("title", "title")
         yield ArticleField("date", "date")
@@ -46,12 +47,11 @@ class DeFactoStudent(UploadScript):
         yield ArticleField("medium", "medium")
         yield ArticleField("section", "section")
 
-    def parse_file(self, file: str, encoding: str, _data):
-        for file, encoding, _ in self._get_files(file, encoding):
-            for item in self.split_file(_open(file, encoding)):
-                for art_dict in self._scrape_unit(item):
-                    mapped_dict = {k: v for k, v in self.map_article(art_dict).items() if v is not None}
-                    yield Article(**mapped_dict)
+    def parse_file(self, file: UploadedFile, _data):
+        for item in self.split_file(file):
+            for art_dict in self._scrape_unit(item):
+                mapped_dict = {k: v for k, v in self.map_article(art_dict).items() if v is not None}
+                yield Article(**mapped_dict)
 
     def split_file(self, f):
         html = get_html(f)

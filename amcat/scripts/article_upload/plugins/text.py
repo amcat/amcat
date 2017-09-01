@@ -26,21 +26,32 @@ import logging
 import os.path
 import subprocess
 import tempfile
-from io import StringIO
+from io import BytesIO
 
 from PyPDF2 import PdfFileReader
 from django import forms
+from django.core.files.uploadedfile import UploadedFile
 
 from amcat.models.article import Article
-from amcat.scripts.article_upload.upload import UploadScript, UploadForm, ArticleField, _read
+from amcat.scripts.article_upload.upload import ArticleField, UploadForm, UploadScript
 from amcat.scripts.article_upload.upload_plugins import UploadPlugin
-from amcat.tools import toolkit
 
 log = logging.getLogger(__name__)
 
 
+
+def _external_converter_factory(popen_args):
+    def converter(file):
+        p = subprocess.Popen(popen_args, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        text, err = p.communicate(file.read())
+        if not text.strip():
+            raise Exception("No text from docx2txt. Error: {err}".format(**locals()))
+        return text.decode("utf-8")
+    return converter
+
 def _convert_docx(file):
-    text, err = toolkit.execute("docx2txt", file.bytes)
+    p = subprocess.Popen(["docx2txt"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    text, err = p.communicate(file.bytes)
     if not text.strip():
         raise Exception("No text from docx2txt. Error: {err}".format(**locals()))
     return text.decode("utf-8")
@@ -55,18 +66,25 @@ def _convert_doc(file):
         raise Exception("No text from {antiword?}")
     return text.decode("utf-8")
 
+def _convert_text(file):
+    return file.read()
 
 def _convert_pdf(file):
-    _file = StringIO()
-    _file.write(file.bytes)
+    _file = BytesIO()
+    _file.write(file.read())
     pdf = PdfFileReader(_file)
     text = ""
     n = pdf.getNumPages()
-    for i in range(0,n):
+    for i in range(0, n):
         page = pdf.getPage(i)
         text += page.extractText()
     return text
 
+def _convert(file):
+    try:
+        return converters[file.content_type](file)
+    except KeyError:
+        return _convert_text(file)
 
 def _convert_multiple(file, convertors):
     errors = []
@@ -74,7 +92,15 @@ def _convert_multiple(file, convertors):
         return convertor(file)
     raise Exception("\n".join(errors))
 
-@UploadPlugin(label="Plain Text", default=True)
+converters = {
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": _external_converter_factory(["docx2txt"]),
+    "application/msword": _external_converter_factory(["antiword", "-"]),
+    "text/plain": _convert_text,
+    "application/pdf": _convert_pdf
+}
+
+@UploadPlugin(label="Plain Text", default=True,
+              mime_types=tuple(converters.keys()))
 class Text(UploadScript):
     """
     Plain text uploader.
@@ -92,27 +118,43 @@ class Text(UploadScript):
 
     class form_class(UploadForm):
         date = forms.DateField(required=False)
-         
+
     @classmethod
-    def get_fields(cls, file: str, encoding: str):
-        path, fn = os.path.split(file)
-        fn, ext = os.path.splitext(fn)
-        yield ArticleField("Filename", "title", values=[fn])
-        # FIXME encoding, and probably don't read the whole file?
-        yield ArticleField("Text", "text", values=[_read(file, encoding=encoding, n=100)])
-        if path:
-            yield ArticleField("Path", "section", values=[path])
-        if "_" in fn:
-            for i, elem in enumerate(fn.split("_")):
-                yield ArticleField("Filename part {i}".format(**locals()), values=[elem])
+    def _preprocess(cls, file: UploadedFile):
+        return {
+            "filename": file.name,
+            "text": _convert(file)
+        }
+
+    @classmethod
+    def get_fields(cls, upload):
+        def iter_fields(file):
+            path, fn = os.path.split(file.name)
+            fn, ext = os.path.splitext(fn)
+            yield ArticleField("Filename", "title", values=[fn])
+            # FIXME encoding, and probably don't read the whole file?
+            yield ArticleField("Text", "text", values=[data['text']])
+            if path:
+                yield ArticleField("Path", "section", values=[path])
+            if "_" in fn:
+                for i, elem in enumerate(fn.split("_"), start=1):
+                    yield ArticleField("Filename part {i}".format(**locals()), values=[elem])
+        fields = {}
+        for _, (file, data) in zip(range(5), cls._get_files(upload)):
+            for field in iter_fields(file):
+                if field.label not in fields:
+                    fields[field.label] = field
+                    continue
+                fields[field.label].values += field.values
+        return fields.values()
 
     def get_headline_from_file(self):
         hl = self.options['file'].name
         if hl.endswith(".txt"): hl = hl[:-len(".txt")]
         return hl
 
-    def parse_file(self, file, encoding, _data):
-        path, filename = os.path.split(file)
+    def parse_file(self, file: UploadedFile, data):
+        path, filename = os.path.split(file.name)
         filename, ext = os.path.splitext(filename)
 
         def parse_field(file, type, value):
@@ -121,12 +163,12 @@ class Text(UploadScript):
             if value == 'Filename':
                 return filename
             if value == 'Text':
-                return _read(file, encoding)
+                return data['text']
             if value == 'Path':
                 return path
             if value.startswith('Filename part '):
                 n = int(value.replace("Filename part ", ""))
-                return filename.split("_")[n-1]  # filename-n is 1 based index
+                return filename.split("_")[n - 1]  # filename-n is 1 based index
             raise ValueError("Can't parse field {value}".format(**locals()))
 
         fields = {field: parse_field(file, **setting) for (field, setting) in self.options['field_map'].items()}
@@ -142,4 +184,3 @@ if __name__ == '__main__':
     from amcat.scripts.tools.cli import run_cli
 
     run_cli(handle_output=False)
-

@@ -20,11 +20,12 @@ class TestBZK(amcattest.AmCATTestCase):
         import os.path
         self.project = amcattest.create_test_project()
         self.dir = os.path.join(os.path.dirname(__file__), 'test_files', 'bzk')
-        self.file_scrape1 = _rmcache(os.path.join(self.dir, 'test.html'))
-        self.file_scrape2 = _rmcache(os.path.join(self.dir, 'test_scrape2.html'))
+        self.file_scrape1 = os.path.join(self.dir, 'test.html')
+        self.file_scrape2 = os.path.join(self.dir, 'test_scrape2.html')
 
     def test_get_fields(self):
-        fields = set(f.label for f in BZK.get_fields(self.file_scrape1, encoding="utf-8"))
+        upload = create_test_upload(self.file_scrape1, project=self.project)
+        fields = set(f.label for f in BZK.get_fields(upload))
         self.assertIn("title", fields)
         self.assertIn("date", fields)
         self.assertIn("text", fields)
@@ -42,7 +43,7 @@ class TestBZK(amcattest.AmCATTestCase):
         @param expected_articles    A sequence of {field: value} dicts, each with at least a 'title' field.
         """
         field_map = self._create_id_field_map("title", "text", "medium", "date")
-        upload = create_test_upload(file, self.project, self.project.owner)
+        upload = create_test_upload(file, "utf-8", project=self.project)
         script = BZK(field_map=field_map, upload=upload.id, project=self.project.id, encoding="utf-8")
         result_set = script.run()
         self.assertIsInstance(result_set, ArticleSet)

@@ -1,15 +1,21 @@
+import codecs
 import datetime
+import functools
 import os
 import shutil
 import tempfile
+import zipfile
 from logging import getLogger
+from typing import Iterable
 
 import chardet
 from django.contrib.auth.models import User
+import django.core.files.uploadedfile
 from django.core.files.storage import FileSystemStorage
 from django.db import models
 from django.db.models import QuerySet
 
+from amcat.scripts.article_upload import magic
 from amcat.tools.model import AmcatModel
 
 log = getLogger(__name__)
@@ -46,24 +52,12 @@ class UploadedFile(AmcatModel):
             log.warning("Failed to delete file {self.file.name} from upload {self}. Reason: {e}".format(**locals()))
         return super().delete(*args, **kwargs)
 
-    def open_file(self, encoding):
-        """Open the file in str (unicode) mode, guessing encoding if needed"""
-        binary_content = open(self.file.file.name, mode='rb').read(1000)
-        encoding = self._get_encoding(encoding, binary_content)
-        return open(self.file.file.name, encoding=encoding)
-
-    def read_file(self, encoding, n=None):
-        """Read the file, guessing encoding if needed"""
-        binary_content = open(self.file.file.name, mode='rb').read(n)
-        encoding = self._get_encoding(encoding, binary_content)
-        return binary_content.decode(encoding)
-
     @property
     def filepath(self) -> str:
         return self.file.file.name
 
     @property
-    def filename(self) -> str:
+    def basename(self) -> str:
         return os.path.basename(self.file.name)
 
     @property
@@ -74,6 +68,87 @@ class UploadedFile(AmcatModel):
     def expires_at(self) -> datetime:
         """The expiry datetime of this upload"""
         return self.created_at + EXPIRY_TIME
+
+    @property
+    @functools.lru_cache()
+    def file_info(self) -> str:
+        return magic.get_mime(self.filepath)
+
+    @property
+    def mime_type(self) -> str:
+        return self.file_info[0]
+
+    @property
+    def is_zip(self) -> str:
+        return self.file_info[2]
+
+    @functools.lru_cache()
+    def count(self):
+        if self.is_zip:
+            return len([m for m in self.zipfile.namelist() if not m.endswith("/")])
+        return 1
+
+    @property
+    def encoding(self) -> str:
+        if not hasattr(self, "_encoding"):
+            content = open(self.file.file.name, mode='rb').read(1000)
+            self._encoding = self._guess_encoding(content)
+        return self._encoding
+
+    @property
+    @functools.lru_cache()
+    def zipfile(self):
+        if not self.is_zip:
+            raise AttributeError
+        return zipfile.ZipFile(self.filepath)
+
+
+    def get_files(self) -> Iterable[django.core.files.uploadedfile.UploadedFile]:
+        if self.is_zip:
+            yield from self._unpack()
+            return
+
+        yield self._open(self.filepath, self.basename)
+
+    def encoding_override(self, encoding: str):
+        """
+        Override the encoding with a fixed value.
+        @param encoding:
+        @return:
+        """
+        if not encoding or encoding.lower() in ("autodetect", "binary"):
+            return
+        try:
+            codecs.lookup(encoding)
+        except LookupError:
+            raise LookupError("The given codec ({}) does not exist".format(encoding))
+        self._encoding = encoding
+
+    def _unpack(self) -> Iterable[django.core.files.uploadedfile.UploadedFile]:
+        path = "{}/{}".format(os.path.dirname(self.filepath), os.path.splitext(self.basename)[0])
+        os.makedirs(path, exist_ok=True)
+        for member in self.zipfile.namelist():
+            if member.endswith("/"):
+                continue
+            fn = os.path.join(path, member)
+            if not os.path.isfile(fn):
+                self.zipfile.extract(member, os.path.dirname(fn))
+            yield self._open(fn, member)
+
+    def _open(self, path: str, name: str) -> django.core.files.uploadedfile.UploadedFile:
+        if self.encoding == "binary":
+            return django.core.files.uploadedfile.UploadedFile(open(path, mode="rb"), name=name,
+                                                               content_type=self.mime_type)
+        else:
+            return django.core.files.uploadedfile.UploadedFile(open(path, encoding=self.encoding), name=name,
+                                                               content_type=self.mime_type, charset=self.encoding)
+
+
+    def __iter__(self) -> Iterable[django.core.files.uploadedfile.UploadedFile]:
+        return self.get_files()
+
+    def __len__(self) -> int:
+        return self.count()
 
     @classmethod
     def get_all_active(cls) -> QuerySet:
@@ -104,12 +179,12 @@ class UploadedFile(AmcatModel):
         return expired
 
     @staticmethod
-    def _get_encoding(encoding, binary_content):
-        if encoding.lower() == "autodetect":
-            encoding = chardet.detect(binary_content)["encoding"]
-            if encoding == "ascii":
-                encoding = "utf-8"
-            log.info("Guessed encoding: {encoding}".format(**locals()))
+    def _guess_encoding(binary_content):
+        encoding = chardet.detect(binary_content)["encoding"]
+        if encoding is None:
+            encoding = "binary"
+        elif encoding == "ascii":
+            encoding = "utf-8"
         return encoding
 
     class Meta:

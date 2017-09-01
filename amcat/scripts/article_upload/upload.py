@@ -25,20 +25,18 @@ import json
 import logging
 import os.path
 import zipfile
-from typing import Any, Iterable, Sequence, Tuple
+from typing import Any, Iterable, Sequence, Tuple, Mapping
 
 import chardet
 from actionform import ActionForm
 from django import forms
 from django.contrib.postgres.forms import JSONField
+from django.core.files.uploadedfile import UploadedFile
 from django.core.files.utils import FileProxyMixin
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db.models import Q
-from django.forms.widgets import HiddenInput
 
-from amcat.forms.fields import StaticModelChoiceField
 from amcat.forms.widgets import BootstrapSelect
-from amcat.models import Article, ArticleSet, Project, UploadedFile, upload_storage
+from amcat.models import Article, ArticleSet, Project, UploadedFile as model_UploadedFile
 from amcat.models.articleset import create_new_articleset
 from amcat.tools import amcates
 from amcat.tools.progress import NullMonitor
@@ -96,7 +94,7 @@ class ParseError(Exception):
 
 
 class UploadForm(forms.Form):
-    upload = forms.ModelChoiceField(queryset=UploadedFile.objects.all())
+    upload = forms.ModelChoiceField(queryset=model_UploadedFile.objects.all())
     project = forms.ModelChoiceField(queryset=Project.objects.all())
 
     articleset = forms.ModelChoiceField(
@@ -114,6 +112,10 @@ class UploadForm(forms.Form):
     field_map = JSONField(validators=[validate_field_map],
                           help_text='json dict with property names (title, date, etc.) as keys, and field settings as values. '
                                     'Field settings should have the form {"type": "field"/"literal", "value": "field_name_or_literal"}')
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'encoding' in kwargs.get('data', {}) and kwargs['data']['encoding'] == "binary":
+            self.fields['encoding'].choices.append(("binary", "-"))
 
     def clean_articleset_name(self):
         """If articleset name not specified, use file base name instead"""
@@ -121,9 +123,9 @@ class UploadForm(forms.Form):
             # skip check if error in articlesets: cleaned_data['articlesets'] does not exist
             return
         if not (self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
-            fn = self.cleaned_data.get('upload').filename
+            fn = self.cleaned_data.get('upload')
             if fn:
-                return os.path.basename(fn)
+                return fn.basename
         name = self.cleaned_data['articleset_name']
         if not bool(name) ^ bool(self.cleaned_data['articleset']):
             raise forms.ValidationError("Please specify either articleset or articleset_name")
@@ -149,10 +151,10 @@ def _open(file, encoding):
     return open(file, encoding=encoding)
 
 
-def _read(file, encoding, n=None):
+def _read(file: UploadedFile, n=None):
     """Read the file, guessing encoding if needed"""
-    binary_content = open(file, mode='rb').read(n)
-    encoding = _get_encoding(encoding, binary_content)
+    binary_content = file.read(n)
+    encoding = _get_encoding(file.encoding, binary_content)
     return binary_content.decode(encoding)
 
 
@@ -167,44 +169,58 @@ class UploadScript(ActionForm):
     form_class = UploadForm
 
     @classmethod
-    def get_fields(cls, file: str, encoding: str) -> Sequence[ArticleField]:
+    def get_fields(cls, upload: model_UploadedFile) -> Sequence[ArticleField]:
         """
         Return a sequence of ArticleField objects listing the fields in the uploaded file(s)
         """
         return []
 
-    def parse_file(self, file: str, encoding: str, _data) -> Iterable[Article]:
+    def parse_file(self, file: UploadedFile, _data: Iterable[Any]) -> Iterable[Article]:
         """
         Parse the file into an iterable of Article objects.
-        @param file: The full file path
-        @param encoding: The encoding of the file
+        @param file: The file object
         @param _data: Preprocessed data
         @return: An iterable of Article objects.
         """
         raise NotImplementedError()
 
     @classmethod
-    def _get_preprocessed(cls, file: str, encoding: str) -> Tuple[str, str, Any]:
+    def _preprocess(cls, file: UploadedFile) -> Any:
         """
-        Get and cache _preprocess(file, encoding)
+        Parse the file into an iterable of preprocessed objects.
+        Only called if overridden.
+
+        @param file:
+        @return:
+        """
+        raise NotImplementedError()
+
+    @classmethod
+    def _get_preprocessed(cls, file: UploadedFile) -> Tuple[UploadedFile, Any]:
+        """
+        Get and cache _preprocess(file)
         If preprocessing is desired, _preprocess should return a json-serializable object
         @param file: The full filename
         @param encoding: The encoding of the file
-        @return: A tuple (file, encoding, preprocess_data)
+        @return: A tuple (file, preprocess_data)
         """
-        if not hasattr(cls, "_preprocess"):
-            return file, encoding, None
-        cachefn = file + "__upload_cache_{}.json".format(cls.__name__)
+        if not cls.has_preprocess():
+            return file, None
+        cachefn = file.file.name + "__upload_cache_{}.json".format(cls.__name__)
         log.debug("Cache file {cachefn} exists? {}".format(os.path.exists(cachefn), **locals()))
         if os.path.exists(cachefn):
             data = json.load(open(cachefn))
         else:
-            data = cls._preprocess(file, encoding)
+            data = cls._preprocess(file)
             json.dump(data, open(cachefn, "w"), cls=DjangoJSONEncoder, indent=2)
-        return file, encoding, data
+        return file, data
 
     @classmethod
-    def _get_files(cls, file: str, encoding: str, monitor=NullMonitor()) -> Iterable[Tuple[str, str, Any]]:
+    def has_preprocess(cls):
+        return cls._preprocess.__func__ is not UploadScript._preprocess.__func__
+
+    @classmethod
+    def _get_files(cls, upload: model_UploadedFile, monitor=NullMonitor()) -> Iterable[Tuple[UploadedFile, Any]]:
         """
         Get the files to upload, unpacking zip files if needed, and returning preprocessed data if applicable
         @param file: Full file path
@@ -212,23 +228,12 @@ class UploadScript(ActionForm):
         @param monitor: A monitor with progress=0, total=100
         @return: An iterable of (file, encoding, preprocessed_data_or_None)
         """
-        if file.endswith(".zip"):
-            path = "{}/{}".format(os.path.dirname(file), os.path.splitext(os.path.basename(file))[0])
-            os.makedirs(path, exist_ok=True)
-            zf = zipfile.ZipFile(file)
-            monitor.update(0, "Unpacking and preprocessing files.")
-            zipmonitor = monitor.submonitor(len(zf.namelist()), weight=100)
-            for member in zf.namelist():
-                if member.endswith('/'):
-                    continue
-                fn = os.path.join(path, member)
-                zipmonitor.update()
-                if not os.path.exists(fn):
-                    zf.extract(member, path=path)
-                yield cls._get_preprocessed(fn, encoding)
-        else:
-            monitor.update(100, "Preprocessing file")
-            yield cls._get_preprocessed(file, encoding)
+        monitor = monitor.submonitor(len(upload), weight=100)
+        monitor.update(0, "Unpacking and preprocessing file(s).")
+        for file in upload:
+            monitor.update()
+            yield cls._get_preprocessed(file)
+
 
     def __init__(self, form=None, file=None, **kargs):
         if form is None:
@@ -236,7 +241,7 @@ class UploadScript(ActionForm):
         super().__init__(form)
         self.progress_monitor = NullMonitor()
         self.options = self.form.cleaned_data
-        self.project = self.form.cleaned_data['project']
+        self.project = self.options['project']
         self.errors = []
 
     def get_or_create_articleset(self):
@@ -262,22 +267,23 @@ class UploadScript(ActionForm):
                 "using {self.__class__.__name__}".format(**locals()))
 
     def run(self):
+        upload = self.options['upload']
+        upload.encoding_override(self.options['encoding'])
+
         monitor = self.progress_monitor
 
-        root_dir = os.path.dirname(self.options['upload'].filepath)
-        filename = self.options['upload'].filename
-        file_shortname = os.path.basename(filename)
-        monitor.update(10, u"Importing {self.__class__.__name__} from {file_shortname} into {self.project}"
+        root_dir = os.path.dirname(upload.filepath)
+
+        monitor.update(10, u"Importing {self.__class__.__name__} from {upload.basename} into {self.project}"
                        .format(**locals()))
 
         articles = []
-        encoding = self.options['encoding']
-        files = list(self._get_files(self.options['upload'].filepath, encoding))
-        nfiles = len(files)
-        for i, (file, encoding, data) in enumerate(files):
-            rel_name = file.replace(root_dir, ".")
-            monitor.update(20 / nfiles, "Parsing file {i}/{nfiles}: {rel_name}".format(**locals()))
-            articles += list(self.parse_file(file, encoding, data))
+        files = self._get_files(upload)
+        nfiles = len(upload)
+        filemonitor = monitor.submonitor(nfiles, weight=60)
+        for i, (file, data) in enumerate(files):
+            filemonitor.update(1, "Parsing file {i}/{nfiles}: {file.name}".format(**locals()))
+            articles += list(self.parse_file(file, data))
 
         for article in articles:
             _set_project(article, self.project)
@@ -293,8 +299,8 @@ class UploadScript(ActionForm):
 
         monitor.update(10, "Uploaded {n} articles, post-processing".format(n=len(articles)))
 
-        aset = self.options["articleset"]
-        new_provenance = self.get_provenance(file_shortname, articles)
+        aset = self.options['articleset']
+        new_provenance = self.get_provenance(upload.basename, articles)
         aset.provenance = ("%s\n%s" % (aset.provenance or "", new_provenance)).strip()
         aset.save()
 
@@ -318,7 +324,7 @@ class UploadScript(ActionForm):
 
 
 class PreprocessForm(UploadForm):
-    upload = forms.ModelChoiceField(UploadedFile.objects.all())
+    upload = forms.ModelChoiceField(model_UploadedFile.objects.all())
     script = forms.ChoiceField(choices=())
     field_map = None
 
@@ -345,18 +351,18 @@ class PreprocessScript(ActionForm):
         plugin_name = self.form.cleaned_data['script']
         plugin = get_upload_plugin(plugin_name)
         upload = self.form.cleaned_data['upload']
-        encoding = self.form.cleaned_data['encoding']
-        if hasattr(plugin.script_cls, "_preprocess"):
-            filesmonitor = self.progress_monitor.submonitor(100, weight=49)
-            for _ in plugin.script_cls._get_files(upload.filepath, encoding, monitor=filesmonitor):
+        upload.encoding_override(self.form.cleaned_data['encoding'])
+        if plugin.script_cls.has_preprocess():
+            filesmonitor = self.progress_monitor.submonitor(100, weight=80)
+            for _ in plugin.script_cls._get_files(upload, monitor=filesmonitor):
                 pass
         else:
-            self.progress_monitor.update(49)
+            self.progress_monitor.update(80)
         self.progress_monitor.update(0, "Collecting fields")
         fields = [self._articlefield_as_kwargs(field) for field in
-                  plugin.script_cls.get_fields(upload.filepath, encoding)]
+                  plugin.script_cls.get_fields(upload)]
 
-        self.progress_monitor.update(1, "Done")
+        self.progress_monitor.update(20, "Done")
         return fields
 
 def _set_project(art, project):

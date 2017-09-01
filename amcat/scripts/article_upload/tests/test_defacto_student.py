@@ -58,7 +58,7 @@ class TestDeFactoStudent(amcattest.AmCATTestCase):
                              for field in DeFactoStudent.get_fields(f, "autodetect")}
             project = create_test_project()
             aset = DeFactoStudent(
-                upload=create_test_upload(f, project, project.owner).id,
+                upload=create_test_upload(f, project=project).id,
                 project=project.id,
                 encoding="autodetect",
                 field_map=json.dumps(field_mapping)
