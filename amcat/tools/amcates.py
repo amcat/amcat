@@ -542,13 +542,18 @@ class _ES(object):
                 monitor.update()
             return
 
-        batches = list(splitlist(article_ids, itemsperbatch=1000))
+        batches = [set(batch) for batch in splitlist(article_ids, itemsperbatch=1000)]
         monitor = monitor.submonitor(total=len(batches))
 
         nbatches = len(batches)
         for i, batch in enumerate(batches):
             monitor.update(message="Adding batch {iplus}/{nbatches}..".format(iplus=i + 1, nbatches=nbatches))
-            self.bulk_update(batch, UPDATE_SCRIPT_ADD_TO_SET, params={'set': setid})
+            missing = batch - set(self.in_index(batch))
+            if missing:
+                logging.warning("Adding {} missing articles to elastic".format(len(missing)))
+                self.add_articles(missing)
+            if batch - missing:
+                self.bulk_update(batch - missing, UPDATE_SCRIPT_ADD_TO_SET, params={'set': setid})
 
     def get_tokens(self, aid: int, fields=["text", "title"]):
         """
