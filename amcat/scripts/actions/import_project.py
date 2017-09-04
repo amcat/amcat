@@ -34,9 +34,9 @@ class ImportProject(Script):
         self.project = project if project else Project.objects.create(name=file.file.name, owner_id=1)
         logging.info("Importing {file.file.name} into project {self.project.id}:{self.project.name}"
                      .format(**locals()))
-        #self.import_articlesets()
-        #self.import_articles()
-        #self.import_articlesets_articles()
+        self.import_articlesets()
+        self.import_articles()
+        self.import_articlesets_articles()
         self.import_codes()
 
         self.codebooks = self.import_codebooks()
