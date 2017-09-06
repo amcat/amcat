@@ -166,7 +166,7 @@ def get_upload_plugin(name: str) -> UploadPlugin:
 def add_project_plugins(sender, instance, created, *args, **kwargs):
     if not created:
         return
-    plugins = [ProjectUploadPlugin(enabled=plugin.default, name=name, presets="{}", project=instance)
+    plugins = [ProjectUploadPlugin(enabled=plugin.default, name=name, presets={}, project=instance)
                for name, plugin in get_upload_plugins().items()]
     ProjectUploadPlugin.objects.bulk_create(plugins)
 

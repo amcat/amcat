@@ -1,7 +1,8 @@
-import time
+import functools
 import os
+import time
+from collections import OrderedDict
 
-from celery.exceptions import TimeoutError
 from git import InvalidGitRepositoryError, Repo
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK
@@ -10,28 +11,47 @@ from rest_framework.views import APIView
 import amcat
 from amcat.amcatcelery import status
 from amcat.tools.amcates import ES
-
+from settings import amcat_config
 
 class StatusView(APIView):
     def get(self, request):
-        data = {"amcat": status(),
-                'elastic': ES().status(),
-                'git': git_status()}
-        try:
-            data['celery_worker'] = status.delay().wait(timeout=3)
-        except TimeoutError:
-            data['celery_worker'] = {"Error": "Timeout on getting worker status"}
-        try:
-            data['celery_queues'] = queue_status()
-        except Exception as e:
-            data['celery_queues'] = e
-        
+        data = OrderedDict()
+        data['amcat'] = amcat_status()
+        data['elastic'] = es_status()
+        data['git'] = git_status()
+        data['celery_worker'] = worker_status()
+        data['celery_queues'] = queue_status()
+
         return Response(data, status=HTTP_200_OK)
 
+def _nofail(func):
+    """
+    Catches all exceptions thrown by func, and returns a serializable error message.
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            return {type(e).__name__: str(e)}
+    return wrapper
 
+
+@_nofail
+def amcat_status():
+    return status()
+
+@_nofail
+def es_status():
+    return ES().status()
+
+@_nofail
+def worker_status():
+    return status.delay().wait(timeout=3)
+
+@_nofail
 def queue_status():
     from amqplib import client_0_8 as amqp
-    from amcat.amcatcelery import app
     result = {}
 
     def _inspect_queue(queue, **conn_kwargs):
@@ -40,11 +60,18 @@ def queue_status():
         return {"queue": name, "#tasks": ntask, "#consumer": nconsumer}
     
     #amcat queue  - should read config instead of assuming localhost?
-    amcatq = app.conf['CELERY_DEFAULT_QUEUE']
-    result["amcat"] = _inspect_queue(amcatq, host="localhost:5672", userid="guest", password="guest")
+    celery_config = amcat_config['celery']
+    host = "{amqp_host}:{amqp_port}".format(**celery_config)
+    try:
+        result["amcat"] = _inspect_queue(celery_config['queue'], host=host, userid=celery_config['amqp_user'],
+                                         password=celery_config['amqp_passwd'])
+    except UnboundLocalError:
+        # UnboundLocalError is thrown due to a bug in the error handling in the amqp library.
+        raise ConnectionRefusedError("Host '{}' refused the connection.".format(host))
 
     return result
 
+@_nofail
 def git_status():
     def date2iso(date):
         return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(date))
