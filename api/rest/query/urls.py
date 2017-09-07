@@ -28,10 +28,7 @@ from api.rest.query.viewset import wrap_query_action
 
 
 def get_action_name(viewcls):
-    name = viewcls.query_action.__name__
-    if name.endswith("Action"):
-        name = name[:-6]
-    return name.lower()
+    return viewcls.query_action.get_action_name()
 
 
 def get_url_name(viewcls):

@@ -21,7 +21,6 @@ requirejs.config({
         "pnotify": "pnotify/pnotify.core",
         "pnotify.nonblock": "pnotify/pnotify.nonblock",
         "moment": "moment/moment",
-        "renderjson": "renderjson/renderjson",
         "datatables": "datatables/media/js/jquery.dataTables",
         "datatables.tabletools": "datatables/extensions/TableTools/js/dataTables.tableTools",
         "datatables.plugins": AMCAT_STATIC_URL + "js/jquery.dataTables.plugins",
@@ -57,9 +56,6 @@ requirejs.config({
         },
         "bootstrap-tooltip":{
             deps: ['bootstrap']
-        },
-        "renderjson":{
-            exports: "renderjson"
         },
         "amcat/amcat.datatables":{
             deps: [

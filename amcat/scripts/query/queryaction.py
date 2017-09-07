@@ -19,6 +19,7 @@
 import datetime
 import pickle
 import zlib
+import re
 
 import dateutil.parser
 import functools
@@ -40,7 +41,7 @@ from navigator.views.scriptview import CeleryProgressUpdater
 from settings import SECRET_KEY
 
 DOWNLOAD_HEADER = "Content-Disposition: attachment; "
-
+RE_CAPITALS = re.compile("([A-Z])")
 
 def to_querydict(dict):
     """
@@ -288,5 +289,20 @@ class QueryAction(object):
             raise PermissionDenied("User has no permission to perform {self.__class__.__name__}"
                                    " on project {project}".format(**locals()))
 
+    @classmethod
+    def get_action_name(cls):
+        if hasattr(cls, "action_name"):
+            return cls.action_name
+        name = cls.__name__
+        if name.endswith("Action"):
+            name = name[:-6]
+        return name.lower()
 
-
+    @classmethod
+    def get_action_label(cls):
+        if hasattr(cls, "action_label"):
+            return cls.action_label
+        name = cls.__name__
+        if name.endswith("Action"):
+            name = name[:-6]
+        return RE_CAPITALS.sub(" \\1", name).strip()

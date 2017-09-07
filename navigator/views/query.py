@@ -22,6 +22,8 @@ import logging
 
 from django.shortcuts import redirect
 
+import settings
+from amcat.scripts import query
 from amcat.scripts.query import get_r_queryactions
 from amcat.scripts.query.queryaction import is_valid_cache_key
 from django import conf
@@ -42,6 +44,32 @@ from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin,
 log = logging.getLogger(__name__)
 
 SHOW_N_RECENT_QUERIES = 5
+
+R_PLUGIN_PLACEHOLDER = object()
+
+QUERY_ACTIONS = (
+    ("Summary", query.SummaryAction),
+    ("Graph/Table (Elastic)", query.AggregationAction),
+    ("Articlelist", query.ArticleListAction),
+    ("Network", (
+        ("Association", query.AssociationAction),
+        ("Clustermap", query.ClusterMapAction)
+    )),
+    ("Actions", (
+        ("Append to existing set", query.AppendToSetAction),
+        ("Assign as codingjob", query.AssignAsCodingjobAction),
+        ("Save query as codebook", query.SaveQueryToCodebookAction),
+        ("Save as new set", query.SaveAsSetAction)
+    )),
+    R_PLUGIN_PLACEHOLDER
+)
+
+if settings.DEBUG:
+    QUERY_ACTIONS += (
+        ("Debug", (
+            ("Statistics", query.StatisticsAction),
+        ),),
+    )
 
 class ClearQueryCacheView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, View):
     context_category = 'Query'
@@ -142,6 +170,25 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
     def _get_ids(self, key):
         return set(map(int, filter(str.isdigit, self.request.GET.get(key, "").split(","))))
 
+    def _get_query_action(self, label, action):
+        if isinstance(action, type) and issubclass(action, query.QueryAction):
+            return {"label": label, "name": action.get_action_name()}
+        else:
+            return {"label": label, "actions": [self._get_query_action(*kv) for kv in action]}
+
+    def query_actions(self):
+        query_actions = list(QUERY_ACTIONS)
+        r_queryactions = sorted((q for q in get_r_queryactions()), key=lambda q: q.get_action_name())
+        r_queryactions = [(q.get_action_label(), q) for q in r_queryactions]
+        if self.project.r_plugins_enabled:
+            idx = query_actions.index(R_PLUGIN_PLACEHOLDER)
+            query_actions.insert(idx, ("R plugins", r_queryactions))
+        query_actions.remove(R_PLUGIN_PLACEHOLDER)
+
+        query_actions = [self._get_query_action(*kv) for kv in query_actions]
+
+        return  query_actions
+
     def get_context_data(self, **kwargs):
         query_id = self.request.GET.get("query", "null")
         user_id = self.request.user.id
@@ -190,6 +237,5 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
             saved_project_queries = saved_queries.filter(~Q(user=self.request.user))[:SHOW_N_RECENT_QUERIES]
 
         form.fields["articlesets"].widget.attrs['disabled'] = 'disabled'
-        r_queryactions = sorted(q.__name__[:-6] for q in get_r_queryactions())
         return dict(super(QueryView, self).get_context_data(), **locals())
 

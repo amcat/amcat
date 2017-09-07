@@ -65,7 +65,6 @@ class StatisticsAction(QueryAction):
         queries = selection.get_queries()
         articlesets = form.cleaned_data["articlesets"]
         codingjobs = form.cleaned_data["codingjobs"]
-        mediums = form.cleaned_data["mediums"]
 
         statistics = selection.get_statistics()
 
@@ -78,7 +77,6 @@ class StatisticsAction(QueryAction):
 
         return json.dumps({
             "queries": {q.label: q.query for q in queries},
-            "mediums": {m.id: m.name for m in mediums},
             "articlesets": {a.id: a.name for a in articlesets},
             "codingjobs": {cj.id: cj.name for cj in codingjobs},
             "codes_used": list(get_used_code_ids(codingjobs)),

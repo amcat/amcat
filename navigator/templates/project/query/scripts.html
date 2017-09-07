@@ -1,80 +1,25 @@
 <div class="btn-group main-scripts">
-    <!-- Mains scripts -->
-    <span class="btn btn-sm btn-default script" id="script_summary" name="summary">Summary</span>
-    {% if all_codingjobs %}
-    <span class="btn btn-sm btn-default script" id="script_codingaggregation" name="codingaggregation">Graph/Table (Codings)</span>
-    {% else %}
-    <span class="btn btn-sm btn-default script" id="script_aggregation" name="aggregation">Graph/Table (Elastic)</span>
-    {% endif %}
-
-    <span class="btn btn-sm btn-default script" id="script_articlelist" name="articlelist">Articlelist</span>
-
-    <!-- Network -->
-    <div class="btn-group" role="group">
-        <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-            Network <span class="caret"></span>
-        </button>
-
-        <ul class="dropdown-menu pull-right" role="menu">
-            <li>
-                <a href="" class="script" id="script_association" name="association">Association</a>
-            </li>
-            <li>
-                <a href="" class="script" id="script_clustermap" name="clustermap">Clustermap</a>
-            </li>
-        </ul>
-    </div>
-
-    <!-- Actions -->
-    <div class="btn-group" role="group">
-        <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-            Actions <span class="caret"></span>
-        </button>
-
-        <ul class="dropdown-menu pull-right" role="menu">
-            <li>
-                <a href="" class="script" id="script_appendtoset" name="appendtoset">Append to existing set</a>
-            </li>
-            <li>
-                <a href="" class="script" id="script_assignascodingjob" name="assignascodingjob">Assign as codingjob</a>
-            </li>
-            <li>
-              <a href="" class="script" id="script_savequerytocodebook" name="savequerytocodebook">Save query as codebook</a>
-            </li>
-            <li>
-                <a href="" class="script" id="script_saveasset" name="saveasset">Save as new set</a>
-            </li>
-        </ul>
-    </div>
-
-  {% if project.r_plugins_enabled %}
-    <div class="btn-group" role="group">
-        <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-            R plugins <span class="caret"></span>
-        </button>
-
-        <ul class="dropdown-menu pull-right" role="menu">
-          {% for r_plugin in r_queryactions %}
-            <li>
-                <a href="" class="script" id="script_{{ r_plugin|lower }}" name="{{ r_plugin|lower }}">{{ r_plugin|lower }}</a>
-            </li>
-          {% endfor %}
-        </ul>
-    </div>
-  {% endif %}
-
-  {% if settings.DEBUG %}
-        <div class="btn-group" role="group">
-            <button type="button" class="btn btn-sm btn-warning dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                Debug <span class="caret"></span>
-            </button>
-
-            <ul class="dropdown-menu pull-right" role="menu">
-                <li>
-
-                    <a href="" class="script" id="script_statistics" name="statistics">Statistics</a>
-                </li>
-            </ul>
-        </div>
-    {% endif %}
+    {% for action_or_group in view.query_actions %}
+        {% if action_or_group.actions %}
+            {# action_or_group is group #}
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown"
+                        aria-expanded="false">
+                    {{ action_or_group.label }} <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu pull-right" role="menu">
+                    {% for inner_action in action_or_group.actions %}
+                        <li>
+                            <a href="" class="script" id="script_{{ inner_action.name }}"
+                               name="{{ inner_action.name }}">{{ inner_action.label }}</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% else %}
+            {# action_or_group is action #}
+            <span class="btn btn-sm btn-default script" id="script_{{ action_or_group.name }}"
+                  name="{{ action_or_group.name }}">{{ action_or_group.label }}</span>
+        {% endif %}
+    {% endfor %}
 </div>
