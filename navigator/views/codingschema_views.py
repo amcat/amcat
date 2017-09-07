@@ -270,6 +270,11 @@ class CodingSchemaFieldForm(forms.ModelForm):
         self.fields['codebook'].required = False
         self.fields['codebook'].queryset = schema.project.get_codebooks()
 
+    def save(self, commit=True):
+        if self.cleaned_data['codebook'] is None:
+            self.instance.codebook = None
+        return super().save(commit=commit)
+
     def _to_bool(self, val):
         if val is None:
             return
