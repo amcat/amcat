@@ -269,10 +269,17 @@ class ArticleUploadFormSet(forms.BaseFormSet):
 
     def clean(self):
         required = set(REQUIRED)
+        destinations = set()
         for form in self.forms:
-            required.discard(form.cleaned_data.get('destination'))
+            dest = form.cleaned_data.get('destination')
+            required.discard(dest)
+            if dest and dest != "-":
+                if dest in destinations:
+                    raise forms.ValidationError("Duplicate destination: '{}'. Destinations must be unique.".format(dest))
+                destinations.add(dest)
+
         if required:
-            raise forms.ValidationError("Missing required article field(s): {}".format(", ".join(required)))
+            raise forms.ValidationError("Missing required article field(s): '{}'".format(", ".join(required)))
 
 
 class ArticlesetUploadOptionsView(UploadViewMixin, FormView):

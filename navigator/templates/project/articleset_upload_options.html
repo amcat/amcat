@@ -81,7 +81,9 @@
         <div class="panel panel-default">
             <div class="panel-heading">Specify fields:</div>
             {% if form.non_form_errors %}
-                <div class="panel-body">{{ form.non_form_errors }}</div>
+                <div class="panel-body">
+                    <div class="alert alert-danger">{{ form.non_form_errors }}</div>
+                </div>
             {% endif %}
             <table id="table-fieldmap" class="table table-striped">
                 <colgroup>
