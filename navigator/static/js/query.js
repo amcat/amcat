@@ -840,6 +840,42 @@ define([
             image.after(self.get_image_save_buttons(image));
         });
     };
+
+    self.handle_result = function(jqXHR, data){
+        if(self.download_result()){
+            self.download_data_as(data, form_data.output_type, "data." + form_data.output_type.split(/[\/+;]/)[1]);
+            return;
+        }
+        var contentType = jqXHR.getResponseHeader("Content-Type");
+        var body = result.find(".panel-body").html("");
+        var renderer = renderers[contentType];
+
+        if(renderer === undefined){
+            self.show_error("Server replied with unknown datatype: " + contentType);
+        } else{
+            renderer(form_data, body, data);
+        }
+        self.render_complete(body);
+        result.attr("class", window.location.hash.slice(1));
+        $(window).scrollTo(result, 500);
+
+        // Reset cache messages
+        $(".cache-clear").unbind("click");
+        $(".cache-message").hide();
+        $(".cache-clearing").hide();
+        $(".cache-timestamp").text("");
+
+        // Check for cache in HTTP headers
+        if(jqXHR.getResponseHeader("X-Query-Cache-Hit") === "1"){
+            var nTimestamp = jqXHR.getResponseHeader("X-Query-Cache-Natural-Timestamp");
+            nTimestamp = ("nTimestamp" === "now") ? "just now" : nTimestamp;
+            $(".cache-timestamp").text(nTimestamp);
+            var cacheKey = jqXHR.getResponseHeader("X-Query-Cache-Key");
+            $(".cache-clear").click(self.clear_cache.bind(cacheKey));
+            $(".cache-message").show();
+        }
+    };
+
     self.init_poll = function(uuid){
         // TODO: remove any remaining download logic from amcat-query-js/utils/poll
         var poll = Poll(uuid /*, {download: self.download_result()}*/);
@@ -861,37 +897,16 @@ define([
             $("#loading-dialog").modal("hide");
             progress_bar.css("width", "0%");
         }).result(function(data, textStatus, jqXHR){
-            if(self.download_result()){
-                self.download_data_as(data, form_data.output_type, "data." + form_data.output_type.split(/[\/+;]/)[1]);
-                return;
+            try {
+                self.handle_result(jqXHR, data);
             }
-            var contentType = jqXHR.getResponseHeader("Content-Type");
-            var body = result.find(".panel-body").html("");
-            var renderer = renderers[contentType];
-
-            if(renderer === undefined){
-                self.show_error("Server replied with unknown datatype: " + contentType);
-            } else {
-                renderer(form_data, body, data);
-            }
-            self.render_complete(body);
-            result.attr("class", window.location.hash.slice(1));
-            $(window).scrollTo(result, 500);
-
-            // Reset cache messages
-            $(".cache-clear").unbind("click");
-            $(".cache-message").hide();
-            $(".cache-clearing").hide();
-            $(".cache-timestamp").text("");
-
-            // Check for cache in HTTP headers
-            if (jqXHR.getResponseHeader("X-Query-Cache-Hit") === "1"){
-                var nTimestamp = jqXHR.getResponseHeader("X-Query-Cache-Natural-Timestamp");
-                nTimestamp = ("nTimestamp" === "now") ? "just now" : nTimestamp;
-                $(".cache-timestamp").text(nTimestamp);
-                var cacheKey = jqXHR.getResponseHeader("X-Query-Cache-Key");
-                $(".cache-clear").click(self.clear_cache.bind(cacheKey));
-                $(".cache-message").show();
+            catch(e){
+                loading_dialog.modal("hide");
+                new PNotify({
+                    "type": "error",
+                    "text": e,
+                    "delay": 1000
+                });
             }
         }).always(function() {
             loading_dialog.modal("hide");
