@@ -39,7 +39,7 @@ django-redis==4.6.0
 ruamel.yaml==0.12.18
 
 #TODO: 0.6.0 contains a severe performance bug. Add dateparser>0.6.0 once released.
-https://github.com/scrapinghub/dateparser/archive/53084340d11f442b1a681fb13f023b28a879857c.zip
+dateparser==0.6.0
 
 anyjson
 billiard==3.3.0.23
