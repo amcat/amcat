@@ -273,6 +273,8 @@ class ArticleUploadFormSet(forms.BaseFormSet):
         for form in self.forms:
             dest = form.cleaned_data.get('destination')
             required.discard(dest)
+            if dest == "new_field":
+                dest = "{new_name}_{type}".format(**form.cleaned_data)
             if dest and dest != "-":
                 if dest in destinations:
                     raise forms.ValidationError("Duplicate destination: '{}'. Destinations must be unique.".format(dest))
