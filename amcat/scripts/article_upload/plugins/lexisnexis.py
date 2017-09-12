@@ -186,7 +186,7 @@ def _strip_article(art):
     art = art.split("\n")
 
     for i in (0, -1):
-        while not art[i].strip():
+        while art and not art[i].strip():
             del art[i]
 
     return "\n".join(art).replace("\r", "")
