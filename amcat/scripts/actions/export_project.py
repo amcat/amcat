@@ -29,6 +29,10 @@ import datetime
 import re
 import json
 from binascii import hexlify, unhexlify
+import tempfile
+import shutil
+import zipfile
+
 
 from django import forms
 from django.core import serializers
@@ -108,22 +112,42 @@ class ExportProject(Script):
             logging.error("Output {output} already exists!")
             sys.exit(1)
 
-        os.mkdir(output)
+        if output.endswith(".zip"):
+            self.folder = tempfile.mkdtemp()
+            logging.debug("Writing output to temporary folder {self.folder}".format(**locals()))
+        else:
+            os.mkdir(output) 
+            self.folder = output
+        
         logging.info("Exporting project {project.id}:{project} to {output}".format(**locals()))
 
-        self.codebook_fields = set()  # which fields do we need to serialize to uuid?
-        self.codes = {}  # code_id -> uuid
-        
-        self.project = project
-        
-        self.export_articlesets()
-        self.export_articles()
-        self.export_articlesets_articles()
+        try:
+            self.codebook_fields = set()  # which fields do we need to serialize to uuid?
+            self.codes = {}  # code_id -> uuid
+            
+            self.project = project
+            
+            self.schema_ids = self.get_schema_ids()
+            self.codebook_ids = self.get_codebook_ids()
 
-        self.export_codebooks()
-        self.export_codingschemas()
-        self.export_codingjobs()
-        
+            self.export_articlesets()
+
+            self.export_articles()
+            self.export_articlesets_articles()
+
+            
+            self.codebook_ids = self.export_codebooks()
+            self.export_codingschemas()
+            self.export_codingjobs()
+            
+            if output.endswith(".zip"):
+                logging.info("Creating zipfile {output}".format(**locals()))
+                with zipfile.ZipFile(output, "w") as z:
+                    for f in os.listdir(self.folder):
+                        z.write(os.path.join(self.folder, f), f)
+        finally:
+            if output.endswith(".zip"):
+                shutil.rmtree(self.folder)
         logging.info("Done")
 
     def _get_codingjob_values(self, ca_ids, batch_size=1000):
@@ -147,33 +171,68 @@ class ExportProject(Script):
             for caid, codings in codings_per_article.items():
                 yield dict(coded_article_id=caid, codings=[get_values_dict(c) for c in codings])
                 
+    def get_sentences(self, aids, batch_size=1000):
+        for i, batch in enumerate(toolkit.splitlist(aids, itemsperbatch=batch_size)):
+            logging.info("... batch {i}/{n}".format(n=len(aids)//batch_size, **locals()))
+            keys = "article_id", "sentnr", "parnr", "sentence"
+            for values in Sentence.objects.filter(article_id__in=batch).distinct().values_list(*keys):
+                yield dict(zip(keys, values))
         
+
     def export_codingjobs(self):
-        self._serialize("codingjobs", CodingJob.objects.filter(project=self.project))
+        cjs = json.loads(serializers.serialize("json", CodingJob.objects.filter(project=self.project)))
+        coders = dict(User.objects.filter(pk__in={cj["fields"]["coder"] for cj in cjs}).values_list("pk", "email"))
+        def substitute_email(coder, **fields):
+            return dict(coder=coders[coder], **fields)
+        cjs = [substitute_email(pk=c["pk"], **c["fields"]) for c in cjs]
+        self._write_json_lines("codingjobs", cjs)
+        
+        #self._serialize("codingjobs", CodingJob.objects.filter(project=self.project))
         cas = CodedArticle.objects.filter(codingjob__project=self.project)
         coded_articles = self._serialize("codedarticles", cas)
         ca_ids = [ca.id for ca in coded_articles]
         self._write_json_lines("codingvalues", self._get_codingjob_values(ca_ids))
+
+        #serialize sentences
+        sentences = self.get_sentences({ca.article_id for ca in coded_articles})
+        self._write_json_lines("sentences", sentences, "coded sentences")
         
-            
+
+    def get_schema_ids(self):
+        # we need to serialize coding schemas that are either part of this project, linked in this project, or using in a codingjob
+        # TODO: require read access on the other projects?
+        ids = set(CodingSchema.objects.filter(project=self.project).values_list("pk", flat=True))
+        ids |= set(self.project.codingschemas.values_list("pk", flat=True))
+        for schemas in CodingJob.objects.filter(project=self.project).values_list("articleschema_id", "unitschema_id"):
+            ids |= set(schemas)
+        return ids
+
+    def get_codebook_ids(self):
+        # serialize codebooks that are either part of this project, *or* used in a coding schema in this project
+        # TODO: require read access on the other projects?
+        ids = set(Codebook.objects.filter(project=self.project).values_list("pk", flat=True))
+        ids |= set(self.project.codebooks.values_list("pk", flat=True))
+        ids |= set(CodingSchemaField.objects.filter(codingschema_id__in=self.schema_ids, codebook__isnull=False).values_list("codebook_id", flat=True))
+        return ids
+        
     def export_codingschemas(self):
-        self._serialize("codingschemas", CodingSchema.objects.filter(project=self.project))
-        for f in self._serialize("codingschemafields", CodingSchemaField.objects.filter(codingschema__project=self.project)):
+        self._serialize("codingschemas", CodingSchema.objects.filter(pk__in=self.schema_ids))
+        for f in self._serialize("codingschemafields", CodingSchemaField.objects.filter(codingschema_id__in=self.schema_ids)):
             if f.fieldtype_id == FIELDTYPE_IDS.CODEBOOK:
                 self.codebook_fields.add(f.id)
         
     def export_codebooks(self):
-        for c in self._serialize("codes", Code.objects.filter(codebook_codes__codebook__project=self.project).distinct()):
+        ids = self.codebook_ids
+        for c in self._serialize("codes", Code.objects.filter(codebook_codes__codebook__in=ids).distinct()):
             self.codes[c.pk] = unicode(c.uuid)
-        self._serialize("labels", Label.objects.filter(code__codebook_codes__codebook__project=self.project)
+        self._serialize("labels", Label.objects.filter(code__codebook_codes__codebook__in=ids)
                         .select_related("code__uuid").select_related("language__label").distinct())
+        self._serialize("codebooks", Codebook.objects.filter(pk__in=ids).distinct())
+        self._serialize("codebookcodes", CodebookCode.objects.filter(codebook__in=ids).distinct())
 
-        self._serialize("codebooks", Codebook.objects.filter(project=self.project).distinct())
-
-        self._serialize("codebookcodes", CodebookCode.objects.filter(codebook__project=self.project).distinct())
-        
     def export_articlesets(self):
-        self.sets = list(self.project.articlesets_set.all())
+        self.sets = set(self.project.articlesets_set.all())
+        self.sets |= {cj.articleset for cj in CodingJob.objects.filter(project=self.project)}
         favs = set(self.project.favourite_articlesets.values_list("pk", flat=True))
         dicts = (dict(old_id=aset.id, provenance=aset.provenance, name=aset.name, favourite=aset.pk in favs)
                  for aset in self.sets)        
@@ -189,10 +248,12 @@ class ExportProject(Script):
         self._write_json_lines("articlesets_articles", dicts.values())
 
     def export_articles(self):
-        ids = list(ES().query_ids(filters=dict(sets=[s.id for s in self.sets])))
+        ids = set(ES().query_ids(filters=dict(sets=[s.id for s in self.sets])))
+        # make sure all codingjob articles are in here, even if the set was modified after coding
+        ids |= set(CodedArticle.objects.filter(codingjob__project=self.project).values_list("article_id", flat=True))
         self._write_json_lines("articles", self._generate_all_articles(ids))
 
-        
+
     def _generate_article(self, a, medium):
         if a.parent:
             raise Exception("Project export does not support parents (yet)!")
@@ -223,7 +284,7 @@ class ExportProject(Script):
         
     @contextmanager
     def _output_file(self, fn, extension="json"):
-        fn = os.path.join(self.options['output'], ".".join([fn, extension]))
+        fn = os.path.join(self.folder, ".".join([fn, extension]))
         with open(fn, "w") as f:
             yield f
 

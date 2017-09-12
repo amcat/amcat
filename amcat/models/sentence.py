@@ -46,3 +46,6 @@ class Sentence(AmcatModel):
         app_label = 'amcat'
         unique_together = ('article', 'parnr', 'sentnr')
         ordering = ['article', 'parnr', 'sentnr']
+    
+    def natural_key(self):
+        return article, parnr, sentnr
