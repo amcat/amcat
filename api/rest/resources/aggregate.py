@@ -71,7 +71,7 @@ class AggregateES(object):
                 raise ValueError("Please specify at least one query (using q=) when aggregating on query")
             for q in self.queries:
                 for group, n in self._get_counts(x, query=q.query):
-                    yield self.result_type(group, q.label, n)
+                    yield self.output(n, group, q.label)
 
         else:
             raise ValueError("Cannot aggregate on axes2="+y)
