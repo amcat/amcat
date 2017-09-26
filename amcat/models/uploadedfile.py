@@ -131,13 +131,16 @@ class UploadedFile(AmcatModel):
     def _unpack(self) -> Iterable[django.core.files.uploadedfile.UploadedFile]:
         path = "{}/{}".format(os.path.dirname(self.filepath), os.path.splitext(self.basename)[0])
         os.makedirs(path, exist_ok=True)
+        archive_name = os.path.basename(self.zipfile.filename)
         for member in self.zipfile.namelist():
             if member.endswith("/"):
                 continue
             fn = os.path.join(path, member)
             if not os.path.isfile(fn):
                 self.zipfile.extract(member, os.path.dirname(fn))
-            yield self._open(fn, member)
+            f = self._open(fn, member)
+            setattr(f, "archive_name", archive_name)
+            yield f
 
     def _open(self, path: str, name: str) -> django.core.files.uploadedfile.UploadedFile:
         if self.encoding == "binary":

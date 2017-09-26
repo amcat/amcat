@@ -92,6 +92,24 @@ class ArticleField(object):
 class ParseError(Exception):
     pass
 
+class FileParseError(Exception):
+    def __init__(self, file, innerError):
+        self.file = file
+        self.innerError = innerError
+        super().__init__(self, file, innerError)
+
+    def __str__(self):
+        if hasattr(self.file, "archive_name"):
+            filename = "'./{file.name}' (in '{file.archive_name}')".format(file=self.file)
+        else:
+            filename = "'{}'".format(self.file.name)
+        return "In file {}: {}: {}".format(filename, type(self.innerError).__name__, str(self.innerError))
+
+    def __repr__(self):
+        return "{}({}, {}, {})".format(self, self.__class__.__name__, *(repr(arg) for arg in self.args))
+
+class PreprocessError(FileParseError):
+    pass
 
 class UploadForm(forms.Form):
     upload = forms.ModelChoiceField(queryset=model_UploadedFile.objects.all())
@@ -211,7 +229,11 @@ class UploadScript(ActionForm):
         if os.path.exists(cachefn):
             data = json.load(open(cachefn))
         else:
-            data = cls._preprocess(file)
+            try:
+                data = cls._preprocess(file)
+            except Exception as e:
+                raise PreprocessError(file, e)
+
             json.dump(data, open(cachefn, "w"), cls=DjangoJSONEncoder, indent=2)
         return file, data
 
