@@ -7,12 +7,12 @@ cssselect==0.9.1
 Django>=1.9,<1.10
 django-jsonfield==0.9.15
 djangorestframework==3.2.2
-elasticsearch>=5.4.0<5.5.0
+elasticsearch>=5.4.0,<5.5.0
 html2text==2016.1.8
 jdcal==1.0.1
 kombu==3.0.33
 openpyxl==2.3.0
-pyparsing==2.0.3
+pyparsing>=2.2.0,<2.3.0
 PyPDF2==1.25.1
 python-dateutil==2.4.2
 Unidecode==0.04.19
