@@ -284,7 +284,7 @@ class XHTMLRenderer(TableRenderer):
         result = table.export(format='html')
         return result
 
-class RdaRenderer(BaseRenderer):
+class RdaRenderer(TableRenderer):
     """
     Renderer which creates a .rda (R Data) file
     """
@@ -297,7 +297,9 @@ class RdaRenderer(BaseRenderer):
         result = {}
         n = len(rows)
         for i, row in enumerate(rows):
-            for k, v in row.iteritems():
+            if isinstance(row, dict):
+                row = self.flatten_dict(row)
+            for k, v in row.items():                
                 if k not in result:
                     result[k] = [None] * n
                 result[k][i] = v
@@ -310,7 +312,7 @@ class RdaRenderer(BaseRenderer):
                              'status': renderer_context['response'].status_code})
             else:
                 vectors = self.json_to_vectors(data['results'])
-                data['results'] = create_dataframe(vectors.iteritems())
+                data['results'] = create_dataframe(vectors.items())
             return save_to_bytes(**data)
         except:
             logging.exception("Error on rendering to rda")

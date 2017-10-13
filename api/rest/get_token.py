@@ -5,6 +5,7 @@ from rest_framework import parsers
 from rest_framework import renderers
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
+from api.rest.tokenauth import ExpiringTokenAuthentication
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 import datetime
@@ -16,26 +17,31 @@ class AuthTokenSerializer(serializers.Serializer):
         super(AuthTokenSerializer, self).__init__(*args, **kwargs)
         self.user = None
 
-    username = serializers.CharField()
-    password = serializers.CharField()
+    username = serializers.CharField(required = False)
+    password = serializers.CharField(required = False)
+    token = serializers.CharField(required = False)
+
 
     def validate(self, attrs):
         username = attrs.get('username')
         password = attrs.get('password')
-
-        if username and password:
-            self.user = authenticate(username=username, password=password)
-
-            if self.user:
-                if not self.user.is_active:
-                    raise serializers.ValidationError('User account is disabled.')
-                return attrs
-            else:
-                raise serializers.ValidationError('Unable to login with provided credentials.')
+        token = attrs.get('token')
+        if token:
+            eta = ExpiringTokenAuthentication()
+            self.user, token = eta.authenticate_credentials(token)
         else:
-            raise serializers.ValidationError('Must include "username" and "password"')
-
-
+            if username and password:
+                self.user = authenticate(username=username, password=password)
+            else: 
+                raise serializers.ValidationError('Must include either "token" or "username" with "password"')
+            
+        if self.user:
+            if not self.user.is_active:
+                raise serializers.ValidationError('User account is disabled.')
+            return attrs
+        else:
+            raise serializers.ValidationError('Unable to login with provided credentials.')
+        
 
 class ObtainAuthToken(APIView):
     throttle_classes = ()
