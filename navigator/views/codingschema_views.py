@@ -33,7 +33,8 @@ from amcat.forms import widgets
 from amcat.forms.fields import StaticModelChoiceField
 from amcat.forms.widgets import convert_to_bootstrap_select
 
-from amcat.models import CodingSchema, authorisation, CodingSchemaField, CodingSchemaFieldType, CodingRule, Code, Project
+from amcat.models import CodingSchema, authorisation, CodingSchemaField, CodingSchemaFieldType, CodingRule, Code, \
+    Project, PROJECT_ROLES
 from amcat.models.coding.serialiser import CodebookSerialiser, BooleanSerialiser
 from api.rest.viewsets import _CodingSchemaFieldViewSet, CodingSchemaViewSet
 from navigator.forms import CodingSchemaForm
@@ -383,7 +384,7 @@ _get_schemafield_forms = partial(_get_forms, form=CodingSchemaFieldForm)
 _get_codingrule_forms = partial(_get_forms, form=CodingRuleForm)
 
 class CodingSchemaEditRulesView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, TemplateView):
-    required_project_permission = authorisation.ROLE_PROJECT_WRITER
+    required_project_permission = PROJECT_ROLES.WRITER
     parent = CodingSchemaDetailsView
     url_fragment = "rules"
     form_class = CodingSchemaForm
@@ -426,6 +427,7 @@ class CodingSchemaEditRulesView(HierarchicalViewMixin, ProjectViewMixin, BreadCr
 
 
 class CodingSchemaLinkView(ProjectFormView):
+    required_project_permission = PROJECT_ROLES.WRITER
     parent = CodingSchemaListView
     url_fragment = 'link'
 
@@ -446,6 +448,7 @@ class CodingSchemaLinkView(ProjectFormView):
         return super(CodingSchemaLinkView, self).form_valid(form)
 
 class CodingSchemaUnlinkView(ProjectActionRedirectView):
+    required_project_permission = PROJECT_ROLES.WRITER
     parent = CodingSchemaDetailsView
     url_fragment = "unlink"
 

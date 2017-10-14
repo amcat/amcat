@@ -45,7 +45,7 @@ def index(request):
 
     if not request.user.is_anonymous():
         recent_projects = list(it.islice(((rp, rp.project.get_role_id(user=request.user) >= ROLE_PROJECT_READER)
-                                          for rp in RecentProject.get_recent_projects(request.user.userprofile)), MAX_RECENT_PROJECTS))
+                                          for rp in RecentProject.get_recent_projects(request.user.userprofile) if rp.project.get_role_id(user=request.user) is not None), MAX_RECENT_PROJECTS))
         
     return render(request, 'index.html', locals())
 

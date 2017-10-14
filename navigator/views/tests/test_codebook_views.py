@@ -1,4 +1,6 @@
 import json
+from uuid import uuid4
+
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from amcat.models import Codebook
@@ -9,13 +11,14 @@ from amcat.tools.amcattest import create_test_user
 class TestCodebookViews(amcattest.AmCATTestCase):
 
     def setUp(self):
-        if not User.objects.filter(username='amcat').exists():
-            create_test_user(username='amcat', password='amcat')
-        self.cb = amcattest.create_test_codebook()
+        username = "codebookusr_{!s:.7}".format(uuid4())
+        user = create_test_user(username=username, password='codebookusr')
+        self.project = amcattest.create_test_project(owner=user)
+        self.cb = amcattest.create_test_codebook(project=self.project)
         from django.test import Client
         self.client = Client()
-        response = self.client.post('/accounts/login/', {'username': 'amcat', 'password': 'amcat'})
-        self.assert_status(response, 302)
+        success = self.client.login(username=username, password='codebookusr')
+        self.assertTrue(success)
 
     def assert_status(self, response, expect=200):
         if response.status_code != expect:

@@ -25,7 +25,7 @@ from django.views.generic.list import ListView
 from jsonfield.forms import JSONFormField
 
 from amcat.forms import widgets
-from amcat.models import Code, Codebook, CodebookCode, Label, Language, Project
+from amcat.models import Code, Codebook, CodebookCode, Label, Language, Project, PROJECT_ROLES
 from amcat.scripts.actions.export_codebook import ExportCodebook
 from amcat.scripts.actions.export_codebook_as_xml import ExportCodebookAsXML
 from amcat.scripts.actions.import_codebook import ImportCodebook
@@ -105,6 +105,7 @@ class ExportCodebookXML(ProjectScriptView):
         return response
 
 class CodebookImportView(ProjectScriptView):
+    required_project_permission = PROJECT_ROLES.WRITER
     script = ImportCodebook
     parent = CodebookListView
     url_fragment = 'import'
@@ -153,6 +154,7 @@ class CodebookAddView(ProjectActionRedirectView):
 
         
 class CodebookLinkView(ProjectFormView):
+    required_project_permission = PROJECT_ROLES.WRITER
     parent = CodebookListView
     url_fragment = 'link'
 
@@ -198,6 +200,7 @@ class CodebookDeleteView(ProjectActionRedirectView):
 
 class CodebookFormActionView(ProjectFormView):
     """Base class for simple form based actions on codebooks"""
+    required_project_permission = PROJECT_ROLES.WRITER
     parent = CodebookDetailsView
     def form_invalid(self, form):
         error = {

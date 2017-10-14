@@ -26,7 +26,7 @@ from django.core.exceptions import PermissionDenied
 from django.template.defaultfilters import escape
 
 from navigator.views.articleset_views import ArticleSetDetailsView
-from amcat.models import Article, ArticleSet, Sentence
+from amcat.models import Article, ArticleSet, Sentence, PROJECT_ROLES
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectFormView, ProjectActionRedirectView
 from amcat.tools import sbd
 from amcat.models import authorisation, Project, CodingJob
@@ -107,13 +107,14 @@ class ProjectArticleDetailsView(ArticleDetailsView):
 
 
 class ArticleRemoveFromSetView(ProjectActionRedirectView):
+    required_project_permission = PROJECT_ROLES.METAREADER
     parent = ProjectArticleDetailsView
     url_fragment = "removefromset"
     def action(self, **kwargs):
         remove_set = int(self.request.GET["remove_set"])
         # user needs to have writer+ on the project of the articleset
         project = ArticleSet.objects.get(pk=remove_set).project
-        if not project.has_role(authorisation.ROLE_PROJECT_WRITER, self.request.user):
+        if not project.has_role(self.request.user, authorisation.ROLE_PROJECT_WRITER):
             raise PermissionDenied("User {self.request.user} has insufficient rights on project {project}".format(**locals()))
 
 
@@ -281,6 +282,7 @@ def get_sentence_ids(post):
         yield parse_sentence_name(name)
 
 class ArticleSplitView(ProjectFormView):
+    required_project_permission = PROJECT_ROLES.WRITER
     parent = ProjectArticleDetailsView
     url_fragment = "split"
     template_name = "project/article_split.html"

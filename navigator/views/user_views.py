@@ -54,6 +54,7 @@ class ProjectRoleForm(forms.ModelForm):
 
 
 class ProjectUserListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
+    required_project_permission = authorisation.ROLE_PROJECT_ADMIN
     model = User
     parent = None
     base_url = "projects/(?P<project>[0-9]+)"

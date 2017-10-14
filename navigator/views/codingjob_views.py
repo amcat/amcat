@@ -149,8 +149,8 @@ class CodingJobDeleteView(ProjectActionRedirectView):
     def action(self, project, codingjob):
         CodingJob.objects.get(pk=codingjob).recycle()
 
-    def get_redirect_url(self, **kwargs):
-        return CodingJobListView._get_breadcrumb_url(kwargs, self)
+    def get_success_url(self, **kargs):
+        return reverse(CodingJobListView.get_view_name(), args=[self.project.id])
 
 class CodingJobExportSelectView(ProjectFormView):
     form_class = CodingjobListForm

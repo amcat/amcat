@@ -27,7 +27,7 @@ from amcat import models
 from amcat.forms import widgets, fields, forms
 from amcat.models.article import Article
 from amcat.models.articleset import ArticleSet
-from amcat.models.authorisation import Role
+from amcat.models.authorisation import Role, ROLE_PROJECT_READER, ROLE_PROJECT_METAREADER
 from amcat.models.coding.code import Code
 from amcat.models.coding.codebook import Codebook, CodebookCode
 from amcat.models.coding.codingjob import CodingJob
@@ -56,7 +56,7 @@ def gen_coding_choices(user, model):
         # User in project
         Q(project__projectrole__user=user)|
         # User has access to project through guestrole
-        Q(project__guest_role__id__gte=user.userprofile.role.id)
+        Q(project__guest_role__id__gte=ROLE_PROJECT_METAREADER)
     ).distinct() if not user.is_superuser else model.objects.all()
 
     objects.select_related("project__name").only("name")

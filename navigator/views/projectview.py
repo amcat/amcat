@@ -18,21 +18,23 @@
 ###########################################################################
 
 import re
+from typing import Union
 
-from django.http import Http404
-from django.views.generic.base import RedirectView
+from django.contrib import messages
+from django.forms import Form
+from django.http import Http404, HttpResponseNotAllowed
+from django.views.generic.base import RedirectView, View
 from django.views.generic.edit import FormView, UpdateView
 from django.views.generic.detail import DetailView
 from django.core.urlresolvers import reverse
 from django.core.exceptions import PermissionDenied
 
-from amcat.models import authorisation, Project, ArticleSet
+import settings
+from amcat.models import authorisation, Project, ArticleSet, PROJECT_ROLES
 from amcat.models.project import RecentProject
 from navigator.views.scriptview import ScriptView
 
 from amcat.tools.usage import log_request_usage
-
-PROJECT_READ_WRITE = authorisation.ROLE_PROJECT_WRITER
 
 
 class BreadCrumbMixin(object):
@@ -49,8 +51,23 @@ class BreadCrumbMixin(object):
     def _get_breadcrumbs(cls, kwargs, view):
         return []
 
+class ProjectPermissionMap:
+    _methods = ("GET", "POST", "PUT", "DELETE")
+    def __init__(self,
+                 all: PROJECT_ROLES = None,
+                 get: PROJECT_ROLES = None,
+                 post: PROJECT_ROLES = None,
+                 put: PROJECT_ROLES = None,
+                 delete: PROJECT_ROLES = None):
+        self.get = get if get is not None else all
+        self.post = post if post is not None else all
+        self.put = put if put is not None else all
+        self.delete = delete if delete is not None else all
 
-class ProjectViewMixin(object):
+    def role_id(self, method: str) -> int:
+        return getattr(self, method.lower()).value
+
+class ProjectViewMixin(View):
 
     """
     Mixin for all 'project' views (e.g. project details, articlesets) that:
@@ -66,11 +83,27 @@ class ProjectViewMixin(object):
     """
     project_id_url_kwarg = 'project'
     articleset_id_url_kwarg = 'articleset'
-    required_project_permission = authorisation.ROLE_PROJECT_METAREADER
+    required_project_permission = PROJECT_ROLES.METAREADER
     help_context = None
+
+    @property
+    def project(self):
+        if not hasattr(self, "_project"):
+            self._project = self.get_project()
+        return self._project
+
+    @property
+    def articleset(self):
+        if not hasattr(self, "_articleset"):
+            self._articleset = self.get_articleset()
+            if self._articleset is None:
+                raise AttributeError("Property 'articleset' is invalid in this view")
+        return self._articleset
 
     def get_context_data(self, **kwargs):
         context = super(ProjectViewMixin, self).get_context_data(**kwargs)
+
+        #most of this is redundant, 'self' exists in context as 'view'.
         context["project"] = self.project
         context["context"] = self.project  # for menu / backwards compat.
         context["can_edit"] = self.can_edit()
@@ -106,26 +139,34 @@ class ProjectViewMixin(object):
             raise Http404("Articleset not found")
 
     def dispatch(self, request, *args, **kwargs):
-        self.project = self.get_project()
-
-        articleset = self.get_articleset()
-        if articleset is not None:
-            self.articleset = articleset
-
         # HACK: remove query from session to prevent 'permanent' highlighting
         self.last_query = self.request.session.pop("query", None)
 
         if not self.request.user.is_anonymous():
             RecentProject.update_visited(self.request.user.userprofile, self.project)
 
-        self.check_permission()
+        self.check_permission(request.method)
         return super(ProjectViewMixin, self).dispatch(request, *args, **kwargs)
+
+    @classmethod
+    def get_required_project_permissions(cls) -> Union[int, PROJECT_ROLES, ProjectPermissionMap]:
+        """
+        Returns the required project permissions. Either a single int or PROJECT_ROLES object giving
+        one permission for all methods, or a ProjectPermissionMap.
+        """
+        return cls.get_required_project_permissions()
 
     def has_permission(self, perm):
         return self.project.has_role(self.request.user, perm)
 
-    def check_permission(self):
-        if not self.has_permission(self.required_project_permission):
+    def check_permission(self, method: str = "GET"):
+        permission = self.required_project_permission
+        if isinstance(permission, ProjectPermissionMap):
+            permission = permission.role_id(method)
+        else:
+            permission = getattr(permission, "value", permission)
+
+        if not self.has_permission(permission):
             raise PermissionDenied("User {self.request.user} has insufficient "
                                    "rights on project {self.project}"
                                    .format(**locals()))
@@ -403,7 +444,7 @@ class ProjectEditView(BaseMixin, UpdateView):
         if 'project' in form.fields:
             form.fields['project'].queryset = Project.objects.filter(
                 projectrole__user=self.request.user,
-                projectrole__role_id__gte=PROJECT_READ_WRITE)
+                projectrole__role_id__gte=PROJECT_ROLES.WRITER.value)
         return form
 
     def get_cancel_url(self):

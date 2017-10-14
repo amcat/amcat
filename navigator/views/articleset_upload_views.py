@@ -7,17 +7,17 @@ import urllib.parse
 from typing import List
 
 from django import forms
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError, SuspiciousOperation
 from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.db.models.fields.files import FieldFile
-from django.http import QueryDict
+from django.http import QueryDict, HttpResponseBadRequest
 from django.shortcuts import Http404, redirect
 from django.utils.datastructures import MultiValueDict
 from django.views.generic import CreateView, FormView, ListView
 
 from amcat.forms.fields import StaticModelChoiceField
-from amcat.models import UploadedFile, Task, ArticleSet
+from amcat.models import UploadedFile, Task, ArticleSet, PROJECT_ROLES
 from amcat.scripts.article_upload import upload
 from amcat.scripts.article_upload import magic
 from amcat.scripts.article_upload.upload import ArticleField, REQUIRED, PreprocessScript
@@ -88,6 +88,7 @@ class ArticleSetUploadScriptHandler(ActionFormHandler):
 
 
 class UploadListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
+    required_project_permission = PROJECT_ROLES.WRITER
     model = UploadedFile
     parent = ProjectDetailsView
     context_category = 'Uploads'
@@ -109,6 +110,7 @@ class ArticlesetFileUploadForm(forms.ModelForm):
 
 
 class ArticlesSetFileUploadView(BaseMixin, CreateView):
+    required_project_permission = PROJECT_ROLES.WRITER
     parent = UploadListView
     url_fragment = 'add'
     form_class = ArticlesetFileUploadForm
@@ -189,6 +191,7 @@ class UploadViewMixin(BaseMixin):
 
 
 class ArticleSetUploadView(UploadViewMixin, FormView):
+    required_project_permission = PROJECT_ROLES.WRITER
     form_class = ArticleSetUploadForm
     parent = UploadListView
     view_name = "articleset-upload"
@@ -285,6 +288,7 @@ class ArticleUploadFormSet(forms.BaseFormSet):
 
 
 class ArticlesetUploadOptionsView(UploadViewMixin, FormView):
+    required_project_permission = PROJECT_ROLES.WRITER
     parent = ArticleSetUploadView
     view_name = "articleset-upload-options"
     url_fragment = "upload-options"
@@ -307,7 +311,10 @@ class ArticlesetUploadOptionsView(UploadViewMixin, FormView):
         if not hasattr(self, "_parent_form"):
             parent_form = self.parent.form_class(data=self.request.GET, project=self.get_project(), upload=self.upload)
             if parent_form.errors:
-                raise Exception(self.parent_form.errors)
+                raise SuspiciousOperation(
+                    "User attempted to request {self.__class__.__name__} with invalid GET string: {errors}"
+                        .format(self=self, errors=parent_form.errors))
+
             self._parent_form = parent_form
         return self._parent_form
 

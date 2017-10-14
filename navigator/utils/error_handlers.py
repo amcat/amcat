@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 
 import urllib
 import sys
@@ -41,22 +41,27 @@ def handler500(request):
 
     return _build_response(request, locals())
 
-def handler400(request):
+def handler400(request, exception=None):
     """
     400 error handler which includes a normal request context.
     """
     status = 400
     title = header = "400 : Bad Request"
+    if exception:
+        subheader = "{request.path}: {exception}".format(**locals())
     description = """The request was malformed."""
     issue_title = """Bad request: {}""".format(request.path)
     return _build_response(request, locals())
 
-def handler404(request):
+def handler404(request, exception=None):
     """
     404 error handler which includes a normal request context.
     """
     status = 404
+
     title = header = "404 : Page not Found"
+    if exception:
+        subheader = "{request.path}: {exception}".format(**locals())
     description = """The requested location could not be found"""
     issue_title = """Page not found: {}""".format(request.path)
     return _build_response(request, locals())
@@ -73,15 +78,14 @@ def handler503(request):
 
     return _build_response(request, locals())
 
-def handler403(request):
+def handler403(request, exception=None):
     """
     403 Forbidden handler which includes a normal request context.
     """
     status = 403
     title = header = "403 : Forbidden"
-    exc_type, exc_value, exc_tb = sys.exc_info()
-    if exc_value:
-        subheader = "{request.path}: {exc_value}".format(**locals())
+    if exception:
+        subheader = "{request.path}: {exception}".format(**locals())
     issue_title = "Forbidden: {request.path}".format(**locals())
     description = """You have insufficient rights to accesss the requested resource.
                      To gain rights, please contact an administrator of the project you

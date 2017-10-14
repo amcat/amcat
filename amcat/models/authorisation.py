@@ -27,23 +27,35 @@ check(db, privilege/str/int) checks whether user has privilege
 getPrivilege(db, str or int) returns Privilege object
 
 """
+from enum import Enum
+from typing import Union
+
 from django.contrib.auth.models import User
 
 from django.db import models
 from amcat.tools.model import AmcatModel
-
-ROLE_PROJECT_METAREADER = 10
-ROLE_PROJECT_READER = 11
-ROLE_PROJECT_WRITER = 12
-ROLE_PROJECT_ADMIN = 13
+from django.core.exceptions import PermissionDenied
 
 
-class AccessDenied(EnvironmentError):
+
+class PROJECT_ROLES(Enum):
+    METAREADER = 10
+    READER = 11
+    WRITER = 12
+    ADMIN = 13
+
+# todo: replace usages with the PROJECT_ROLES enum members.
+ROLE_PROJECT_METAREADER = PROJECT_ROLES.METAREADER.value
+ROLE_PROJECT_READER = PROJECT_ROLES.READER.value
+ROLE_PROJECT_WRITER = PROJECT_ROLES.WRITER.value
+ROLE_PROJECT_ADMIN = PROJECT_ROLES.ADMIN.value
+
+class AccessDenied(PermissionDenied):
     def __init__(self, user, privilege, project=None):
         projectstr = " on %s" % project if project else ""
         msg = "Access denied for privilege %s%s to %s\nRequired role %s, has role %s" % (
             privilege, projectstr, user, privilege.role, user.userprofile.role)
-        EnvironmentError.__init__(self, msg)
+        super().__init__(self, msg)
 
 
 class Role(AmcatModel):

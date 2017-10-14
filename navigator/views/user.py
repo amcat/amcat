@@ -20,7 +20,7 @@ import logging
 
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from django.shortcuts import render, redirect
 
 from amcat.models.user import User
@@ -37,7 +37,10 @@ def view(request, id=None, form=None):
     try:
         user = User.objects.get(id=id)
     except User.DoesNotExist:
-        return HttpResponse("User not found", status=404)
+        raise Http404("User not found")
+
+    if not (user == request.user or request.user.is_staff):
+        raise PermissionDenied("You are not allowed to view other user's details.")
 
     ref = request.META.get('HTTP_REFERER', '')
     success = ref.endswith(reverse("navigator:user", args=[user.id])) and not form

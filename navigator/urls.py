@@ -24,6 +24,8 @@ import navigator.views.codingjob
 import navigator.views.index
 import navigator.views.request_token
 import navigator.views.user
+
+
 from navigator.views.article_views import *  # noqa
 from navigator.views.articleset_upload_views import * # noqa
 from navigator.views.articleset_views import *  # noqa
@@ -35,6 +37,8 @@ from navigator.views.query import *  # noqa
 from navigator.views.remote_import import * # noqa
 from navigator.views.task import TaskDetailsView, TaskListView, clean_ready, clean_stuck, uuid_redirect
 from navigator.views.user_views import *  # noqa
+
+import navigator.utils.error_handlers
 
 UUID_RE = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
 

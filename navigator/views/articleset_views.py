@@ -30,7 +30,7 @@ from django.views.generic.edit import CreateView
 from django.views.generic.list import ListView
 
 from amcat.forms.fields import StaticModelChoiceField
-from amcat.models import Article
+from amcat.models import Article, PROJECT_ROLES
 from amcat.models import Project, ArticleSet
 from amcat.models.project import LITTER_PROJECT_ID
 from amcat.scripts.actions.deduplicate_set import DeduplicateSet
@@ -41,7 +41,8 @@ from api.rest.resources import SearchResource
 from api.rest.viewsets import FavouriteArticleSetViewSet, ArticleSetViewSet, CodingjobArticleSetViewSet
 from navigator.views.datatableview import DatatableMixin
 from navigator.views.project_views import ProjectDetailsView
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectActionRedirectView, ProjectEditView
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, \
+    ProjectActionRedirectView, ProjectEditView, ProjectPermissionMap
 
 UPLOAD_PLUGIN_TYPE = 1
 
@@ -160,6 +161,10 @@ class AddArticlesToArticleSetForm(forms.Form):
 
     
 class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, DetailView):
+    required_project_permission = ProjectPermissionMap(
+        get=PROJECT_ROLES.METAREADER,
+        delete=PROJECT_ROLES.WRITER,
+        post=PROJECT_ROLES.WRITER)
     parent = ArticleSetListView
     resource = SearchResource
     rowlink = './{id}'
@@ -167,9 +172,6 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
 
     def delete(self, request, project, articleset):
         """Accepts a list of article ids as post argument (articles)."""
-        if not self.can_edit():
-            raise PermissionDenied("You can't edit this articleset.")
-
         articleset = ArticleSet.objects.get(id=articleset, project__id=project)
         form = ArticleSetArticleDeleteForm(articleset=articleset, data=request.POST)
 
@@ -181,9 +183,6 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
         return HttpResponseBadRequest(str(dict(form.errors)))
 
     def post(self, request, project, articleset):
-        if not self.can_edit():
-            raise PermissionDenied("You can't edit this articleset.")
-
         articleset = ArticleSet.objects.get(id=articleset, project__id=project)
         form = AddArticlesToArticleSetForm(project=self.project, articleset=articleset, data=request.POST)
 
@@ -224,6 +223,7 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
 
     
 class ArticleSetImportView(ProjectScriptView):
+    required_project_permission = PROJECT_ROLES.WRITER
     script = ImportSet
     parent = ArticleSetDetailsView
     url_fragment = 'import'
@@ -250,6 +250,7 @@ class ArticleSetImportView(ProjectScriptView):
         return initial
 
 class ArticleSetSampleView(ProjectScriptView):
+    required_project_permission = PROJECT_ROLES.WRITER
     parent = ArticleSetDetailsView
     script = SampleSet
     url_fragment = 'sample'
@@ -280,6 +281,7 @@ class ArticleSetSampleView(ProjectScriptView):
                             .format(**locals()))
 
 class ArticleSetDeduplicateView(ProjectScriptView):
+    required_project_permission = PROJECT_ROLES.WRITER
     parent = ArticleSetDetailsView
     script = DeduplicateSet
     url_fragment = "deduplicate"
@@ -308,11 +310,13 @@ class ArticleSetDeduplicateView(ProjectScriptView):
     
 
 class ArticleSetEditView(ProjectEditView):
+    required_project_permission = PROJECT_ROLES.WRITER
     parent = ArticleSetDetailsView
     fields = ['project', 'name', 'provenance']
 
 
 class ArticleSetCreateView(HierarchicalViewMixin, ProjectViewMixin, CreateView):
+    required_project_permission = PROJECT_ROLES.WRITER
     parent = ArticleSetListView
     fields = ['project', 'name', 'provenance']
     url_fragment = 'create' 
@@ -348,6 +352,7 @@ class MultipleArticleSetDestinationView(HierarchicalViewMixin, ProjectViewMixin,
 
 
 class ArticleSetRefreshView(ProjectActionRedirectView):
+    required_project_permission = PROJECT_ROLES.WRITER
     parent = ArticleSetDetailsView
     url_fragment = "refresh"
 
@@ -358,6 +363,7 @@ class ArticleSetRefreshView(ProjectActionRedirectView):
 
         
 class ArticleSetDeleteView(ProjectActionRedirectView):
+    required_project_permission = PROJECT_ROLES.WRITER
     parent = ArticleSetDetailsView
     url_fragment = "delete"
 
@@ -378,6 +384,7 @@ class ArticleSetDeleteView(ProjectActionRedirectView):
         return ArticleSetListView._get_breadcrumb_url(kwargs, self)
 
 class ArticleSetUnlinkView(ProjectActionRedirectView):
+    required_project_permission = PROJECT_ROLES.WRITER
     parent = ArticleSetDetailsView
     url_fragment = "unlink"
 

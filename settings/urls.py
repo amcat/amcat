@@ -21,6 +21,8 @@ from django.conf.urls import include, url
 from django.contrib import admin
 from django.views.static import serve
 
+from navigator.utils.error_handlers import *
+
 admin.autodiscover()
 
 urlpatterns = [
@@ -38,3 +40,4 @@ urlpatterns += [
         "document_root": settings.MEDIA_ROOT,
     }, prefix="django.views")
 ]
+

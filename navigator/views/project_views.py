@@ -27,8 +27,8 @@ from amcat.forms.fields import StaticModelChoiceField
 from amcat.forms.widgets import BootstrapMultipleSelect
 from amcat.scripts.article_upload.upload_plugins import get_project_plugins, get_upload_plugins
 from navigator.views.datatableview import DatatableMixin
-from amcat.models import Project, ArticleSet
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
+from amcat.models import Project, ArticleSet, PROJECT_ROLES
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectPermissionMap
 from navigator.views.scriptview import ScriptView
 from amcat.scripts.actions.add_project import AddProject
 
@@ -103,6 +103,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
 from django import forms
 from amcat.models import Role
 class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, UpdateView):
+    required_project_permission = ProjectPermissionMap(all=PROJECT_ROLES.WRITER, get=PROJECT_ROLES.METAREADER)
     context_category = 'Settings'
     parent = None
     base_url = "projects"

@@ -2,9 +2,10 @@ import urllib.parse
 
 from django.core.urlresolvers import reverse
 
+from amcat.models import PROJECT_ROLES
 from amcat.scripts.actions.remote_import import RemoteArticleSetImport
 from navigator.views.project_views import ProjectDetailsView
-from navigator.views.projectview import ProjectScriptView
+from navigator.views.projectview import ProjectScriptView, ProjectPermissionMap
 from navigator.views.scriptview import ScriptHandler
 
 
@@ -15,6 +16,7 @@ class RemoteImportHandler(ScriptHandler):
 
 
 class RemoteArticleSetImportView(ProjectScriptView):
+    required_project_permission = ProjectPermissionMap(PROJECT_ROLES.WRITER)
     script = RemoteArticleSetImport
     parent = ProjectDetailsView
     url_fragment = "import"
