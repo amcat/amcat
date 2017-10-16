@@ -17,24 +17,14 @@ class AuthTokenSerializer(serializers.Serializer):
         super(AuthTokenSerializer, self).__init__(*args, **kwargs)
         self.user = None
 
-    username = serializers.CharField(required = False)
-    password = serializers.CharField(required = False)
-    token = serializers.CharField(required = False)
-
+    username = serializers.CharField()
+    password = serializers.CharField()
 
     def validate(self, attrs):
         username = attrs.get('username')
         password = attrs.get('password')
-        token = attrs.get('token')
-        if token:
-            eta = ExpiringTokenAuthentication()
-            self.user, token = eta.authenticate_credentials(token)
-        else:
-            if username and password:
-                self.user = authenticate(username=username, password=password)
-            else: 
-                raise serializers.ValidationError('Must include either "token" or "username" with "password"')
-            
+    
+        self.user = authenticate(username=username, password=password)    
         if self.user:
             if not self.user.is_active:
                 raise serializers.ValidationError('User account is disabled.')
@@ -52,6 +42,7 @@ class ObtainAuthToken(APIView):
     model = Token
 
     def post(self, request):
+        
         serializer = self.serializer_class(data=request.data)
 
         if not request.user.is_anonymous():

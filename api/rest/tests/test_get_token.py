@@ -96,7 +96,7 @@ class TestObtainAuthToken(ApiTestCase):
             "password": "test"
         })
 
-        self.assertIn("username", response["non_field_errors"][0])
+        self.assertIn("username", response)
 
     def test_wrong_credentials(self):
         response = self.post("/api/v4/get_token", check_status=400, body={
