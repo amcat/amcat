@@ -123,3 +123,6 @@ if not amcat_config["base"].getboolean("debug") and amcat_config["logs"].get("fi
 
 if amcat_config["logs"].getboolean("console"):
     LOGGING['loggers']['']['handlers'] += ['console']
+
+# explicitly reset amcat logger to undo disabling via disable_existing_loggers
+LOGGING['loggers']['amcat'] = {}
