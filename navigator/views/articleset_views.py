@@ -30,7 +30,7 @@ from django.views.generic.edit import CreateView
 from django.views.generic.list import ListView
 
 from amcat.forms.fields import StaticModelChoiceField
-from amcat.models import Article, PROJECT_ROLES
+from amcat.models import Article, PROJECT_ROLES, Role, ProjectRole
 from amcat.models import Project, ArticleSet
 from amcat.models.project import LITTER_PROJECT_ID
 from amcat.scripts.actions.deduplicate_set import DeduplicateSet
@@ -223,10 +223,17 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
 
     
 class ArticleSetImportView(ProjectScriptView):
-    required_project_permission = PROJECT_ROLES.WRITER
+    required_project_permission = PROJECT_ROLES.READER
     script = ImportSet
     parent = ArticleSetDetailsView
     url_fragment = 'import'
+
+    def form_valid(self, form):
+        tgt = form.cleaned_data['target_project'] #type: Project
+        role_id = tgt.get_role_id(self.request.user)
+        if role_id < PROJECT_ROLES.WRITER.value:
+            raise PermissionDenied("The user does not have permission to write to the target project.")
+        return super().form_valid(form)
 
     def get_success_url(self):
         project = self.form.cleaned_data["target_project"]

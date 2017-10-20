@@ -103,7 +103,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
 from django import forms
 from amcat.models import Role
 class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, UpdateView):
-    required_project_permission = ProjectPermissionMap(all=PROJECT_ROLES.WRITER, get=PROJECT_ROLES.METAREADER)
+    required_project_permission = ProjectPermissionMap(post=PROJECT_ROLES.ADMIN, get=PROJECT_ROLES.METAREADER)
     context_category = 'Settings'
     parent = None
     base_url = "projects"

@@ -16,7 +16,7 @@ class ProjectPermissionsTestCase(amcattest.AmCATTestCase):
         super().setUpClass()
         cls.order = ["noaccess", "readmeta", "read", "write", "admin"]
         cls.users = {k: amcattest.create_test_user(username="testuser-{}".format(k)) for k in cls.order}
-        cls.clients = {} #type: Mapping[str, Client]
+        cls.clients = {}
         for k, v in cls.users.items():
             client = Client()
             client.login(username=v.username, password="test")
@@ -26,7 +26,7 @@ class ProjectPermissionsTestCase(amcattest.AmCATTestCase):
         cls.articleset = amcattest.create_test_set(articles=5, project=cls.project)
         cls.article = cls.articleset.articles.all()[0]
 
-        cls.alt_project = amcattest.create_test_project(name="alt-permission-project", guest_role_id=ROLE_PROJECT_METAREADER)
+        cls.alt_project = amcattest.create_test_project(name="alt-permission-project", guest_role_id=ROLE_PROJECT_READER)
         cls.alt_articleset = amcattest.create_test_set(articles=5, project=cls.alt_project)
         cls.alt_article = cls.alt_articleset.articles.all()[0]
         cls.articleset.add_articles([art.id for art in cls.alt_articleset.articles.all()])
@@ -35,11 +35,12 @@ class ProjectPermissionsTestCase(amcattest.AmCATTestCase):
         ProjectRole.objects.create(project=cls.project, user=cls.users["read"], role_id=ROLE_PROJECT_READER)
         ProjectRole.objects.create(project=cls.project, user=cls.users["write"], role_id=ROLE_PROJECT_WRITER)
 
-    def _test_generic(self, method, fail_role, success_role, url):
+    def _test_generic(self, method, fail_role, success_role, url, data=''):
         """Test if access is denied on role `fail_role`, and given for role `success_role`."""
-        get = self.clients[fail_role].generic(method, url)
+        content_type = "application/x-www-form-urlencoded"
+        get = self.clients[fail_role].generic(method, url, data=data, content_type=content_type)
         self.assertEqual(get.status_code, 403, "Permission not denied for role '{}'. Expected minimum required role '{}'.".format(fail_role, success_role))
-        get = self.clients[success_role].generic(method, url)
+        get = self.clients[success_role].generic(method, url, data=data, content_type=content_type)
         self.assertNotEqual(get.status_code, 403, "Permission denied for role '{}'".format(success_role))
 
     def _test_get_readmeta_access(self, url):
@@ -54,8 +55,11 @@ class ProjectPermissionsTestCase(amcattest.AmCATTestCase):
     def _test_get_write_access(self, url):
         self._test_generic("GET", "read", "write", url)
 
-    def _test_post_write_access(self, url):
-        self._test_generic("POST", "read", "write", url)
+    def _test_post_write_access(self, url, data=''):
+        self._test_generic("POST", "read", "write", url, data=data)
+
+    def _test_post_admin_access(self, url, data=''):
+        self._test_generic("POST", "write", "admin", url, data=data)
 
     def _test_get_post_write_access(self, url):
         self._test_get_write_access(url)
@@ -66,7 +70,7 @@ class TestViewPermissions(ProjectPermissionsTestCase):
         self._test_get_readmeta_access(reverse("navigator:article-details", args=[self.project.id, self.articleset.id, self.article.id]))
         self._test_get_readmeta_access(reverse("navigator:project-article-details", args=[self.project.id, self.article.id]))
 
-        # let writer remove article from the set that originates from another project. writer has metareader access in alt_project.
+        # let writer remove article from the set that originates from another project. writer has read access in alt_project.
         rm_art_url = "{}?remove_set={}".format(reverse("navigator:article-removefromset", args=[self.alt_project.id, self.alt_article.id]), self.articleset.id)
         self._test_get_write_access(rm_art_url)
         self._test_get_post_write_access(reverse("navigator:article-split", args=[self.project.id, self.article.id]))
@@ -92,8 +96,10 @@ class TestViewPermissions(ProjectPermissionsTestCase):
         self._test_get_post_write_access(reverse("navigator:articleset-delete", args=[self.project.id, self.articleset.id]))
 
     def test_articleset_action_views(self):
+        self._test_get_read_access(reverse("navigator:articleset-import", args=[self.project.id, self.articleset.id]))
+        self._test_post_write_access(reverse("navigator:articleset-import", args=[self.alt_project.id, self.articleset.id]),
+                                     data='target_project={}&articleset={}'.format(self.project.id, self.articleset.id))
         self._test_get_post_write_access(reverse("navigator:articleset-deduplicate", args=[self.project.id, self.articleset.id]))
-        self._test_get_post_write_access(reverse("navigator:articleset-import", args=[self.project.id, self.articleset.id]))
         self._test_get_post_write_access(reverse("navigator:articleset-sample", args=[self.project.id, self.articleset.id]))
         self._test_get_post_write_access(reverse("navigator:articleset-refresh", args=[self.project.id, self.articleset.id]))
         self._test_get_post_write_access(reverse("navigator:articleset-unlink", args=[self.project.id, self.articleset.id]))
@@ -110,4 +116,4 @@ class TestViewPermissions(ProjectPermissionsTestCase):
 
     def test_project_views(self):
         self._test_get_readmeta_access(reverse("navigator:project-details", args=[self.project.id]))
-        self._test_post_write_access(reverse("navigator:project-details", args=[self.project.id]))
+        self._test_post_admin_access(reverse("navigator:project-details", args=[self.project.id]))
