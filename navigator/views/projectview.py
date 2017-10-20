@@ -18,8 +18,9 @@
 ###########################################################################
 
 import re
-from typing import Union
+from typing import Union, Type
 
+from actionform import ActionForm
 from django.contrib import messages
 from django.forms import Form
 from django.http import Http404, HttpResponseNotAllowed
@@ -404,8 +405,36 @@ class ProjectFormView(BaseMixin, FormView):
         context["cancel_url"] = self.get_cancel_url()
         return context
 
+class ProjectActionForm(ActionForm):
+    pass
+
+class ProjectActionFormView(BaseMixin, FormView):
+    action_form_class = ProjectActionForm
+
+    def get_form_class(self):
+        return self.action_form_class.get_form_class()
+
+    def form_valid(self, form):
+        self.form = form
+        self.result = form.run()
+        message = self.success_message(self.result)
+        self.request.session['notification'] = message
+        return self.form_valid(form)
+
+    def get_success_url(self):
+        return self.parent._get_breadcrumb_url(self.kwargs, self)
+
+    def success_message(self, result=None):
+        """Message to display (notify) on success"""
+        return ("Succesfully ran action {self.__class__.__name__}"
+                .format(**locals()))
+
 
 class ProjectActionRedirectView(BaseMixin, RedirectView):
+    """
+    DEPRECATED
+    Performs an action on  GET-request. HTTP-noncompliant and should be phased out.
+    """
     permanent = False
     # we don't want the browser to cache the redirect and prevent the action
     # (but what we really want is a POST request instead???)
@@ -414,6 +443,8 @@ class ProjectActionRedirectView(BaseMixin, RedirectView):
     def get(self, request, *args, **kwargs):
         result = self.action(**kwargs)
         message = self.success_message(result)
+        if settings.DEBUG:
+            message += "<br> Deprecation warning: ProjectActionRedirectView is deprecated. Use ProjectActionFormView instead."
         request.session['notification'] = message
         return (super(ProjectActionRedirectView, self)
                 .get(request, *args, **kwargs))

@@ -34,7 +34,7 @@ from api.rest.resources import CodebookHierarchyResource
 from api.rest.viewsets import CodebookViewSet
 from navigator.views.project_views import ProjectDetailsView
 from navigator.views.projectview import BreadCrumbMixin, HierarchicalViewMixin, ProjectActionRedirectView, \
-    ProjectDetailView, ProjectFormView, ProjectScriptView, ProjectViewMixin
+    ProjectDetailView, ProjectFormView, ProjectScriptView, ProjectViewMixin, ProjectActionForm
 from navigator.views.scriptview import TableExportMixin
 
 
@@ -173,6 +173,9 @@ class CodebookLinkView(ProjectFormView):
             self.project.codebooks.add(cb)
         self.request.session['notification'] = "Linked {n} codebook(s)".format(n=len(cbs))
         return super(CodebookLinkView, self).form_valid(form)
+
+class CodebookUnlinkActionForm(ProjectActionForm):
+    pass
 
 class CodebookUnlinkView(ProjectActionRedirectView):
     parent = CodebookDetailsView
