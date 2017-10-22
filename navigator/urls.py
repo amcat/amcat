@@ -89,7 +89,7 @@ _views = [
     CodingJobAddView, CodingJobDetailsView,CodingJobDeleteView, CodingJobEditView,
     CodingJobExportSelectView, CodingJobExportView,
 
-    ProjectUserListView, ProjectUserAddView,
+    ProjectUserListView, ProjectUserAddView, ProjectUserInviteView,
 
     RemoteArticleSetImportView,
 

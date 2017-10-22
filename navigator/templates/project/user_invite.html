@@ -1,0 +1,86 @@
+{% extends "project/base.html" %}
+{% load bootstrap %}
+{% load staticfiles %}
+{% block css %}
+    <link href="{% static 'css/sortselect.css' %}" rel="stylesheet" type="text/css"  />
+{% endblock %}
+
+{% block javascript %}
+    <script lang="javascript">
+        require(['jquery', 'bootstrap-multiselect'], $ => $('.multiselect').multiselect());
+
+        require(["jquery", "amcat/sortselect"], function($){
+            $("#id_display_columns").sortSelect();
+        })
+    </script>
+{% endblock %}
+{% block content %}
+
+<form action="" method="POST">
+{% csrf_token %}
+{% for f in form %}
+    {% for field in f.hidden_fields %}{{ field }}{% endfor %}
+{% endfor %}
+    <legend>Invite one or more users to project {{ project.id }}: "{{ project.name }}"</legend>
+    {{ form.management_form }}
+    <p>{{ form.non_field_errors }}</p>
+    <table id="formset-table" class="table table-condensed">
+        <thead>
+        {% with f=form.0 %}
+            <tr>
+            {% for field in f.visible_fields %}
+                <th>{{ field.label }}</th>
+            {% endfor %}
+            </tr>
+        {% endwith %}
+        </thead>
+        <tbody>
+        {% for f in form %}
+            {% with f=f|bootstrap_form_controls %}
+            <tr class="{% if f.email.data and not f.exists.data %}success{% endif %}">
+            {% for field in f %}
+                <td>{{ field }}</td>
+            {% endfor %}
+            {% for field in f.visible_fields %}
+                {% if field.errors %}
+                <td>{{ field.label }}: {{ field.errors|join:", " }}</td>
+                {% endif %}
+            {% endfor %}
+            <td>
+            {% if view.confirm and f.email.data %}
+            {% if not f.exists.data  %}
+                <span class="label label-success">New</span>
+            {% else %}
+                <span class="label label-info">Exists</span>
+            {% endif %}
+            {% endif %}
+            </td>
+            </tr>
+            {% endwith %}
+        {% endfor %}
+        </tbody>
+    </table>
+    <div class="pull-right small">
+    <dl class="dl-horizontal">
+        {% if not view.confirm %}
+        <dt></dt><dd>Tip: try pasting an Excel table into this form.</dd>
+        {% else %}
+        <dt><span class="label label-success">New</span></dt><dd>A new account with this e-mail address will be created, and the user will be invited to AmCAT and to this project.</dd>
+        <dt><span class="label label-info">Exists</span></dt><dd>A user with this e-mail address already exists and will be added to the project.</dd>
+        {% endif %}
+    </dl>
+    </div>
+    <div class="form-actions">
+        <input class="btn btn-primary" type="submit" value="{% if view.confirm %}Confirm invitations{% else %}Invite{% endif %}">
+        <a href="{% url "navigator:project" project.id %}" class="btn">Cancel</a>
+   </div>
+
+<p>
+</p>
+</form>
+<script>
+require(["amcat/formsetutils"], (formsetUtils)=>{
+    formsetUtils.bindTableEditEvents($('#formset-table'));
+});
+</script>
+{% endblock %}

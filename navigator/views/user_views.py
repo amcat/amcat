@@ -18,7 +18,10 @@
 ###########################################################################
 
 from django import forms
+from django.core.exceptions import SuspiciousOperation
 from django.core.urlresolvers import reverse
+from django.forms import formset_factory
+from django.views.generic import FormView
 from django.views.generic.base import RedirectView
 from django.views.generic.list import ListView
 
@@ -27,8 +30,10 @@ from amcat.models import Project, ProjectRole, Role
 from amcat.models import User, authorisation
 from api.rest.resources import ProjectRoleResource
 from navigator.forms import gen_user_choices
+from navigator.utils import auth
 from navigator.views.datatableview import DatatableMixin
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, BaseMixin
+
 
 class ProjectRoleForm(forms.ModelForm):
     user = forms.MultipleChoiceField(widget=BootstrapMultipleSelect)
@@ -99,3 +104,106 @@ class ProjectUserAddView(ProjectViewMixin, HierarchicalViewMixin, RedirectView):
                     r = ProjectRole(project=project, user=user, role=role)
                     r.save()
         return reverse("navigator:user-list", args=[project.id])
+
+class ProjectUserInviteForm(forms.ModelForm):
+    email = forms.EmailField(required=True)
+    exists = forms.BooleanField(required=False, widget=forms.HiddenInput)
+
+    def validate_unique(self):
+        pass
+
+    class Meta:
+        model = User
+        fields = ["username", "email", "first_name", "last_name"]
+
+class ProjectUserInviteBaseFormSet(forms.BaseFormSet):
+
+    @property
+    def management_form(self):
+        form = super().management_form
+        form.fields["confirm"] = forms.BooleanField(widget=forms.HiddenInput)
+        form.fields["role"] = forms.ModelChoiceField(queryset=Role.objects.all())
+        return form
+
+ProjectUserInviteFormSet = formset_factory(form=ProjectUserInviteForm, formset=ProjectUserInviteBaseFormSet, extra=5, min_num=1)
+
+class ProjectUserInviteView(BaseMixin, FormView):
+    required_project_permission = authorisation.ROLE_PROJECT_ADMIN
+    form_class = ProjectUserInviteFormSet
+    parent = ProjectUserListView
+    url_fragment = "invite"
+    confirm = False
+
+    def has_permission(self, perm):
+        if not self.request.user.is_staff:
+            return False
+        return super().has_permission(perm)
+
+    def create_user(self, user_form):
+        return auth.create_user(
+            username=user_form.cleaned_data['username'],
+            email=user_form.cleaned_data['email'],
+            first_name=user_form.cleaned_data['first_name'],
+            last_name=user_form.cleaned_data['last_name']
+        )
+
+    def form_confirmed(self, form):
+        for f in form:
+            try:
+                user = User.objects.get(email=f.cleaned_data["email"])
+                if not f.cleaned_data["exists"]:
+                    raise SuspiciousOperation
+            except User.DoesNotExist:
+                if f.cleaned_data["exists"]:
+                    raise SuspiciousOperation
+                user = self.create_user(f)
+
+            role = Role.objects.get(id=int(form.data["form-role"]))
+            ProjectRole.objects.update_or_create(user=user, project=self.project, defaults={"role": role})
+
+        return super().form_valid(form)
+
+    def form_valid(self, form):
+        if bool(form.management_form.data.get('form-confirm')):
+            return self.form_confirmed(form)
+        self.confirm = True
+        return self.form_confirm(form)
+
+    def form_confirm(self, form):
+        data = form.data.copy()
+        data['form-confirm'] = True
+        fms = [f for f in form if f.cleaned_data]
+        emails = set()
+        for f in fms:
+            emails.add(f.cleaned_data["email"])
+        existing_users = {user.email: user for user in User.objects.filter(email__in=emails)}
+
+        for i in range(len(form.forms)):
+            email = data.get('form-{}-email'.format(i))
+            if email in existing_users:
+                self.any_exist = True
+                user = existing_users[email]
+                data['form-{}-username'.format(i)] = user.username
+                data['form-{}-email'.format(i)] = email
+                data['form-{}-first_name'.format(i)] = user.first_name
+                data['form-{}-last_name'.format(i)] = user.last_name
+                data['form-{}-exists'.format(i)] = True
+                form.forms[i].data = data
+                form.forms[i].initial = data
+            for k, f in form.forms[i].fields.items():
+                f.widget.attrs["readonly"] = "readonly"
+                f.widget.attrs["class"] = "input-confirm"
+        n = len(form.forms)
+        for i in range(len(form.forms) - 1, -1, -1):
+            if data['form-{}-email'.format(i)] != '':
+                break
+            form.forms.pop(i)
+            n -= 1
+        data["form-TOTAL_FORMS"] = n
+        form.management_form.data = data
+        form.data = data
+        form.initial = data
+        return super().form_invalid(form) # return to form view
+
+    def get_success_url(self):
+        return reverse("navigator:user-list", args=[self.project.id])
