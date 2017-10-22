@@ -122,10 +122,11 @@ class ProjectUserInviteBaseFormSet(forms.BaseFormSet):
     def management_form(self):
         form = super().management_form
         form.fields["confirm"] = forms.BooleanField(widget=forms.HiddenInput)
-        form.fields["role"] = forms.ModelChoiceField(queryset=Role.objects.all())
+        form.fields["role"] = forms.ModelChoiceField(queryset=Role.objects.all(), label="Project Role",
+                                                     help_text="Optional, leave blank if users shouldn't be added to the project.")
         return form
 
-ProjectUserInviteFormSet = formset_factory(form=ProjectUserInviteForm, formset=ProjectUserInviteBaseFormSet, extra=5, min_num=1)
+ProjectUserInviteFormSet = formset_factory(form=ProjectUserInviteForm, formset=ProjectUserInviteBaseFormSet, extra=1, min_num=1)
 
 class ProjectUserInviteView(BaseMixin, FormView):
     required_project_permission = authorisation.ROLE_PROJECT_ADMIN
@@ -158,12 +159,17 @@ class ProjectUserInviteView(BaseMixin, FormView):
                     raise SuspiciousOperation
                 user = self.create_user(f)
 
-            role = Role.objects.get(id=int(form.data["form-role"]))
-            ProjectRole.objects.update_or_create(user=user, project=self.project, defaults={"role": role})
+            if form.data.get("form-role"):
+                role = Role.objects.get(id=int(form.data["form-role"]))
+                ProjectRole.objects.update_or_create(user=user, project=self.project, defaults={"role": role})
 
         return super().form_valid(form)
 
     def form_valid(self, form):
+        # This form consists of two steps: a step where the users fills in the users, followed by validation
+        # and a check for existing users on the server which must be confirmed by the user.
+        # If the 'confirm' flag of the management_form is set this indicates that the confirmation step has
+        # been completed.
         if bool(form.management_form.data.get('form-confirm')):
             return self.form_confirmed(form)
         self.confirm = True
@@ -178,6 +184,7 @@ class ProjectUserInviteView(BaseMixin, FormView):
             emails.add(f.cleaned_data["email"])
         existing_users = {user.email: user for user in User.objects.filter(email__in=emails)}
 
+        # check for existing users and flag them as such, change user info in form if necessary.
         for i in range(len(form.forms)):
             email = data.get('form-{}-email'.format(i))
             if email in existing_users:
@@ -193,6 +200,8 @@ class ProjectUserInviteView(BaseMixin, FormView):
             for k, f in form.forms[i].fields.items():
                 f.widget.attrs["readonly"] = "readonly"
                 f.widget.attrs["class"] = "input-confirm"
+
+        # strip unused forms
         n = len(form.forms)
         for i in range(len(form.forms) - 1, -1, -1):
             if data['form-{}-email'.format(i)] != '':

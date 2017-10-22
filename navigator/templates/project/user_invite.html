@@ -18,11 +18,18 @@
 
 <form action="" method="POST">
 {% csrf_token %}
+{% for field in form.management_form.hidden_fields %}{{ field }}{% endfor %}
 {% for f in form %}
     {% for field in f.hidden_fields %}{{ field }}{% endfor %}
 {% endfor %}
     <legend>Invite one or more users to project {{ project.id }}: "{{ project.name }}"</legend>
-    {{ form.management_form }}
+    <div class="form-inline">
+    {% with management_form=form.management_form|bootstrap_form_controls %}
+        {% for field in management_form.visible_fields %}
+            <p><label for="{{ field.auto_id }}">{{ field.label }}</label> <span>{{ field }}</span> <br><small>{{ field.help_text }}</small></p>
+        {% endfor %}
+    {% endwith %}
+    </div>
     <p>{{ form.non_field_errors }}</p>
     <table id="formset-table" class="table table-condensed">
         <thead>
@@ -59,6 +66,11 @@
             {% endwith %}
         {% endfor %}
         </tbody>
+        <tfoot>
+        {% if not view.confirm %}
+        <tr class="text-center"><td colspan="4"><button class="btn btn-default" id="btn-formset-add-row"><span class="glyphicon glyphicon-plus"></span> Add row</button></td></tr>
+        {% endif %}
+        </tfoot>
     </table>
     <div class="pull-right small">
     <dl class="dl-horizontal">
@@ -79,8 +91,40 @@
 </p>
 </form>
 <script>
+    {% if view.confirm %}
+        const confirmView = true;
+    {% else %}
+        const confirmView = false;
+    {% endif %}
+
 require(["amcat/formsetutils"], (formsetUtils)=>{
-    formsetUtils.bindTableEditEvents($('#formset-table'));
+    const table = $("#formset-table");
+    const form = table.closest("form");
+    formsetUtils.bindTablePasteEvent(table);
+    $("#btn-formset-add-row").on("click", e=>{e.preventDefault(); formsetUtils.expandTable($('#formset-table'))});
+
+    if(confirmView) {
+        return;
+    }
+
+    // restore form content on back button.
+    form.on("submit", e =>{
+        let formData = new FormData(form[0]);
+        history.replaceState({'formData': {[form.selector]: Array.from(formData)}}, "");
+    });
+    if(history.state !== null){
+        let formMap = new Map(history.state.formData[form.selector]);
+        if(formMap.size > 0){
+            let size = formMap.get("form-TOTAL_FORMS") | 0;
+            formsetUtils.expandTable(table, size);
+            for(let kv of formMap){
+                form[0][kv[0]].value = kv[1];
+            }
+        }
+        let state = history.state;
+        delete state.formData[form.selector];
+        history.replaceState(state, "import");
+    }
 });
 </script>
 {% endblock %}

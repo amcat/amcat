@@ -4,7 +4,13 @@
 
 {% block actions %}
 {% if is_admin %}
+
  <h2>Add, remove, or modify users:</h2>
+ {% if view.request.user.is_staff %}
+     <p>
+     <a class="btn btn-warning" href="{% url "navigator:user-invite" project.id %}">Invite new users by email</a>
+     </p>
+ {% endif %}
  <form action="{% url "navigator:user-add" project.id %}" id="users-form" method="POST">
      {% csrf_token %}
   {{ add_user }}
