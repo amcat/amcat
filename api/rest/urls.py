@@ -24,7 +24,7 @@ from api.rest import resources
 from api.rest.views.meta import ArticleMetaView
 from api.rest.views.status import StatusView
 from api.rest.views.tokens import TokensView
-from api.rest.viewsets import get_viewsets
+from api.rest.viewsets import get_viewsets, UserViewSet
 
 router = DefaultRouter()
 for vs in get_viewsets():
@@ -42,7 +42,7 @@ urlpatterns = [
     url(r'^projects/(?P<project_id>[0-9]+)/articlesets/(?P<articleset_id>[0-9]+)/meta/?$', ArticleMetaView.as_view(), name="meta"),
     url(r'^meta/?$', ArticleMetaView.as_view(), name="meta"),
     url(r'^projects/(?P<project_id>[0-9]+)/articlesets/(?P<articleset_id>[0-9]+)/tokens/?$', TokensView.as_view(), name="tokens"),
-
+    #url(r'^users/me/', UserViewSet.as_view({"get": "retrieve"}), name="current-user", kwargs={"pk": "me"}),
 
     *(r.get_url_pattern() for r in resources.all_resources())
 ]
@@ -50,3 +50,4 @@ urlpatterns = [
 urlpatterns +=  [
     url(r'^', include(router.urls)),
 ]
+

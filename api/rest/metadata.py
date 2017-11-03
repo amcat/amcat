@@ -64,6 +64,7 @@ class AmCATMetadata(SimpleMetadata):
             yield (name, field_name)
 
     def determine_metadata(self, request, view):
+        from api.rest.resources import get_resource_for_model
         metadata = super(AmCATMetadata, self).determine_metadata(request, view)
 
         if self._get_model(view) is None:
@@ -77,14 +78,12 @@ class AmCATMetadata(SimpleMetadata):
             log.debug("No resource for model, returning minimal metadata.")
             return metadata
 
-        grfm = api.rest.resources.get_resource_for_model
-
         serializer = view.get_serializer()
         if hasattr(serializer, "Meta") and  hasattr(serializer.Meta, "model"):
             model = serializer.Meta.model
 
             metadata['models'] = {
-                name: grfm(_get_model_by_field(model, name)).get_url()
+                name: get_resource_for_model(_get_model_by_field(model, name)).get_url()
                 for (name, field) in serializer.get_fields().items()
                 if hasattr(field, 'queryset')
             }

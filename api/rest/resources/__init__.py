@@ -24,7 +24,7 @@ If you want to customize the model, create it in this package and import it here
 """
 
 
-import types, sys
+import sys
 from amcat.tools import classtools
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.resources.project import ProjectResource
@@ -44,6 +44,9 @@ from rest_framework.decorators import api_view
 from rest_framework.reverse import reverse
 
 from collections import OrderedDict
+from logging import getLogger
+
+log = getLogger(__name__)
 
 MODELS = ['Article', 'AmCAT',
           'Role', 'ProjectRole',
@@ -75,7 +78,8 @@ def get_resource_for_model(model):
     for resource in all_resources():
         if resource.model == model:
             return resource
-    raise ValueError("No resource registered for model {model}".format(**locals()))
+    log.debug("No resource registered for model {model}".format(**locals()))
+    return None
 
 def get_all_resource_views(request):
     for r in all_resources():

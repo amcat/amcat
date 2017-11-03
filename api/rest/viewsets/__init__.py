@@ -36,6 +36,7 @@ from api.rest.viewsets.task import *
 from api.rest.viewsets.preprocess import *
 from api.rest.viewsets.query import *
 from api.rest.viewsets.uploadplugin import *
+from api.rest.viewsets.user import *
 
 def get_viewsets():
     for cls in globals().values():

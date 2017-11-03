@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from rest_framework.permissions import IsAdminUser
 
 from amcat.models import User
 
@@ -30,7 +31,7 @@ class UserResource(AmCATResource):
     class serializer_class(AmCATModelSerializer):
         class Meta:
             model = User
-            exclude = ("password",)
+            fields = ("id", "username")
 
     @classmethod
     def get_label(cls):

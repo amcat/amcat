@@ -165,6 +165,8 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         def save(self, commit=True):
             if not self.cleaned_data['display_columns']:
                 self.instance.display_columns = []
+            if not self.cleaned_data["guest_role"]:
+                self.instance.guest_role = None
             super().save(commit)
 
 

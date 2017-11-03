@@ -17,10 +17,9 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-import json
 import logging
 
-from django_filters import filters, FilterSet
+from django_filters import filters
 
 from amcat.models import Article, ArticleSet
 from api.rest.resources.amcatresource import AmCATResource

@@ -30,8 +30,6 @@ from django.db import models
 from django.conf import settings
 from rest_framework.filters import DjangoFilterBackend, OrderingFilter
 
-from api.rest import count
-
 log = logging.getLogger(__name__)
 
 # Monkey patch filterset for autofield - no idea why it's not in that list

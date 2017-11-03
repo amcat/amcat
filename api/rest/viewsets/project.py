@@ -20,6 +20,8 @@ from datetime import datetime
 
 from rest_framework import serializers, permissions, exceptions, status
 from rest_framework.viewsets import ModelViewSet, ViewSetMixin
+
+import settings
 from amcat.models import Project, Role
 from amcat.tools.caching import cached
 from api.rest.mixins import DatatablesMixin
@@ -54,6 +56,13 @@ class NotFoundInProject(exceptions.APIException):
     def __init__(self, detail=None):
         self.detail = detail or self.default_detail
 
+class OptionalIsAuthenticated(permissions.IsAuthenticated):
+    def has_permission(self, request, view):
+        if not settings.amcat_config.get('auth', 'require_login'):
+            return True
+        return super().has_permission(request, view)
+
+
 class ProjectPermission(permissions.BasePermission):
     """
     Checks permissions based on the user's project role
@@ -65,6 +74,8 @@ class ProjectPermission(permissions.BasePermission):
         # When viewing project lists, no project is in context
         if view.project is None:
             return True
+
+
 
         user = request.user if request.user.is_authenticated() else None
         if user and user.is_superuser:
@@ -130,7 +141,7 @@ class ProjectSerializer(AmCATProjectModelSerializer):
         model = Project
 
 class ProjectViewSetMixin(AmCATViewSetMixin):
-    permission_classes = (ProjectPermission,)
+    permission_classes = (OptionalIsAuthenticated, ProjectPermission)
     serializer_class = ProjectSerializer
     model_key = "project"
     queryset = Project.objects.all()
