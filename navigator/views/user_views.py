@@ -123,7 +123,7 @@ class ProjectUserInviteBaseFormSet(forms.BaseFormSet):
         form = super().management_form
         form.fields["confirm"] = forms.BooleanField(widget=forms.HiddenInput)
         form.fields["role"] = forms.ModelChoiceField(queryset=Role.objects.all(), label="Project Role",
-                                                     help_text="Optional, leave blank if users shouldn't be added to the project.")
+                                                     help_text="All selected users will have this role. Optional, leave blank if users shouldn't be added to the project.")
         return form
 
 ProjectUserInviteFormSet = formset_factory(form=ProjectUserInviteForm, formset=ProjectUserInviteBaseFormSet, extra=1, min_num=1)
@@ -175,6 +175,21 @@ class ProjectUserInviteView(BaseMixin, FormView):
         self.confirm = True
         return self.form_confirm(form)
 
+    def check_user_form(self, new_form_data, form_idx):
+        data = new_form_data
+        i = form_idx
+        email = data.get('form-{}-email'.format(i))
+        user = User.objects.filter(email=email)
+        if user.exists():
+            user = user.first()
+            data['form-{}-username'.format(i)] = user.username
+            data['form-{}-email'.format(i)] = email
+            data['form-{}-first_name'.format(i)] = user.first_name
+            data['form-{}-last_name'.format(i)] = user.last_name
+            data['form-{}-exists'.format(i)] = True
+            return True
+        return False
+
     def form_confirm(self, form):
         data = form.data.copy()
         data['form-confirm'] = True
@@ -186,17 +201,9 @@ class ProjectUserInviteView(BaseMixin, FormView):
 
         # check for existing users and flag them as such, change user info in form if necessary.
         for i in range(len(form.forms)):
-            email = data.get('form-{}-email'.format(i))
-            if email in existing_users:
-                self.any_exist = True
-                user = existing_users[email]
-                data['form-{}-username'.format(i)] = user.username
-                data['form-{}-email'.format(i)] = email
-                data['form-{}-first_name'.format(i)] = user.first_name
-                data['form-{}-last_name'.format(i)] = user.last_name
-                data['form-{}-exists'.format(i)] = True
-                form.forms[i].data = data
-                form.forms[i].initial = data
+            self.check_user_form(data, i)
+            form.forms[i].data = data
+            form.forms[i].initial = data
             for k, f in form.forms[i].fields.items():
                 f.widget.attrs["readonly"] = "readonly"
                 f.widget.attrs["class"] = "input-confirm"
