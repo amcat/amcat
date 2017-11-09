@@ -91,6 +91,8 @@ _views = [
 
     ProjectUserListView, ProjectUserAddView, ProjectUserInviteView,
 
+    UserTokenView,
+
     RemoteArticleSetImportView,
 
     TaskDetailsView, TaskListView,

@@ -16,24 +16,71 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import datetime
 
 from django import forms
 from django.core.exceptions import SuspiciousOperation
 from django.core.urlresolvers import reverse
 from django.forms import formset_factory
+from django.utils.safestring import mark_safe
 from django.views.generic import FormView
 from django.views.generic.base import RedirectView
 from django.views.generic.list import ListView
+from rest_framework.authtoken.models import Token
 
 from amcat.forms.widgets import BootstrapMultipleSelect
 from amcat.models import Project, ProjectRole, Role
 from amcat.models import User, authorisation
+from api.rest.get_token import get_token
 from api.rest.resources import ProjectRoleResource
+from api.rest.tokenauth import EXPIRY_TIME
 from navigator.forms import gen_user_choices
 from navigator.utils import auth
 from navigator.views.datatableview import DatatableMixin
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, BaseMixin
 
+class UserTokenView(FormView):
+    url_fragment = "tokens"
+    template_name = "user_token.html"
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        if form.instance.pk and form.instance.created < datetime.datetime.now() - EXPIRY_TIME:
+            form.fields['key'].help_text = mark_safe('<span class="text-danger">expired</span>')
+        return form
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        try:
+            kwargs["instance"] = Token.objects.get(user=self.request.user)
+        except Token.DoesNotExist:
+            pass
+        return kwargs
+
+    def form_valid(self, form):
+        token = get_token(self.request.user)
+        return super().form_valid(form)
+
+    @classmethod
+    def get_url_patterns(cls):
+        yield "^user/tokens/$"
+
+    @classmethod
+    def get_view_name(cls):
+        return "user-token"
+
+    def get_success_url(self):
+        return reverse("navigator:{}".format(self.get_view_name()))
+
+    class form_class(forms.ModelForm):
+        key = forms.CharField(required=False, widget=forms.TextInput(attrs={"readonly": "readonly"}))
+
+        class Meta:
+            model = Token
+            fields = ("key",)
+
+        def save(self, commit=True):
+            return
 
 class ProjectRoleForm(forms.ModelForm):
     user = forms.MultipleChoiceField(widget=BootstrapMultipleSelect)

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load bootstrap %}
+
+{% block help_context %}Account{% endblock %}
+
+{% block title %}User Tokens{% endblock %}
+
+{% block content %}
+
+
+    <h1>Token for User {{ user.id }}: {{ user.first_name }} {{ user.last_name }}</h1>
+    <form method="POST" class="">
+        {% csrf_token %}
+
+        {% with form=form|bootstrap_form_controls %}
+            <div class="form-group">
+                {{ form.key }} <input class="btn btn-primary" type="submit" value="Get or refresh token">
+                <br>
+                <small>{{ form.key.help_text }}</small>
+            </div>
+        {% endwith %}
+    </form>
+
+{% endblock %}
