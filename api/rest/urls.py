@@ -42,7 +42,6 @@ urlpatterns = [
     url(r'^projects/(?P<project_id>[0-9]+)/articlesets/(?P<articleset_id>[0-9]+)/meta/?$', ArticleMetaView.as_view(), name="meta"),
     url(r'^meta/?$', ArticleMetaView.as_view(), name="meta"),
     url(r'^projects/(?P<project_id>[0-9]+)/articlesets/(?P<articleset_id>[0-9]+)/tokens/?$', TokensView.as_view(), name="tokens"),
-    #url(r'^users/me/', UserViewSet.as_view({"get": "retrieve"}), name="current-user", kwargs={"pk": "me"}),
 
     *(r.get_url_pattern() for r in resources.all_resources())
 ]

@@ -1,4 +1,6 @@
 import json
+from uuid import uuid4
+
 from django.test import Client
 from amcat.tools import amcattest
 from api.rest.viewset import AmCATViewSetMixin
@@ -6,6 +8,7 @@ from api.rest.viewset import AmCATViewSetMixin
 
 class TestSearchViewSetMixin(amcattest.AmCATTestCase):
     def setUp(self):
+        self.client = Client()
         project = amcattest.create_test_project()
         amcattest.create_test_set(name="foo", project=project)
         amcattest.create_test_set(name="bar", project=project)
@@ -14,8 +17,12 @@ class TestSearchViewSetMixin(amcattest.AmCATTestCase):
         self.url = self.url.format(**locals())
 
     def _get_json(self, url):
+        self.user = amcattest.create_test_user(username="user_{!s:.7s}".format(uuid4()), password="password")
         c = Client()
-        return json.loads(c.get(url).content.decode('utf-8'))
+        c.login(username=self.user.username, password="password")
+        r = c.get(url)
+        self.assertEqual(r.status_code, 200)
+        return json.loads(r.content.decode('utf-8'))
 
     def test_basic(self):
         # No search parameter

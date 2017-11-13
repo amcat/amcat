@@ -66,7 +66,7 @@ class TestArticleViewSet(APITestCase):
             self.client.login(username=as_user.username, password="test")
         else:
             self.client.logout()
-        response = Client().get(self.url_article(aid, **url_kwargs))
+        response = self.client.get(self.url_article(aid, **url_kwargs))
         self.assertEqual(response.status_code, expected_status,
                          "Status code {response.status_code}: {response.content}".format(**locals()))
         return json.loads(response.content.decode(response.charset))
@@ -195,16 +195,17 @@ class TestArticleViewSet(APITestCase):
         p2.articlesets.add(s1)
         p3.articlesets.add(s1)
         s2 = amcattest.create_test_set(project=p2)
+        nobody = amcattest.create_test_user()
 
         # anonymous user shoud be able to read articles on p2 and p3
-        self._get_articles(projectid=p3.id, setid=s1.id, expected_status=200, as_user=None)
-        self._get_articles(projectid=p2.id, setid=s1.id, expected_status=200, as_user=None)
-        self._get_articles(projectid=p1.id, setid=s1.id, expected_status=401, as_user=None)
+        self._get_articles(projectid=p3.id, setid=s1.id, expected_status=200, as_user=nobody)
+        self._get_articles(projectid=p2.id, setid=s1.id, expected_status=200, as_user=nobody)
+        self._get_articles(projectid=p1.id, setid=s1.id, expected_status=403, as_user=nobody)
 
         # anonymous user shoud be able to read articles on p3 only
-        self._get_articles(projectid=p3.id, setid=s1.id, expected_status=200, as_user=None, text=True)
-        self._get_articles(projectid=p2.id, setid=s1.id, expected_status=401, as_user=None, text=True)
-        self._get_articles(projectid=p1.id, setid=s1.id, expected_status=401, as_user=None, text=True)
+        self._get_articles(projectid=p3.id, setid=s1.id, expected_status=200, as_user=nobody, text=True)
+        self._get_articles(projectid=p2.id, setid=s1.id, expected_status=403, as_user=nobody, text=True)
+        self._get_articles(projectid=p1.id, setid=s1.id, expected_status=403, as_user=nobody, text=True)
 
         # it is illegal to view an articleset through a project it is not a member of
         self._get_articles(projectid=p4.id, setid=s1.id, expected_status=404)

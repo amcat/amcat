@@ -75,8 +75,6 @@ class ProjectPermission(permissions.BasePermission):
         if view.project is None:
             return True
 
-
-
         user = request.user if request.user.is_authenticated() else None
         if user and user.is_superuser:
             return True
@@ -88,7 +86,7 @@ class ProjectPermission(permissions.BasePermission):
 
         actual_role_id = view.project.get_role_id(user=user)
         if actual_role_id is None or actual_role_id < required_role_id:
-            log.warn("User {user} has role {actual_role_id} < {required_role_id}".format(**locals()))
+            log.warning("User {user} has role {actual_role_id} < {required_role_id}".format(**locals()))
 
         if actual_role_id is None:
             return False
