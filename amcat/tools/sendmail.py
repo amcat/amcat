@@ -29,7 +29,7 @@ def sendmail(sender, recipient, subject, html, plain):
     msg = EmailMultiAlternatives(subject, plain, sender, [recipient])
     if html:
         msg.attach_alternative(html, "text/html")
-    msg.send()
+    return msg.send()
     
 if __name__ == '__main__':
     # actual test in __name__ to prevent getting an email everytime the tests run

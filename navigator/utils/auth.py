@@ -55,9 +55,10 @@ def create_user(username, first_name, last_name, email,  password=None):
     log.info("Created new user, sending email...")
     html = render(get_request(), "welcome_email.html", locals()).content.decode()
     text = render(get_request(), "welcome_email.txt", locals()).content.decode()
-    sendmail.sendmail(settings.DEFAULT_FROM_EMAIL, email, 'Welcome to AmCAT!',
+    sender = settings.EMAIL_DEFAULT_FROM
+    n = sendmail.sendmail(sender, email, 'Welcome to AmCAT!',
                       html, text)
-    log.info("Email sent, done!")
+    log.info("{} emails sent, done!".format(n))
     return u
 
 

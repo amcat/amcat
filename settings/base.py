@@ -207,8 +207,6 @@ TEMPLATES = [{
     }
 }]
 
-DEFAULT_FROM_EMAIL = "wat200@vu.nl"
-
 FIXTURE_DIRS = (os.path.join(ROOT, "amcat/models"),)
 
 REST_FRAMEWORK = {
@@ -256,6 +254,8 @@ if not DEBUG:
 else:
     ALLOWED_HOSTS.append("*")
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+EMAIL_DEFAULT_FROM = amcat_config["email"].get("from")
 
 # Pnotify is a javascript library to show (unintrusive) popups
 PNOTIFY_DEFAULTS = {
