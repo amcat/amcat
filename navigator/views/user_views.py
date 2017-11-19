@@ -29,7 +29,7 @@ from django.views.generic.list import ListView
 from rest_framework.authtoken.models import Token
 
 from amcat.forms.widgets import BootstrapMultipleSelect
-from amcat.models import Project, ProjectRole, Role
+from amcat.models import Project, ProjectRole, Role, ROLE_PROJECT_METAREADER
 from amcat.models import User, authorisation
 from api.rest.get_token import get_token
 from api.rest.resources import ProjectRoleResource
@@ -169,8 +169,10 @@ class ProjectUserInviteBaseFormSet(forms.BaseFormSet):
     def management_form(self):
         form = super().management_form
         form.fields["confirm"] = forms.BooleanField(widget=forms.HiddenInput)
-        form.fields["role"] = forms.ModelChoiceField(queryset=Role.objects.all(), label="Project Role",
-                                                     help_text="All selected users will have this role. Optional, leave blank if users shouldn't be added to the project.")
+        form.fields["role"] = forms.ModelChoiceField(queryset=Role.objects.all(), label="Project Role", required=False,
+                                                     initial=ROLE_PROJECT_METAREADER,
+                                                     help_text="All selected users will have this role. Optional, leave "
+                                                               "blank if users shouldn't be added to the project.")
         return form
 
 ProjectUserInviteFormSet = formset_factory(form=ProjectUserInviteForm, formset=ProjectUserInviteBaseFormSet, extra=1, min_num=1)

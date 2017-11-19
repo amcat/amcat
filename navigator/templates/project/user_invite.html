@@ -44,7 +44,7 @@
         <tbody>
         {% for f in form %}
             {% with f=f|bootstrap_form_controls %}
-            <tr class="{% if f.email.data and not f.exists.data %}success{% endif %}">
+            <tr class="{% if view.confirm and f.email.data and not f.exists.data %}success{% endif %}">
             {% for field in f %}
                 <td>{{ field }}</td>
             {% endfor %}
