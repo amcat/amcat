@@ -111,18 +111,21 @@ def fix_fs20(s):
 
 def fix_rtf(s):
     """
-    This function does two things:
+    This function does four things:
       1. Fixing broken 'tags'
       2. Replacing non-ASCII characters with UNDECODED
-      3. Replacing new page-indicators ("____") with rtf page tag
+      3. Double-escape unicode escape sequences, \u0000? -> \\u0000? .
+      4. Replacing new page-indicators ("____" or otherwise "\sect") with rtf page tag
     
     @param s: bytes containing rtf
     @return: rtf bytes
     """
-    s = fix_fs20(s.replace('_' * 67, '\\page'))
+    separator = "_" * 67
+    if s.find(separator) < 0:
+        separator = "\\sect"
+    s = fix_fs20(s.replace(separator, '\\page'))
 
-    for match, correct in get_unencoded_unicode(s):
-        s = s.replace(match, UNDECODED_UNICODE, 1)
+    s = RE_UNICHAR.sub(lambda m: "\\" + m.group(), s)
 
     return "".join(UNDECODED if ord(b) >= 128 else b for b in s)
 
@@ -130,12 +133,6 @@ def fix_rtf(s):
 def get_unencoded(s):
     """Get characters with a value higher than 128 (non-ASCII characters)"""
     return (bytes(b) for b in s if ord(b) >= 128)
-
-
-def get_unencoded_unicode(s):
-    for groups in (m.groupdict() for m in RE_UNICHAR.finditer(s)):
-        yield bytes(groups['match']), chr(int(groups['hex']))
-
 
 def to_html(original_rtf, fixed_rtf):
     html = None
@@ -151,8 +148,8 @@ def to_html(original_rtf, fixed_rtf):
 
     html = html.decode("latin-1")
 
-    for match, correct in get_unencoded_unicode(original_rtf):
-        html = html.replace(UNDECODED_UNICODE, correct, 1)
+    # Convert previously escaped RTF unicode escape sequences to HTML, \u0000? -> &#0000;
+    html = RE_UNICHAR.sub(lambda m: "&#{};".format(m.group("ord")), html)
 
     return html.replace("&gt;", ">").replace("&lt;", "<")
 
@@ -279,7 +276,7 @@ def parse_page(doc_elements):
     year, month, day = metadata["year"], metadata["month"], metadata["day"]
     hour, minute = metadata.get("hour"), metadata.get("minute")
 
-    datestring = "{day} {month} {year}"
+    datestring = "{day}.{month}.{year}"
     if hour is not None and minute is not None:
         datestring += ", {hour}:{minute}"
 
