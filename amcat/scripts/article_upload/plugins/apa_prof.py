@@ -39,6 +39,9 @@ given an RTF file):
 
 """
 from tempfile import NamedTemporaryFile
+from typing import Iterable
+
+from django.core.files.uploadedfile import UploadedFile
 from lxml.html import fromstring
 
 import re
@@ -47,8 +50,9 @@ import itertools
 import lxml.html
 import logging
 
+from amcat import models
 from amcat.models import Article
-from amcat.scripts.article_upload.upload import UploadScript
+from amcat.scripts.article_upload.upload import UploadScript, ArticleField
 from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.tools.toolkit import read_date
 
@@ -88,10 +92,10 @@ RE_AUTHOR = re.compile("^Von (?P<author>[^0-9]+)$")
 # All regular expressions which can match metadata
 META_RE = (RE_DATE, RE_DATE2, RE_DATETIME, RE_PAGENR, RE_SECTION, RE_AUTHOR, RE_MEDIUM, RE_MEDIUM_QUOTE)
 
-UNDECODED = b"NON_DECODED_CHARACTER"
-UNDECODED_UNICODE = b"NON_DECODED_UNICODE_CHARACTER"
+UNDECODED = "NON_DECODED_CHARACTER"
+UNDECODED_UNICODE = "NON_DECODED_UNICODE_CHARACTER"
 
-RE_UNICHAR = re.compile(r"(?P<match>\\u(?P<hex>[0-9]+)\?)", re.UNICODE)
+RE_UNICHAR = re.compile(r"(?P<match>\\u(?P<ord>[0-9]+)\?)", re.UNICODE)
 
 ### FIXING AND PARSING ###
 def _fix_fs20(s):
@@ -106,7 +110,7 @@ def _fix_fs20(s):
 
 
 def fix_fs20(s):
-    return bytes(" ").join(_fix_fs20(s))
+    return " ".join(_fix_fs20(s))
 
 
 def fix_rtf(s):
@@ -132,21 +136,19 @@ def fix_rtf(s):
 
 def get_unencoded(s):
     """Get characters with a value higher than 128 (non-ASCII characters)"""
-    return (bytes(b) for b in s if ord(b) >= 128)
+    return (bytes([b]) for b in s if ord(b) >= 128)
 
 def to_html(original_rtf, fixed_rtf):
     html = None
     from sh import unrtf
 
     with NamedTemporaryFile() as xml:
-        xml.write(fixed_rtf)
+        xml.write(fixed_rtf.encode("ascii"))
         xml.flush()
-        html = bytes(unrtf(xml.name))
+        html = str(unrtf(xml.name))
 
     for u in get_unencoded(original_rtf):
         html = html.replace(UNDECODED, u, 1)
-
-    html = html.decode("latin-1")
 
     # Convert previously escaped RTF unicode escape sequences to HTML, \u0000? -> &#0000;
     html = RE_UNICHAR.sub(lambda m: "&#{};".format(m.group("ord")), html)
@@ -292,7 +294,7 @@ def parse_page(doc_elements):
     if medium in headline:
         headline = headline.split("-", medium.count("-") + 1)[-1]
 
-    metadata["headline"] = headline
+    metadata["title"] = headline
 
     # Get text. Since ordering is lost in sets, restore original order of elements
     return metadata, "".join(get_text(sorted(text, key=lambda e: elements.index(e)))).strip()
@@ -306,14 +308,32 @@ class APAForm(UploadScript.form_class):
 class APA(UploadScript):
     options_form = APAForm
 
-    def parse_document(self, paragraphs):
+    @classmethod
+    def get_fields(cls, upload: models.UploadedFile):
+        return [
+            ArticleField("title", "title"),
+            ArticleField("byline", "byline"),
+            ArticleField("text", "text"),
+            ArticleField("date", "date"),
+            ArticleField("medium", "medium"),
+            ArticleField("pagenr", "pagenr"),
+            ArticleField("section", "section"),
+            ArticleField("author", "author")
+        ]
+
+    def parse_file(self, file: UploadedFile, _) -> Iterable[Article]:
+        data = file.read()
+        for para in self.split_file(data):
+            yield self.parse_document(para)
+
+
+    def parse_document(self, paragraphs) -> Article:
         metadata, text = parse_page(paragraphs)
-        metadata["medium"] = Medium.get_or_create(metadata["medium"])
 
         return Article(text=text, **metadata)
 
-    def split_file(self, file):
-        original_rtf, fixed_rtf = file.bytes, fix_rtf(file.bytes)
+    def split_file(self, data):
+        original_rtf, fixed_rtf = data, fix_rtf(data)
         doc = parse_html(to_html(original_rtf, fixed_rtf))
 
         for i, page in enumerate(get_pages(doc)):
