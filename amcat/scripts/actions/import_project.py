@@ -6,9 +6,10 @@ from django import forms
 import django
 from django.core import serializers
 
+
 django.setup()
 
-from amcat.models import Article, ArticleSet, Project, Code, Label, CodebookCode, CodedArticle, User, CodingJob
+from amcat.models import Article, ArticleSet, Project, Label, CodebookCode, CodedArticle, User, CodingJob, Sentence
 from amcat.tools import toolkit, sbd
 from amcat.scripts.script import Script
 from amcat.tools.djangotoolkit import bulk_insert_returning_ids
@@ -42,9 +43,8 @@ class ImportProject(Script):
         self.codebooks = self.import_codebooks()
         self.import_codebookcodes()
         self.codingschemas = self.import_codingschemas()
-        print(self.codingschemas)
         self.codingjobs = dict(self.import_codingjobs())
-        print(self.codingjobs)
+        self.import_sentences()
         self.import_codings()
 
         logging.info("Done!")
@@ -96,7 +96,11 @@ class ImportProject(Script):
 
             for c in a["codings"]:
                 s = c.pop("sentence")
-                c["sentence_id"] = None if s is None else sdict[tuple(s)]
+                try:
+                    c["sentence_id"] = None if s is None else sdict[tuple(s)]
+                except KeyError:
+                    logging.warning("Cannot find sentence {ca.article_id}: {s}".format(**locals()))
+                    raise
                 for v in c["values"]:
                     v["codingschemafield_id"] = self.schemafields[v["codingschemafield_id"]]
                     if "code" in v:
@@ -114,6 +118,7 @@ class ImportProject(Script):
             f.save()
             self.schemafields[old_id] = f.object.pk
         return codingschemas
+
 
     def import_codes(self):
         for c in self._deserialize("codes.json"):
@@ -138,6 +143,23 @@ class ImportProject(Script):
             self.setids[a['old_id']] = aset.id
             if a['favourite']:
                 self.project.favourite_articlesets.add(aset)
+
+    def get_sentences(self, articles):
+        seen = set(Sentence.objects.filter(article_id__in=articles).values_list("article_id", "parnr", "sentnr"))
+        for aid, sentences in articles.items():
+            for (parnr, sentnr, sentence) in sentences:
+                if (aid, parnr, sentnr) not in seen:
+                    yield Sentence(article_id=aid, sentence=sentence, parnr=parnr, sentnr=sentnr)
+
+    def import_sentences(self):
+        for i, batch in enumerate(toolkit.splitlist(self._get_dicts("sentences.jsonl"), itemsperbatch=1000)):
+            logging.info("Creating sentences for 100 articles, batch {i}".format(**locals()))
+            # check existing articles
+            articles = {self.articles[d["article_id"]]: d["sentences"] for d in batch}
+            sentences = list(self.get_sentences(articles))
+            if sentences:
+                logging.info("Creating {} sentences".format(len(sentences)))
+                Sentence.objects.bulk_create(sentences)
 
     def import_articles(self):
         for i, batch in enumerate(toolkit.splitlist(self._get_dicts("articles.jsonl"), itemsperbatch=1000)):
