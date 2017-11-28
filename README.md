@@ -42,16 +42,24 @@ env/bin/pip install wheel -r requirements.txt
 ```
 
 ### Elastic
+AmCAT uses elasticsearch for searching articles. The easiest way to install elastic is through docker.
 
-AmCAT uses elasticsearch for searching articles. The easiest way to install elastic is through docker:
+**Development:**
+
+For development only, the easiest way to run docker is by running the following:
 
 ```sh
-docker run --name elastic -dp 9200:9200 amcat/amcat-elastic-docker:5.4.3
+docker run --name elastic -dp 9200:9200 -e "discovery.type=single-node" amcat/amcat-elastic-docker:5.4.3
 ```
 
-Note: depending on your system settings, you might have to run docker with `sudo docker ...`
+This is fine for testing/developing, but *absolutely not suitable for production* use! 
 
-Note 2: This is fine for testing/developing, but *absolutely not suitable for production* use! For production, install elastic normally, preferably on more than 1 node, or see https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html for more information on installing elastic through docker on production systems. 
+Note: if you do not have permission to run docker, it might be necessary to add yourself to the `docker` group. Run 
+`sudo usermod -aG docker $USER` and log out and back in.
+
+**Production**:
+
+For production, install elastic normally, preferably on more than 1 node, or see https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html for more information on installing elastic through docker on production systems. 
 
 For configuring elastic for AmCAT, see the [Dockerfile](https://github.com/amcat/amcat-elastic-docker/blob/master/Dockerfile)
 
