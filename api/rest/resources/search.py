@@ -177,20 +177,21 @@ class ScoreField(IntegerField):
 
 
 class SearchResourceSerialiser(Serializer):
+    default_columns = ["title", "date", "url"]
     id = IntegerField()
-    title = HighlightField()
-    date = DateTimeField(input_formats=("iso-8601",))
-    url = CharField()
 
     def __init__(self, *args, **kwargs):
         Serializer.__init__(self, *args, **kwargs)
         ctx = kwargs.get("context", {})
         columns = set(ctx.get("columns", []))
+        if not columns:
+            columns = self.default_columns
         queries = ctx.get("queries", [])
         if ctx.get('minimal'):
             for fn in list(self.fields):
                 if fn != 'id' and fn not in columns:
                     del self.fields[fn]
+
 
         for column in columns:
             if column not in self.fields:
@@ -202,6 +203,9 @@ class SearchResourceSerialiser(Serializer):
 
         if "text" in columns:
             self.fields['text'] = CharField()
+
+        if "date" in columns:
+            self.fields['date'] =  DateTimeField(input_formats=("iso-8601",))
 
         if "projectid" in columns:
             self.fields['projectid'] = IntegerField()
