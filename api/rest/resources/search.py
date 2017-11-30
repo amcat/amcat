@@ -370,7 +370,7 @@ class SearchResource(AmCATResource):
             yield 'right'
 
         for col in cols:
-            if col not in ("id", "title", "date", "url"):
+            if col not in ("id",):
                 yield col
 
     @classmethod
