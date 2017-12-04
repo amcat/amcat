@@ -41,6 +41,9 @@ pyvenv env
 env/bin/pip install wheel -r requirements.txt
 ```
 
+Note: at the time of writing, the latest dateparser release (v0.6.0) contains a severe performance bug.
+If this proves to be a problem, install from: https://github.com/CJStuart/dateparser@v0.6.0-patch0
+
 ### Elastic
 AmCAT uses elasticsearch for searching articles. The easiest way to install elastic is through docker.
 

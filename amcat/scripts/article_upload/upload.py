@@ -226,9 +226,9 @@ class UploadScript(ActionForm):
             return file, None
         cachefn = file.file.name + "__upload_cache_{}.json".format(cls.__name__)
         log.debug("Cache file {cachefn} exists? {}".format(os.path.exists(cachefn), **locals()))
-        if os.path.exists(cachefn):
+        try:
             data = json.load(open(cachefn))
-        else:
+        except (FileNotFoundError, json.JSONDecodeError):
             try:
                 data = cls._preprocess(file)
             except Exception as e:
