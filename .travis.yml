@@ -3,75 +3,35 @@ dist: trusty
 language: python
 python:
   - "3.5"
-jvm:
-  - "oraclejdk8"
-
-addons:
-  postgresql: "9.5"
-  apt:
-    sources:
-    - r-packages-trusty
 
 services:
- - postgresql
- - redis-server
- - rabbitmq
+ - docker
 
 virtualenv:
   system_site_packages: false
 
 before_install:
- - psql -c 'create database amcat;' -U postgres
- - export DJANGO_DB_USER=postgres
- - export DJANGO_LOG_LEVEL=WARNING
- - export DJANGO_SETTINGS_MODULE=settings
- - export TRAVIS=true
- - export AMCAT_ES_LEGACY_HASH=0
- - export PYTHONPATH=
- - "export DISPLAY=:99.0"
- - "sh -e /etc/init.d/xvfb start"
- - sleep 2 # Give framebuffer some time to start
+ - curl -L https://github.com/amcat/amcat-docker/archive/master.tar.gz -o /tmp/amcat-docker.tar.gz
+ - mkdir amcat-docker
+ - tar -xzf /tmp/amcat-docker.tar.gz --strip 1 -C amcat-docker
+
+ - sudo rm /usr/local/bin/docker-compose
+ - curl -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-`uname -s`-`uname -m` > docker-compose
+ - chmod +x docker-compose
+ - sudo mv docker-compose /usr/local/bin
 
 install:
- - sudo apt-get update
-   #- cat apt_requirements.txt | tr '\n' ' ' | xargs sudo apt-get install -y
- - sudo apt-get install python-lxml python-amqplib python-psycopg2 python-requests python-pygments texinfo unrtf rabbitmq-server python3-dev libxml2-dev libxslt-dev lib32z1-dev git curl python-pdfminer graphviz pspp r-base r-base-dev antiword redis-server -y
- - sudo service rabbitmq-server start
+ - cd amcat-docker
+ - docker-compose pull
+ - docker build --build-arg COMMIT=$TRAVIS_COMMIT -t amcat/amcat-docker amcat
 
- # Latest PSPP (present in 15.04, 15.10, 16.04 archives)
- - sudo apt-get install debhelper dh-apparmor gir1.2-atk-1.0 gir1.2-gtk-2.0 gir1.2-pango-1.0 gperf libatk1.0-dev libgsl0-dev libgtk2.0-dev libgtksourceview2.0-dev libharfbuzz-dev libharfbuzz-gobject0 libintl-perl libkpathsea6 libpango1.0-dev libptexenc1 librsvg2-bin libtext-diff-perl libtext-unidecode-perl libxcomposite-dev libxcursor-dev libxi-dev libxinerama-dev libxml-libxml-perl libxml-namespacesupport-perl libxml-sax-base-perl libxml-sax-perl libxml2-utils libxrandr-dev x11proto-composite-dev x11proto-randr-dev x11proto-xinerama-dev -y
- - wget "http://ftp.download-by.net/gnu/gnu/pspp/pspp-0.8.5.tar.gz" -O - | tar xvz
- - cd pspp*
- - ./configure
- - make -j4 >make_stdout.log 2>make_stderr.log
- - sudo make install
- - cd ..
-
- # libmagic1 from ubuntu
- - wget http://de.archive.ubuntu.com/ubuntu/pool/main/f/file/libmagic1_5.25-2ubuntu1_amd64.deb http://de.archive.ubuntu.com/ubuntu/pool/main/f/file/file_5.25-2ubuntu1_amd64.deb
- - sudo dpkg -i libmagic1_5.25-2ubuntu1_amd64.deb file_5.25-2ubuntu1_amd64.deb
-
- # Elasticsearch
- - wget --no-check-certificate https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.4.0.deb
- - sudo dpkg -i elasticsearch-5.4.0.deb
- - sudo /usr/share/elasticsearch/bin/elasticsearch-plugin install analysis-icu
- - sudo /usr/share/elasticsearch/bin/elasticsearch-plugin install https://github.com/amcat/hitcount/releases/download/5.4.0/hitcount-5.4.0-plugin.zip
- - sudo wget -q https://raw.githubusercontent.com/amcat/amcat/master/config/elasticsearch/amcat_remove_from_set.groovy -O /etc/elasticsearch/scripts/amcat_remove_from_set.groovy
- - sudo wget -q https://raw.githubusercontent.com/amcat/amcat/master/config/elasticsearch/amcat_add_to_set.groovy -O /etc/elasticsearch/scripts/amcat_add_to_set.groovy
- - sudo wget -q https://raw.githubusercontent.com/amcat/amcat/master/config/elasticsearch/amcat_lead.groovy -O /etc/elasticsearch/scripts/amcat_lead.groovy  
- - sudo service elasticsearch restart
- - pip install -r requirements.txt
- - pip install coverage coveralls
- - celery -A amcat.amcatcelery worker -l DEBUG -Q amcat &
- - npm install -g bower
- - bower install
+before_script:
+ - docker-compose up -d
+ - docker-compose stop amcat
 
 script:
- - coverage run --source=. --omit=*/migrations/*,settings/* -m amcat.manage test
+ - docker-compose run amcat sh -c 'pip3 install coverage && python3 wait_services.py && cd amcat && coverage run --source=. --omit="*/migrations/*,settings/*" -m amcat.manage test && coverage report -m && coveralls'
 
-after_success:
- - coverage report -m
- - coveralls
 
 notifications:
   slack: amcat:weNC9PqWkfvAXoJbad2Xmd0v
