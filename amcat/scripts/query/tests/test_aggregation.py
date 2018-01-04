@@ -81,10 +81,10 @@ class TestAggregationQueryAction(amcattest.AmCATTestCase):
         self.assertEqual(result, {
             'columns': ['Value'],
             'rows': [
-                '2016-52',
-                '2017-01',
-                '2017-02',
-                '2017-03'
+                '2016-12-26',
+                '2017-01-02',
+                '2017-01-09',
+                '2017-01-16'
             ],
             'data': [[[1]], [[0]], [[0]], [[2]]]
         })
@@ -98,8 +98,8 @@ class TestAggregationQueryAction(amcattest.AmCATTestCase):
         self.assertEqual(result, {
             'columns': ['Value'],
             'rows': [
-                '2016-52',
-                '2017-03'
+                '2016-12-26',
+                '2017-01-16'
             ],
             'data': [[[1]], [[2]]]
         })

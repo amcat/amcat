@@ -373,6 +373,21 @@ def skip_TODO(reason):
         return skip
     return inner
 
+def use_java(func):
+    from subprocess import Popen
+    try:
+        has_java = Popen(["java", "-version"]).wait() == 0
+    except FileNotFoundError:
+        has_java = False
+
+    @wraps(func)
+    def inner(*args, **kwargs):
+        if not has_java:
+            raise unittest.SkipTest("Java executable not found")
+        return func(*args, **kwargs)
+
+    return inner
+
 
 def use_elastic(func):
     """

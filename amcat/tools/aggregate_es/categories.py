@@ -221,7 +221,7 @@ class IntervalCategory(Category):
         return datetime.datetime.fromtimestamp(value / 1000, tz=datetime.timezone.utc).replace(tzinfo=None)
 
     def get_object(self, _, timestamp: datetime.datetime):
-        return timestamp.isoformat()
+        return timestamp.date().isoformat()
 
     def get_aggregation(self):
         return {

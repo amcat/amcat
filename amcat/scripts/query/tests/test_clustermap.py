@@ -55,6 +55,7 @@ class TestClustermapAction(amcattest.AmCATTestCase):
             data=dict(ChainMap({"output_type": output_type, "query": query}, kwargs))
         )
 
+    @amcattest.use_java
     @amcattest.use_elastic
     def test_json_clustermap(self):
         self.set_up()
