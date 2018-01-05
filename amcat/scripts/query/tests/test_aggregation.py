@@ -68,7 +68,7 @@ class TestAggregationQueryAction(amcattest.AmCATTestCase):
     @amcattest.use_elastic
     def test_week_aggregation(self):
         self.a1 = amcattest.create_test_article(articleset=self.aset, date=date(2017, 1, 1))  # week 0
-        self.a2 = amcattest.create_test_article(articleset=self.aset, date=date(2017, 1, 17)) # week 3
+        self.a2 = amcattest.create_test_article(articleset=self.aset, date=date(2017, 1, 16)) # week 3
         self.a3 = amcattest.create_test_article(articleset=self.aset, date=date(2017, 1, 17)) # week 3
         ES().refresh()
 

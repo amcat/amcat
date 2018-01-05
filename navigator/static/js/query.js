@@ -44,6 +44,7 @@ define([
 
 
     var DEFAULT_SCRIPT = "summary";
+    var TASK_API_URL = "/api/v4/tasks/?uuid={uuid}";
     var SAVED_QUERY_API_URL = "/api/v4/projects/{project_id}/querys/{query_id}/";
     var CODEBOOK_LANGUAGE_API_URL = "/api/v4/projects/{project_id}/codebooks/{codebook_id}/languages/";
     var SELECTION_FORM_FIELDS = [
@@ -190,9 +191,6 @@ define([
         })
     };
 
-    self.update_history_state = function(form_data){
-
-    };
     self.run_query = function(event) {
         event.preventDefault();
         $(window).off("scroll");
@@ -212,7 +210,6 @@ define([
         }
 
         form_data = serializeForm($("#query-form"), JOBS, SETS);
-        self.update_history_state(form_data);
         $result.find(".panel-body").html("<i>No results yet</i>");
 
         var script = scripts_container.find(".active")[0].id.replace("script_","");
@@ -347,6 +344,45 @@ define([
             progress_bar.css("width", "0%");
             self.init_delete_query_button();
             $("#query-name").text(data.name);
+        }).fail(self.fail);
+    };
+
+    self.init_previous_query = function(task_uuid){
+        var url = TASK_API_URL.format({uuid: task_uuid});
+        loading_dialog.modal({keyboard: false, backdrop: "static"});
+        loading_dialog.find(".message").text("Loading saved query..");
+        progress_bar.css("width", "10%");
+
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            url: url
+        }).done(function(data){
+            console.log(data);
+            saved_query.parameters = data.results[0].arguments.data;
+            saved_query.loading = true;
+
+            loading_dialog.find(".message").html("Retrieved <i class='name'></i>. Loading script..");
+            loading_dialog.find(".message .name").text(data.name);
+            progress_bar.css("width", "50%");
+
+            var script = data.results[0].class_name.split(".");
+            script = script[script.length - 1].replace("Action", "").toLowerCase();
+
+            window.location.hash = "#" + script;
+            $(window).trigger("hashchange");
+
+            loading_dialog.modal("hide");
+            progress_bar.css("width", "0%");
+            self.init_delete_query_button();
+            $("#query-name").text(data.name);
+
+            // TODO: figure out race condition that occurs here.
+            setTimeout(function() {
+                self.fill_form();
+                form_data = serializeForm($("#query-form"), JOBS, SETS);
+                self.init_poll(task_uuid);
+            }, 200);
         }).fail(self.fail);
     };
 
@@ -898,7 +934,9 @@ define([
             progress_bar.css("width", "0%");
         }).result(function(data, textStatus, jqXHR){
             try {
-                self.handle_result(jqXHR, data);
+                self.handle_result(jqXHR, data)
+                var root = window.location.href.split("/query/")[0];
+                $("#share-result-link").val(`${root}/query/${uuid}`);
             }
             catch(e){
                 loading_dialog.modal("hide");
@@ -1056,6 +1094,21 @@ define([
             loading_dialog.find(".message").text("Refreshing..");
         });
 
+        $("[data-copy]").click(function(e){
+            var copyInput = document.getElementById($(this).data("copy"));
+            copyInput.focus();
+            document.execCommand("selectAll");
+            document.execCommand("copy");
+
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+
+        var uuid = window.location.href.match(/\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/);
+        if(uuid){
+            self.init_previous_query(uuid[1]);
+        }
         self.init_dates();
         self.init_scripts();
         self.init_shortcuts();

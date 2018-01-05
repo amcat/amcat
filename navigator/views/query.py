@@ -25,15 +25,15 @@ from django.shortcuts import redirect
 import settings
 from amcat.scripts import query
 from amcat.scripts.query import get_r_queryactions
-from amcat.scripts.query.queryaction import is_valid_cache_key
+from amcat.scripts.query.queryaction import is_valid_cache_key, QueryAction
 from django import conf
 from django.core.cache import cache
 from django.core.urlresolvers import reverse
 from django.db.models.query_utils import Q
-from django.http import HttpResponseBadRequest, HttpResponse
+from django.http import HttpResponseBadRequest, HttpResponse, Http404
 from django.views.generic.base import TemplateView, RedirectView, View
 
-from amcat.models import Query
+from amcat.models import Query, Task
 from amcat.scripts.forms import SelectionForm
 from amcat.tools import amcates
 from api.rest.datatable import Datatable
@@ -45,7 +45,7 @@ log = logging.getLogger(__name__)
 
 SHOW_N_RECENT_QUERIES = 5
 
-R_PLUGIN_PLACEHOLDER = object()
+R_PLUGIN_PLACEHOLDER = (object(),object())
 
 QUERY_ACTIONS = (
     ("Summary", query.SummaryAction),
@@ -64,12 +64,18 @@ QUERY_ACTIONS = (
     R_PLUGIN_PLACEHOLDER
 )
 
+
 if settings.DEBUG:
     QUERY_ACTIONS += (
         ("Debug", (
             ("Statistics", query.StatisticsAction),
         ),),
     )
+
+# get all class paths from the above QUERY_ACTIONS dict
+QUERY_ACTION_CLASSES = ["{cls.__module__}.{cls.__name__}".format(cls=cls)
+    for classes in ([x] if not isinstance(x, tuple) else list(dict(x).values()) for x in dict(QUERY_ACTIONS).values())
+    for cls in classes if isinstance(cls, type) and issubclass(cls, QueryAction)]
 
 class ClearQueryCacheView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, View):
     context_category = 'Query'
@@ -161,20 +167,42 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
     url_fragment = 'query'
     view_name = 'query'
 
+    def get_task(self, uuid):
+        try:
+            return Task.objects.get(uuid=uuid, class_name__in=QUERY_ACTION_CLASSES)
+        except Task.DoesNotExist:
+            raise Http404("Task does not exist")
+
     def get(self, request, *args, **kwargs):
+        if "uuid" in kwargs:
+            self.task = self.get_task(kwargs["uuid"])
+
         context = self.get_context_data(**kwargs)
+
         if not (context["articleset_ids"] or context["codingjob_ids"]):
             return redirect(reverse("navigator:query_select", args=[self.project.id]))
         return self.render_to_response(context)
 
     def _get_ids(self, key):
-        return set(map(int, filter(str.isdigit, self.request.GET.get(key, "").split(","))))
+        if key in ("jobs", "sets") and hasattr(self, "task"):
+            return self.task.arguments["codingjobs" if key == "jobs" else "articlesets"]
+        else:
+            return set(map(int, filter(str.isdigit, self.request.GET.get(key, "").split(","))))
+
 
     def _get_query_action(self, label, action):
         if isinstance(action, type) and issubclass(action, query.QueryAction):
             return {"label": label, "name": action.get_action_name()}
         else:
             return {"label": label, "actions": [self._get_query_action(*kv) for kv in action]}
+
+    @classmethod
+    def get_url_patterns(cls):
+        patterns = super().get_url_patterns()
+        comps = list(super()._get_url_components())
+        comps.append("(?P<uuid>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})") #task UUID
+        patterns += ["^" + "/".join(comps) + "/$"]
+        return patterns
 
     def query_actions(self):
         query_actions = list(QUERY_ACTIONS)
@@ -187,7 +215,12 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
 
         query_actions = [self._get_query_action(*kv) for kv in query_actions]
 
-        return  query_actions
+        return query_actions
+
+    def get_task_form_data(self):
+        if not hasattr(self, "task"):
+            return {}
+        return self.task.arguments["data"]
 
     def get_context_data(self, **kwargs):
         query_id = self.request.GET.get("query", "null")
@@ -218,7 +251,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
             project=self.project,
             articlesets=articlesets,
             codingjobs=all_codingjobs,
-            data=self.request.GET,
+            data=dict(self.request.GET, **self.get_task_form_data()),
             initial={
                 "datetype": "all",
                 "articlesets": articlesets
@@ -238,4 +271,3 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
 
         form.fields["articlesets"].widget.attrs['disabled'] = 'disabled'
         return dict(super(QueryView, self).get_context_data(), **locals())
-

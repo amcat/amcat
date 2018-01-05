@@ -255,11 +255,18 @@
 
 <div class="row query-submit">
     <div class="btn-group">
-        <!--<a class="btn btn-default disabled">Save as..</a>
-        <a class="btn btn-default disabled">Save</a>-->
-        <a type="button" data-toggle="tooltip" data-placement="bottom" title="CTRL+Q" class="btn btn-success disabled" id="run-query">
+        <button class="btn btn-default disabled" data-toggle="dropdown"><span class="glyphicon glyphicon-share"></span> Share result...</button>
+        <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+            <li>
+                <div class="form-group-sm">
+                    <input type="text" class="form-control" readonly id="share-result-link">
+                    <button class="btn btn-sm btn-default" data-copy="share-result-link"><span class="glyphicon glyphicon-copy"></span></button>
+                </div>
+            </li>
+        </ul>
+        <button type="button" data-toggle="tooltip" data-placement="bottom" title="CTRL+Q" class="btn btn-success disabled" id="run-query">
             <i class="glyphicon glyphicon-cog"></i> <u>Q</u>uery
-        </a>
+        </button>
     </div>
 </div>
 
