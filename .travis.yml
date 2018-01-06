@@ -30,8 +30,8 @@ before_script:
  - docker-compose stop amcat
 
 script:
- - docker-compose run amcat sh -c 'pip3 install coverage && python3 wait_services.py && cd amcat && coverage run --source=. --omit="*/migrations/*,settings/*" -m amcat.manage test && coverage report -m && coveralls'
-
+ - docker-compose run amcat sh -c 'pip3 install coverage && python3 wait_services.py && cd amcat && coverage run --source=. --omit="*/migrations/*,settings/*" -m amcat.manage test && coverage report -m'
+ # - coveralls
 
 notifications:
   slack: amcat:weNC9PqWkfvAXoJbad2Xmd0v
