@@ -142,7 +142,7 @@ class ExportProject(Script):
             
             if output.endswith(".zip"):
                 logging.info("Creating zipfile {output}".format(**locals()))
-                with zipfile.ZipFile(output, "w") as z:
+                with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, allowZip64 = True) as z:
                     for f in os.listdir(self.folder):
                         z.write(os.path.join(self.folder, f), f)
         finally:
@@ -159,7 +159,7 @@ class ExportProject(Script):
         
         def get_values_dict(coding):
             s = coding.sentence
-            return dict(sentence=(s and [s.sentnr, s.parnr] or None),
+            return dict(sentence=(s and [s.parnr, s.sentnr] or None),
                         start=coding.start, end=coding.end,
                         values=[serialize_coding_value(cv) for cv in coding.values.all()])
                     
@@ -174,9 +174,12 @@ class ExportProject(Script):
     def get_sentences(self, aids, batch_size=1000):
         for i, batch in enumerate(toolkit.splitlist(aids, itemsperbatch=batch_size)):
             logging.info("... batch {i}/{n}".format(n=len(aids)//batch_size, **locals()))
-            keys = "article_id", "sentnr", "parnr", "sentence"
-            for values in Sentence.objects.filter(article_id__in=batch).distinct().values_list(*keys):
-                yield dict(zip(keys, values))
+            articles = {}
+            for aid, parnr, sentnr, sentence in (Sentence.objects.filter(article_id__in=batch).distinct()
+                                                 .values_list("article_id", "parnr", "sentnr", "sentence")):
+                articles.setdefault(aid, []).append((parnr, sentnr, sentence))
+            for aid, sentences in articles.iteritems():
+                yield dict(article_id=aid, sentences=sentences)
         
 
     def export_codingjobs(self):
@@ -251,25 +254,30 @@ class ExportProject(Script):
         ids = set(ES().query_ids(filters=dict(sets=[s.id for s in self.sets])))
         # make sure all codingjob articles are in here, even if the set was modified after coding
         ids |= set(CodedArticle.objects.filter(codingjob__project=self.project).values_list("article_id", flat=True))
-        self._write_json_lines("articles", self._generate_all_articles(ids))
+        with self._output_file("articles", extension="jsonl") as f1:
+            with self._output_file("articles_with_parents", extension="jsonl") as f2:
+                logging.info("Writing articles to {f1.name} and {f2.name}".format(**locals()))
+                for d in self._generate_all_articles(ids):
+                    f = f2 if d.get('parent_id') else f1
+                    json.dump(d, f, cls=DjangoJSONEncoder)
+                    f.write("\n")
 
 
     def _generate_article(self, a, medium):
-        if a.parent:
-            raise Exception("Project export does not support parents (yet)!")
-        
         props = {prop: getattr(a, prop) for prop in PROP_FIELDS if getattr(a, prop)}
         if 'uuid' in props:
             props['uuid'] = unicode(props['uuid'])
         props['medium'] = medium
             
-        return dict(date = a.date,
+        d = dict(date = a.date,
                  title = a.headline,
                  url = a.url,
                  text = a.text,
-                 parent_hash = None,
                  properties = props,
                  old_id = a.id)
+        if a.parent_id:
+            d['parent_id'] = a.parent_id
+        return d
         
     def _generate_all_articles(self, ids):
         media = {}

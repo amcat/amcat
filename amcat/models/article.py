@@ -149,9 +149,6 @@ class Article(AmcatModel):
         db_table = 'articles'
         app_label = 'amcat'
 
-    def natural_key(self):
-        return unicode(self.uuid), 
-
     def highlight(self, query, escape=True, keep_em=True):
         """
         Highlight headline and text property by inserting HTML tags (em). You won't be able to
