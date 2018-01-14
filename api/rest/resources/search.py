@@ -29,14 +29,14 @@ from rest_framework.exceptions import ParseError, NotFound, PermissionDenied
 from rest_framework.fields import CharField, IntegerField, DateTimeField
 from rest_framework.serializers import Serializer
 
-from amcat.models import Project, Article, ROLE_PROJECT_METAREADER
+from amcat.models import Project, Article, ROLE_PROJECT_METAREADER, ArticleSet
 from amcat.tools import amcates, keywordsearch
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import AmCATResource
 
 # NOTE: Adding 'page' to filter fields introduces ambiguity (article-page vs. API page)
-FILTER_FIELDS = frozenset({"start_date", "end_date", "on_date", "mediumid", "sets", "section"})
-FILTER_SINGLE_FIELDS = frozenset({"start_date", "end_date", "on_date", "section"})
+FILTER_FIELDS = frozenset({"start_date", "end_date", "on_date", "mediumid", "sets"})
+FILTER_SINGLE_FIELDS = frozenset({"start_date", "end_date", "on_date"})
 FILTER_ID_FIELDS = frozenset({"ids", "pk"})
 
 RE_KWIC = re.compile("(?P<left>.*?)<mark>(?P<keyword>.*?)</mark>(?P<right>.*)", re.DOTALL)
@@ -312,6 +312,10 @@ class SearchResource(AmCATResource):
 
         return frozenset(given_set_ids or valid_set_ids)
 
+    def get_filter_properties(self):
+        articlesets = ArticleSet.objects.filter(id__in=self.get_articlesets())
+        return {prop for articleset in articlesets for prop in articleset.get_used_properties()}
+
     def filter_queryset(self, queryset):
         # Allow for both 'ids' and 'pk' filtering
         ids = [self.params.getlist(field_name) for field_name in FILTER_ID_FIELDS]
@@ -330,6 +334,12 @@ class SearchResource(AmCATResource):
                 else:
                     queryset.filter(k, params.getlist(k))
 
+        for k in self.get_filter_properties():
+            if k in params:
+                queryset.filter(k, params.get(k))
+            elif k + "_str" in params:
+                k_par = k + "_str"
+                queryset.filter(k, params.get(k_par))
         return queryset
 
     @classmethod

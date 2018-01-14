@@ -70,6 +70,15 @@ ALL_FIELDS = frozenset({"id", "sets", "hash"} | ARTICLE_FIELDS)
 RE_PROPERTY_NAME = re.compile('[A-Za-z][A-Za-z0-9]*$')
 
 
+def get_property_type(name: str) -> str:
+    try:
+        if "_" in name:
+            return settings.ES_MAPPING_TYPES[name[name.rfind("_") + 1:]]["type"]
+    except KeyError:
+        pass
+
+    return settings.ES_MAPPING_TYPES["default"]["type"]
+
 @functools.lru_cache()
 def get_property_primitive_type(name) -> Union[int, float, str, set, datetime.datetime]:
     """Based on a property name, determine its primitive Python type."""
@@ -935,7 +944,10 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
             f[singular] = filters.pop(singular)
 
     for k, v in filters.items():
-        yield {'terms': {k: _list(v, number=False)}}
+        if get_property_type(k) == "text":
+            yield {'match': {k: v}}
+        else:
+            yield {'terms': {k: _list(v, number=False)}}
 
     if 'set' in f: yield dict(terms={'sets': _list(f['set'])})
     if 'id' in f: yield dict(ids={'values': _list(f['id'])})

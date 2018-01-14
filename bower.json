@@ -16,14 +16,13 @@
     "jquery-cookie": "",
     "papaparse": "4.1.0",
     "bootstrap-multiselect": "0.9.13",
-    "renderjson": "",
     "requirejs": "",
-    "amcat-query-js": "git://github.com/amcat/amcat-query-js.git#master",
+    "amcat-query-js": "git://github.com/amcat/amcat-query-js.git#~3.5.0",
     "clipboard": "1.6.0"
   },
   "resolutions": {
     "jquery": ">= 1.9.1",
     "bootstrap": ">= 2.3.2",
-    "highcharts": "~4.2.3"
+    "highcharts": "~6.0.4"
   }
 }
