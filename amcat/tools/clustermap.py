@@ -141,7 +141,12 @@ class AdunaException(Exception):
 
 def aduna(xml_path, img_path):
     args = ["java", "-classpath", CLASS_PATH, "-Xms%s" % ADUNA_MEMORY, "Cluster", xml_path, img_path]
-    stdout, stderr = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+    try:
+        p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+    except FileNotFoundError:
+        raise AdunaException("Java executable not found")
+
 
     if not stdout:
         raise AdunaException("Aduna clustermap proces generated error: %s" % stderr)
