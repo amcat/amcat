@@ -1,12 +1,28 @@
 
-import socket
-import amcat
 import os
+import resource
+import socket
 
+import amcat
 from celery import Celery
+from celery.loaders.base import BaseLoader
 from django.conf import settings
 
-app = Celery('amcat')
+
+class FileLimitingLoader(BaseLoader):
+    """Reduces the open file limit on celery child processes."""
+    def on_worker_process_init(self):
+        import settings
+        try:
+            sl, hl = resource.getrlimit(resource.RLIMIT_NOFILE)
+            new_sl = settings.amcat_config.getint("celery", "worker_process_file_limit", fallback=16000)
+            resource.setrlimit(resource.RLIMIT_NOFILE, (new_sl, hl))
+        except (resource.error, ValueError):
+            pass  # just keep the current limit
+        return super().on_worker_process_init()
+
+
+app = Celery('amcat', loader='amcat.amcatcelery:FileLimitingLoader')
 app.config_from_object('settings.celery')
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 
