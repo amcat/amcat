@@ -32,12 +32,12 @@ TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 # Host/port on which elastic can be reached:
 ES_HOST = amcat_config["elasticsearch"].get("host")
 ES_PORT = amcat_config["elasticsearch"].get("port")
+ES_INDEX = amcat_config["elasticsearch"].get("index")
 
-# Emulate Django behaviour by prepending index name with 'test_' if running
-ES_TEST_INDEX = "test_amcat"
-ES_PROD_INDEX = "amcat"
+if TESTING:
+    # Emulate Django behaviour by prepending index name with 'test_' if running
+    ES_INDEX = "test_{}".format(ES_INDEX)
 
-ES_INDEX = os.environ.get('AMCAT_ES_INDEX', ES_TEST_INDEX if TESTING else ES_PROD_INDEX)
 ES_ARTICLE_DOCTYPE = 'article'
 
 
