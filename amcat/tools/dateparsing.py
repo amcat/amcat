@@ -5,8 +5,6 @@ import re
 from contextlib import contextmanager
 from typing import Hashable, Iterable, Tuple, Union
 
-import dateparser
-from dateparser.languages.detection import AutoDetectLanguage
 from django.utils.translation import get_language_info
 from iso8601 import iso8601
 
@@ -18,18 +16,13 @@ DEFAULT_DATEPARSER_SETTINGS = {
 RE_ISO = re.compile(r'\d{4}-\d{2}-\d{2}')
 
 
-def _get_language_aliases(language: dateparser.languages.Language) -> Iterable[str]:
+def _get_language_aliases(language: 'dateparser.languages.Language') -> Iterable[str]:
     yield language.info['name']
     yield language.shortname
     try:
         yield get_language_info(language.shortname)['name_local']
     except KeyError:
         pass
-
-
-_language_aliases = dict((alias.lower(), l)
-                         for l in dateparser.languages.default_language_loader.get_languages()
-                         for alias in _get_language_aliases(l))
 
 
 def read_date(datestr: str, language_pool: Iterable[str] = None) -> Union[None, datetime.datetime]:
@@ -50,6 +43,19 @@ def read_date(datestr: str, language_pool: Iterable[str] = None) -> Union[None, 
         language_pool = tuple(language_pool)
 
     return _read_date(datestr, language_pool)
+
+
+__language_aliases = None
+
+
+def _language_aliases():
+    global __language_aliases
+    if __language_aliases is None:
+        import dateparser
+        __language_aliases = dict((alias.lower(), l)
+                                 for l in dateparser.languages.default_language_loader.get_languages()
+                                 for alias in _get_language_aliases(l))
+    return __language_aliases
 
 
 @functools.lru_cache()
@@ -75,16 +81,20 @@ def _read_date(datestr: str, language_pool: Tuple[str, ...]):
 
 
 @functools.lru_cache()
-def _get_dateparser(language_pool: Tuple[str, ...], settings: Hashable = None) -> dateparser.DateDataParser:
+def _get_dateparser(language_pool: Tuple[str, ...], settings: Hashable = None) -> 'dateparser.DateDataParser':
+    import dateparser
+    from dateparser.languages.detection import AutoDetectLanguage
+
     settings = dict(settings or ())
+
     parser = dateparser.DateDataParser(allow_redetect_language=True, settings=settings)
 
     if language_pool is None:
         return parser
-
-    language_codes = set(_language_aliases[lang.lower()]
+    aliases = _language_aliases()
+    language_codes = set(aliases[lang.lower()]
                          for lang in language_pool
-                         if lang in _language_aliases)
+                         if lang in aliases)
 
     if not language_codes:
         # language pool None or empty, fall back to the default language pool.
@@ -97,6 +107,7 @@ def _get_dateparser(language_pool: Tuple[str, ...], settings: Hashable = None) -
 
 
 def _parse_with_language_pool(datestr: str, language_pool: Tuple[str, ...], **settings_kwargs) -> datetime.datetime:
+    import dateparser
     settings = tuple(dict(DEFAULT_DATEPARSER_SETTINGS, **settings_kwargs).items())
     dateparser = _get_dateparser(language_pool, settings)
     date = dateparser.get_date_data(datestr)

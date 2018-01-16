@@ -41,7 +41,6 @@ import datetime
 import itertools
 import logging
 import random
-import re
 import string
 import time
 from typing import Sequence
@@ -152,18 +151,18 @@ ACCENTS_MAP = {'a': '\xe0\xe1\xe2\xe3\xe4\xe5',
                # u"(c)" : u'\xa9',
                }
 
-REV_ACCENTS_MAP = {}
-for to, from_characters in ACCENTS_MAP.items():
-    for from_character in from_characters:
-        if from_character in REV_ACCENTS_MAP:
-            raise ValueError("Character {} occured twice on right-hand side".format(from_character))
-        REV_ACCENTS_MAP[from_character] = to
 
-"""Map of unaccented : accented pairs.
-
-The values (accented) are strings where each character is an accented
-version of the corresponding key (unaccented). The key can be of length>1
-if appropriate (e.g. german sz, ellipsis)"""
+_REV_ACCENTS_MAP = None
+def _get_accents_map():
+    global _REV_ACCENTS_MAP
+    if _REV_ACCENTS_MAP is None:
+        _REV_ACCENTS_MAP = {}
+        for to, from_characters in ACCENTS_MAP.items():
+            for from_character in from_characters:
+                if from_character in _REV_ACCENTS_MAP:
+                    raise ValueError("Character {} occured twice on right-hand side".format(from_character))
+                _REV_ACCENTS_MAP[from_character] = to
+    return _REV_ACCENTS_MAP
 
 
 def strip_accents(s):
@@ -173,7 +172,7 @@ def strip_accents(s):
     @return: a str string containing the translated input
     """
     # [WvA] this can probably be replaced by unidecode?
-    return "".join(REV_ACCENTS_MAP.get(c, c) for c in s)
+    return "".join(_get_accents_map().get(c, c) for c in s)
 
 
 ###########################################################################
