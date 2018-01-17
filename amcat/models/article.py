@@ -138,6 +138,9 @@ class PropertyMapping(dict):
         # Implicitly convert ints to floats (but not the other way around)
         if expected_type is float and isinstance(value, int):
             value = float(value)
+        # Implicitly convert ints and floats into str
+        if expected_type is str and isinstance(value, (int, float)):
+            value = str(value)
 
         if not isinstance(value, expected_type):
             raise ValueError("Expected type {} for key {}. Got {} with type {} instead.".format(

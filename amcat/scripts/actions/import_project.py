@@ -1,4 +1,5 @@
 import json
+from itertools import count
 from zipfile import ZipFile
 import logging
 
@@ -162,16 +163,91 @@ class ImportProject(Script):
                 Sentence.objects.bulk_create(sentences)
 
     def import_articles(self):
+        def create_articles(batch):
+            for a in batch:
+                a['oldid_int'] = a.pop('old_id')
+            articles = Article.create_articles([Article(project_id=self.project.id, **a) for a in batch])
+            self.articles.update({a.get_property('oldid_int'): a.id for a in articles})
+            return articles
+        hashes = {}
+        def create_articles_store_hashes(batch):
+            arts = create_articles(batch)
+            hashes.update({a.get_property('oldid_int'): a.hash for a in arts})
+
+        # save articles without parents
         for i, batch in enumerate(toolkit.splitlist(self._get_dicts("articles.jsonl"), itemsperbatch=1000)):
             logging.info("Import articles batch {i}".format(**locals()))
-            uuids = {a['properties']['uuid'] : a.pop('old_id') for a in batch}
-            articles = Article.create_articles([Article(project_id=self.project.id, **a) for a in batch])
-            self.articles.update({uuids[a.get_property('uuid')]: a.id for a in articles})
+            create_articles(batch)
+
+        # Do first pass of articles with parents in batches to avoid potential memory issues
+        # (I'm assuming here that the number of 2+ depth children will not be too high)
+        todo = []
+        hashes = {}  # old_id: hash
+        for j, batch in enumerate(toolkit.splitlist(self._get_dicts("articles_with_parents.jsonl"), itemsperbatch=1000)):
+            logging.info("Iterating over articles with parents, batch {j}".format(**locals()))
+            # sort children, create articles for direct children, remember parent structure for others
+            known = {} # parent_id : a
+            for a in batch:
+                parent = a.pop('parent_id')
+                a['parentid_int'] = parent
+                if parent in self.articles:
+                    known[self.articles[parent]] = a
+                else:
+                    todo.append(a)
+            # retrieve parent hash and create articles for known parents
+            if known:
+                for aid, hash in Article.objects.filter(pk__in=known).values_list("pk","hash"):
+                    known[aid]['parent_hash'] = hash
+                logging.info("Saving {} articles with known parents".format(len(known)))
+                create_articles_store_hashes(known.values())
+
+        logging.info("Direct children saved, {} articles to be dealt with".format(len(todo)))
+        # deal with remaining children: (1) save 'real' orphans (ie parent not in this project)
+        known_ids = {a["old_id"] for a in todo}
+        new_todo, tosave = [], []
+        for a in todo:
+            parent = a['parentid_int']
+            if parent not in known_ids and parent not in self.articles:
+                logging.warning("Parent {parent} for article {aid} unknown, removing parent relation".format(**locals()))
+                tosave.append(a)
+            else:
+                new_todo.append(a)
+        if tosave:
+            logging.info("Saving {} articles without parents".format(len(tosave)))
+            create_articles_store_hashes(tosave)
+
+        # (2) make passes through articles until either done or no progress made
+        logging.info("Real orphans saved, {} articles todo".format(len(todo)))
+        while new_todo:
+            todo, tosave, new_todo = new_todo, [], []
+            for a in todo:
+                if a['parentid_int'] in hashes:
+                    a['parent_hash'] = hashes[a['parentid_int']]
+                    tosave.append(a)
+                else:
+                    new_todo.append(a)
+            if not tosave:
+                logging.info("No articles to save, breaking; {} articles todo".format(len(new_todo)))
+                break
+            logging.info("Saving {} articles with found parents, {} articles todo".format(len(tosave), len(new_todo)))
+            create_articles_store_hashes(tosave)
+
+        # store remaining articles without parent, cycles are stupid anyway, right?
+        if new_todo:
+            logging.info("Data contained cycles, saving remaining {} articles without parents".format(len(new_todo)))
+            create_articles(new_todo)
+
+
+
+
 
     def import_articlesets_articles(self):
         for a in self._get_dicts("articlesets_articles.jsonl"):
-            aids = [self.articles[aid] for aid in a['articles']]
+            aids = [self.articles[aid] for aid in a['articles'] if aid in self.articles]
             setid = self.setids[a['articleset']]
+            if len(aids) < len(a['articles']):
+                logging.warning("Not all articles in set were exported, was the project modified during export?"
+                                "set: {}, in set: {}, found: {}".format(a['articleset'], len(a['articles']), len(aids)))
             ArticleSet.objects.get(pk=setid).add_articles(aids)
 
     def _get_dicts(self, fn):
