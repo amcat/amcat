@@ -109,7 +109,13 @@ class ImportProject(Script):
             ca.replace_codings(a["codings"])
 
     def import_codingschemas(self):
-        codingschemas = dict(self._save_with_id_mapping(self._deserialize("codingschemas.json")))
+
+        schemas = self._deserialize("codingschemas.json")
+        for o in schemas:
+            o.m2m_data['highlighters'] = [self.codebooks[cbid] for cbid in o.m2m_data['highlighters']
+                                          if cbid in self.codebooks]
+
+        codingschemas = dict(self._save_with_id_mapping(schemas))
         for f in self._deserialize("codingschemafields.json"):
             old_id = f.object.pk
             f.object.pk = None
@@ -243,9 +249,13 @@ class ImportProject(Script):
 
     def import_articlesets_articles(self):
         for a in self._get_dicts("articlesets_articles.jsonl"):
-            aids = [self.articles[aid] for aid in a['articles'] if aid in self.articles]
+            if a['articleset'] not in self.setids:
+                logging.warning("Missing articleset! {}".format(a['articleset']))
+                continue
             setid = self.setids[a['articleset']]
+            aids = [self.articles[aid] for aid in a['articles'] if aid in self.articles]
             if len(aids) < len(a['articles']):
+                missing = [aid for aid in a['articles'] if aid not in self.articles]
                 logging.warning("Not all articles in set were exported, was the project modified during export?"
                                 "set: {}, in set: {}, found: {}".format(a['articleset'], len(a['articles']), len(aids)))
             ArticleSet.objects.get(pk=setid).add_articles(aids)
@@ -267,7 +277,6 @@ class ImportProject(Script):
             result = list(serializers.deserialize("json", self.zipfile.open(fn)))
             logging.info("Read {} entries from {fn}".format(len(result), **locals()))
             return result
-
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
