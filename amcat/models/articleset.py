@@ -129,12 +129,13 @@ class ArticleSet(AmcatModel):
             es = ES()
             es.add_to_set(self.id, to_add, monitor=monitor)
             es.refresh()  # We need to flush, or setting cache will fail
+            # Add to property cache
+            properties = ES().get_used_properties(article_ids=to_add)
+            self._add_to_property_cache(properties)
         else:
             monitor.update(2)
 
-        # Add to property cache
-        properties = ES().get_used_properties(article_ids=to_add)
-        self._add_to_property_cache(properties)
+
 
     def get_used_properties(self) -> Set[str]:
         cache = django_redis.get_redis_connection()  # type: redis.client.StrictRedis

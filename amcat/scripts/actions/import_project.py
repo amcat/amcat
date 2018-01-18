@@ -1,4 +1,6 @@
 import json
+import os
+import tempfile
 from itertools import count
 from zipfile import ZipFile
 import logging
@@ -8,8 +10,7 @@ import django
 from django.core import serializers
 
 
-django.setup()
-
+from amcat.scripts.tools import cli
 from amcat.models import Article, ArticleSet, Project, Label, CodebookCode, CodedArticle, User, CodingJob, Sentence
 from amcat.tools import toolkit, sbd
 from amcat.scripts.script import Script
@@ -21,34 +22,92 @@ class ImportProject(Script):
         file = forms.FileField()
         project = forms.ModelChoiceField(queryset=Project.objects.all(), required=False)
         user = forms.ModelChoiceField(queryset=User.objects.all())
+        status_file = forms.CharField(required=False)
 
-    def _run(self, file, project, user):
+    def _run(self, file, project, user, status_file=None):
         from amcat.models import Project
+
         self.setids = {}  # old_id -> new_id
         self.articles = {}  # old_id -> new_id
-        self.schemafields = {}  # old_id -> new_id
         self.codes = {}  # uuid -> id
-
+        self.codebooks = {} # old_id -> new_id
+        self.codingschemas = {} # old_id -> new_id
+        self.schemafields = {}  # old_id -> new_id
+        self.codingjobs = {}
+        self.sentences = False
+        self.articlesets_articles = False
         self.user_id = user.id
         self.zipfile = ZipFile(file.file.name)
         self.coders = self.check_coders()  # email -> id
 
-        self.project = project if project else Project.objects.create(name=file.file.name, owner_id=1)
-        logging.info("Importing {file.file.name} into project {self.project.id}:{self.project.name}"
-                     .format(**locals()))
-        self.import_articlesets()
-        self.import_articles()
-        self.import_articlesets_articles()
-        self.import_codes()
+        #TODO replace self.x by status dict entries
+        #TODO make sure calling import again doesn't duplicate things
+        #TODO indexing
+        if status_file:
+            status = json.load(open(status_file))
+            def _intkeys(key):
+                return {int(k): v for (k, v) in status[key].items()} if key in status else {}
 
-        self.codebooks = self.import_codebooks()
-        self.import_codebookcodes()
-        self.codingschemas = self.import_codingschemas()
-        self.codingjobs = dict(self.import_codingjobs())
-        self.import_sentences()
+            self.project = Project.objects.get(pk=status['project'])
+            self.setids = _intkeys('setids')
+            self.articles = _intkeys('articles')
+            self.codes = status.get('codes', {})
+            self.codebooks = _intkeys('codebooks')
+            self.codingschemas = _intkeys('codingschemas')
+            self.schemafields = _intkeys('schemafields')
+            self.codingjobs = _intkeys('codingjobs')
+            self.sentences = status.get('sentences', False)
+            self.articlesets_articles = status.get('articlesets_articles', False)
+
+        else:
+            status = {}
+            self.project = project if project else Project.objects.create(name=file.file.name, owner_id=1)
+
+        _, self.status_file = tempfile.mkstemp(suffix=".json", prefix="import_status_{}_".format(os.path.basename(file.file.name)))
+        logging.info("Importing {file.file.name} into project {self.project.id}:{self.project.name}; status file: {self.status_file}"
+                     .format(**locals()))
+
+        if not self.setids:
+            self.setids = dict(self.import_articlesets())
+            self.save_status()
+        if not self.articles:
+            self.import_articles()
+            self.save_status()
+
+        if not self.articlesets_articles:
+            self.import_articlesets_articles()
+            self.articlesets_articles = True
+            self.save_status()
+        if not self.codes:
+            self.codes = dict(self.import_codes())
+            self.save_status()
+
+        if not self.codebooks:
+            self.codebooks = self.import_codebooks()
+            self.import_codebookcodes()
+            self.save_status()
+        if not self.codingschemas:
+            self.codingschemas, self.schemafields = self.import_codingschemas()
+            self.save_status()
+        if not self.codingjobs:
+            self.codingjobs = dict(self.import_codingjobs())
+            self.save_status()
+        if not self.sentences:
+            self.import_sentences()
+            self.sentences = True
+            self.save_status()
         self.import_codings()
 
         logging.info("Done!")
+
+    def save_status(self):
+        status = dict(setids=self.setids, articles=self.articles, project=self.project.id, codebooks=self.codebooks,
+                      codes=self.codes, codingschemas=self.codingschemas, schemafields=self.schemafields,
+                      codingjobs=self.codingjobs, articlesets_articles=self.articlesets_articles,
+                      sentences=self.sentences)
+        json.dump(status, open(self.status_file, "w"))
+        logging.info("Written status to {self.status_file}: project {self.project.id}, {nsets} sets, {nart} articles"
+                     .format(nsets=len(self.setids), nart=len(self.articles), **locals()))
 
     def _save_with_id_mapping(self, objects):
         for o in objects:
@@ -87,10 +146,14 @@ class ImportProject(Script):
         cas = self._deserialize("codedarticles.json")
         codedarticles = {}
         for ca in cas:
-            codedarticles[ca.object.pk] = CodedArticle.objects.create(
-                comments=ca.object.comments, status_id=ca.object.status_id,
-                codingjob_id=self.codingjobs[ca.object.codingjob_id],
-                article_id=self.articles[ca.object.article_id])
+            cjid = self.codingjobs[ca.object.codingjob_id]
+            aid = self.articles[ca.object.article_id]
+            try:
+                art = CodedArticle.objects.get(codingjob_id=cjid, article_id=aid)
+            except CodedArticle.DoesNotExist:
+                art = CodedArticle.objects.create(comments=ca.object.comments, status_id=ca.object.status_id,
+                                                  codingjob_id=cjid, article_id=aid)
+            codedarticles[ca.object.pk] = art
         for a in self._get_dicts("codingvalues.jsonl"):
             ca = codedarticles[a["coded_article_id"]]
             sdict = {(s.parnr, s.sentnr): s.pk for s in sbd.get_or_create_sentences(ca.article)}
@@ -109,12 +172,11 @@ class ImportProject(Script):
             ca.replace_codings(a["codings"])
 
     def import_codingschemas(self):
-
         schemas = self._deserialize("codingschemas.json")
         for o in schemas:
             o.m2m_data['highlighters'] = [self.codebooks[cbid] for cbid in o.m2m_data['highlighters']
                                           if cbid in self.codebooks]
-
+        schemafields ={}
         codingschemas = dict(self._save_with_id_mapping(schemas))
         for f in self._deserialize("codingschemafields.json"):
             old_id = f.object.pk
@@ -123,15 +185,15 @@ class ImportProject(Script):
             if f.object.codebook_id:
                 f.object.codebook_id = self.codebooks[f.object.codebook_id]
             f.save()
-            self.schemafields[old_id] = f.object.pk
-        return codingschemas
+            schemafields[old_id] = f.object.pk
+        return codingschemas, schemafields
 
 
     def import_codes(self):
         for c in self._deserialize("codes.json"):
             if not c.object.pk:
                 c.save()
-            self.codes[c.object.uuid] = c.object.pk
+            yield c.object.uuid, c.object.pk
         Label.objects.bulk_create(c.object for c in self._deserialize("labels.json") if not c.object.pk)
 
     def import_codebooks(self):
@@ -147,7 +209,7 @@ class ImportProject(Script):
     def import_articlesets(self):
         for a in self._get_dicts("articlesets.jsonl"):
             aset = ArticleSet.objects.create(project=self.project, name=a['name'], provenance=a['provenance'])
-            self.setids[a['old_id']] = aset.id
+            yield a['old_id'], aset.id
             if a['favourite']:
                 self.project.favourite_articlesets.add(aset)
 
@@ -192,20 +254,23 @@ class ImportProject(Script):
         for j, batch in enumerate(toolkit.splitlist(self._get_dicts("articles_with_parents.jsonl"), itemsperbatch=1000)):
             logging.info("Iterating over articles with parents, batch {j}".format(**locals()))
             # sort children, create articles for direct children, remember parent structure for others
-            known = {} # parent_id : a
+            known = []
             for a in batch:
-                parent = a.pop('parent_id')
-                a['parentid_int'] = parent
-                if parent in self.articles:
-                    known[self.articles[parent]] = a
+                a['parentid_int'] = a.pop('parent_id')
+                if a['parentid_int'] in self.articles:
+                    known.append(a)
                 else:
                     todo.append(a)
             # retrieve parent hash and create articles for known parents
             if known:
-                for aid, hash in Article.objects.filter(pk__in=known).values_list("pk","hash"):
-                    known[aid]['parent_hash'] = hash
+                parents = dict(Article.objects.filter(pk__in={self.articles[a['parentid_int']] for a in known})
+                               .values_list("pk", "hash"))
+                if len(known) != len(parents):
+                    print(parents)
+                for a in known:
+                    a['parent_hash'] = parents[self.articles[a['parentid_int']]]
                 logging.info("Saving {} articles with known parents".format(len(known)))
-                create_articles_store_hashes(known.values())
+                create_articles_store_hashes(known)
 
         logging.info("Direct children saved, {} articles to be dealt with".format(len(todo)))
         # deal with remaining children: (1) save 'real' orphans (ie parent not in this project)
@@ -214,7 +279,8 @@ class ImportProject(Script):
         for a in todo:
             parent = a['parentid_int']
             if parent not in known_ids and parent not in self.articles:
-                logging.warning("Parent {parent} for article {aid} unknown, removing parent relation".format(**locals()))
+                logging.warning("Parent {parent} for article {aid} unknown, removing parent relation"
+                                .format(aid=a["old_id"], parent=parent))
                 tosave.append(a)
             else:
                 new_todo.append(a)
@@ -223,7 +289,7 @@ class ImportProject(Script):
             create_articles_store_hashes(tosave)
 
         # (2) make passes through articles until either done or no progress made
-        logging.info("Real orphans saved, {} articles todo".format(len(todo)))
+        logging.info("Real orphans saved, {} articles todo".format(len(new_todo)))
         while new_todo:
             todo, tosave, new_todo = new_todo, [], []
             for a in todo:
@@ -243,12 +309,9 @@ class ImportProject(Script):
             logging.info("Data contained cycles, saving remaining {} articles without parents".format(len(new_todo)))
             create_articles(new_todo)
 
-
-
-
-
     def import_articlesets_articles(self):
-        for a in self._get_dicts("articlesets_articles.jsonl"):
+        for i, a in enumerate(self._get_dicts("articlesets_articles.jsonl")):
+            logging.info("Adding articles for set {i}: {setid}".format(i=i, setid=a['articleset']))
             if a['articleset'] not in self.setids:
                 logging.warning("Missing articleset! {}".format(a['articleset']))
                 continue
@@ -258,7 +321,8 @@ class ImportProject(Script):
                 missing = [aid for aid in a['articles'] if aid not in self.articles]
                 logging.warning("Not all articles in set were exported, was the project modified during export?"
                                 "set: {}, in set: {}, found: {}".format(a['articleset'], len(a['articles']), len(aids)))
-            ArticleSet.objects.get(pk=setid).add_articles(aids)
+                logging.info(str(missing))
+            ArticleSet.objects.get(pk=setid).add_articles(aids, add_to_index=False)
 
     def _get_dicts(self, fn):
         if fn not in self.zipfile.namelist():
@@ -279,5 +343,4 @@ class ImportProject(Script):
             return result
 
 if __name__ == '__main__':
-    from amcat.scripts.tools import cli
     result = cli.run_cli()

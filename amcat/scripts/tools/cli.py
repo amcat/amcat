@@ -17,6 +17,12 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+# set settings module and setup django - useful so you can import this first
+import os
+import django
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+django.setup()
+
 import argparse
 import logging
 
