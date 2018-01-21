@@ -70,8 +70,6 @@ class ImportStatus:
         status['sentences'] = list(_save_sentences(status.pop('sentences')))
         json.dump(status, open(self._status_file, "w"))
         logging.info("Written status to {self._status_file}".format(**locals()))
-        msg = ", ".join("{}: {}".format(k, len(v) if isinstance(v, dict) else v) for (k, v) in status.items() if v)
-        logging.debug(msg)
 
 
 class ImportProject(Script):
@@ -278,8 +276,6 @@ class ImportProject(Script):
             if known:
                 parents = dict(Article.objects.filter(pk__in={self.status.articles[a['parentid_int']] for a in known})
                                .values_list("pk", "hash"))
-                if len(known) != len(parents):
-                    print(parents)
                 for a in known:
                     a['parent_hash'] = parents[self.status.articles[a['parentid_int']]]
                 logging.info("Saving {} articles with known parents".format(len(known)))
@@ -357,7 +353,6 @@ class ImportProject(Script):
 
     def import_users(self):
         for u in self._get_dicts("users.jsonl"):
-            print(u)
             # get or create user
             try:
                 user = User.objects.get(email=u['email'])
