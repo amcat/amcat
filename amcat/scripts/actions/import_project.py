@@ -1,142 +1,145 @@
 import json
 import os
 import tempfile
-from itertools import count
 from zipfile import ZipFile
 import logging
 
 from django import forms
-import django
 from django.core import serializers
 
-
 from amcat.scripts.tools import cli
+from amcat.models.authorisation import ProjectRole, Role
+from amcat.models.user import create_user
 from amcat.models import Article, ArticleSet, Project, Label, CodebookCode, CodedArticle, User, CodingJob, Sentence
-from amcat.tools import toolkit, sbd
+from amcat.tools import toolkit
 from amcat.scripts.script import Script
+from amcat.tools.amcates import ES
 from amcat.tools.djangotoolkit import bulk_insert_returning_ids
+
+
+def _load_sentences(sentences, target = None):
+    if target is None:
+        target = {}
+    for (aid, par, sent, sent_id) in sentences:
+        target.setdefault(aid, {})[par, sent] = sent_id
+    return target
+
+
+class ImportStatus:
+    """Keep track of import status and id mappings"""
+    def __init__(self, status_file=None):
+        if status_file:
+            logging.info("Reading status from {status_file}".format(**locals()))
+            status = json.load(open(status_file)) if os.path.exists(status_file) else {}
+            self._status_file = status_file
+        else:
+            status = {}
+            _, self._status_file = tempfile.mkstemp(suffix=".json", prefix="import_status")
+
+        def _intkeys(key):
+            return {int(k): v for (k, v) in status[key].items()} if key in status else {}
+        self.project = Project.objects.get(pk=status['project']) if 'project' in status else None
+        # Mappings of old_id --> new_id:
+        self.setids = _intkeys('setids')
+        self.articles = _intkeys('articles')
+        self.codebooks = _intkeys('codebooks')
+        self.codingschemas = _intkeys('codingschemas')
+        self.schemafields = _intkeys('schemafields')
+        self.codingjobs = _intkeys('codingjobs')
+        # boolean flags that items have been imported:
+        self.articlesets_articles = status.get('articlesets_articles', False)
+        self.codebookcodes = status.get('codebookcodes', False)
+        self.codings = status.get('codings', False)
+        # other mappings:
+        self.sentences = _load_sentences(status.get('sentences', []))  # {article_id : {(par, sent): sent.id}}
+        self.codes = status.get('codes', {})  # uuid -> id
+        self.users = status.get('users', {})  # email -> id
+
+    def set(self, **kargs):
+        for k, v in kargs.items():
+            self.__setattr__(k, v)
+        self.save()
+
+    def save(self):
+        def _save_sentences(sentences):
+            """dict to tuple (json dicts require str keys, so no good)"""
+            for aid, sents in sentences.items():
+                yield from ((aid, par, sent, sentid) for ((par, sent), sentid) in sents.items())
+        status = {k: v for (k, v) in self.__dict__.items() if not k.startswith("_")}
+        status['project'] = self.project.id
+        status['sentences'] = list(_save_sentences(status.pop('sentences')))
+        json.dump(status, open(self._status_file, "w"))
+        logging.info("Written status to {self._status_file}".format(**locals()))
+        msg = ", ".join("{}: {}".format(k, len(v) if isinstance(v, dict) else v) for (k, v) in status.items() if v)
+        logging.debug(msg)
 
 
 class ImportProject(Script):
     class options_form(forms.Form):
         file = forms.FileField()
-        project = forms.ModelChoiceField(queryset=Project.objects.all(), required=False)
-        user = forms.ModelChoiceField(queryset=User.objects.all())
-        status_file = forms.CharField(required=False)
+        user = forms.ModelChoiceField(queryset=User.objects.all(), help_text="Import project as this user",
+                                      required=False)
+        status_file = forms.CharField(required=False, help_text="Continue from partial import")
 
-    def _run(self, file, project, user, status_file=None):
-        from amcat.models import Project
-
-        self.setids = {}  # old_id -> new_id
-        self.articles = {}  # old_id -> new_id
-        self.codes = {}  # uuid -> id
-        self.codebooks = {} # old_id -> new_id
-        self.codingschemas = {} # old_id -> new_id
-        self.schemafields = {}  # old_id -> new_id
-        self.codingjobs = {}
-        self.sentences = False
-        self.articlesets_articles = False
-        self.user_id = user.id
+    def _run(self, file, user, status_file=None):
+        self.status = ImportStatus(status_file)
         self.zipfile = ZipFile(file.file.name)
-        self.coders = self.check_coders()  # email -> id
+        if not self.status.project:
+            self.status.set(project=Project.objects.create(name=file.file.name, owner_id=(user.pk if user else 1)))
+        if not self.status.users:
+            self.status.set(users=dict(self.import_users()))
 
-        #TODO replace self.x by status dict entries
-        #TODO make sure calling import again doesn't duplicate things
-        #TODO indexing
-        if status_file:
-            status = json.load(open(status_file))
-            def _intkeys(key):
-                return {int(k): v for (k, v) in status[key].items()} if key in status else {}
-
-            self.project = Project.objects.get(pk=status['project'])
-            self.setids = _intkeys('setids')
-            self.articles = _intkeys('articles')
-            self.codes = status.get('codes', {})
-            self.codebooks = _intkeys('codebooks')
-            self.codingschemas = _intkeys('codingschemas')
-            self.schemafields = _intkeys('schemafields')
-            self.codingjobs = _intkeys('codingjobs')
-            self.sentences = status.get('sentences', False)
-            self.articlesets_articles = status.get('articlesets_articles', False)
-
-        else:
-            status = {}
-            self.project = project if project else Project.objects.create(name=file.file.name, owner_id=1)
-
-        _, self.status_file = tempfile.mkstemp(suffix=".json", prefix="import_status_{}_".format(os.path.basename(file.file.name)))
-        logging.info("Importing {file.file.name} into project {self.project.id}:{self.project.name}; status file: {self.status_file}"
-                     .format(**locals()))
-
-        if not self.setids:
-            self.setids = dict(self.import_articlesets())
-            self.save_status()
-        if not self.articles:
+        if not self.status.setids:
+            self.status.set(setids=dict(self.import_articlesets()))
+        if not self.status.articles:
             self.import_articles()
-            self.save_status()
+            self.status.save()
 
-        if not self.articlesets_articles:
+        if not self.status.articlesets_articles:
             self.import_articlesets_articles()
-            self.articlesets_articles = True
-            self.save_status()
-        if not self.codes:
-            self.codes = dict(self.import_codes())
-            self.save_status()
+            self.status.set(articlesets_articles=True)
+        if not self.status.codes:
+            self.status.set(codes=dict(self.import_codes()))
 
-        if not self.codebooks:
-            self.codebooks = self.import_codebooks()
+        if not self.status.codebooks:
+            self.status.set(codebooks=self.import_codebooks())
+        if not self.status.codebookcodes:
             self.import_codebookcodes()
-            self.save_status()
-        if not self.codingschemas:
-            self.codingschemas, self.schemafields = self.import_codingschemas()
-            self.save_status()
-        if not self.codingjobs:
-            self.codingjobs = dict(self.import_codingjobs())
-            self.save_status()
-        if not self.sentences:
-            self.import_sentences()
-            self.sentences = True
-            self.save_status()
-        self.import_codings()
+            self.status.set(codebookcodes=True)
+        if not self.status.codingschemas:
+            codingschemas, schemafields = self.import_codingschemas()
+            self.status.set(codingschemas=codingschemas, schemafields=schemafields)
+        if not self.status.codingjobs:
+            self.status.set(codingjobs=dict(self.import_codingjobs()))
+        if not self.status.sentences:
+            self.status.set(sentences=self.import_sentences())
+        if not self.status.codings:
+            self.import_codings()
+            self.status.set(codings=True)
+        logging.info("Adding articles to index")
+        ES().add_articles(self.status.articles.values())
 
         logging.info("Done!")
-
-    def save_status(self):
-        status = dict(setids=self.setids, articles=self.articles, project=self.project.id, codebooks=self.codebooks,
-                      codes=self.codes, codingschemas=self.codingschemas, schemafields=self.schemafields,
-                      codingjobs=self.codingjobs, articlesets_articles=self.articlesets_articles,
-                      sentences=self.sentences)
-        json.dump(status, open(self.status_file, "w"))
-        logging.info("Written status to {self.status_file}: project {self.project.id}, {nsets} sets, {nart} articles"
-                     .format(nsets=len(self.setids), nart=len(self.articles), **locals()))
 
     def _save_with_id_mapping(self, objects):
         for o in objects:
             old_id = o.object.pk
             o.object.pk = None
             if hasattr(o.object, "project_id"):
-                o.object.project_id = self.project.id
+                o.object.project_id = self.status.project.id
             o.save()
             yield old_id, o.object.pk
-
-    def check_coders(self):
-        emails = {d['coder'] for d in self._get_dicts("codingjobs.jsonl")}
-        if any(not e for e in emails):
-            raise ValueError("Empty email in coder list")
-        users = dict(User.objects.filter(email__in=emails).values_list("email", "pk"))
-        if emails - set(users):
-            raise ValueError("Users missing in this AmCAT server: {}".format(emails - set(users)))
-        return users
 
     def import_codingjobs(self):
         old_ids, jobs = [], []
         for job in self._get_dicts("codingjobs.jsonl"):
-            j = CodingJob(project_id=self.project.id, name=job['name'], archived=job['archived'],
-                          insertuser_id=self.user_id, coder_id=self.coders[job['coder']],
-                          articleset_id=self.setids[job['articleset']])
+            j = CodingJob(project_id=self.status.project.id, name=job['name'], archived=job['archived'],
+                          insertuser_id=self.status.project.owner.id, coder_id=self.status.users[job['coder']],
+                          articleset_id=self.status.setids[job['articleset']])
             if job['articleschema']:
-                j.articleschema_id = self.codingschemas[job['articleschema']]
+                j.articleschema_id = self.status.codingschemas[job['articleschema']]
             if job['unitschema']:
-                j.unitschema_id = self.codingschemas[job['unitschema']]
+                j.unitschema_id = self.status.codingschemas[job['unitschema']]
             jobs.append(j)
             old_ids.append(job['pk'])
         jobs = bulk_insert_returning_ids(jobs)
@@ -146,8 +149,8 @@ class ImportProject(Script):
         cas = self._deserialize("codedarticles.json")
         codedarticles = {}
         for ca in cas:
-            cjid = self.codingjobs[ca.object.codingjob_id]
-            aid = self.articles[ca.object.article_id]
+            cjid = self.status.codingjobs[ca.object.codingjob_id]
+            aid = self.status.articles[ca.object.article_id]
             try:
                 art = CodedArticle.objects.get(codingjob_id=cjid, article_id=aid)
             except CodedArticle.DoesNotExist:
@@ -156,38 +159,41 @@ class ImportProject(Script):
             codedarticles[ca.object.pk] = art
         for a in self._get_dicts("codingvalues.jsonl"):
             ca = codedarticles[a["coded_article_id"]]
-            sdict = {(s.parnr, s.sentnr): s.pk for s in sbd.get_or_create_sentences(ca.article)}
-
+            sdict = self.status.sentences.get(ca.article_id, {})
             for c in a["codings"]:
-                s = c.pop("sentence")
+                parsent = c.pop("sentence")
                 try:
-                    c["sentence_id"] = None if s is None else sdict[tuple(s)]
+                    c["sentence_id"] = None if parsent is None else sdict[tuple(parsent)]
                 except KeyError:
-                    logging.warning("Cannot find sentence {ca.article_id}: {s}".format(**locals()))
-                    raise
+                    logging.warning("Cannot find sentence {ca.article_id}: {parsent}"
+                                    "(old codedarticle id: {caid}), creating dummy sentence"
+                                    .format(caid=a["coded_article_id"], **locals()))
+                    s = Sentence.objects.create(article_id=ca.article_id, parnr=parsent[0], sentnr=parsent[1],
+                                                sentence="<unknown sentence>")
+                    c["sentence_id"] = s.id
+                    self.status.sentences.setdefault(ca.article_id, {})[tuple(parsent)] = s.id
                 for v in c["values"]:
-                    v["codingschemafield_id"] = self.schemafields[v["codingschemafield_id"]]
+                    v["codingschemafield_id"] = self.status.schemafields[v["codingschemafield_id"]]
                     if "code" in v:
-                        v["intval"] = self.codes[v.pop("code")]
+                        v["intval"] = self.status.codes[v.pop("code")]
             ca.replace_codings(a["codings"])
 
     def import_codingschemas(self):
         schemas = self._deserialize("codingschemas.json")
         for o in schemas:
-            o.m2m_data['highlighters'] = [self.codebooks[cbid] for cbid in o.m2m_data['highlighters']
-                                          if cbid in self.codebooks]
-        schemafields ={}
+            o.m2m_data['highlighters'] = [self.status.codebooks[cbid] for cbid in o.m2m_data['highlighters']
+                                          if cbid in self.status.codebooks]
+        schemafields = {}
         codingschemas = dict(self._save_with_id_mapping(schemas))
         for f in self._deserialize("codingschemafields.json"):
             old_id = f.object.pk
             f.object.pk = None
             f.object.codingschema_id = codingschemas[f.object.codingschema_id]
             if f.object.codebook_id:
-                f.object.codebook_id = self.codebooks[f.object.codebook_id]
+                f.object.codebook_id = self.status.codebooks[f.object.codebook_id]
             f.save()
             schemafields[old_id] = f.object.pk
         return codingschemas, schemafields
-
 
     def import_codes(self):
         for c in self._deserialize("codes.json"):
@@ -202,40 +208,46 @@ class ImportProject(Script):
     def import_codebookcodes(self):
         cbcodes = [c.object for c in self._deserialize("codebookcodes.json")]
         for c in cbcodes:
-            c.codebook_id = self.codebooks[c.codebook_id]
+            c.codebook_id = self.status.codebooks[c.codebook_id]
             c.pk = None
         CodebookCode.objects.bulk_create(cbcodes)
 
     def import_articlesets(self):
         for a in self._get_dicts("articlesets.jsonl"):
-            aset = ArticleSet.objects.create(project=self.project, name=a['name'], provenance=a['provenance'])
+            aset = ArticleSet.objects.create(project=self.status.project, name=a['name'], provenance=a['provenance'])
             yield a['old_id'], aset.id
             if a['favourite']:
-                self.project.favourite_articlesets.add(aset)
+                self.status.project.favourite_articlesets.add(aset)
 
-    def get_sentences(self, articles):
-        seen = set(Sentence.objects.filter(article_id__in=articles).values_list("article_id", "parnr", "sentnr"))
-        for aid, sentences in articles.items():
-            for (parnr, sentnr, sentence) in sentences:
-                if (aid, parnr, sentnr) not in seen:
+    def get_sentences(self, articles, sentences):
+        for aid, sents in articles.items():
+            for (parnr, sentnr, sentence) in sents:
+                if (parnr, sentnr) not in sentences.get(aid, {}):
                     yield Sentence(article_id=aid, sentence=sentence, parnr=parnr, sentnr=sentnr)
 
     def import_sentences(self):
+        sentences = {}  # aid -> {par, sent -> sent_id}
         for i, batch in enumerate(toolkit.splitlist(self._get_dicts("sentences.jsonl"), itemsperbatch=1000)):
-            logging.info("Creating sentences for 100 articles, batch {i}".format(**locals()))
+            logging.info("Creating sentences for 1000 articles, batch {i}".format(**locals()))
             # check existing articles
-            articles = {self.articles[d["article_id"]]: d["sentences"] for d in batch}
-            sentences = list(self.get_sentences(articles))
-            if sentences:
-                logging.info("Creating {} sentences".format(len(sentences)))
-                Sentence.objects.bulk_create(sentences)
+            articles = {self.status.articles[d["article_id"]]: d["sentences"] for d in batch}
+            _load_sentences(Sentence.objects.filter(article_id__in=articles)
+                            .values_list("article_id", "parnr", "sentnr", "pk")
+                            , target=sentences)
+            to_add = list(self.get_sentences(articles, sentences))
+            if to_add:
+                logging.info("Creating {} sentences".format(len(to_add)))
+                added = ((s.article_id, s.sentence, s.parnr, s.pk) for s in bulk_insert_returning_ids(to_add))
+                _load_sentences(added, target=sentences)
+                sentences.update(added)
+        return sentences
 
     def import_articles(self):
         def create_articles(batch):
             for a in batch:
                 a['oldid_int'] = a.pop('old_id')
-            articles = Article.create_articles([Article(project_id=self.project.id, **a) for a in batch])
-            self.articles.update({a.get_property('oldid_int'): a.id for a in articles})
+            articles = Article.create_articles([Article(project_id=self.status.project.id, **a) for a in batch])
+            self.status.articles.update({a.get_property('oldid_int'): a.id for a in articles})
             return articles
         hashes = {}
         def create_articles_store_hashes(batch):
@@ -251,24 +263,25 @@ class ImportProject(Script):
         # (I'm assuming here that the number of 2+ depth children will not be too high)
         todo = []
         hashes = {}  # old_id: hash
-        for j, batch in enumerate(toolkit.splitlist(self._get_dicts("articles_with_parents.jsonl"), itemsperbatch=1000)):
+        for j, batch in enumerate(toolkit.splitlist(self._get_dicts("articles_with_parents.jsonl"),
+                                                    itemsperbatch=1000)):
             logging.info("Iterating over articles with parents, batch {j}".format(**locals()))
             # sort children, create articles for direct children, remember parent structure for others
             known = []
             for a in batch:
                 a['parentid_int'] = a.pop('parent_id')
-                if a['parentid_int'] in self.articles:
+                if a['parentid_int'] in self.status.articles:
                     known.append(a)
                 else:
                     todo.append(a)
             # retrieve parent hash and create articles for known parents
             if known:
-                parents = dict(Article.objects.filter(pk__in={self.articles[a['parentid_int']] for a in known})
+                parents = dict(Article.objects.filter(pk__in={self.status.articles[a['parentid_int']] for a in known})
                                .values_list("pk", "hash"))
                 if len(known) != len(parents):
                     print(parents)
                 for a in known:
-                    a['parent_hash'] = parents[self.articles[a['parentid_int']]]
+                    a['parent_hash'] = parents[self.status.articles[a['parentid_int']]]
                 logging.info("Saving {} articles with known parents".format(len(known)))
                 create_articles_store_hashes(known)
 
@@ -278,7 +291,7 @@ class ImportProject(Script):
         new_todo, tosave = [], []
         for a in todo:
             parent = a['parentid_int']
-            if parent not in known_ids and parent not in self.articles:
+            if parent not in known_ids and parent not in self.status.articles:
                 logging.warning("Parent {parent} for article {aid} unknown, removing parent relation"
                                 .format(aid=a["old_id"], parent=parent))
                 tosave.append(a)
@@ -312,13 +325,13 @@ class ImportProject(Script):
     def import_articlesets_articles(self):
         for i, a in enumerate(self._get_dicts("articlesets_articles.jsonl")):
             logging.info("Adding articles for set {i}: {setid}".format(i=i, setid=a['articleset']))
-            if a['articleset'] not in self.setids:
+            if a['articleset'] not in self.status.setids:
                 logging.warning("Missing articleset! {}".format(a['articleset']))
                 continue
-            setid = self.setids[a['articleset']]
-            aids = [self.articles[aid] for aid in a['articles'] if aid in self.articles]
+            setid = self.status.setids[a['articleset']]
+            aids = [self.status.articles[aid] for aid in a['articles'] if aid in self.status.articles]
             if len(aids) < len(a['articles']):
-                missing = [aid for aid in a['articles'] if aid not in self.articles]
+                missing = [aid for aid in a['articles'] if aid not in self.status.articles]
                 logging.warning("Not all articles in set were exported, was the project modified during export?"
                                 "set: {}, in set: {}, found: {}".format(a['articleset'], len(a['articles']), len(aids)))
                 logging.info(str(missing))
@@ -342,5 +355,31 @@ class ImportProject(Script):
             logging.info("Read {} entries from {fn}".format(len(result), **locals()))
             return result
 
+    def import_users(self):
+        for u in self._get_dicts("users.jsonl"):
+            print(u)
+            # get or create user
+            try:
+                user = User.objects.get(email=u['email'])
+            except User.DoesNotExist:
+                user = create_user(u['username'], u['first_name'], u['last_name'], u['email'])
+                user.password = u['password']
+                user.save()
+            # add user to project
+            role = Role.objects.get(label=u['role'])
+            if not ProjectRole.objects.filter(project=self.status.project, user=user).exists():
+                ProjectRole.objects.create(project=self.status.project, user=user, role=role)
+            yield u['email'], user.id
+        self.check_coders()
+
+    def check_coders(self):
+        emails = {d['coder'] for d in self._get_dicts("codingjobs.jsonl")}
+        if any(not e for e in emails):
+            raise ValueError("Empty email in coder list")
+        users = dict(User.objects.filter(email__in=emails).values_list("email", "pk"))
+        if emails - set(users):
+            raise ValueError("Users missing in this AmCAT server: {}".format(emails - set(users)))
+
+
 if __name__ == '__main__':
-    result = cli.run_cli()
+    cli.run_cli()
