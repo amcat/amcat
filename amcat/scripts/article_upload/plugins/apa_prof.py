@@ -52,7 +52,7 @@ import logging
 
 from amcat import models
 from amcat.models import Article
-from amcat.scripts.article_upload.upload import UploadScript, ArticleField
+from amcat.scripts.article_upload.upload import UploadScript, ArticleField, ParseError
 from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 from amcat.tools.toolkit import read_date
 
@@ -136,11 +136,23 @@ def fix_rtf(s):
 
 def get_unencoded(s):
     """Get characters with a value higher than 128 (non-ASCII characters)"""
-    return (bytes([b]) for b in s if ord(b) >= 128)
+    return [b for b in s if ord(b) >= 128]
+
+
+def unrtf(name):
+    from subprocess import Popen, PIPE
+    try:
+        p = Popen(["unrtf", name], stdout=PIPE, stderr=PIPE)
+    except FileNotFoundError:
+        raise RuntimeError("unrtf executable not found.")
+    stdout, stderr = p.communicate()
+    if p.returncode > 0:
+        raise ParseError("Failed to parse RTF: {}".format(stderr))
+    return stdout.decode()
+
 
 def to_html(original_rtf, fixed_rtf):
     html = None
-    from sh import unrtf
 
     with NamedTemporaryFile() as xml:
         xml.write(fixed_rtf.encode("ascii"))
@@ -149,7 +161,6 @@ def to_html(original_rtf, fixed_rtf):
 
     for u in get_unencoded(original_rtf):
         html = html.replace(UNDECODED, u, 1)
-
     # Convert previously escaped RTF unicode escape sequences to HTML, \u0000? -> &#0000;
     html = RE_UNICHAR.sub(lambda m: "&#{};".format(m.group("ord")), html)
 
