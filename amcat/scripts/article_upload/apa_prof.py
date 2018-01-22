@@ -91,7 +91,7 @@ META_RE = (RE_DATE, RE_DATE2, RE_DATETIME, RE_PAGENR, RE_SECTION, RE_AUTHOR, RE_
 UNDECODED = "NON_DECODED_CHARACTER"
 UNDECODED_UNICODE = "NON_DECODED_UNICODE_CHARACTER"
 
-RE_UNICHAR = re.compile(r"(?<!\\)(?P<match>\\u(?P<ord>[0-9]+)\?)", re.UNICODE)
+RE_UNICHAR = re.compile(r"(?P<match>\\u(?P<ord>[0-9]+)\?)", re.UNICODE)
 
 ### FIXING AND PARSING ###
 def _fix_fs20(s):
@@ -106,7 +106,7 @@ def _fix_fs20(s):
 
 
 def fix_fs20(s):
-    return bytes(" ").join(_fix_fs20(s))
+    return " ".join(_fix_fs20(s))
 
 
 def fix_rtf(s):
@@ -135,31 +135,54 @@ def get_unencoded(s):
     return (b for b in s if ord(b) >= 128)
 
 
+class TooManyAttributesError(BaseException):
+    pass
+
 def unrtf(name):
     from subprocess import Popen, PIPE
     try:
         p = Popen(["unrtf", name], stdout=PIPE, stderr=PIPE)
-    except FileNotFoundError:
+    except OSError:
         raise RuntimeError("unrtf executable not found.")
     stdout, stderr = p.communicate()
+    if len(stderr) > 100:
+        if stderr.count(b"Too many attributes") > 10:
+            raise TooManyAttributesError()
     if p.returncode > 0:
         raise ParseError("Failed to parse RTF: {}".format(stderr))
     return stdout.decode()
 
 
+def compartmentalize(rtf):
+    """
+    Split the rtf into small paragraph sized groups to prevent formatting directives from leaking out of their scope, which would
+    throw off unrtf.
+    """
+    boundary = "\r\n\\par\r\n"
+    parts = rtf.split(boundary)
+    middle = "\n}}{}{{\n".format(boundary).join(parts[1:-1])
+
+    return "{head}{boundary}{{{body}}}{boundary}{tail}".format(head=parts[0], boundary=boundary, body=middle,
+                                                               tail=parts[-1])
+
+
 def to_html(original_rtf, fixed_rtf):
     html = None
 
-    with NamedTemporaryFile() as xml:
-        xml.write(fixed_rtf)
-        xml.flush()
-        html = str(unrtf(xml.name))
+    try:
+        with NamedTemporaryFile() as rtf:
+            rtf.write(fixed_rtf.encode("ascii"))
+            rtf.flush()
+            html = str(unrtf(rtf.name))
+    except TooManyAttributesError:
+        fixed_rtf2 = compartmentalize(fixed_rtf)
+        with NamedTemporaryFile() as rtf:
+            rtf.write(fixed_rtf2.encode("ascii"))
+            rtf.flush()
+            html = str(unrtf(rtf.name))
 
     for u in get_unencoded(original_rtf):
         html = html.replace(UNDECODED, u, 1)
-
-    html = html.decode("latin-1")
-
     # Convert previously escaped RTF unicode escape sequences to HTML, \u0000? -> &#0000;
     html = RE_UNICHAR.sub(lambda m: "&#{};".format(m.group("ord")), html)
 
@@ -174,6 +197,8 @@ def parse_html(html):
 
     try:
         return fromstring(html)
+    except Exception as e:
+        raise Exception(str(e))
     finally:
         sys.setrecursionlimit(limit)
 
