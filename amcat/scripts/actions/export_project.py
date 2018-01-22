@@ -40,6 +40,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 
 from amcat.scripts.script import Script
 from amcat.models import *
+from amcat.models.user import User
 from amcat.tools.amcates import ES
 from amcat.tools.toolkit import splitlist
 
@@ -130,6 +131,7 @@ class ExportProject(Script):
             self.schema_ids = self.get_schema_ids()
             self.codebook_ids = self.get_codebook_ids()
 
+            self.export_users()
             self.export_articlesets()
 
             self.export_articles()
@@ -154,7 +156,14 @@ class ExportProject(Script):
         def serialize_coding_value(cv):
             result = dict(codingschemafield_id=cv.field_id, intval=cv.intval, strval=cv.strval)
             if cv.field_id in self.codebook_fields:
-                result["code"] = self.codes[result.pop("intval")]
+                intval = result['intval']
+                try:
+                    result["code"] = self.codes[intval]
+                    del result['intval']
+                except KeyError:
+                    ca = cv.coding.coded_article
+                    logging.warn("Could not find code {intval} in job {ca.codingjob_id} article {ca.article_id} , was it removed from the codebook?".format(**locals()))
+                    pass
             return result
         
         def get_values_dict(coding):
@@ -200,6 +209,16 @@ class ExportProject(Script):
         sentences = self.get_sentences({ca.article_id for ca in coded_articles})
         self._write_json_lines("sentences", sentences, "coded sentences")
         
+    def export_users(self):
+        roles = {r.user_id: r.role.label for r in self.project.projectrole_set.all()}
+        cjs = CodingJob.objects.filter(project=self.project)
+        uids = set(roles) | {self.project.insert_user.pk} | {cj.coder_id for cj in cjs}
+        def get_users(uids, roles):
+            for u in User.objects.filter(pk__in=uids):
+                role = roles.get(u.id)
+                yield dict(username=u.username, first_name=u.first_name, last_name=u.last_name, password=u.password, role=role, email=u.email)
+        self._write_json_lines("users", get_users(uids, roles))
+
 
     def get_schema_ids(self):
         # we need to serialize coding schemas that are either part of this project, linked in this project, or using in a codingjob
