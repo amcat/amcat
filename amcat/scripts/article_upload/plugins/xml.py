@@ -25,13 +25,17 @@ class XMLUploadBase(UploadScript):
 
     @classmethod
     def _preprocess(cls, file: UploadedFile):
-        t = etree.ElementTree(file=file)
-        data = []
-        for article in t.iterfind(cls.articlePath):
-            articletree = etree.ElementTree(article)
-            paths = ((articletree.getelementpath(el), etree.tounicode(el), cls.parseElement(el)) for el in articletree.iter())
-            data.append([{"path": path, "content": text, "outerXML": xml} for path, xml, text in paths])
-        return data
+        try:
+            t = etree.ElementTree(file=file)
+            data = []
+            for article in t.iterfind(cls.articlePath):
+                articletree = etree.ElementTree(article)
+                paths = ((articletree.getelementpath(el), etree.tounicode(el), cls.parseElement(el)) for el in articletree.iter())
+                data.append([{"path": path, "content": text, "outerXML": xml} for path, xml, text in paths])
+            return data
+        except Exception as e:
+            # weird bug crashes Celery if an LXML exception is raised. Wrapping it in another exception fixes it.
+            raise Exception(str(e))
 
     @classmethod
     def get_fields(cls, upload: models.UploadedFile):
