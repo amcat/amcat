@@ -235,7 +235,7 @@ class ImportProject(Script):
             to_add = list(self.get_sentences(articles, sentences))
             if to_add:
                 logging.info("Creating {} sentences".format(len(to_add)))
-                added = ((s.article_id, s.sentence, s.parnr, s.pk) for s in bulk_insert_returning_ids(to_add))
+                added = ((s.article_id, s.parnr, s.sentnr, s.pk) for s in bulk_insert_returning_ids(to_add))
                 _load_sentences(added, target=sentences)
                 sentences.update(added)
         return sentences
