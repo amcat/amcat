@@ -139,6 +139,9 @@ def get_unencoded(s):
     return [b for b in s if ord(b) >= 128]
 
 
+class TooManyAttributesError(BaseException):
+    pass
+
 def unrtf(name):
     from subprocess import Popen, PIPE
     try:
@@ -146,18 +149,42 @@ def unrtf(name):
     except FileNotFoundError:
         raise RuntimeError("unrtf executable not found.")
     stdout, stderr = p.communicate()
+    if len(stderr) > 100:
+        if stderr.count(b"Too many attributes") > 10:
+            raise TooManyAttributesError()
     if p.returncode > 0:
         raise ParseError("Failed to parse RTF: {}".format(stderr))
     return stdout.decode()
 
 
+def compartmentalize(rtf):
+    """
+    Split the rtf into small paragraph sized groups to prevent formatting directives from leaking out of their scope, which would
+    throw off unrtf.
+    """
+    boundary = "\n\\par\n"
+    parts = rtf.split(boundary)
+    middle = "\n}}{}{{\n".format(boundary).join(parts[1:-1])
+
+    return "{head}{boundary}{{{body}}}{boundary}{tail}".format(head=parts[0], boundary=boundary, body=middle,
+                                                               tail=parts[-1])
+
+
 def to_html(original_rtf, fixed_rtf):
     html = None
 
-    with NamedTemporaryFile() as xml:
-        xml.write(fixed_rtf.encode("ascii"))
-        xml.flush()
-        html = str(unrtf(xml.name))
+    try:
+        with NamedTemporaryFile() as rtf:
+            rtf.write(fixed_rtf.encode("ascii"))
+            rtf.flush()
+            html = str(unrtf(rtf.name))
+    except TooManyAttributesError:
+        fixed_rtf2 = compartmentalize(fixed_rtf)
+        with NamedTemporaryFile() as rtf:
+            rtf.write(fixed_rtf2.encode("ascii"))
+            rtf.flush()
+            html = str(unrtf(rtf.name))
+
 
     for u in get_unencoded(original_rtf):
         html = html.replace(UNDECODED, u, 1)
