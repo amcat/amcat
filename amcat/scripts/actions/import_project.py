@@ -174,7 +174,7 @@ class ImportProject(Script):
                     v["codingschemafield_id"] = self.status.schemafields[v["codingschemafield_id"]]
                     if "code" in v:
                         v["intval"] = self.status.codes[v.pop("code")]
-            ca.replace_codings(a["codings"])
+            ca.replace_codings(a["codings"], check_schemafields=False)
 
     def import_codingschemas(self):
         schemas = self._deserialize("codingschemas.json")

@@ -130,7 +130,7 @@ class CodedArticle(models.Model):
 
         return (new_coding_objects, CodingValue.objects.bulk_create(coding_values))
 
-    def replace_codings(self, coding_dicts):
+    def replace_codings(self, coding_dicts, check_schemafields=True):
         """
         Creates codings and replace currently existing ones. It takes one parameter
         which has to be an iterator of dictionaries with each dictionary following
@@ -154,6 +154,7 @@ class CodedArticle(models.Model):
         @raises IntegrityError: codingschemafield_id is None
         @raises ValueError: intval == strval == None
         @raises ValueError: intval != None and strval != None
+        @param check_schemafields: if True (default), raises ValueError if fields not in coding schema
         @returns: ([Coding], [CodingValue])
         """
         coding_dicts = tuple(coding_dicts)
@@ -169,7 +170,7 @@ class CodedArticle(models.Model):
         fields = CodingSchemaField.objects.filter(codingschema__id__in=schemas)
         field_ids = set(fields.values_list("id", flat=True)) | {None}
 
-        if any(v.get("codingschemafield_id") not in field_ids for v in values):
+        if check_schemafields and any(v.get("codingschemafield_id") not in field_ids for v in values):
             raise ValueError("codingschemafield_id must be in codingjob")
 
         with transaction.atomic():

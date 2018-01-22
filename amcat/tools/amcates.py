@@ -517,7 +517,7 @@ class _ES(object):
         finally:
             pool.close()
 
-    def add_articles(self, article_ids, batch_size=100):
+    def add_articles(self, article_ids, batch_size=1000):
         """
         Add the given article_ids to the index. This is done in batches, so there
         is no limit on the length of article_ids (which can be a generator).
