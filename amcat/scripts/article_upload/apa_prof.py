@@ -48,7 +48,7 @@ import lxml.html
 import logging
 
 from amcat.models import Article, Medium
-from amcat.scripts.article_upload.upload import UploadScript
+from amcat.scripts.article_upload.upload import UploadScript, ParseError
 from amcat.scripts.article_upload import fileupload
 from amcat.tools.toolkit import read_date
 
@@ -57,7 +57,7 @@ log = logging.getLogger(__name__)
 FS20 = "\\fs20"
 PAGE_BREAK = "page-break"
 STOP_AT = re.compile(
-    ur"((Gespeicherter Anhang:)|(Der gegenst\xc3\xa4ndliche Text ist eine Abschrift)|(Gespeicherte Anh\xc3\xa4nge))")
+    r"((Gespeicherter Anhang:)|(Der gegenst\xc3\xa4ndliche Text ist eine Abschrift)|(Gespeicherte Anh\xc3\xa4nge))")
 
 # 11.05.2004
 _RE_DATE = "(?P<day>\d{2})\.(?P<month>\d{2})\.(?P<year>\d{4})"
@@ -88,10 +88,10 @@ RE_AUTHOR = re.compile("^Von (?P<author>[^0-9]+)$")
 # All regular expressions which can match metadata
 META_RE = (RE_DATE, RE_DATE2, RE_DATETIME, RE_PAGENR, RE_SECTION, RE_AUTHOR, RE_MEDIUM, RE_MEDIUM_QUOTE)
 
-UNDECODED = bytes("NON_DECODED_CHARACTER")
-UNDECODED_UNICODE = bytes(b"NON_DECODED_UNICODE_CHARACTER")
+UNDECODED = "NON_DECODED_CHARACTER"
+UNDECODED_UNICODE = "NON_DECODED_UNICODE_CHARACTER"
 
-RE_UNICHAR = re.compile(ur"(?<!\\)(?P<match>\\u(?P<ord>[0-9]+)\?)", re.UNICODE)
+RE_UNICHAR = re.compile(r"(?<!\\)(?P<match>\\u(?P<ord>[0-9]+)\?)", re.UNICODE)
 
 ### FIXING AND PARSING ###
 def _fix_fs20(s):
@@ -132,16 +132,28 @@ def fix_rtf(s):
 
 def get_unencoded(s):
     """Get characters with a value higher than 128 (non-ASCII characters)"""
-    return (bytes(b) for b in s if ord(b) >= 128)
+    return (b for b in s if ord(b) >= 128)
+
+
+def unrtf(name):
+    from subprocess import Popen, PIPE
+    try:
+        p = Popen(["unrtf", name], stdout=PIPE, stderr=PIPE)
+    except FileNotFoundError:
+        raise RuntimeError("unrtf executable not found.")
+    stdout, stderr = p.communicate()
+    if p.returncode > 0:
+        raise ParseError("Failed to parse RTF: {}".format(stderr))
+    return stdout.decode()
+
 
 def to_html(original_rtf, fixed_rtf):
     html = None
-    from sh import unrtf
 
     with NamedTemporaryFile() as xml:
         xml.write(fixed_rtf)
         xml.flush()
-        html = bytes(unrtf(xml.name))
+        html = str(unrtf(xml.name))
 
     for u in get_unencoded(original_rtf):
         html = html.replace(UNDECODED, u, 1)
@@ -235,7 +247,7 @@ def get_metadata(metadata, element):
 
     it = _get_metadata(metadata, element)
     try:
-        it.next()
+        next(it)
     except StopIteration:
         return False
     list(it)
