@@ -17,7 +17,7 @@
 * License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
 ***************************************************************************/
 
-define(["jquery"], function($){
+define(["jquery", "annotator/widgets"], function($, widgets){
     var self = {};
 
     self.OPERATORS = {
@@ -54,6 +54,7 @@ define(["jquery"], function($){
      *
      */
     self.add = function(html){
+        self.root = html;
         $("input.codingvalue", html).change(self.codingvalue_changes);
     };
 
@@ -62,52 +63,57 @@ define(["jquery"], function($){
      */
     self.codingvalue_changes = function(event){
         var container, coding_el, coding, schemafield, rules;
+        let coding_fields = $("input.codingvalue", self.root);
 
-        container = self.get_container_by_input($(event.currentTarget));
-        coding_el = self.get_coding_element_by_container(container);
-        schemafield = annotator.models.schemafields[container.attr("schemafield_id")];
-        rules = self.get_field_codingrules()[schemafield.id];
+        coding_fields.each(function (i, el) {
+            container = self.get_container_by_input($(el));
+            coding_el = self.get_coding_element_by_container(container);
+            schemafield = annotator.models.schemafields[container.attr("schemafield_id")];
+            rules = self.get_field_codingrules()[schemafield.id];
 
-        if (rules === undefined) {
-            console.log("No codingrules for field " + schemafield.id);
-            return;
-        }
-
-        // Check each rule
-        var apply = [], not_apply = [];
-        $.each(rules, function (i, rule) {
-            (self.applies(coding_el, schemafield, rule.parsed_condition)
-                ? apply : not_apply).push(rule);
-        });
-
-        // If a rule not applies, reset their error-state
-        $.each(not_apply, function (i, rule) {
-            // We mark all input fields in the container belonging to the rule destination
-            var widget = widgets.find(rule.field, coding_el);
-            var inputs = widget.find("input");
-
-            widget.removeClass(self.ERROR_CLASS);
-            inputs.css("borderColor", "");
-            inputs.prop("disabled", false);
-        });
-
-        $.each(apply, function (i, rule) {
-            var widget = widgets.find(rule.field, coding_el);
-            var inputs = widget.find("input");
-
-            if (rule.field === null || rule.action === null) return;
-
-            var action = rule.action.label;
-            if (action === self.ACTIONS.RED) {
-                inputs.css("borderColor", "red");
-                widget.addClass(self.ERROR_CLASS);
-            } else if (action === self.ACTIONS.NOT_CODABLE) {
-                inputs.prop("disabled", true);
-            } else if (action === self.ACTIONS.NOT_NULL) {
-                if(widgets.get_value(widget) === null){
-                    widget.addClass(self.ERROR_CLASS);
-                }
+            if (rules === undefined) {
+                console.log("No codingrules for field " + schemafield.id);
+                return;
             }
+
+            // Check each rule
+            var apply = [], not_apply = [];
+            $.each(rules, function (i, rule) {
+                (self.applies(coding_el, schemafield, rule.parsed_condition)
+                    ? apply : not_apply).push(rule);
+            });
+
+            console.log("Applies/Not Applies:", apply, not_apply);
+            // If a rule not applies, reset their error-state
+            $.each(not_apply, function (i, rule) {
+                // We mark all input fields in the container belonging to the rule destination
+                var widget = widgets.find(rule.field, coding_el);
+                var inputs = widget.find("input");
+
+                widget.removeClass(self.ERROR_CLASS);
+                inputs.css("borderColor", "");
+                inputs.prop("disabled", false);
+            });
+
+            $.each(apply, function (i, rule) {
+                var widget = widgets.find(rule.field, coding_el);
+                var inputs = widget.find("input");
+
+                if (rule.field === null || rule.action === null) return;
+
+                var action = rule.action.label;
+                if (action === self.ACTIONS.RED) {
+                    inputs.css("borderColor", "red");
+                    widget.addClass(self.ERROR_CLASS);
+                } else if (action === self.ACTIONS.NOT_CODABLE) {
+                    inputs.prop("disabled", true);
+                } else if (action === self.ACTIONS.NOT_NULL) {
+                    console.log("Is null? :", widgets.get_value(widget));
+                    if (widgets.get_value(widget) === null) {
+                        widget.addClass(self.ERROR_CLASS);
+                    }
+                }
+            });
         });
     };
 
@@ -121,9 +127,7 @@ define(["jquery"], function($){
      */
     self.applies = function (coding_el, schemafield, rule) {
         // Create partially applied applies function
-        var ra = function (rule) {
-            self.applies(coding_el, schemafield, rule)
-        };
+        var ra = rule => self.applies(coding_el, schemafield, rule);
 
         var truth, assert = function (cond) {
             if (!cond) throw "AssertionError";
@@ -163,6 +167,10 @@ define(["jquery"], function($){
 
         if (rule.type === self.OPERATORS.LESSER_THAN_OR_EQUAL_TO) {
             return input_value <= rule.values[1];
+        }
+
+        if (rule.type === "codingschemafield") {
+            return !!input_value;
         }
 
         // rule.type must equal either EQUALS or NOT_EQUALS. Furthermore

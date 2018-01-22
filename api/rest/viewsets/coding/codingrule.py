@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import json
+
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
@@ -39,8 +41,9 @@ class CodingRuleSerializer(AmCATModelSerializer):
     def get_parsed_condition(self, obj):
         try:
             return codingruletoolkit.to_json(codingruletoolkit.parse(obj), serialise=False)
-        except (ValidationError, SyntaxError):
-            return None
+        except (ValidationError, SyntaxError) as e:
+            return json.dumps(str(e))
+
 
     class Meta:
         model = CodingRule

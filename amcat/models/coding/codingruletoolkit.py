@@ -29,7 +29,7 @@ KNOWN_NODES = (
     ast.BoolOp, ast.UnaryOp, ast.And, ast.Or, ast.Not,
     ast.Eq, ast.NotEq, ast.Expr, ast.Compare, ast.Str,
     ast.Load, ast.Num, ast.Tuple, ast.Lt, ast.LtE,
-    ast.Gt, ast.GtE
+    ast.Gt, ast.GtE, ast.NameConstant
 )
 
 OR = "OR"
@@ -83,7 +83,9 @@ def resolve_operands(node):
         value = right.n
     elif isinstance(right, ast.Str):
         value = right.s
-
+    elif isinstance(right, ast.NameConstant):
+        value = right.value
+    print(value)
     # Check if type of right operand seems to match the type requested by its serialiser
     schemafield = CodingSchemaField.objects.get(id=left.n)
     serialiser = schemafield.serialiser
@@ -113,7 +115,11 @@ def parse_node(node, _seen=()):
             "values": resolve_operands(node)
         }
     if isinstance(node, ast.Num):
-        return parse(CodingRule.objects.get(id=node.n), _seen)
+        return CodingSchemaField.objects.get(pk=node.n)
+    if isinstance(node, ast.NameConstant):
+        if not isinstance(node.value, bool):
+            raise SyntaxError("Constant {} is not a bool (col {}, line {})".format(node.value, node.col_offset, node.lineno))
+        return node.value
     if isinstance(node, ast.Str):
         raise SyntaxError("invalid syntax (col {}, line {})".format(node.col_offset, node.lineno))
     if isinstance(node, ast.Expr):

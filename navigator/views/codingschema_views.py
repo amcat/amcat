@@ -259,7 +259,7 @@ def _get_form(data, schema, form):
     return form(schema, data=data, instance=instance)
 
 def _get_forms(datas, schema, form):
-    return itertools.map(partial(_get_form, form=form, schema=schema), datas)
+    return map(partial(_get_form, form=form, schema=schema), datas)
 
 
 class CodingSchemaFieldForm(forms.ModelForm):

@@ -56,7 +56,7 @@ def get_property_field_cls(property):
 
     class PropertyField(base_field):
         def get_attribute(self, instance):
-            return instance.article.properties[property]
+            return instance.article.properties.get(property)
 
     return PropertyField
 
