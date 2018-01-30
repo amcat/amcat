@@ -526,7 +526,7 @@ class _ES(object):
         if not article_ids: return
         from amcat.models import Article, ArticleSetArticle
 
-        n = len(article_ids) / batch_size
+        n = len(article_ids) // batch_size
         for i, batch in enumerate(splitlist(article_ids, itemsperbatch=batch_size)):
             log.info("Adding batch {i}/{n}".format(**locals()))
             all_sets = multidict((aa.article_id, aa.articleset_id)
