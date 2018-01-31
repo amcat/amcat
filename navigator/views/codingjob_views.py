@@ -102,6 +102,10 @@ class CodingJobDetailsView(ProjectDetailView, DatatableMixin):
         table = table.rowlink_reverse('navigator:article-details', args=[self.project.id, self.object.articleset.id, '{id}'])
         return table
 
+    def get_datatable_kwargs(self):
+        fields = [("col", prop) for prop in ("title", "date", "url")]
+        props = [("col", prop) for prop in self.project.get_display_columns() if prop in self.object.articleset.get_used_properties()]
+        return {"extra_args": fields + props}
 
 class CodingJobEditView(ProjectEditView):
     parent = CodingJobDetailsView
