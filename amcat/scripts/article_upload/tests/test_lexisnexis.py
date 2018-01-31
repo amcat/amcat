@@ -57,6 +57,14 @@ class TestLexisNexis(amcattest.AmCATTestCase):
         article = parse_article(next(split_body(body)))
         self.assertEqual("Gretta Duisenberg oprichtster van Palestina-groep", article['title'])
 
+    def test_german_doc_header(self):
+        header, body = split_header(self.test_text3)
+        g = split_body(body)
+        _ = next(g)
+        article = parse_article(next(g))
+        self.assertEqual("Der zweite Überschrift", article['title'])
+
+
     def split(self):
         return split_header(self.test_text)
 
