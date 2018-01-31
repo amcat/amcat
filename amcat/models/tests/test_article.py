@@ -75,8 +75,9 @@ class TestProperties(amcattest.AmCATTestCase):
         a.set_property("now_num", .35)
 
         # Test default
-        self.assertRaises(ValueError, a.set_property, "now", .305)
-        self.assertRaises(ValueError, a.set_property, "now", 3)
+        # int and float assignment to str type is legal.
+        # self.assertRaises(ValueError, a.set_property, "now", .305)
+        # self.assertRaises(ValueError, a.set_property, "now", 3)
         self.assertRaises(ValueError, a.set_property, "now", datetime.datetime.now())
         a.set_property("now", "test")
 
