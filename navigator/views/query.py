@@ -47,6 +47,8 @@ SHOW_N_RECENT_QUERIES = 5
 
 R_PLUGIN_PLACEHOLDER = (object(),object())
 
+CODINGJOB_AGGREGATION_ACTION = ("Graph/Table (Codings)", query.CodingAggregationAction)
+
 QUERY_ACTIONS = (
     ("Summary", query.SummaryAction),
     ("Graph/Table (Elastic)", query.AggregationAction),
@@ -189,8 +191,11 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         else:
             return set(map(int, filter(str.isdigit, self.request.GET.get(key, "").split(","))))
 
-
     def _get_query_action(self, label, action):
+
+        if action is query.AggregationAction and self._get_ids("jobs"):
+            label, action = CODINGJOB_AGGREGATION_ACTION
+
         if isinstance(action, type) and issubclass(action, query.QueryAction):
             return {"label": label, "name": action.get_action_name()}
         else:
