@@ -21,8 +21,8 @@ class ScrollingPaginator(pagination.BasePagination):
         self.done = not res['hits']['hits']
         for hit in res['hits']['hits']:
             item = {'id': hit['_id']}
-            if 'fields' in hit:
-                item.update({k: v[0] for (k, v) in hit['fields'].items()})
+            if '_source' in hit:
+                item.update({k: v for (k, v) in hit['_source'].items()})
             yield item
 
     def get_paginated_response(self, data):

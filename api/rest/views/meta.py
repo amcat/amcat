@@ -1,3 +1,4 @@
+from amcat.tools import amcates
 from api.rest.scrollingpaginator import ScrollingPaginator
 
 from rest_framework.generics import ListAPIView
@@ -24,8 +25,7 @@ class ArticleMetaView(ListAPIView):
 
     def get_queryset(self):
         # TODO: should check permission!
-        columns = self.request.query_params.get('columns')
-        fields = columns.split(",") if columns else ['date']
+        columns = self.request.query_params.get('columns') or 'date'
         page_size = int(self.request.query_params.get("page_size", 10))
 
         if 'articleset_id' in self.kwargs:
@@ -36,6 +36,6 @@ class ArticleMetaView(ListAPIView):
             filter = {'id': ids}
         else:
             raise Exception("Meta API needs either articleset or id paramter")
-        
-        return {'body': {u'filter': {'terms': filter}},
-                'fields': fields, 'size': page_size}
+        body = amcates.build_body(filters=filter)
+        return {'body': body,
+                '_source_include': columns, 'size': page_size}
