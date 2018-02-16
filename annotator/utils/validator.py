@@ -8,9 +8,9 @@ from amcat.models.coding import codingruletoolkit
 
 class CodingValidationError(ValidationError):
     def __init__(self, arg0, *args, fields: Sequence[Tuple[int, int]] = None, **kwargs):
-        super.__init__(arg0, *args, **kwargs)
+        super().__init__(arg0, *args, **kwargs)
         if isinstance(arg0, list) and all(isinstance(x, CodingValidationError) for x in arg0):
-            self.fields = sum([err.fields for err in arg0], [])
+            self.fields = sum([err.fields for err in arg0 if err.fields is not None], [])
         self.fields = fields
 
 
@@ -70,7 +70,7 @@ def get_rule_fn(codingrule: CodingRule):
             return
         success = apply_action(codingrule.action, codingrule.field, context)
         if not success:
-            raise CodingValidationError("Validation failed for rule {}: {}".format(codingrule.id, codingrule.label))
+            raise CodingValidationError("Validation failed for rule {}: {}".format(codingrule.id, codingrule.label), fields=[])
 
     return rule
 
@@ -87,9 +87,10 @@ def apply_rules(codedarticle: CodedArticle):
         for rule in rules[coding.schema]:
             try:
                 rule(context)
-            except CodingValidationError:
-
-
+            except CodingValidationError as e:
+                errors.append(e)
+    if errors:
+        raise CodingValidationError(errors)
 
 def apply_schema_requirements(codedarticle: CodedArticle):
     schemas = (codedarticle.codingjob.articleschema, codedarticle.codingjob.unitschema)
