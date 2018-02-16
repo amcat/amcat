@@ -1035,9 +1035,26 @@ define([
         }).fail(error_callback);
     };
 
+    self.finish_and_select_next_article = function(data){
+        data = JSON.parse(data);
+        console.log(data.error);
+        if(data.error !== null){
+            new PNotify({
+                type: 'warning',
+                title: 'Validation failed.',
+                text: data.error + ""
+            });
+            self.warn_for_unfinished();
+            self.set_status(self.STATUS.IN_PROGRESS);
+            return;
+        }
+        self.select_next_article();
+    };
+
     self.set_status = function set_status(state){
         self.article_status_dropdown.val(state);
         self.article_status_dropdown.trigger("change");
+        self.set_column_text("status", self.STATUS_TEXT[state]);
     };
 
     self.save_and_continue = function save_and_continue () {
@@ -1046,7 +1063,8 @@ define([
 
     self.finish_and_continue = function finish_and_continue(){
         self.set_status(self.STATUS.COMPLETE);
-        self.save_and_continue();
+        self.save({ success_callback : self.finish_and_select_next_article, validate : true });
+        return false;
     };
 
     self.irrelevant_and_continue = function irrelevant_and_continue () {
@@ -1551,11 +1569,12 @@ define([
 
     // TODO: Clean, comment on magic
     self.initialise_wordcount = function initialise_wordcount(){
+        // Gets the text in a selection of sentences, excluding sentence numbers, and counts the words.
         // http://stackoverflow.com/questions/6743912/get-the-pure-text-without-html-element-by-javascript
         var sentence_re = / id="sentence-[0-9]*"/g;
         var count = function () {
             var html = "";
-            if (typeof window.getSelection != "undefined") {
+            if (typeof window.getSelection !== "undefined") {
                 var sel = window.getSelection();
                 if (sel.rangeCount) {
                     var container = document.createElement("div");
@@ -1564,8 +1583,8 @@ define([
                     }
                     html = container.innerHTML;
                 }
-            } else if (typeof document.selection != "undefined") {
-                if (document.selection.type == "Text") {
+            } else if (typeof document.selection !== "undefined") {
+                if (document.selection.type === "Text") {
                     html = document.selection.createRange().htmlText;
                 }
             }

@@ -55,13 +55,18 @@ input.form-control{
     background-color: #d9edf7;
 }
 
-h2{
-    font-size:15px;
+.sentences h2{
+    font-size:1.2em;
     margin: 5px;
 }
 
 .annotator-sentencenr{
     color:gray;
+
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .article-list-toolbar{

@@ -19,6 +19,7 @@
 import datetime
 
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from amcat.models import Sentence, CodedArticle, Article, ROLE_PROJECT_READER, CodingJob, Project
