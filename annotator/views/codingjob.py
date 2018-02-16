@@ -93,7 +93,8 @@ def save(request, project_id, codingjob_id, coded_article_id):
             coded_article.save()
 
             status["status"] = STATUS_INPROGRESS
-            status["error"] = ", ".join(e.message for e in e.error_list)
+            status["error"] = {"message": [suberror.message for suberror in e.error_list]}
+            status["error"]["fields"] = getattr(e, "fields", None)
 
     return HttpResponse(status=201, content=json.dumps(status))
 

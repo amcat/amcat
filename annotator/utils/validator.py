@@ -1,17 +1,21 @@
-from typing import Any, Mapping, Tuple, Sequence
+from typing import Any, Mapping, Tuple, Sequence, Optional
 
 from django.core.exceptions import ValidationError
 
-from amcat.models import CodingRule, CodingSchemaField, CodingRuleAction, CodedArticle
+from amcat.models import CodingRule, CodingSchemaField, CodingRuleAction, CodedArticle, Coding
 from amcat.models.coding import codingruletoolkit
 
 
 class CodingValidationError(ValidationError):
-    def __init__(self, arg0, *args, fields: Sequence[Tuple[int, int]] = None, **kwargs):
+    def __init__(self, arg0, *args, fields: Sequence[Tuple[Optional[int], int, str]] = None, **kwargs):
         super().__init__(arg0, *args, **kwargs)
+
+        self.fields = None
         if isinstance(arg0, list) and all(isinstance(x, CodingValidationError) for x in arg0):
             self.fields = sum([err.fields for err in arg0 if err.fields is not None], [])
-        self.fields = fields
+
+        if fields is not None:
+            self.fields = fields
 
 
 comparators = {
@@ -64,13 +68,14 @@ def apply_action(action: CodingRuleAction, field: CodingSchemaField, context) ->
 
 
 def get_rule_fn(codingrule: CodingRule):
-    def rule(context):
+    def rule(context, coding):
         condition = evaluate_condition(codingruletoolkit.parse(codingrule), context)
         if not condition:
             return
         success = apply_action(codingrule.action, codingrule.field, context)
         if not success:
-            raise CodingValidationError("Validation failed for rule {}: {}".format(codingrule.id, codingrule.label), fields=[])
+            raise CodingValidationError("Validation failed for rule {}: {}".format(codingrule.id, codingrule.label),
+                                        fields=[(coding.id, codingrule.field.id, codingrule.label)])
 
     return rule
 
@@ -84,9 +89,10 @@ def apply_rules(codedarticle: CodedArticle):
         context = {v.field: v.intval if v.strval is None else v.strval for v in values}
         if coding.schema not in rules:
             rules[coding.schema] = [get_rule_fn(rule) for rule in coding.schema.rules.all()]
+
         for rule in rules[coding.schema]:
             try:
-                rule(context)
+                rule(context, coding)
             except CodingValidationError as e:
                 errors.append(e)
     if errors:
@@ -100,7 +106,8 @@ def apply_schema_requirements(codedarticle: CodedArticle):
         required_fields -= {v.field for v in values}
 
     if required_fields:
-        raise CodingValidationError(["Missing required field: {}".format(f.label) for f in required_fields])
+        raise CodingValidationError(["Missing required field: {}".format(f.label) for f in required_fields],
+                                    fields=[(None, field.id, "This field is required") for field in required_fields])
 
 
 def validate(codedarticle: CodedArticle) -> None:
@@ -108,5 +115,16 @@ def validate(codedarticle: CodedArticle) -> None:
     Validates a coded article against the rules and schema requirements.
     Raises a CodingValidationError on failure.
     """
-    apply_schema_requirements(codedarticle)
-    apply_rules(codedarticle)
+    errors = []
+    try:
+        apply_schema_requirements(codedarticle)
+    except CodingValidationError as e:
+        errors.append(e)
+
+    try:
+        apply_rules(codedarticle)
+    except CodingValidationError as e:
+        errors.append(e)
+
+    if errors:
+        raise CodingValidationError(errors)

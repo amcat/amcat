@@ -423,6 +423,7 @@ define([
         var schemafields = self.article_schemafields;
         var table = $("<div>")
             .attr("annotator_coding_id", self.state.article_coding.annotator_id)
+            .attr("coding_id", self.state.article_coding.id)
             .addClass("coding");
 
         return table.append($.map(widgets.get_html(schemafields, null), function(widget, i){
@@ -808,12 +809,11 @@ define([
 
     /* Returns (new) DOM representation of a single sentence coding */
     self.get_sentence_coding_html = function get_sentence_coding_html(coding){
-        var coding_el = $("<tr class='coding'>").attr("annotator_coding_id", coding.annotator_id);
+        var coding_el = $("<tr class='coding'>").attr("annotator_coding_id", coding.annotator_id).attr("coding_id", coding.id);
 
         // Add sentencenr, from and to.
         var sentence_td = $("<td>");
         sentence_td.append(widgets.sentence.get_html().val((coding.sentence === null) ? "" : coding.sentence.get_unit()));
-
         if(self.codingjob.unitschema.subsentences){
             sentence_td.append(widgets.from.get_html().val(coding.start||""));
             sentence_td.append(widgets.to.get_html().val(coding.end||""));
@@ -822,7 +822,7 @@ define([
         coding_el.append(sentence_td);
 
         coding_el.append($.map(widgets.get_html(self.sentence_schemafields), function(widget){
-            return $("<td>").append(widget);
+            return $("<td>").append(widget).append(`<div><small class="errors text-danger"></small></div>`);
         }));
 
         coding_el.append($("<td>").addClass("focus-stealer").focus(self.last_widget_reached));
@@ -907,8 +907,8 @@ define([
         }
     };
 
-    self.warn_for_unfinished = function warn_for_unfinished(){
-        if (self.state.coded_article.status !== self.STATUS.IN_PROGRESS){
+    self.warn_for_unfinished = function warn_for_unfinished(warn_always){
+        if (self.state.coded_article.status !== self.STATUS.IN_PROGRESS || warn_always){
             new PNotify({
                 "type": "warning",
                 "text": "Setting status to 'unfinished' while field validation failed."
@@ -918,6 +918,23 @@ define([
         self.set_status(self.STATUS.IN_PROGRESS);
     };
 
+    self.mark_errors = function(errors){
+        "use strict";
+        const fields = errors.fields;
+        if(fields === null) return;
+        const codings = self.get_codings();
+        let i = 0;
+        for(let codingfield of fields){
+            const codingid = codingfield[0] | 0;
+            const fieldid = codingfield[1] | 0;
+            const message = codingfield[2] + "";
+            const input = $(`[coding_id=${codingid}] [schemafield_id=${fieldid}]`);
+            input.parent().addClass('has-error');
+            input.parent().find('.errors').text(message);
+            i++;
+        }
+
+    };
     /*
      * Save codings.
      *
@@ -930,6 +947,7 @@ define([
      * @default validate: false
      */
     self.save = function save(options){
+        let success = true;
         if (options === undefined || options.currentTarget !== undefined) options = {};
 
         options = $.extend({}, {
@@ -961,6 +979,7 @@ define([
         if (validation !== true){
             self.warn_for_unfinished();
             self.show_message("Validation", validation);
+            success = false;
         }
 
         // Send coding values to server
@@ -1029,7 +1048,7 @@ define([
             var current_row = self.article_table_container.find("tr.row_selected");
             $("td:eq({0})".f(td_index), current_row).text(self.STATUS_TEXT[self.state.coded_article.status]);
 
-            if (success_callback !== undefined && success_callback.currentTarget === undefined){
+            if (success && success_callback !== undefined && success_callback.currentTarget === undefined){
                 success_callback(data, textStatus, jqXHR);
             }
         }).fail(error_callback);
@@ -1039,13 +1058,17 @@ define([
         data = JSON.parse(data);
         console.log(data.error);
         if(data.error !== null){
-            new PNotify({
-                type: 'warning',
-                title: 'Validation failed.',
-                text: data.error + ""
+            // An error occurred, re-fetch the article to consolidate state with server, and show error messages.
+            self.get_article(self.state.coded_article_id).then(() => {
+                new PNotify({
+                    type: 'warning',
+                    title: 'Validation failed.',
+                    text: data.error.message.join(", ")
+                });
+                self.mark_errors(data.error);
+                self.warn_for_unfinished(true);
+                self.set_status(self.STATUS.IN_PROGRESS);
             });
-            self.warn_for_unfinished();
-            self.set_status(self.STATUS.IN_PROGRESS);
             return;
         }
         self.select_next_article();
@@ -1241,7 +1264,7 @@ define([
         ];
 
         self.show_loading("Loading codings..");
-        $.when.apply(undefined, self.state.requests).then(self.coded_article_fetched);
+        return $.when.apply(undefined, self.state.requests).then(self.coded_article_fetched);
     };
 
 
