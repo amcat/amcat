@@ -105,8 +105,10 @@ class SelectionSearch:
             self.data.start_date, self.data.end_date,
             self.data.on_date, self.data.datetype
         )
-
-        yield (("sets", [a.id for a in self.data.articlesets]),)
+        if self.data.codingjobs:
+            yield (("sets", [j.articleset.id for j in self.data.codingjobs]),)
+        else:
+            yield (("sets", [a.id for a in self.data.articlesets]),)
         yield (("ids", self.data.article_ids or None),)
 
     @cached
