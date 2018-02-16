@@ -61,8 +61,11 @@ def evaluate_condition(condition: dict, codingContext: Mapping[CodingSchemaField
 
 
 def apply_action(action: CodingRuleAction, field: CodingSchemaField, context) -> bool:
-    if action.id == 3:
+    if action.label == 'not null':
         return field in context and context[field] is not None
+
+    if action.label == 'not codable':
+        return field not in context or context[field] is None
 
     return True
 
