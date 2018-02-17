@@ -23,7 +23,7 @@ from typing import Union, Type
 from actionform import ActionForm
 from django.contrib import messages
 from django.forms import Form
-from django.http import Http404, HttpResponseNotAllowed
+from django.http import Http404, HttpResponseBadRequest
 from django.views.generic.base import RedirectView, View
 from django.views.generic.edit import FormView, UpdateView
 from django.views.generic.detail import DetailView
@@ -406,7 +406,10 @@ class ProjectFormView(BaseMixin, FormView):
         return context
 
 class ProjectActionForm(ActionForm):
-    pass
+
+    def validate(self, form):
+        form.full_clean()
+        return form
 
 class ProjectActionFormView(BaseMixin, FormView):
     action_form_class = ProjectActionForm
@@ -414,12 +417,15 @@ class ProjectActionFormView(BaseMixin, FormView):
     def get_form_class(self):
         return self.action_form_class.get_form_class()
 
+    def form_invalid(self, form: Form):
+        return HttpResponseBadRequest('Bad Request: {}'.format(form.errors))
+
     def form_valid(self, form):
-        self.form = form
-        self.result = form.run()
+        self.action_form = self.action_form_class(form)
+        self.result = self.action_form.run()
         message = self.success_message(self.result)
         self.request.session['notification'] = message
-        return self.form_valid(form)
+        return super().form_valid(form)
 
     def get_success_url(self):
         return self.parent._get_breadcrumb_url(self.kwargs, self)
@@ -433,7 +439,7 @@ class ProjectActionFormView(BaseMixin, FormView):
 class ProjectActionRedirectView(BaseMixin, RedirectView):
     """
     DEPRECATED
-    Performs an action on  GET-request. HTTP-noncompliant and should be phased out.
+    Performs an action on GET-request. HTTP non-compliant, vulnerable to CSRF, and should be phased out.
     """
     permanent = False
     # we don't want the browser to cache the redirect and prevent the action

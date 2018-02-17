@@ -45,7 +45,12 @@ define(["jquery", "bootstrap"], function() {
         if (btn.is("[type=submit]")) {
             dialog.find("a.btn-danger").click(function (event) {
                 event.preventDefault();
-                btn.closest("form").submit();
+                if(btn[0].form instanceof HTMLFormElement) {
+                    btn[0].form.submit();
+                }
+                else {
+                    btn.closest("form").submit();
+                }
             });
         }
 
@@ -58,6 +63,7 @@ define(["jquery", "bootstrap"], function() {
         /* For <a> with a class 'confirm', display confirmation dialog */
         $(function () {
             $("a.confirm").click(confirm_dialog);
+            $("button.confirm").click(confirm_dialog);
         });
     }
 

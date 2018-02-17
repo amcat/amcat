@@ -20,11 +20,13 @@
 import datetime
 import json
 
+from actionform import ActionForm
 from django import forms
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
 from django.db.models import Q
-from django.http import Http404
+from django.http import Http404, HttpResponseNotAllowed
+from django.utils.datastructures import MultiValueDict
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import CreateView
 from django.views.generic.list import ListView
@@ -42,7 +44,7 @@ from api.rest.viewsets import FavouriteArticleSetViewSet, ArticleSetViewSet, Cod
 from navigator.views.datatableview import DatatableMixin
 from navigator.views.project_views import ProjectDetailsView
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, \
-    ProjectActionRedirectView, ProjectEditView, ProjectPermissionMap
+    ProjectActionRedirectView, ProjectEditView, ProjectPermissionMap, ProjectActionFormView, ProjectActionForm
 
 UPLOAD_PLUGIN_TYPE = 1
 
@@ -51,7 +53,7 @@ from django.template.defaultfilters import escape
 from django.http import HttpResponseBadRequest, HttpResponse
 
 
-class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
+class ArticleSetListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = ArticleSet
     parent = ProjectDetailsView
     context_category = 'Articles'
@@ -94,7 +96,7 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
         ]
         what = self.what
         if not ArticleSet.objects.filter(Q(projects_set=self.project)
-                                         | Q(project=self.project)).exists():
+                                                 | Q(project=self.project)).exists():
             no_sets = True
         if not self.project.favourite_articlesets.exists():
             no_active = True
@@ -159,7 +161,7 @@ class AddArticlesToArticleSetForm(forms.Form):
         for aset in self.cleaned_data["articlesets"]:
             aset.add_articles(self.cleaned_data["articles"])
 
-    
+
 class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, DetailView):
     required_project_permission = ProjectPermissionMap(
         get=PROJECT_ROLES.METAREADER,
@@ -194,7 +196,8 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
 
     def get_datatable_kwargs(self):
         fields = [("col", prop) for prop in ("title", "date", "url")]
-        props = [("col", prop) for prop in self.project.get_display_columns() if prop in self.object.get_used_properties()]
+        props = [("col", prop) for prop in self.project.get_display_columns() if
+                 prop in self.object.get_used_properties()]
         return {"checkboxes": True, "extra_args": fields + props}
 
     def filter_table(self, table):
@@ -202,11 +205,12 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
 
     def get_context_data(self, **kwargs):
         context = super(ArticleSetDetailsView, self).get_context_data(**kwargs)
-        
+
         if not ((self.object.project_id == self.project.id) or
-                self.project.articlesets.filter(pk=self.object.id).exists()):
-            raise Http404("ArticleSet {self.object.id}:{self.object} does not exist in project {self.project.id}: {self.project}"
-                          .format(**locals()))
+                    self.project.articlesets.filter(pk=self.object.id).exists()):
+            raise Http404(
+                "ArticleSet {self.object.id}:{self.object} does not exist in project {self.project.id}: {self.project}"
+                .format(**locals()))
 
         star = self.request.GET.get("star")
         starred = self.project.favourite_articlesets.filter(pk=self.object.id).exists()
@@ -221,7 +225,6 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
         return context
 
 
-    
 class ArticleSetImportView(ProjectScriptView):
     required_project_permission = PROJECT_ROLES.READER
     script = ImportSet
@@ -229,7 +232,7 @@ class ArticleSetImportView(ProjectScriptView):
     url_fragment = 'import'
 
     def form_valid(self, form):
-        tgt = form.cleaned_data['target_project'] #type: Project
+        tgt = form.cleaned_data['target_project']  # type: Project
         role_id = tgt.get_role_id(self.request.user)
         if role_id < PROJECT_ROLES.WRITER.value:
             raise PermissionDenied("The user does not have permission to write to the target project.")
@@ -237,7 +240,7 @@ class ArticleSetImportView(ProjectScriptView):
 
     def get_success_url(self):
         project = self.form.cleaned_data["target_project"]
-        return reverse("navigator:" + ArticleSetListView.get_view_name(), kwargs={"project":project.id})
+        return reverse("navigator:" + ArticleSetListView.get_view_name(), kwargs={"project": project.id})
 
     def get_form(self, form_class=None):
         form = super(ArticleSetImportView, self).get_form(form_class)
@@ -247,7 +250,8 @@ class ArticleSetImportView(ProjectScriptView):
             qs = qs.exclude(articlesets=self.kwargs["articleset"])
             qs = qs.exclude(pk=self.project.id)
             form.fields['target_project'].queryset = qs
-            form.fields['target_project'].help_text = "Only showing your favourite projects that do not use this set already"
+            form.fields[
+                'target_project'].help_text = "Only showing your favourite projects that do not use this set already"
             form.fields['articleset'].queryset = ArticleSet.objects.filter(pk=self.kwargs['articleset'])
         return form
 
@@ -255,6 +259,7 @@ class ArticleSetImportView(ProjectScriptView):
         initial = super().get_initial()
         initial['articleset'] = self.kwargs['articleset']
         return initial
+
 
 class ArticleSetSampleView(ProjectScriptView):
     required_project_permission = PROJECT_ROLES.WRITER
@@ -266,7 +271,7 @@ class ArticleSetSampleView(ProjectScriptView):
         super().__init__(**kwargs)
 
     def get_success_url(self):
-        return self.parent._get_breadcrumb_url({'project' : self.project.id, 'articleset' : self.result.id}, self)
+        return self.parent._get_breadcrumb_url({'project': self.project.id, 'articleset': self.result.id}, self)
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
@@ -285,14 +290,14 @@ class ArticleSetSampleView(ProjectScriptView):
         old_url = reverse('navigator:articleset-details', kwargs=self.kwargs)
         return SafeText("""Created sample set {new_name} as shown below.
                             <a href='{old_url}'>Return to original set {old.id}: {old_name}</a>"""
-                            .format(**locals()))
+                        .format(**locals()))
+
 
 class ArticleSetDeduplicateView(ProjectScriptView):
     required_project_permission = PROJECT_ROLES.WRITER
     parent = ArticleSetDetailsView
     script = DeduplicateSet
     url_fragment = "deduplicate"
-
 
     def get_form(self, form_class=None):
         form = super(ArticleSetDeduplicateView, self).get_form(form_class)
@@ -314,7 +319,7 @@ class ArticleSetDeduplicateView(ProjectScriptView):
         else:
             return SafeText("Removed {n} duplicates from the set!"
                             .format(**locals()))
-    
+
 
 class ArticleSetEditView(ProjectEditView):
     required_project_permission = PROJECT_ROLES.WRITER
@@ -326,7 +331,7 @@ class ArticleSetCreateView(HierarchicalViewMixin, ProjectViewMixin, CreateView):
     required_project_permission = PROJECT_ROLES.WRITER
     parent = ArticleSetListView
     fields = ['project', 'name', 'provenance']
-    url_fragment = 'create' 
+    url_fragment = 'create'
     model = ArticleSet
 
     def get_form(self, form_class=None):
@@ -343,7 +348,8 @@ class ArticleSetCreateView(HierarchicalViewMixin, ProjectViewMixin, CreateView):
         return reverse("navigator:articleset-details", args=[self.project.id, self.object.id])
 
 
-class MultipleArticleSetDestinationView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
+class MultipleArticleSetDestinationView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin,
+                                        ListView):
     """
     If a user selected multiple articlesets upon uploading, (s)he will be redirected here for
     an overview of those sets.
@@ -358,48 +364,77 @@ class MultipleArticleSetDestinationView(HierarchicalViewMixin, ProjectViewMixin,
         return table.filter(pk=self.request.GET.getlist('set'), project=self.project)
 
 
-class ArticleSetRefreshView(ProjectActionRedirectView):
+class ArticleSetActionForm(ProjectActionForm):
+    class form_class(forms.Form):
+        project = forms.ModelChoiceField(queryset=Project.objects.all())
+        articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
+
+
+class ArticleSetActionFormView(ProjectActionFormView):
+    action_form_class = None
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method != "POST":
+            return HttpResponseNotAllowed(permitted_methods=["POST"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_success_url(self, **kwargs):
+        return ArticleSetListView._get_breadcrumb_url(dict(kwargs, project=self.project.id), self)
+
+    def get_form(self, form_class=None):
+        form = super().get_form_class()
+        return form(data={'project': self.project.id, 'articleset': self.articleset.id})
+
+
+class ArticleSetRefreshActionForm(ArticleSetActionForm):
+    def run(self):
+        articleset = self.form.cleaned_data['articleset']
+        articleset.refresh_index(full_refresh=True)
+
+
+class ArticleSetRefreshView(ArticleSetActionFormView):
+    action_form_class = ArticleSetRefreshActionForm
     required_project_permission = PROJECT_ROLES.WRITER
     parent = ArticleSetDetailsView
     url_fragment = "refresh"
 
-    def action(self, articleset, **kwargs):
-        # refresh the queryset. Probably not the nicest way to do this (?)
-        ArticleSet.objects.get(pk=articleset).refresh_index(full_refresh=True)
+
+class ArticleSetDeleteActionForm(ArticleSetActionForm):
+    def run(self):
+        project = self.form.cleaned_data['project']
+        articleset = self.form.cleaned_data['articleset']
+        if articleset.project != project:
+            raise ValueError("ArticleSet {} is not a direct member of project {}. "
+                             "Deleting linked sets is not allowed!".format(articleset, project))
+
+        articleset.project = Project.objects.get(id=LITTER_PROJECT_ID)
+        articleset.indexed = False
+        articleset.provenance = json.dumps({
+            "provenance": articleset.provenance,
+            "project": project.id,
+            "deleted_on": datetime.datetime.now().isoformat()
+        })
+        articleset.save()
+        project.favourite_articlesets.remove(articleset)
 
 
-        
-class ArticleSetDeleteView(ProjectActionRedirectView):
+class ArticleSetDeleteView(ArticleSetActionFormView):
+    action_form_class = ArticleSetDeleteActionForm
     required_project_permission = PROJECT_ROLES.WRITER
     parent = ArticleSetDetailsView
     url_fragment = "delete"
 
-    def action(self, project, articleset):
-        aset = ArticleSet.objects.get(pk=articleset)
-        project = Project.objects.get(pk=project)
-        aset.project = Project.objects.get(id=LITTER_PROJECT_ID)
-        aset.indexed = False
-        aset.provenance = json.dumps({
-            "provenance": aset.provenance,
-            "project": project.id,
-            "deleted_on": datetime.datetime.now().isoformat()
-        })
-        aset.save()
-        project.favourite_articlesets.remove(aset)
 
-    def get_redirect_url(self, **kwargs):
-        return ArticleSetListView._get_breadcrumb_url(kwargs, self)
+class ArticleSetUnlinkActionForm(ArticleSetActionForm):
+    def run(self):
+        project = self.form.cleaned_data['project']
+        articleset = self.form.cleaned_data['articleset']
+        project.articlesets.remove(articleset)
+        project.favourite_articlesets.remove(articleset)
 
-class ArticleSetUnlinkView(ProjectActionRedirectView):
+
+class ArticleSetUnlinkView(ArticleSetActionFormView):
+    action_form_class = ArticleSetUnlinkActionForm
     required_project_permission = PROJECT_ROLES.WRITER
     parent = ArticleSetDetailsView
     url_fragment = "unlink"
-
-    def action(self, project, articleset):
-        aset = ArticleSet.objects.get(pk=articleset)
-        project = Project.objects.get(pk=project)
-        project.articlesets.remove(aset)
-        project.favourite_articlesets.remove(aset)
-
-    def get_redirect_url(self, **kwargs):
-        return ArticleSetListView._get_breadcrumb_url(kwargs, self)

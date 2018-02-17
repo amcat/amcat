@@ -8,10 +8,22 @@
 {% endblock %}
 
 {% block actions %}
+    <!-- action forms -->
+    <form id="action-form-articleset-delete" action="{% url "navigator:articleset-delete" project.id  object.id %}" method="POST">
+        {% csrf_token %}
+    </form>
+    <form id="action-form-articleset-unlink" action="{% url "navigator:articleset-unlink" project.id  object.id %}" method="POST">
+        {% csrf_token %}
+    </form>
+    <form id="action-form-articleset-refresh" action="{% url "navigator:articleset-refresh" project.id  object.id %}" method="POST">
+        {% csrf_token %}
+    </form>
+    <!-- /action forms -->
+
     <div class="btn-group">
     <a class="btn btn-primary" href="{% url "navigator:query" project.id %}?sets={{ object.id }}"><i class="glyphicon glyphicon-cog"></i>Query</a>
     {% if can_edit and  object.project.id == project.id %}
-        <a class="btn btn-default" data-confirm="You're about to refresh the index for <i>{{ object.name }}</i>. This action can take a while, and all articles in the index will be unavailable for search in the meantime." href="{% url "navigator:articleset-refresh" project.id object.id %}"><i class="glyphicon glyphicon-refresh"></i> Refresh Index</a>
+        <button type="submit" class="btn btn-default confirm" form="action-form-articleset-refresh" data-confirm="You're about to refresh the index for <i>{{ object.name }}</i>. This action can take a while, and all articles in the index will be unavailable for search in the meantime." ><i class="glyphicon glyphicon-refresh"></i> Refresh Index</button>
         <a class="btn btn-default" href="{% url "navigator:articleset-deduplicate" project.id object.id %}"><i class="glyphicon glyphicon-duplicate"></i>Deduplicate</a>
     {% endif %}
         {% if can_view_text %}
@@ -22,9 +34,9 @@
 
         {% if object.project.id == project.id %}
             <a class="btn btn-default" href="{% url "navigator:articleset-edit" project.id object.id %}"><i class="glyphicon glyphicon-edit"></i> Edit details</a>
-            <a class="btn btn-danger confirm" href="{% url "navigator:articleset-delete" project.id  object.id %}" data-confirm="You're about to delete <i>{{ object.name }}</i>. This action is not reversible."> <i class="glyphicon glyphicon-trash"></i> Delete</a>
+            <button type="submit" form="action-form-articleset-delete" class="btn btn-danger confirm"  data-confirm="You're about to delete <i>{{ object.name }}</i>. This action is not reversible."> <i class="glyphicon glyphicon-trash"></i> Delete</button>
         {% else %}
-            <a class="btn btn-warning confirm" data-confirm="You're about to unlink <i>{{ object.name }}</i>." href="{% url "navigator:articleset-unlink" project.id object.id %}"><i class="glyphicon glyphicon-remove"></i> Unlink</a>
+            <button type="submit" form="action-form-articleset-unlink" class="btn btn-warning confirm" data-confirm="You're about to unlink <i>{{ object.name }}</i>." ><i class="glyphicon glyphicon-remove"></i> Unlink</button>
         {% endif %}
 
     {% endif %}
