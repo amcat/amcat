@@ -60,7 +60,7 @@ class CodingJobSerializer(AmCATModelSerializer):
     def to_internal_value(self, data):
         if 'insertuser' not in data:
             data['insertuser'] = self.context['request'].user.id
-        return super().to_internal_value(data)
+        return super(CodingJobSerializer, self).to_internal_value(data)
 
     def __init__(self, *args, **kwargs):
         """Initializes the Serializer
