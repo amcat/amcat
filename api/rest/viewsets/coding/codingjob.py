@@ -25,7 +25,7 @@ from amcat.models.sentence import  Sentence
 from amcat.models.coding.codebook import Codebook
 from amcat.models.coding.codingrule import CodingRule
 from amcat.models.coding.codingschemafield import CodingSchemaField
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 from amcat.models.coding.codedarticle import STATUS_COMPLETE, STATUS_IRRELEVANT, CodedArticle, STATUS_INPROGRESS, STATUS_NOTSTARTED
 from amcat.tools import sbd
 from amcat.tools.caching import cached
@@ -56,7 +56,12 @@ class CodingJobSerializer(AmCATModelSerializer):
     articles = serializers.SerializerMethodField('get_n_articles')
     complete = serializers.SerializerMethodField('get_n_done_jobs')
     todo = serializers.SerializerMethodField('get_n_todo_jobs')
-    
+
+    def to_internal_value(self, data):
+        if 'insertuser' not in data:
+            data['insertuser'] = self.context['request'].user.id
+        return super().to_internal_value(data)
+
     def __init__(self, *args, **kwargs):
         """Initializes the Serializer
         @param use_caching: indicates whether the serializer should cache codingjobs' statistics
@@ -132,7 +137,7 @@ class CodingJobViewSetMixin(AmCATViewSetMixin):
         "insertuser__username", "coder__username"
     )
 
-class CodingJobViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+class CodingJobViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, DatatablesMixin, ModelViewSet):
     queryset = CodingJob.objects.all()
     serializer_class = CodingJobSerializer
     
