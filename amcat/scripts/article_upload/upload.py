@@ -336,7 +336,8 @@ class UploadScript(ActionForm):
         mapped_dict = {}
         for destination, field in self.options['field_map'].items():
             if field['type'] == "field":
-                mapped_dict[destination] = art_dict[field["value"]]
+                if field["value"] in art_dict:
+                    mapped_dict[destination] = art_dict[field["value"]]
             elif field["type"] == "literal":
                 mapped_dict[destination] = field["value"]
             else:

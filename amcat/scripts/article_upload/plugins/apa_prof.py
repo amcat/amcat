@@ -80,7 +80,6 @@ RE_MEDIUM = re.compile("(?P<medium>.*) vom ({_RE_DATE})".format(**locals()))
 RE_MEDIUM_QUOTE = re.compile("\"(?P<medium>.+)\" (?P<section>.+) vom ({_RE_DATE})".format(**locals()))
 RE_MEDIUM_ONLINE = re.compile("\"(?P<medium>.+)\" ((?P<section>.+) )?gefunden am ({_RE_DATE})".format(**locals()))
 
-
 # Seite: 14
 RE_PAGENR = re.compile("Seite:? *L?(?P<pagenr>\d+)")
 
@@ -92,12 +91,17 @@ RE_SECTION = re.compile("Ressort: *(?P<section>[^;:.?!-]+)")
 RE_AUTHOR = re.compile("^Von (?P<author>[^0-9]+)$")
 
 # All regular expressions which can match metadata
-META_RE = (RE_DATE, RE_DATE2, RE_DATETIME, RE_PAGENR, RE_SECTION, RE_AUTHOR, RE_MEDIUM, RE_MEDIUM_QUOTE, RE_MEDIUM_ONLINE)
+META_RE = (
+RE_DATE, RE_DATE2, RE_DATETIME, RE_PAGENR, RE_SECTION, RE_AUTHOR, RE_MEDIUM, RE_MEDIUM_QUOTE, RE_MEDIUM_ONLINE)
 
 UNDECODED = "NON_DECODED_CHARACTER"
 UNDECODED_UNICODE = "NON_DECODED_UNICODE_CHARACTER"
 
 RE_UNICHAR = re.compile(r"(?P<match>\\u(?P<ord>[0-9]+)\?)", re.UNICODE)
+
+# any non-word sequence.
+RE_NONWORD = re.compile(r"[^\w]+")
+
 
 ### FIXING AND PARSING ###
 def _fix_fs20(s):
@@ -144,6 +148,7 @@ def get_unencoded(s):
 class TooManyAttributesError(BaseException):
     pass
 
+
 def unrtf(name):
     from subprocess import Popen, PIPE
     try:
@@ -186,7 +191,6 @@ def to_html(original_rtf, fixed_rtf):
             rtf.write(fixed_rtf2.encode("ascii"))
             rtf.flush()
             html = str(unrtf(rtf.name))
-
 
     for u in get_unencoded(original_rtf):
         html = html.replace(UNDECODED, u, 1)
@@ -340,14 +344,20 @@ def parse_page(doc_elements):
         del metadata["section"]
 
     # Get text. Since ordering is lost in sets, restore original order of elements
-    return metadata, "".join(get_text(sorted(text, key=lambda e: elements.index(e)))).strip()
+    text = "".join(get_text(sorted(text, key=lambda e: elements.index(e)))).strip()
+
+    metadata["length"] = sum(1 for w in RE_NONWORD.split(text) if w)
+
+    return metadata, text
 
 
 ### NAVIGATOR INTEGRATION ###
+
 class APAForm(UploadScript.form_class):
     pass
 
-@UploadPlugin(label="APA")
+
+@UploadPlugin(label="APA", mime_types=("text/rtf",))
 class APA(UploadScript):
     options_form = APAForm
 
@@ -361,7 +371,8 @@ class APA(UploadScript):
             ArticleField("medium", "medium"),
             ArticleField("pagenr", "pagenr"),
             ArticleField("section", "section"),
-            ArticleField("author", "author")
+            ArticleField("author", "author"),
+            ArticleField("length", "length_int")
         ]
 
     def parse_file(self, file: UploadedFile, _) -> Iterable[Article]:
@@ -369,11 +380,10 @@ class APA(UploadScript):
         for para in self.split_file(data):
             yield self.parse_document(para)
 
-
     def parse_document(self, paragraphs) -> Article:
         metadata, text = parse_page(paragraphs)
-
-        return Article(text=text, **metadata)
+        print(metadata)
+        return Article(**self.map_article(dict(metadata, text=text)))
 
     def split_file(self, data):
         original_rtf, fixed_rtf = data, fix_rtf(data)
@@ -382,19 +392,6 @@ class APA(UploadScript):
         for i, page in enumerate(get_pages(doc)):
             yield doc, page
 
-
-"""if __name__ == '__main__':
-    original_rtf = open(sys.argv[1], 'rb').read()
-    fixed_rtf = fix_rtf(original_rtf)
-    html = to_html(original_rtf, fixed_rtf)
-    #html = open("blaat.html").read()
-    doc = parse_html(html)
-    pages = list(get_pages(doc))
-
-    for page in pages:
-        metadata, text = parse_page((doc, page))
-        print(text)
-        print("-----")"""
 
 if __name__ == '__main__':
     from amcat.scripts.tools.cli import run_cli
