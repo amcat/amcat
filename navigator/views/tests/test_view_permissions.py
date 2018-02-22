@@ -39,9 +39,15 @@ class ProjectPermissionsTestCase(amcattest.AmCATTestCase):
         """Test if access is denied on role `fail_role`, and given for role `success_role`."""
         content_type = "application/x-www-form-urlencoded"
         get = self.clients[fail_role].generic(method, url, data=data, content_type=content_type)
-        self.assertEqual(get.status_code, 403, "Permission not denied for role '{}'. Expected minimum required role '{}'.".format(fail_role, success_role))
+        self.assertEqual(get.status_code, 403, "Permission not denied for role '{}' in url {}. "
+                                               "Expected minimum required role '{}'.".format(fail_role, url, success_role))
         get = self.clients[success_role].generic(method, url, data=data, content_type=content_type)
-        self.assertNotEqual(get.status_code, 403, "Permission denied for role '{}'".format(success_role))
+        self.assertNotEqual(get.status_code, 403, "Permission denied for role '{}' in url {}. Expected permission to "
+                                                  "be granted.".format(success_role, url))
+
+    def _test_method_not_allowed(self, method, url, data=''):
+        req = self.clients["admin"].generic(method, url, data=data)
+        self.assertEqual(req.status_code, 405, "Method {} should not be allowed for url {}.".format(method, url))
 
     def _test_get_readmeta_access(self, url):
         self._test_generic("GET", "noaccess", "readmeta", url)
@@ -93,7 +99,6 @@ class TestViewPermissions(ProjectPermissionsTestCase):
         self._test_post_write_access(reverse("navigator:articleset-details", args=[self.project.id, self.articleset.id]))
         self._test_get_post_write_access(reverse("navigator:articleset-create", args=[self.project.id]))
         self._test_get_post_write_access(reverse("navigator:articleset-edit", args=[self.project.id, self.articleset.id]))
-        self._test_get_post_write_access(reverse("navigator:articleset-delete", args=[self.project.id, self.articleset.id]))
 
     def test_articleset_action_views(self):
         self._test_get_read_access(reverse("navigator:articleset-import", args=[self.project.id, self.articleset.id]))
@@ -101,8 +106,11 @@ class TestViewPermissions(ProjectPermissionsTestCase):
                                      data='target_project={}&articleset={}'.format(self.project.id, self.articleset.id))
         self._test_get_post_write_access(reverse("navigator:articleset-deduplicate", args=[self.project.id, self.articleset.id]))
         self._test_get_post_write_access(reverse("navigator:articleset-sample", args=[self.project.id, self.articleset.id]))
-        self._test_get_post_write_access(reverse("navigator:articleset-refresh", args=[self.project.id, self.articleset.id]))
-        self._test_get_post_write_access(reverse("navigator:articleset-unlink", args=[self.project.id, self.articleset.id]))
+
+    def test_articleset_actionform_views(self):
+        for action in ("delete", "unlink", "refresh"):
+            self._test_method_not_allowed("GET", reverse("navigator:articleset-{}".format(action), args=[self.project.id, self.articleset.id]))
+            self._test_post_write_access(reverse("navigator:articleset-{}".format(action), args=[self.project.id, self.articleset.id]))
 
     def test_codebook_views(self):
         codebook = amcattest.create_test_codebook(project=self.project)
