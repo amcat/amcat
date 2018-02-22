@@ -72,12 +72,14 @@ _RE_DATE2 = "(?P<day>\d{2})\.(?P<month>\w{3}) (?P<year>\d{4})"
 RE_DATE2 = re.compile(_RE_DATE2)
 
 # 11.05.2004 18.00 Uhr
-_RE_DATETIME = "(?P<day>\d{2})\.(?P<month>\d{2})\.(?P<year>\d{4}) (?P<hour>\d{2})\.(?P<minute>\d{2}) Uhr"
+_RE_DATETIME = "(?P<day>\d{2})\.(?P<month>\d{2})\.(?P<year>\d{4}) (?P<hour>\d{2})[.:](?P<minute>\d{2}) Uhr"
 RE_DATETIME = re.compile(_RE_DATETIME)
 
 # Title
 RE_MEDIUM = re.compile("(?P<medium>.*) vom ({_RE_DATE})".format(**locals()))
 RE_MEDIUM_QUOTE = re.compile("\"(?P<medium>.+)\" (?P<section>.+) vom ({_RE_DATE})".format(**locals()))
+RE_MEDIUM_ONLINE = re.compile("\"(?P<medium>.+)\" ((?P<section>.+) )?gefunden am ({_RE_DATE})".format(**locals()))
+
 
 # Seite: 14
 RE_PAGENR = re.compile("Seite:? *L?(?P<pagenr>\d+)")
@@ -90,7 +92,7 @@ RE_SECTION = re.compile("Ressort: *(?P<section>[^;:.?!-]+)")
 RE_AUTHOR = re.compile("^Von (?P<author>[^0-9]+)$")
 
 # All regular expressions which can match metadata
-META_RE = (RE_DATE, RE_DATE2, RE_DATETIME, RE_PAGENR, RE_SECTION, RE_AUTHOR, RE_MEDIUM, RE_MEDIUM_QUOTE)
+META_RE = (RE_DATE, RE_DATE2, RE_DATETIME, RE_PAGENR, RE_SECTION, RE_AUTHOR, RE_MEDIUM, RE_MEDIUM_QUOTE, RE_MEDIUM_ONLINE)
 
 UNDECODED = "NON_DECODED_CHARACTER"
 UNDECODED_UNICODE = "NON_DECODED_UNICODE_CHARACTER"
@@ -333,6 +335,9 @@ def parse_page(doc_elements):
         headline = headline.split("-", medium.count("-") + 1)[-1]
 
     metadata["title"] = headline
+
+    if "section" in metadata and metadata["section"] is None:
+        del metadata["section"]
 
     # Get text. Since ordering is lost in sets, restore original order of elements
     return metadata, "".join(get_text(sorted(text, key=lambda e: elements.index(e)))).strip()
