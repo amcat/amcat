@@ -103,9 +103,11 @@ class QueryActionView(APIView):
 
     @cached
     def get_query_action(self):
+        host = "{protocol}://{host}/".format(protocol=("https" if self.request.is_secure() else "http"),
+                                             host=self.request.get_host())
         return self.query_action(
             user=self.request.user, project=self.get_project(), codingjobs=self.get_codingjobs(),
-            articlesets=self.get_articlesets(), data=self.request.POST or self.request.data or None
+            articlesets=self.get_articlesets(), data=self.request.POST or self.request.data or None,api_host=host
         )
 
     def get_form(self):

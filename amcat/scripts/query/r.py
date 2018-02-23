@@ -45,7 +45,6 @@ def get_r_queryactions():
         if inspect.isclass(cls) and issubclass(cls, RQueryAction):
             yield cls
 
-
 # Get local plugins
 system_dir = os.path.join(os.path.dirname(__file__), "r_plugins")
 for path in glob.glob(os.path.join(system_dir, "*.r")):

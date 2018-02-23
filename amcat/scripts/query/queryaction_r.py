@@ -79,8 +79,10 @@ def _to_r_primitive(obj):
 
 
 def cleaned_data_to_r_primitives(cdata: dict) -> dict:
-    """Takes cleaned data (as returned by Django forms) and converts the data into
-    suitable types which can be interpreted by R."""
+    """
+    Takes cleaned data (as returned by Django forms) and converts the data into
+    suitable types which can be interpreted by R.
+    """
     return {k: _to_r_primitive(v) for k, v in cdata.items()}
 
 
@@ -133,6 +135,7 @@ class RQueryAction(QueryAction):
     @synchronized_with(Lock())  # We only have one R interpreter
     def _run(self, cdata):
         # Execute script using R
+        cdata = {k: v for (k, v) in cdata.items() if v is not None}
         r_json_arguments = robjects.StrVector([json.dumps(cdata, indent=4)])
         r_arguments = importr("rjson").fromJSON(r_json_arguments)
         source_r_file(self.r_file)
@@ -155,6 +158,8 @@ class RQueryAction(QueryAction):
             api_token.save()
 
         cleaned_data["api_token"] = api_token.key
+        cleaned_data["api_host"] = self.api_host
+        cleaned_data["project"] = self.project.id
         return self._run(cleaned_data)
 
 

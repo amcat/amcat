@@ -169,7 +169,7 @@ class QueryAction(object):
     ignore_cache_fields = ("output_type",)
     monitor_steps = None
 
-    def __init__(self, user, project, articlesets, codingjobs=None, data=None):
+    def __init__(self, user, project, api_host, articlesets, codingjobs=None, data=None):
         """
         @type project: amcat.models.Project
         @type articlesets: django.db.QuerySet
@@ -177,6 +177,7 @@ class QueryAction(object):
         """
         self.user = user
         self.project = project
+        self.api_host = api_host
         self.articlesets = articlesets
         self.codingjobs = codingjobs
         self.data = data
@@ -276,7 +277,7 @@ class QueryAction(object):
         return self.get_task_handler().call(
             target_class=self.__class__, user=self.user,
             project=self.project, arguments={
-                "user": self.user, "project": self.project,
+                "user": self.user, "project": self.project, "api_host": self.api_host,
                 "data": self.data, "articlesets": self.articlesets,
                 "codingjobs": self.codingjobs
             }
