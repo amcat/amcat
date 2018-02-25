@@ -18,7 +18,7 @@ depends = function(...) {
   invisible(packages)
 }
 depends_github = function(...) {
-  #depends("devtools")
+  depends("devtools")
   packages = list(...)
   message(names(packages), packages)
   to_install = packages[!.load(names(packages))]
@@ -103,8 +103,8 @@ connect = function(api_host, api_token, ...) {
 get_text = function(api_host, api_token, project, articlesets, query=NULL, ...) {
   conn = connect(api_host, api_token)
   if (is.null(query) || query == "") {
-    amcat.articles(conn, project=project, articleset=articlesets, columns = c("headline", "text"))
+    amcat.articles(conn, project=project, articleset=articlesets, columns = c("title", "text"))
   } else {
-    amcat.hits(conn, queries=query, project=1, sets = articlesets, col=c("headline" ,"text"))
+    amcat.hits(conn, queries=query, project=project, sets = articlesets, col=c("title" ,"text"))
   }
 }
