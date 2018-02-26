@@ -11,7 +11,10 @@
 {% block content %}
     <div class="row">
         <div class="articlelist-part">
-            <div id="article-table-container"></div>
+            <div id="article-table-container"
+                 data-datatable
+                 data-datatable-src="{% url "api:project-codingjob-coded_article-list" project.id codingjob.id %}">
+            </div>
         </div>
     </div>
 
@@ -129,48 +132,6 @@
         require(["annotator/annotator"], function(annotator){
             annotator.initialise({{ project.id }}, {{ codingjob.id }}, {{ coder.id }});
         });
-    </script>
-
-    <script type="text/javascript">
-        require(["jquery", "annotator/annotator", "amcat/amcat.datatables"], function($, annotator){
-            var jqueryElement = $('#article-table-container');
-            var url = "{% url "api:project-codingjob-coded_article-list" project.id codingjob.id %}";
-            var columns = [], column_order = [
-                "id", "article_id", "title", "medium", "date", "pagenr",
-                "length", "status", "comments"
-            ];
-
-            var sortable = [
-                "id", "title", "comments", "article_id", "medium", "date",
-                "pagenr", "length", "status"
-            ];
-
-            columns = $.map(column_order, function(colname){
-                return {
-                    bSortable: sortable.indexOf(colname) !== -1,
-                    mData : colname, aTargets : [colname]
-                };
-            });
-
-            amcat.datatables.create_rest_table(jqueryElement, url, {
-                datatables_options: {
-                    aaSorting: [[0, "asc"]],
-                    iDisplayLength: 100000,
-                    //aoColumns: columns,
-                    sScrollY: "100px",
-                    searching: false,
-
-                    fnDrawCallback: function(){
-                        $("tr", $("#article-table-container")).click(function(event){
-                            annotator.datatables_row_clicked($(event.currentTarget));
-                        }).css("cursor", "pointer");
-                    }
-                },
-                setup_callback: function(tbl){
-                    console.log("Done setting up datatable..");
-                    annotator.datatable = tbl;
-                }
-            });
-        });
+        require(["annotator/datatable"]);
     </script>
 {% endblock %}

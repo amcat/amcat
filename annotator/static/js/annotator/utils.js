@@ -16,36 +16,42 @@
 * You should have received a copy of the GNU Affero General Public        *
 * License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
 ***************************************************************************/
-/*
- * Given model data ( [{ id : 5, prop1 : "asd", .. }] ), create a mapping with
- * the prop as key, and the object as value.
- */
-function map_ids(model_data, prop) {
-    prop = (prop === undefined) ? "id" : prop;
 
-    var _result = {};
-    $.each(model_data, function (i, object) {
-        _result[object[prop]] = object;
-    });
-    return _result;
-}
 
-function resolve_id(obj, target_models, prop) {
-    var val = obj[prop];
-    obj[prop] = (val === null) ? null : target_models[val];
-}
+/**/
+define([], function() {
+    /*
+     * Given model data ( [{ id : 5, prop1 : "asd", .. }] ), create a mapping with
+     * the prop as key, and the object as value.
+     */
+    function map_ids(model_data, prop) {
+        prop = (prop === undefined) ? "id" : prop;
+        const result = {};
+        for(let obj of model_data){
+            result[obj[prop]] = obj;
+        }
+        return result;
+    }
 
-/*
- * Some model objects contain foreign keys which are represented by
- * and id. This function resolves those ids to real objects.
- *
- * @param models: model objects which contain a foreign key
- * @param target_models: model objects which are targeted by the FK
- * @param prop: foreign key property
- */
-function resolve_ids(models, target_models, prop) {
-    $.each(models, function (obj_id, obj) {
-        resolve_id(obj, target_models, prop);
-    });
-}
+    function resolve_id(obj, target_models, prop) {
+        var val = obj[prop];
+        obj[prop] = (val === null) ? null : target_models[val];
+    }
 
+    /*
+     * Some model objects contain foreign keys which are represented by
+     * and id. This function resolves those ids to real objects.
+     *
+     * @param models: model objects which contain a foreign key
+     * @param target_models: model objects which are targeted by the FK
+     * @param prop: foreign key property
+     */
+    function resolve_ids(models, target_models, prop) {
+        for(let obj of Object.values(models)){
+            resolve_id(obj, target_models, prop);
+        }
+    }
+
+
+    return {map_ids, resolve_id, resolve_ids};
+});

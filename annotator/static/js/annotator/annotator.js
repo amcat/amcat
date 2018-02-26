@@ -33,22 +33,9 @@ String.prototype.format = String.prototype.f = function() {
     return s;
 };
 
-// Workaround: focus events don't carry *Key properties, so we don't
-// know for sure if shift is pressed.
-shifted = false;
-
-require(["jquery"], function($){
-    $(document).keydown(function(event){
-        shifted = event.shiftKey;
-    });
-
-    $(document).keyup(function(){
-        shifted = false;
-    });
-});
 
 // TODO: Remove annotator as global variable. At the moment widgets.js, autoomplete.js still need it.
-annotator = null;
+var annotator = null;
 
 
 define([
@@ -56,38 +43,37 @@ define([
     "annotator/widgets",
     "annotator/autocomplete",
     "annotator/rules",
+    "annotator/utils",
     "pnotify",
     "clipboard",
     "jquery.highlight",
-    "annotator/functional",
-    "annotator/utils",
     "jquery.hotkeys",
     "jquery.scrollTo",
     "bootstrap"
-    ], function($, widgets, autocomplete, rules, PNotify, Clipboard){
-    var self = {};
+    ], function($, widgets, autocomplete, rules, utils, PNotify, Clipboard){
+    "use strict";
+
+
+    const self = {};
     annotator = self;
 
-    self.values = function(obj) {
-        return $.map(obj, function(value, _) {
-            return value;
-        });
-    };
+    const logger = {
+        log: function (data) {
+            const date = new Date();
+            const datetime = date.toUTCString().split(" GMT")[0];
 
-    self.log = function(data){
-        var date = new Date();
-        var datetime = date.toUTCString().split(" GMT")[0];
-        var millis = date.getUTCMilliseconds().toString();
+            let millis = date.getUTCMilliseconds().toString();
+            if (millis.length === 1) {
+                millis = "00" + millis;
+            } else if (millis.length === 2) {
+                millis = "0" + millis;
+            }
 
-        if (millis.length === 1){
-            millis = "00" + millis;
-        } else if (millis.length === 2){
-            millis = "0" + millis;
+            let currentDate = `[${datetime}:${millis}]`;
+            console.log(currentDate, data);
         }
-
-        var currentDate = "[{0}:{1}]".f(datetime, millis);
-        console.log(currentDate, data);
     };
+
 
 
     /******** STATE & CONSTANTS *******/
@@ -110,6 +96,8 @@ define([
         9 : "Irrelevant"
     };
 
+
+
     self.get_empty_state = function get_empty_state(){
         return {
             requests : null,
@@ -121,9 +109,6 @@ define([
             sentences : []
         }
     };
-
-    self.width_warning = "Your window width is lower than 1000 pixels. For Annotator to function ";
-    self.width_warning += "normally, you need to use a wider window.";
 
     /*
      * Contains model objects which are constant for this particular
@@ -198,7 +183,7 @@ define([
 
     self.set_unsaved = function set_unsaved (bool) {
         self.unsaved = (bool === undefined) ? true : bool;
-        var icon = self.save_btn.find(".glyphicon");
+        const icon = self.save_btn.find(".glyphicon");
         icon.removeClass("glyphicon-floppy-disk glyphicon-floppy-saved");
         icon.addClass("glyphicon-floppy-" + ((self.unsaved) ? "disk" : "saved"));
 
@@ -210,8 +195,8 @@ define([
     };
 
     self.show_unsaved_changes = function show_unsaved_changes(continue_func){
-        var save_btn = $(".save", self.unsaved_modal);
-        var discard_btn = $(".discard", self.unsaved_modal);
+        const save_btn = $(".save", self.unsaved_modal);
+        const discard_btn = $(".discard", self.unsaved_modal);
 
         save_btn.unbind().click(function(){
             self.save({ success_callback : continue_func });
@@ -262,12 +247,12 @@ define([
     
 
     self.display_lost_code = function(code_id, code_value){
-        var lostCodes = $('#lost-codes');
+        const lostCodes = $('#lost-codes');
         if(lostCodes.hasClass("dont-show")){
             return;
         }
-        var triggeredBy = lostCodes.find('.triggered-by');
-        var text = "{0}: {1}".format(code_id, code_value);
+        const triggeredBy = lostCodes.find('.triggered-by');
+        let text = `${code_id}: ${code_value}`;
         if(triggeredBy.text() !== ""){
             text = triggeredBy.text() + ", " + text;
         }
@@ -281,20 +266,21 @@ define([
      */
     self.count = function count(){
         // http://stackoverflow.com/questions/6743912/get-the-pure-text-without-html-element-by-javascript
-        var sentence_re = / id="sentence-[0-9]*"/g
-        var html = "";
+        const sentence_re = / id="sentence-[0-9]*"/g;
+        let html = "";
 
-        if (typeof window.getSelection != "undefined") {
-            var sel = window.getSelection();
+        if (typeof window.getSelection !== "undefined") {
+            const sel = window.getSelection();
             if (sel.rangeCount) {
-                var container = document.createElement("div");
-                for (var i = 0, len = sel.rangeCount; i < len; ++i) {
+                const container = document.createElement("div");
+                const len = sel.rangeCount;
+                for (let i = 0; i < len; ++i) {
                     container.appendChild(sel.getRangeAt(i).cloneContents());
                 }
                 html = container.innerHTML;
             }
-        } else if (typeof document.selection != "undefined") {
-            if (document.selection.type == "Text") {
+        } else if (typeof document.selection !== "undefined") {
+            if (document.selection.type === "Text") {
                 html = document.selection.createRange().htmlText;
             }
         }
@@ -307,13 +293,13 @@ define([
             $(el).removeClass("new-paragraph");
         });
 
-        var text = "";
+        let text = "";
         $.each(html, function(i, el){
             text += el.innerHTML.replace("</div><div>", " ");
             text += " ";
         });
 
-        var count = 0;
+        let count = 0;
         $.each(text.split(/ /g), function(i, word){
             // replace functions like strip() in Python
             if (word.replace(/^\s+|\s+$/g, '') !== "") count++;
@@ -330,7 +316,7 @@ define([
 
 
     self.initialise_fields = function initialise_fields(){
-        self.show_loading("Loading fields..")
+        self.show_loading("Loading fields..");
 
         self._requests = [
             self.from_api(self.get_api_url()),
@@ -353,34 +339,34 @@ define([
                 // Check if all request completed successfully. (If not, an
                 // error is already thrown, but we need not continue processing
                 // the data.
-                if (!all(self._requests, function (request) {
+                if (!self._requests.every(function (request) {
                     return request.statusText === "OK";
                 })) {
                     throw "Not all requests completed successfully.";
                 }
 
                 // Extract results from response
-                self.models.rules = map_ids(rules[0].results);
-                self.models.actions = map_ids(actions[0].results);
-                self.models.codebooks = map_ids(codebooks[0].results);
-                self.models.schemas = map_ids(schemas[0].results);
-                self.models.schemafields = map_ids(schemafields[0].results);
+                self.models.rules = utils.map_ids(rules[0].results);
+                self.models.actions = utils.map_ids(actions[0].results);
+                self.models.codebooks = utils.map_ids(codebooks[0].results);
+                self.models.schemas = utils.map_ids(schemas[0].results);
+                self.models.schemafields = utils.map_ids(schemafields[0].results);
                 self.codingjob = codingjob[0];
 
                 // Convert codebook.codes (array) to mapping code_id -> code
                 $.each(self.models.codebooks, function(codebook_id, codebook){
-                    codebook.codes = map_ids(codebook.codes, "code");
-                    resolve_ids(codebook.codes, codebook.codes, "parent");
+                    codebook.codes = utils.map_ids(codebook.codes, "code");
+                    utils.resolve_ids(codebook.codes, codebook.codes, "parent");
                 });
 
                 // Resolve a bunch of foreign keys
-                resolve_ids(self.models.rules, self.models.actions, "action");
-                resolve_ids(self.models.rules, self.models.schemas, "codingschema");
-                resolve_ids(self.models.rules, self.models.schemafields, "field");
-                resolve_ids(self.models.schemafields, self.models.schemas, "codingschema");
-                resolve_ids(self.models.schemafields, self.models.codebooks, "codebook");
-                resolve_id(self.codingjob, self.models.schemas, "articleschema");
-                resolve_id(self.codingjob, self.models.schemas, "unitschema");
+                utils.resolve_ids(self.models.rules, self.models.actions, "action");
+                utils.resolve_ids(self.models.rules, self.models.schemas, "codingschema");
+                utils.resolve_ids(self.models.rules, self.models.schemafields, "field");
+                utils.resolve_ids(self.models.schemafields, self.models.schemas, "codingschema");
+                utils.resolve_ids(self.models.schemafields, self.models.codebooks, "codebook");
+                utils.resolve_id(self.codingjob, self.models.schemas, "articleschema");
+                utils.resolve_id(self.codingjob, self.models.schemas, "unitschema");
 
                 // Initialize data
                 self.codebooks_fetched();
@@ -420,16 +406,16 @@ define([
 
     /* Returns (new) DOM representation of the articlecoding */
     self.get_article_coding_html = function get_article_coding_html(){
-        var schemafields = self.article_schemafields;
-        var table = $("<div>")
+        const schemafields = self.article_schemafields;
+        const table = $("<div>")
             .attr("annotator_coding_id", self.state.article_coding.annotator_id)
             .attr("coding_id", self.state.article_coding.id)
             .addClass("coding");
 
         return table.append($.map(widgets.get_html(schemafields, null), function(widget, i){
-            var schemafield = schemafields[i];
-            var label = widgets.get_label_html(schemafield, widget);
-            var value = self.state.article_coding.values[schemafield.id];
+            const schemafield = schemafields[i];
+            const label = widgets.get_label_html(schemafield, widget);
+            const value = self.state.article_coding.values[schemafield.id];
 
             if (value !== undefined){
                 widgets.set_value($(widget), value);
@@ -445,7 +431,7 @@ define([
      * Initialises table headers (sentence + fields + action) (columns)
      */
     self.initialise_sentence_codings_table = function initialise_sentence_codings_table () {
-        var table_header = $("<tr>");
+        const table_header = $("<tr>");
         table_header.append($("<th>").text("Sentence"));
         table_header.append(
             $.map(self.sentence_schemafields, function(schemafield){
@@ -467,7 +453,7 @@ define([
         if (self.codingjob.unitschema === null) return $("<div>");
 
         if (self.state.sentence_codings.length === 0){
-            var empty_coding = self.get_empty_coding();
+            const empty_coding = self.get_empty_coding();
             self.state.sentence_codings.push(empty_coding);
         }
 
@@ -480,13 +466,13 @@ define([
      * for calling set_tab_order() after execution.
      */
     self.append_sentence_coding = function append_sentence_coding(coding){
-        var coding_el = self.get_sentence_coding_html(coding);
+        const coding_el = self.get_sentence_coding_html(coding);
         self.sentence_codings_container.find("tbody").append(coding_el);
         self.set_sentence_codingvalues(coding_el, coding.values||[], coding.sentence);
     };
 
     self.set_sentence_codingvalues = function set_sentence_codingvalues(coding_el, values, sentence){
-        var widget;
+        let widget;
         $.each(values, function(_, codingvalue){
             if(codingvalue.field === undefined){
                 self.display_lost_code(codingvalue.id, codingvalue.strval || codingvalue.intval); 
@@ -503,13 +489,12 @@ define([
     };
 
     self.delete_row = function delete_row(){
-        var active_row = self.get_active_row();
-        var active_coding = self.get_active_sentence_coding();
+        const active_row = self.get_active_row();
         if (active_row === null) return;
 
         // Select a row which need to be focused after the
         // deletion of the currently active row.
-        var next = active_row.next();
+        let next = active_row.next();
         if (!next.length){
             // No next row, set previous row
             next = active_row.prevAll(".coding").first();
@@ -531,9 +516,9 @@ define([
      * Adds new row after currently active row, with `properties`.
      */
     self._add_row = function _add_row(properties){
-        var active_row = self.get_active_row();
-        var empty_coding = self.get_empty_coding(properties);
-        var new_active_row;
+        const active_row = self.get_active_row();
+        const empty_coding = self.get_empty_coding(properties);
+        let new_active_row;
 
         self.state.sentence_codings.push(empty_coding);
         active_row.after(self.get_sentence_coding_html(empty_coding));
@@ -568,36 +553,46 @@ define([
 
     };
 
+
+    self.codingFieldToString = function (schemafield, scoding) {
+        switch(widgets.SCHEMATYPES[schemafield.fieldtype]){
+            case "codebook":
+                return schemafield.codebook.codes[scoding.intval].label;
+            case "quality":
+                return String(scoding.intval / 10);
+            default:
+                return (scoding.intval === null) ? (scoding.strval || "") : String(scoding.intval);
+        }
+    };
+
     /**
      * Copy sentence codings to tabular format (for netviz)
      */
     self.copy_to_netviz = function copy_to_netviz(){
         // Create index from id -> index
-        var schemafields = new Map();
+        const schemafields = new Map();
         $.each(self.sentence_schemafields, function(i, schemafield){
             schemafields.set(schemafield.id, i);
         });
 
 
         // Create CSV file as string
-        var csv = $.map(self.get_sentence_codings(), function(coding){
-            var values = new Array(self.sentence_schemafields.length).fill("");
-            $.each(coding.values, function(_, scoding){
-                var i = schemafields.get(scoding.field.id);
-                var sf = self.sentence_schemafields[i];
-                values[i] = (sf.codebook ? sf.codebook.codes[scoding.intval].label :
-                    (sf.fieldtype == 9 ? String(scoding.intval / 10) :
-                    ((scoding.intval === null) ? (scoding.strval || "") : String(scoding.intval))))
-            });
+        let csv = $.map(self.get_sentence_codings(), function (coding) {
+            const values = new Array(self.sentence_schemafields.length).fill("");
+            for (let scoding of Object.values(coding.values)) {
+                let i = schemafields.get(scoding.field.id);
+                let sf = self.sentence_schemafields[i];
+                values[i] = self.codingFieldToString(sf, scoding);
+            }
 
             // We're returning a double array on purpose: map stupidly chains..
-            return values.map(function(value){
+            return values.map(function (value) {
                 // Escape value for use in CSV
-                if (value.indexOf('"') !== -1){
+                if (value.indexOf('"') !== -1) {
                     value.replace('"', '""');
                 }
 
-                if (value.indexOf(',') !== -1){
+                if (value.indexOf(',') !== -1) {
                     value = '"' + value + '"';
                 }
 
@@ -605,7 +600,7 @@ define([
             }).join();
         }).join("\n");
 
-        var header = self.sentence_schemafields.map(function(f) {return f.label;});
+        const header = self.sentence_schemafields.map(function(f) {return f.label;});
         csv = header.join(",") + "\n" + csv;
 
         // Pop up dialog allowing the user to copy the CSV
@@ -685,12 +680,6 @@ define([
     self.last_widget_reached = function last_widget_reached(event){
         var row = $(event.currentTarget).closest("tr");
         var active_coding = self.get_active_sentence_coding();
-
-        if (shifted){
-            // We need to go back, do nothing!
-            $(event.currentTarget).prev().find("input").first().focus();
-            return;
-        }
 
         var empty_coding = self.get_empty_coding({ sentence : active_coding.sentence });
         self.state.sentence_codings.push(empty_coding);
@@ -776,27 +765,27 @@ define([
         from.attr("min", 0).attr("max", sentence.words.length - 2);
         to.attr("min", 1).attr("max", sentence.words.length - 1);
 
-        var fromv = parseInt(from.val());
-        if (!isNaN(fromv)){
-            to.attr("min", fromv+1);
+        var fromVal = parseInt(from.val());
+        if (!isNaN(fromVal)){
+            to.attr("min", fromVal+1);
         }
 
-        var tov = parseInt(to.val());
-        if (!isNaN(tov)){
-            from.attr("max", tov-1);
+        var toVal = parseInt(to.val());
+        if (!isNaN(toVal)){
+            from.attr("max", toVal-1);
         }
 
-        active_coding.start = fromv || null;
-        active_coding.end = tov || null;
+        active_coding.start = fromVal || null;
+        active_coding.end = toVal || null;
 
         // Highlight selected part
-        if (isNaN(fromv) && isNaN(tov)) return;
-        if (isNaN(fromv)) fromv = 0;
-        if (isNaN(tov)) tov = sentence.words.length;
+        if (isNaN(fromVal) && isNaN(toVal)) return;
+        if (isNaN(fromVal)) fromVal = 0;
+        if (isNaN(toVal)) toVal = sentence.words.length;
 
-        var prefix = sentence.words.slice(0, fromv).join(" ");
-        var middle = sentence.words.slice(fromv, tov+1).join(" ");
-        var remainer = sentence.words.slice(tov+1, sentence.words.length).join(" ");
+        var prefix = sentence.words.slice(0, fromVal).join(" ");
+        var middle = sentence.words.slice(fromVal, toVal+1).join(" ");
+        var remainer = sentence.words.slice(toVal+1, sentence.words.length).join(" ");
 
         $("td", active_row.prev()).html(
             $("<span>")
@@ -825,7 +814,12 @@ define([
             return $("<td>").append(widget).append(`<div><small class="errors text-danger"></small></div>`);
         }));
 
-        coding_el.append($("<td>").addClass("focus-stealer").focus(self.last_widget_reached));
+        coding_el.append($("<td>").addClass("focus-stealer").focus(self.last_widget_reached).keyup(e => {
+            // skip over focus stealer if tabbing back.
+            if(e.key === "Tab"){
+                $(coding_el.find("input").last().focus());
+            }
+        }));
         coding_el.on("sentence-changed", self.refresh_sentence_text);
         coding_el.find("input").focus(function(){
             $(this).closest(".coding").trigger("sentence-changed");
@@ -843,7 +837,7 @@ define([
         for (var i=0; i < codings.length; i++){
             if (codings[i].sentence !== null) continue;
 
-            if ($.map(self.values(codings[i].values), function(cv){
+            if ($.map(Object.values(codings[i].values), function(cv){
                 return (!self.is_empty_codingvalue(cv)) || null;
             }).length){
                 return "Cannot save data.\n 1) Make sure all coded sentences have a sentence number.2) Make sure no codings are left empty if your project does not allow this.";
@@ -875,7 +869,7 @@ define([
     };
 
     self.is_empty_coding = function is_empty_coding(coding){
-        return all(self.values(coding.values), self.is_empty_codingvalue)
+        return Object.values(coding.values).every(self.is_empty_codingvalue);
     };
 
     /*
@@ -885,7 +879,7 @@ define([
         return {
             start : coding.start, end : coding.end,
             sentence_id : (coding.sentence === null) ? null : coding.sentence.id,
-            values : $.map($.grep(self.values(coding.values), self.is_empty_codingvalue, true), self.pre_serialise_codingvalue)
+            values : $.map($.grep(Object.values(coding.values), self.is_empty_codingvalue, true), self.pre_serialise_codingvalue)
         }
     };
 
@@ -995,13 +989,13 @@ define([
             self.hide_loading();
 
             // BUG: Codings get lost sometimes. We try to detect the bug by checking the server:
-            var response = JSON.parse(jqXHR.responseText);
-            var expected_n_codings = self.get_codings().length;
-            var expected_n_values = $.map(self.get_codings(), function(coding){
-                return $.grep(self.values(coding.values), self.is_empty_codingvalue, true).length;
+            const response = JSON.parse(jqXHR.responseText);
+            const expected_n_codings = self.get_codings().length;
+            const expected_n_values = $.map(self.get_codings(), function(coding){
+                return $.grep(Object.values(coding.values), self.is_empty_codingvalue, true).length;
             }).reduce(function(a, b){ return a + b; }, 0);
 
-            if (expected_n_codings != response.saved_codings){
+            if (expected_n_codings !== response.saved_codings){
                 new PNotify({
                     "title": "Unexpected number of saved codings!",
                     "text": "We sent {0} codings to the server, but server saved only {1}. Press F12 and click 'console'. Copy the messages and open a bug report. Thanks!".format(
@@ -1011,9 +1005,9 @@ define([
                     "delay" : 300000
                 });
 
-                self.log("Request: " + String($.map(self.get_codings(), self.pre_serialise_coding)));
-                self.log("Response: " + String(response));
-            } else if (expected_n_values != response.saved_values) {
+                logger.log("Request: " + String($.map(self.get_codings(), self.pre_serialise_coding)));
+                logger.log("Response: " + String(response));
+            } else if (expected_n_values !== response.saved_values) {
                 new PNotify({
                     "title": "Unexpected number of saved coding values!",
                     "text": "We sent {0} codings to the server, but server saved only {1}. Press F12 and click 'console'. Copy the messages and open a bug report. Thanks!".format(
@@ -1023,8 +1017,8 @@ define([
                     "delay": 300000
                 });
 
-                self.log("Request: " + String($.map(self.get_codings(), self.pre_serialise_coding)));
-                self.log("Response: " + String(response));
+                logger.log("Request: " + String($.map(self.get_codings(), self.pre_serialise_coding)));
+                logger.log("Response: " + String(response));
             }
             // END BUG
 
@@ -1044,8 +1038,8 @@ define([
             self.set_unsaved(false);
 
             // Change article status in table
-            var td_index = self.article_table_container.find("thead th:contains('status')").index();
-            var current_row = self.article_table_container.find("tr.row_selected");
+            const td_index = self.article_table_container.find("thead th:contains('status')").index();
+            const current_row = self.article_table_container.find("tr.row_selected");
             $("td:eq({0})".f(td_index), current_row).text(self.STATUS_TEXT[self.state.coded_article.status]);
 
             if (success && success_callback !== undefined && success_callback.currentTarget === undefined){
@@ -1056,7 +1050,6 @@ define([
 
     self.finish_and_select_next_article = function(data){
         data = JSON.parse(data);
-        console.log(data.error);
         if(data.error !== null){
             // An error occurred, re-fetch the article to consolidate state with server, and show error messages.
             self.get_article(self.state.coded_article_id).then(() => {
@@ -1128,7 +1121,7 @@ define([
     };
 
     self.coded_article_fetched = function coded_article_fetched(coded_article, codings, sentences){
-        self.log("Retrieved " + codings.length + " codings and " + sentences.length + " sentences");
+        logger.log("Retrieved " + codings.length + " codings and " + sentences.length + " sentences");
 
         $("#lost-codes").hide();
         $("#lost-codes .triggered-by").empty();
@@ -1141,13 +1134,13 @@ define([
         self.state.sentences_array = sentences[0].results;
         self.state.sentences_array.sort(self.sentence_greater_than);
 
-        codings = map_ids(codings[0].results, "annotator_id");
-        sentences = map_ids(sentences[0].results);
-        resolve_ids(codings, sentences, "sentence");
+        codings = utils.map_ids(codings[0].results, "annotator_id");
+        sentences = utils.map_ids(sentences[0].results);
+        utils.resolve_ids(codings, sentences, "sentence");
 
         $.each(codings, function(_, coding){
-            coding.values = map_ids(coding.values, "field");
-            resolve_ids(coding.values, self.models.schemafields, "field");
+            coding.values = utils.map_ids(coding.values, "field");
+            utils.resolve_ids(coding.values, self.models.schemafields, "field");
 
             $.each(coding.values, function(_, value){
                 value.coding = coding;
@@ -1181,15 +1174,15 @@ define([
         // Initialise coding area
         $("#editor").show();
         $(".sidebar").scrollTop(0);
-        self.log("Building article html..");
+        logger.log("Building article html..");
         self.sentences_fetched(sentences);
-        self.log("Highlighting..");
+        logger.log("Highlighting..");
         self.highlight();
-        self.log("Building codings html..");
+        logger.log("Building codings html..");
         self.codings_fetched();
-        self.log("Setting tab order..");
+        logger.log("Setting tab order..");
         self.set_tab_order();
-        self.log("Hiding non-visible sentence codings..");
+        logger.log("Hiding non-visible sentence codings..");
         self.hide_non_visibile_sentence_codings();
         self.set_unsaved(false);
         self.hide_loading();
@@ -1197,7 +1190,7 @@ define([
         var container = (self.codingjob.articleschema === null) ? self.sentence_codings_container : self.article_coding_container;
         container.find("input:visible").first().focus();
 
-        self.log("Done.")
+        logger.log("Done.")
     };
 
     self.highlight = function highlight(){
@@ -1210,12 +1203,12 @@ define([
 
     self.hide_non_visibile_sentence_codings = function hide_non_visibile_sentence_codings(){
         // We need to find all codings within [top, bottom]
-        var top = $(window).scrollTop();
-        var bottom = top + $(window).height();
+        const top = $(window).scrollTop();
+        const bottom = top + $(window).height();
 
-        codings = $("#sentence-codings-parent").children();
+        const codings = $("#sentence-codings-parent").children();
         codings.css("height", codings.height() + "px");
-        var from = codings.first(), to = codings.last();
+        let from = codings.first(), to = codings.last();
 
         if (codings.length === 0) return;
 
@@ -1250,7 +1243,7 @@ define([
      * coded_article_fetched is called when requests finished
      */
     self.get_article = function get_article(coded_article_id){
-        self.log("get_article(coded_article_id={0}) called".f(coded_article_id))
+        logger.log("get_article(coded_article_id={0}) called".f(coded_article_id))
         var base_url = self.get_api_url() + "coded_articles/" + coded_article_id + "/";
 
         self.state = self.get_empty_state();
@@ -1351,13 +1344,13 @@ define([
     /******** EVENTS *******/
     // TODO: Only initialise article coding html once.
     self.codings_fetched = function codings_fetched(){
-        self.state.sentence_codings = $.grep(self.values(self.state.codings), self.is_article_coding, true);
+        self.state.sentence_codings = $.grep(Object.values(self.state.codings), self.is_article_coding, true);
         self.state.sentence_codings.sort(function(a,b){
             return self.sentence_greater_than(a.sentence, b.sentence);
         });
 
         // Determine article coding
-        var article_coding = $.grep(self.values(self.state.codings), self.is_article_coding);
+        const article_coding = Object.values(self.state.codings).filter(self.is_article_coding);
 
         if (article_coding.length === 0){
             self.state.article_coding = self.get_empty_coding();
@@ -1367,17 +1360,17 @@ define([
         }
 
         // Create html content
-        self.log("Building article coding html..");
+        logger.log("Building article coding html..");
         self.article_coding_container.html(self.get_article_coding_html());
         rules.add(self.article_coding_container);
 
-        self.log("Building sentence coding html..");
+        logger.log("Building sentence coding html..");
         self.initialise_sentence_codings();
         rules.add(self.sentence_codings_container);
     };
 
     self.delete_codingvalue = function delete_codingvalue () {
-        ct = $(document.activeElement);
+        const ct = $(document.activeElement);
 
         // Must be focusable and an input element
         if (ct.attr("tabindex") === undefined && !ct.is("input")) return;
@@ -1425,8 +1418,9 @@ define([
         // Set `roots` property on each codebook which contains a mapping
         // of code_id -> code.
         $.each(self.models.codebooks, function(codebook_id, codebook){
-            codebook.roots = filter(function(code){ return code.parent === null }, codebook.codes);
-            codebook.roots = map_ids(codebook.roots, "code");
+            let codes = Object.values(codebook.codes);
+            codebook.roots = codes.filter(function(code){ return code.parent === null });
+            codebook.roots = utils.map_ids(codebook.roots, "code");
         });
 
         $.each(self.models.codebooks, function(codebook_id, codebook){
@@ -1455,7 +1449,7 @@ define([
 
     self.find_hidden = function find_hidden(codes){
         return Array.prototype.concat.apply([], $.map(codes, function(c){
-            return c.hide ? [c].concat(self.values(c.get_descendants())) : null;
+            return c.hide ? [c].concat(Object.values(c.get_descendants())) : null;
         }));
     };
 
@@ -1478,9 +1472,7 @@ define([
             });
         });
 
-        self.highlight_labels = $.grep(labels, function(label){
-            return !!label.trim().length;
-        });
+        self.highlight_labels = labels.filter(label => label.trim().length > 0);
     };
 
 
@@ -1491,10 +1483,10 @@ define([
 
         $.each(sentences, function (i, s) {
             var _html = $('<div />').attr('id', 'sentence-' + s.id);
-            if (s.parnr != prev_parnr) {
+            if (s.parnr !== prev_parnr) {
                 _html.addClass('new-paragraph');
             }
-            if (s.get_unit() == '1.1') {
+            if (s.get_unit() === '1.1') {
                 _html.append($('<h2 />').text(s.sentence));
             } else {
                 _html.append($('<span />').addClass('annotator-sentencenr').text('(' + s.get_unit() + ') '));
@@ -1504,7 +1496,7 @@ define([
             html.append(_html);
         });
 
-        if (sentences.length == 0) {
+        if (sentences.length === 0) {
             html.append('No sentences found for this article');
         }
 
@@ -1527,6 +1519,9 @@ define([
             $(el).attr("tabindex", tabindex);
             tabindex += 1;
         };
+
+        // remove all but the last focus stealer
+        $('.coding:not(:last-child) .focus-stealer').remove();
 
         $.each(self.article_comment_textarea, set_tabindex);
         $.each($("input:visible", self.article_coding_container), set_tabindex);
@@ -1650,7 +1645,7 @@ define([
             self.last_scroll = Date.now();
         }
 
-        delta = Date.now() - self.last_scroll;
+        let delta = Date.now() - self.last_scroll;
         if (delta > self.SCROLL_TIMEOUT){
             self.last_scroll = null;
         } else {

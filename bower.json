@@ -11,7 +11,7 @@
     "jquery-csv": "",
     "jquery.hotkeys": "",
     "bootstrap-datepicker": "",
-    "highcharts": "~4.2.3",
+    "highcharts": "~6.0.4",
     "moment": "",
     "jquery-cookie": "",
     "papaparse": "4.1.0",
@@ -22,7 +22,6 @@
   },
   "resolutions": {
     "jquery": ">= 1.9.1",
-    "bootstrap": ">= 2.3.2",
-    "highcharts": "~6.0.4"
+    "bootstrap": ">= 2.3.2"
   }
 }
