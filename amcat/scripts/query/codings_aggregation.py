@@ -33,7 +33,7 @@ from amcat.models import ArticleSet, CodingJob
 from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
 from amcat.scripts.forms.selection import get_all_schemafields
 from amcat.scripts.query import QueryAction, QueryActionForm
-from amcat.scripts.query.aggregation import AGGREGATION_FIELDS
+from amcat.scripts.query.aggregation import AGGREGATION_FIELDS, get_aggregation_choices, get_used_properties_by_articlesets
 from amcat.tools import aggregate_orm, aggregate_es
 from amcat.tools.aggregate_orm import ORMAggregate
 from amcat.tools.aggregate_orm.categories import POSTGRES_DATE_TRUNC_VALUES
@@ -97,20 +97,24 @@ class CodingAggregationActionForm(QueryActionForm):
         self.fields["value1"].choices = value_choices
         self.fields["value2"].choices = (("", "------"),) + value_choices
 
+        sets = {cj.articleset for cj in self.codingjobs}
+        props = set(get_used_properties_by_articlesets(sets))
+        meta_choices = tuple(get_aggregation_choices(props)) + (("Metadata Fields", (("year", "Year"), ("month", "Month"), ("week", "Week"))),)
         schema_choices = tuple(get_schemafield_choices(self.codingjobs))
-        self.fields["primary"].choices += schema_choices
-        self.fields["secondary"].choices += schema_choices
+
+
+        self.fields["primary"].choices += schema_choices + meta_choices
+        self.fields["secondary"].choices += schema_choices + meta_choices
 
         project_codebooks = self.project.get_codebooks()
 
     def _clean_aggregation(self, field_name, prefix=None):
         field_value = self.cleaned_data[field_name]
-
         if not field_value:
             return None
 
         if field_value in POSTGRES_DATE_TRUNC_VALUES:
-            return aggregate_orm.IntervalCategory(interval=field_value, prefix=prefix)
+            return aggregate_orm.IntervalCategory(interval=field_value, prefix=prefix, is_json_field=False)
 
         if field_value == "articleset":
             return aggregate_orm.ArticleSetCategory(prefix=prefix)
@@ -126,7 +130,6 @@ class CodingAggregationActionForm(QueryActionForm):
             use_codebook = self.cleaned_data["{}_use_codebook".format(field_name)]
             codebook = codingschemafield.codebook if use_codebook else None
             return aggregate_orm.SchemafieldCategory(codingschemafield, codebook=codebook, prefix=prefix)
-
         raise ValidationError("Not a valid aggregation: %s." % field_value)
 
     def clean_primary(self):
@@ -269,7 +272,8 @@ class CodingAggregationAction(QueryAction):
             self.monitor.update(10, "Found in cache. Rendering..".format(**locals()))
 
         if form.cleaned_data.get("primary_fill_zeroes") and hasattr(primary, 'interval'):
-            aggregation = list(aggregate_es.fill_zeroes(aggregation, primary, secondary))
+            # aggregate_es does not have fill zeroes - does js handle that?
+            pass#aggregation = list(aggregate_es.fill_zeroes(aggregation, primary, secondary))
         # Matrices are very annoying to construct in javascript due to missing hashtables. If
         # the user requests a table, we thus first convert it to a different format which should
         # be easier to render.
