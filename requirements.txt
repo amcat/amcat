@@ -36,6 +36,7 @@ splinter
 tblib
 tqdm
 django-redis==4.6.0
+ruamel.yaml==0.12.18
 
 dateparser==0.7,<0.8
 
