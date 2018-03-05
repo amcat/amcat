@@ -38,8 +38,7 @@ tqdm
 django-redis==4.6.0
 ruamel.yaml==0.12.18
 
-#TODO: 0.6.0 contains a severe performance bug. Add dateparser>0.6.0 once released.
-dateparser==0.6.0
+dateparser==0.7,<0.8
 
 anyjson
 billiard==3.3.0.23

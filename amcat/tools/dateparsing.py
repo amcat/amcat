@@ -13,10 +13,10 @@ DEFAULT_DATEPARSER_SETTINGS = {
     "RETURN_AS_TIMEZONE_AWARE": False
 }
 
-RE_ISO = re.compile(r'\d{4}-\d{2}-\d{2}')
+RE_ISO_LIKE = re.compile(r'\d{4}-\d{1,2}-\d{1,2}')
 
 
-def _get_language_aliases(language: 'dateparser.languages.Language') -> Iterable[str]:
+def _get_language_aliases(language: 'dateparser.languages.Locale') -> Iterable[str]:
     yield language.info['name']
     yield language.shortname
     try:
@@ -53,7 +53,7 @@ def _language_aliases():
     if __language_aliases is None:
         import dateparser
         __language_aliases = dict((alias.lower(), l)
-                                 for l in dateparser.languages.default_language_loader.get_languages()
+                                 for l in dateparser.languages.default_loader.get_locales()
                                  for alias in _get_language_aliases(l))
     return __language_aliases
 
@@ -67,7 +67,7 @@ def _read_date(datestr: str, language_pool: Tuple[str, ...]):
 
     datestr = datestr.replace("Maerz", "März")  # Needed in LN parser?
 
-    if RE_ISO.match(datestr):
+    if RE_ISO_LIKE.match(datestr):
         date_order = 'YMD'  # ISO-like but not quite ISO
     else:
         date_order = 'DMY'  # MDY is studid!
@@ -83,11 +83,11 @@ def _read_date(datestr: str, language_pool: Tuple[str, ...]):
 @functools.lru_cache()
 def _get_dateparser(language_pool: Tuple[str, ...], settings: Hashable = None) -> 'dateparser.DateDataParser':
     import dateparser
-    from dateparser.languages.detection import AutoDetectLanguage
+    from dateparser.search.detection import AutoDetectLanguage
 
     settings = dict(settings or ())
 
-    parser = dateparser.DateDataParser(allow_redetect_language=True, settings=settings)
+    parser = dateparser.DateDataParser(settings=settings)
 
     if language_pool is None:
         return parser
