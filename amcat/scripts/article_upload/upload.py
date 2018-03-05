@@ -332,7 +332,7 @@ class UploadScript(ActionForm):
         monitor.update(10, "Done! Uploaded articles".format(n=len(articles)))
         return self.options["articleset"]
 
-    def map_article(self, art_dict):
+    def map_article(self, art_dict, default=None):
         mapped_dict = {}
         for destination, field in self.options['field_map'].items():
             if field['type'] == "field":
@@ -342,6 +342,10 @@ class UploadScript(ActionForm):
                 mapped_dict[destination] = field["value"]
             else:
                 raise Exception("type should be 'field' or 'literal'")
+
+        for k, v in (default or {}).items():
+            if k not in mapped_dict or mapped_dict[k] == '':
+                mapped_dict[k] = v
         return mapped_dict
 
 

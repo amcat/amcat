@@ -2,7 +2,7 @@ import csv
 import json
 import unittest
 
-from amcat.scripts.article_upload.plugins.csv_import import CSV
+from amcat.scripts.article_upload.plugins.csv_import import CSV, DEFAULTS
 from amcat.scripts.article_upload.tests.test_upload import create_test_upload
 from amcat.scripts.article_upload.upload import UploadForm
 from amcat.tools import amcattest
@@ -58,7 +58,7 @@ class TestCSV(amcattest.AmCATTestCase):
         data = [('kop1', '2001-01-01', '')]
         articles = _run_test_csv(header, data, _get_field_map(text="tekst", title="kop", date="datum"))
         self.assertEqual(len(articles), 1)
-        self.assertEqual(articles[0].text, "")
+        self.assertEqual(articles[0].text, DEFAULTS['text'])
 
     @amcattest.use_elastic
     def test_types(self):

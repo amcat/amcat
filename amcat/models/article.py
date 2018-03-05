@@ -39,14 +39,13 @@ from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models, connection
 from django.template.defaultfilters import escape as escape_filter
-from django_hash_field import HashField
 from psycopg2._json import Json
 
 from amcat.models.authorisation import ROLE_PROJECT_READER
 from amcat.models.authorisation import Role
 from amcat.tools import amcates
 from amcat.tools.djangotoolkit import bulk_insert_returning_ids
-from amcat.tools.model import AmcatModel
+from amcat.tools.model import AmcatModel, HashField
 from amcat.tools.progress import NullMonitor
 from amcat.tools.toolkit import splitlist
 
@@ -224,8 +223,8 @@ class Article(AmcatModel):
     text = models.TextField()
 
     # hash and parent / tree structure
-    hash = HashField(unique=True, max_length=64)
-    parent_hash = HashField(null=True, blank=True, max_length=64)
+    hash = HashField(unique=True, max_length=224//8)
+    parent_hash = HashField(null=True, blank=True, max_length=224//8)
 
     # flexible properties, should be flat str:primitive (json) dict 
     properties = PropertyField(null=False, blank=False, default="{}")
@@ -235,8 +234,7 @@ class Article(AmcatModel):
             if args:
                 raise ValueError("Specify either non-keyword args or keyword args.")
             props = {k: kwargs.pop(k) for k in set(kwargs) if k not in self.static_fields()}
-            if props:
-                kwargs['properties'] = PropertyMapping(**kwargs.get("properties", {}), **props)
+            kwargs['properties'] = PropertyMapping(**kwargs.get("properties", {}), **props)
         super(Article, self).__init__(*args, **kwargs)
 
         self._highlighted = False
@@ -284,17 +282,17 @@ class Article(AmcatModel):
         return frozenset(f.name for f in cls._meta.fields) | frozenset(["project_id", "project"])
 
     @classmethod
-    def fromdict(cls, properties: Dict[str, Any]):
+    def fromdict(cls, properties: Dict[str, Any], enforce_required=True):
         """Construct an Article object from a dictionary."""
         properties = properties.copy()
-        article = cls(properties=properties)
+        article = cls(properties=PropertyMapping(properties))
         article_fields = {f.name for f in cls._meta.fields}
         for field_name, value in list(properties.items()):
             if field_name in ("hash", "id"):
                 raise ValueError("You cannot set {}.{}".format(cls.__name__, field_name))
             elif field_name in article_fields:
                 setattr(article, field_name, value)
-                properties.pop(field_name)
+                article.properties.pop(field_name)
         article.compute_hash()
         return article
 
@@ -437,20 +435,19 @@ class Article(AmcatModel):
         # Determine which articles are dupes of each other, *then* query the database
         # to check if the database has any articles we just got.
         if deduplicate:
-            hashes = collections.defaultdict(list)  # type: Dict[bytes, List[Article]]
+            hashes = collections.defaultdict(list)  # type: Dict[str, List[Article]]
 
             for a in articles:
                 if a.hash in hashes:
                     a._duplicate = hashes[a.hash][0]
                 else:
                     hashes[a.hash].append(a)
-
             # Check database for duplicates
             monitor.update(message="Checking _duplicates based on hash..")
             if hashes:
                 results = Article.objects.filter(hash__in=hashes.keys()).only("hash")
                 for orig in results:
-                    dupes = hashes[orig.hash]
+                    dupes = hashes[str(orig.hash)]
                     for dupe in dupes:
                         dupe._duplicate = orig
                         dupe.id = orig.id
@@ -461,6 +458,8 @@ class Article(AmcatModel):
         to_insert = [a for a in articles if not a._duplicate]
         monitor.update(message="Inserting {} articles into database..".format(len(to_insert)))
         if to_insert:
+            for article in to_insert:
+                article.full_clean()
             result = bulk_insert_returning_ids(to_insert)
             for a, inserted in zip(to_insert, result):
                 a.id = inserted.id

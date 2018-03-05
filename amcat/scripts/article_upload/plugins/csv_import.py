@@ -47,6 +47,12 @@ PARSERS = {
     set: lambda s: {tag for tag in (part.strip() for part in s.split(",")) if tag},
 }
 
+DEFAULTS = {
+    "text": "<no_text>",
+    "title": "<no_title>"
+}
+
+
 FieldType = TypeVar("FieldType")
 
 
@@ -221,7 +227,7 @@ class CSV(UploadScript):
     def parse_file(self, file, _data):
         reader = self.get_reader(file)
         for unmapped_dict in reader:
-            art_dict = self.map_article(unmapped_dict)
+            art_dict = self.map_article(unmapped_dict, dict(DEFAULTS))
             properties = {}
             for k, v in art_dict.items():
                 v = parse_value(k, v)

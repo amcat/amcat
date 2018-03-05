@@ -35,6 +35,11 @@ from amcat.tools.toolkit import read_date
 log = logging.getLogger(__name__)
 from .bzk_aliases import BZK_ALIASES as MEDIUM_ALIASES
 
+DEFAULTS = {
+    "text": "<no_text>",
+    "title": "<no_title>"
+}
+
 @UploadPlugin(name="BZK_HTML", label="BZK HTML")
 class BZK(UploadScript):
 
@@ -50,7 +55,7 @@ class BZK(UploadScript):
         
     def parse_file(self, file, _):
         for art_dict in self._scrape_unit(file.read()):
-            yield Article.fromdict(self.map_article(art_dict))
+            yield Article.fromdict(self.map_article(art_dict, DEFAULTS))
 
     @classmethod
     def _scrape_unit(cls, _file):
