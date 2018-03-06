@@ -148,6 +148,8 @@ def get_unencoded(s):
 class TooManyAttributesError(BaseException):
     pass
 
+class ApaError(ValueError):
+    pass
 
 def unrtf(name):
     from subprocess import Popen, PIPE
@@ -166,8 +168,8 @@ def unrtf(name):
 
 def compartmentalize(rtf):
     """
-    Split the rtf into small paragraph sized groups to prevent formatting directives from leaking out of their scope, which would
-    throw off unrtf.
+    Split the rtf into small paragraph sized groups to prevent formatting directives from leaking out of their scope,
+    which would throw off unrtf.
     """
     boundary = "\n\\par\n"
     parts = rtf.split(boundary)
@@ -177,20 +179,17 @@ def compartmentalize(rtf):
                                                                tail=parts[-1])
 
 
-def to_html(original_rtf, fixed_rtf):
+def to_html(original_rtf, fixed_rtf, fallback=False):
     html = None
 
-    try:
-        with NamedTemporaryFile() as rtf:
-            rtf.write(fixed_rtf.encode("ascii"))
-            rtf.flush()
-            html = str(unrtf(rtf.name))
-    except TooManyAttributesError:
+    if not fallback:
         fixed_rtf2 = compartmentalize(fixed_rtf)
-        with NamedTemporaryFile() as rtf:
-            rtf.write(fixed_rtf2.encode("ascii"))
-            rtf.flush()
-            html = str(unrtf(rtf.name))
+    else:
+        fixed_rtf2 = fixed_rtf
+    with NamedTemporaryFile() as rtf:
+        rtf.write(fixed_rtf2.encode("ascii"))
+        rtf.flush()
+        html = str(unrtf(rtf.name))
 
     for u in get_unencoded(original_rtf):
         html = html.replace(UNDECODED, u, 1)
@@ -299,7 +298,7 @@ def parse_page(doc_elements):
     headline = sorted(get_roots(headline), key=lambda e: elements.index(e))
 
     if not headline:
-        raise ValueError("No possible headlines found.")
+        raise ApaError("No possible headlines found.")
 
     remove_tree(meta, ["b"])
     remove_tree(text, ["b", "i"])
@@ -377,17 +376,23 @@ class APA(UploadScript):
 
     def parse_file(self, file: UploadedFile, _) -> Iterable[Article]:
         data = file.read()
-        for para in self.split_file(data):
-            yield self.parse_document(para)
+        try:
+            for para in self.split_file(data):
+                yield self.parse_document(para)
+        except ApaError:
+            # TODO: test if fallback is actually necessary.
+            log.warning("APA parse attempt failed. Using fallback method.")
+            for para in self.split_file(data, fallback=True):
+                yield self.parse_document(para)
 
     def parse_document(self, paragraphs) -> Article:
         metadata, text = parse_page(paragraphs)
         print(metadata)
         return Article(**self.map_article(dict(metadata, text=text)))
 
-    def split_file(self, data):
+    def split_file(self, data, fallback=False):
         original_rtf, fixed_rtf = data, fix_rtf(data)
-        doc = parse_html(to_html(original_rtf, fixed_rtf))
+        doc = parse_html(to_html(original_rtf, fixed_rtf, fallback=fallback))
 
         for i, page in enumerate(get_pages(doc)):
             yield doc, page
