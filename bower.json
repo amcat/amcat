@@ -3,7 +3,7 @@
   "dependencies": {
     "jquery": "~2.1.1",
     "bootstrap": "3.3.7",
-    "datatables": "https://github.com/CJStuart/amcat-datatables/archive/1.10.7.tar.gz",
+    "datatables": "https://github.com/amcat/amcat-datatables/archive/1.10.7.tar.gz",
     "pnotify": "2.0.1",
     "jquery-ui": "1.10.4",
     "jquery.scrollTo": "1.4.12",
