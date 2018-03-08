@@ -110,11 +110,12 @@ class TestSelectionSearchFilters(SelectionSearchTestCase):
     ]
 
     def test_filter(self):
-        self._run_query({"filters": '{"author":"Plutarch"}'}, [0, 2])
-        self._run_query({"filters": '{"edition_int": 3}'}, [5, 6])
+        self._run_query({"filters": '{"author": ["Plutarch"]}'}, [0, 2])
+        self._run_query({"filters": '{"edition_int": [3]}'}, [5, 6])
 
     def test_multiple_filters(self):
-        self._run_query({"filters": '{"edition_int": 3, "owner": "Socrates"}'}, [6])
+        self._run_query({"filters": '{"edition_int": [3], "owner": ["Socrates"]}'}, [6])
+        self._run_query({"filters": '{"edition_int": [1, 3]}'}, [4, 5, 6])
 
 
 class TestSearchQuery(amcattest.AmCATTestCase):

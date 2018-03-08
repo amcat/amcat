@@ -101,7 +101,7 @@ def prepare(value):
         return value.isoformat()
     elif isinstance(value, (int, bool, float, str)):
         return value
-    elif isinstance(value, (aggregate_orm.Category, aggregate_orm.Value, aggregate_es.Category)):
+    elif isinstance(value, (aggregate_orm.Category, aggregate_orm.Value, aggregate_es.Category, Filter)):
         return repr(value)
     elif value is None:
         return value
@@ -145,6 +145,8 @@ class Filter:
             raise ValidationError("Invalid value")
         return cls(field, value)
 
+    def __repr__(self):
+        return "{}({},{})".format(self.__class__.__name__, repr(self.field), repr(self.value))
 
 class FiltersField(forms.Field):
     filterable_field_types = ["default", "int", "num", "tag", "url", "id"]
@@ -168,8 +170,9 @@ class FiltersField(forms.Field):
         if value in self.empty_values:  # the super call handles the 'required' kwarg
             return
         if not isinstance(value, dict) or not all(
-                        isinstance(k, str) and isinstance(v, (str, int, float)) for k, v in value.items()):
-            raise ValidationError("Couldn't parse JSON: Root element should be a {str: str|int|float} mapping.")
+                                isinstance(k, str) and isinstance(vs, list) and all(
+                    isinstance(v, (str, int, float)) for v in vs) for k, vs in value.items()):
+            raise ValidationError("Couldn't parse JSON: Root element should be a {str: (str|int|float)[]} mapping.")
 
     def to_python(self, value):
         if value in self.empty_values:
