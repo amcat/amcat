@@ -1,7 +1,8 @@
-from amcat.models import Language, Code
+from amcat.models import Language, Code, ArticleSet, Article
+from amcat.scripts.forms import SelectionForm
 from amcat.tools import amcattest
-from amcat.tools.amcattest import create_test_codebook
-from amcat.tools.keywordsearch import SearchQuery, resolve_queries
+from amcat.tools.amcattest import create_test_codebook, create_test_set, create_test_article, use_elastic
+from amcat.tools.keywordsearch import SearchQuery, resolve_queries, SelectionSearch
 from amcat.tools import djangotoolkit
 from amcat.tools.toolkit import strip_accents
 
@@ -13,6 +14,107 @@ class TestKeywordSearch(amcattest.AmCATTestCase):
         self.assertEquals(SearchQuery._get_label_delimiter("abc", "ba"), "b")
         self.assertEquals(SearchQuery._get_label_delimiter("abc", "d"), None)
 
+
+class SelectionSearchTestCase(amcattest.AmCATTestCase):
+    articles = None
+    queries = None
+
+    def _setUp(self):
+        """ _setUp instead of setUp for @use_elastic compatibility. """
+        self.articleset = create_test_set()
+        self.articles = [create_test_article(articleset=self.articleset, **article) for article in type(self).articles]
+        self.article_ids = [article.id for article in self.articles]
+        self.articleset.refresh_index()
+
+    @use_elastic
+    def _run_query(self, form_data, expected_indices=None, expected_count=None):
+        self._setUp()
+        sets = ArticleSet.objects.filter(pk=self.articleset.pk)
+        form = SelectionForm(articlesets=sets, project=self.articleset.project, data=form_data)
+        form.full_clean()
+        self.assertFalse(form.errors, "Form contains errors")
+
+        search = SelectionSearch(form)
+        if expected_indices:
+            article_ids = search.get_article_ids()
+            articles = Article.objects.filter(id__in=article_ids)
+            expected = [self.articles[i] for i in expected_indices]
+            self.assertSetEqual(set(articles), set(expected))
+
+        if expected_count:
+            self.assertEqual(search.get_count(), expected_count)
+
+class TestSelectionSearchQuery(SelectionSearchTestCase):
+    articles = [
+        {"title": "Foo", "text": "bar", "date": "2015-05-05"},
+        {"title": "Julius Caesar said:", "text": "alea iacta est", "date": "0040-01-10"},
+        {"title": "Also phrased as", "text": "iacta alea est", "date": "0040-01-10"}
+    ]
+
+    def test_empty_query(self):
+        self._run_query({}, [0, 1, 2])
+
+    def test_simple_query(self):
+        self._run_query({"query": "foo"}, [0])
+        self._run_query({"query": "est"}, [1, 2])
+
+    def test_bool_query(self):
+        self._run_query({"query": "est OR foo"}, [0, 1, 2])
+        self._run_query({"query": "est AND foo"}, [])
+        self._run_query({"query": "est AND said"}, [1])
+
+
+class TestSelectionSearchDateRange(SelectionSearchTestCase):
+    articles = [
+        {"title": "Foo", "text": "bar", "date": "2015-05-05"},
+        {"title": "Julius Caesar said:", "text": "alea iacta est", "date": "0040-01-10"},
+        {"title": "Also phrased as", "text": "iacta alea est", "date": "0040-01-10"},
+        {"title": "The origin of species", "text": "When on board H.M.S. Beagle, as naturalist...",
+         "date": "1859-11-24"}
+    ]
+
+    def test_after(self):
+        self._run_query({"start_date": "1000-10-10", "datetype": "after"}, [0, 3])
+
+    def test_before(self):
+        self._run_query({"end_date": "1000-10-10", "datetype": "before"}, [1, 2])
+
+    def test_between(self):
+        self._run_query({"start_date": "1000-10-10", "end_date": "1999-09-09", "datetype": "between"}, [3])
+
+    def test_relative(self):
+        self._run_query({"relative_date": "-15768000000", "datetype": "relative"}, [0, 3])
+
+
+class TestSelectionSearchFilters(SelectionSearchTestCase):
+    articles = [
+        {"title": "Foo", "text": "bar", "date": "2015-05-05", "properties": {"author": "Plutarch"}},
+        {"title": "Julius Caesar said:", "text": "alea iacta est", "date": "0049-01-10",
+         "properties": {"author": "Suetonius"}},
+        {"title": "Also phrased as", "text": "iacta alea est", "date": "0049-01-10",
+         "properties": {"author": "Plutarch"}},
+        {"title": "Different author is different", "text": "foo", "date": "0049-01-10",
+         "properties": {"author": "Plutarch et. al"}},
+        {"title": "Book about things",
+         "text": "This book is about things plato probably would've had something to say about things. The end.",
+         "date": "2004-04-04",
+         "properties": {"edition_int": 1}},
+        {"title": "Book about things",
+         "text": "This book is about things. Plato probably would've had something to say about things. The end.",
+         "date": "2004-04-04",
+         "properties": {"edition_int": 3}},
+        {"title": "Book about things",
+         "text": "This book is about things. Plato probably would've had something to say about things. The end.",
+         "date": "2004-04-04",
+         "properties": {"edition_int": 3, "owner": "Socrates"}}
+    ]
+
+    def test_filter(self):
+        self._run_query({"filters": '{"author":"Plutarch"}'}, [0, 2])
+        self._run_query({"filters": '{"edition_int": 3}'}, [5, 6])
+
+    def test_multiple_filters(self):
+        self._run_query({"filters": '{"edition_int": 3, "owner": "Socrates"}'}, [6])
 
 
 class TestSearchQuery(amcattest.AmCATTestCase):

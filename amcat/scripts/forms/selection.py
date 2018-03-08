@@ -33,6 +33,7 @@ from amcat.models import Codebook, Language, Article, ArticleSet, CodingJob, Cod
     CodebookCode, CodingSchema
 from amcat.models.coding.codingschemafield import FIELDTYPE_IDS
 from amcat.forms.forms import order_fields
+from amcat.tools.amcates import get_property_type
 from amcat.tools.caching import cached
 from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.toolkit import to_datetime
@@ -48,6 +49,7 @@ DATETYPES = {
     "before": "Before",
     "after": "After",
     "between": "Between",
+    "relative": "Relative"
 }
 
 __all__ = [
@@ -107,16 +109,101 @@ def prepare(value):
     raise ValueError("Could not prepare {} of type {} for serialization".format(value, type(value)))
 
 
+class TimeDeltaSecondsField(forms.IntegerField):
+    """
+    A timedelta represented as a number of seconds.
+    """
+    def clean(self, value):
+        seconds = super().clean(value)
+        if seconds is not None:
+            return datetime.timedelta(seconds=seconds)
+
+
+def field_type(field):
+    return (field.rsplit("_", 1)[1:] or ["default"])[0]
+
+
+class Filter:
+    def __init__(self, field, value):
+        self.field = field
+        self.value = value
+
+    def get_filter_kwargs(self):
+        t = field_type(self.field)
+        field = self.field
+        if t == "default":
+            field = "{}.raw".format(self.field)
+        yield (field, self.value),
+
+    @classmethod
+    def clean(cls, field, value, field_types):
+        if field_type(field) not in field_types:
+            raise ValidationError("Cannot filter on field type: {}".format(field_type(field)))
+        try:
+            value = prepare(value)
+        except ValueError:
+            raise ValidationError("Invalid value")
+        return cls(field, value)
+
+
+class FiltersField(forms.Field):
+    filterable_field_types = ["default", "int", "num", "tag", "url", "id"]
+
+    def __init__(self, fields=(), **kwargs):
+        super().__init__(**kwargs)
+        self._fields = ()
+        self.fields = fields
+
+    @property
+    def fields(self):
+        return self._fields
+
+    @fields.setter
+    def fields(self, fields):
+        self._fields = [f for f in fields if field_type(f) in self.filterable_field_types]
+        self.initial = ",".join(self._fields)
+
+    def validate(self, value):
+        super().validate(value)
+        if value in self.empty_values:  # the super call handles the 'required' kwarg
+            return
+        if not isinstance(value, dict) or not all(
+                        isinstance(k, str) and isinstance(v, (str, int, float)) for k, v in value.items()):
+            raise ValidationError("Couldn't parse JSON: Root element should be a {str: str|int|float} mapping.")
+
+    def to_python(self, value):
+        if value in self.empty_values:
+            return
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            raise ValidationError("Couldn't parse JSON: invalid JSON")
+
+    def clean(self, value):
+        fielddict = super().clean(value)
+        if fielddict in self.empty_values:
+            return
+
+        value = []
+        for k, v in fielddict.items():
+            value.append(Filter.clean(k, v, field_types=self.filterable_field_types))
+        return value
+
+
 @order_fields()
 class SelectionForm(forms.Form):
     include_all = forms.BooleanField(label="Include articles not matched by any keyword", required=False, initial=False)
     articlesets = ModelMultipleChoiceFieldWithIdLabel(queryset=ArticleSet.objects.none(), required=False, initial=())
     codingjobs = ModelMultipleChoiceFieldWithIdLabel(queryset=CodingJob.objects.none(), required=False, initial=())
     article_ids = forms.CharField(widget=forms.Textarea, required=False)
+
     start_date = forms.DateField(required=False)
     end_date = forms.DateField(required=False)
-    datetype = forms.ChoiceField(choices=DATETYPES.items(), initial='all', required=True)
     on_date = forms.DateField(required=False)
+    relative_date = TimeDeltaSecondsField(required=False, min_value=-2**63, max_value=0)
+    datetype = forms.ChoiceField(choices=DATETYPES.items(), initial='all', required=True)
+
+    filters = FiltersField(required=False)
 
     codebook_replacement_language = ModelChoiceFieldWithIdLabel(queryset=Language.objects.all(), required=False,
                                                                 label="Language which is used to replace keywords")
@@ -189,15 +276,18 @@ class SelectionForm(forms.Form):
                     "data-depends-value": "{code}",
                     "data-depends-label": "{code} - {label}",
                 }
-
         if data is not None:
             self.data = self.get_data()
+
+        self.set_filter_fields()
+
 
 
     def get_hash(self, ignore_fields=()) -> str:
         """
         Calculate a hash based on current form. Form *must* be cleaned and valid before executing
         this method. Method returns a SHA256 hexdigest.
+        If a relative date is included in the form, it is converted to an absolute date before hashing.
         """
         assert self.is_valid(), "Can only calculate hash for valid forms."
         hash_fields = (fname for fname in self.cleaned_data.keys() if fname not in ignore_fields)
@@ -219,6 +309,35 @@ class SelectionForm(forms.Form):
                 _add_to_dict(data, field_name, field.initial)
         return data
 
+    def get_date_range(self):
+        """
+        Calculates and returns a tuple start_date, end_date based on the datetype and date form entries.
+        If end_date or start_date is not applicable, it is returned as None
+        """
+        if 'datetype' not in self.cleaned_data:
+            return None, None
+        datetype = self.cleaned_data['datetype']
+
+        start_date, end_date = None, None
+
+        try:
+            if datetype == "between":
+                start_date = self.cleaned_data["start_date"]
+                end_date = self.cleaned_data["end_date"]
+            elif datetype == "before":
+                end_date = self.cleaned_data["end_date"]
+            elif datetype == "after":
+                start_date = self.cleaned_data["start_date"]
+            elif datetype == "on":
+                start_date = self.cleaned_data["on_date"]
+                end_date = self.cleaned_data["on_date"] + DAY_DELTA
+            elif datetype == "relative":
+                start_date, end_date = self.cleaned_data["relative_date"]
+
+        except (KeyError, TypeError) as e:
+            raise ValidationError("Expected datetype: {}".format(datetype))
+
+        return start_date, end_date
 
     def clean_codebook_label_language(self):
         return self.cleaned_data.get("codebook_label_language")
@@ -276,21 +395,18 @@ class SelectionForm(forms.Form):
         if on_date:
             on_date = to_datetime(on_date)
 
-        if "datetype" not in self.cleaned_data:
-            # Don't bother checking, datetype raised ValidationError
-            return on_date
+        return on_date
 
-        datetype = self.cleaned_data["datetype"]
-
-        if datetype == "on" and not on_date:
-            raise ValidationError("'On date' should be defined when dateype is 'on'", code="missing")
-
-        if datetype == "on":
-            self.cleaned_data["datetype"] = "between"
-            self.cleaned_data["start_date"] = on_date
-            self.cleaned_data["end_date"] = on_date + DAY_DELTA
-
-        return None
+    def clean_relative_date(self):
+        """
+        Returns a tuple start_date, end_date, representing the date range
+        from (today + N seconds) to today.
+        """
+        if self.cleaned_data['relative_date']:
+            today = to_datetime(datetime.datetime.now())
+            delta = self.cleaned_data['relative_date']
+            from_date = today + delta
+            return to_datetime(from_date), today
 
     def clean_articlesets(self):
         if not self.cleaned_data["articlesets"]:
@@ -332,3 +448,12 @@ class SelectionForm(forms.Form):
         return self.cleaned_data
         #return super().clean()
 
+
+    def set_filter_fields(self):
+        fields = set()
+        for aset in self.articlesets:
+            fields |= aset.get_used_properties()
+        for cjob in self.codingjobs:
+            fields |= cjob.articleset.get_used_properties()
+
+        self.fields['filters'].fields = fields

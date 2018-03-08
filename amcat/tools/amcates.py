@@ -22,6 +22,8 @@ import functools
 import logging
 import os
 import re
+import pprint
+
 from collections import namedtuple
 from hashlib import sha224 as hash_class
 from json import dumps as serialize
@@ -79,6 +81,9 @@ def get_property_type(name: str) -> str:
             return settings.ES_MAPPING_TYPES[name[name.rfind("_") + 1:]]["type"]
     except KeyError:
         pass
+
+    if name.endswith(".raw"):
+        return "keyword"
 
     return settings.ES_MAPPING_TYPES["default"]["type"]
 
@@ -416,7 +421,6 @@ class _ES(object):
         """
         Perform a 'raw' search on the underlying ES index
         """
-        import pprint
         kargs = dict(index=self.index, doc_type=self.doc_type)
         kargs.update(options)
         log.debug("Search with body:\n {}".format(pprint.pformat(body)))
@@ -442,6 +446,8 @@ class _ES(object):
         """
         if body is None:
             body = dict(build_body(query, filters, query_as_filter=True))
+
+        log.debug("query_ids with body:\n {}".format(pprint.pformat(body)))
         for i, a in enumerate(scan(self.es, query=body, index=self.index, doc_type=self.doc_type,
                                    size=(limit or 1000), _source=())):
             if limit and i >= limit:

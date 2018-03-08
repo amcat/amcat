@@ -56,9 +56,9 @@ def to_sortable_tuple(key):
 
 
 class SelectionData:
-    def __init__(self, data):
-        self.__dict__.update(data)
-
+    def __init__(self, form):
+        self.__dict__.update(form.cleaned_data)
+        self.start_date, self.end_date = form.get_date_range()
 
 def group_by_first_value(aggr):
     current_group = None
@@ -92,7 +92,7 @@ class SelectionSearch:
         """
         self.es = ES()
         self.form = form
-        self.data = SelectionData(form.cleaned_data)
+        self.data = SelectionData(form)
 
     def _get_filters(self):
         """
@@ -101,15 +101,22 @@ class SelectionSearch:
 
         @type form: SelectionForm
         """
-        yield get_date_filters(
-            self.data.start_date, self.data.end_date,
-            self.data.on_date, self.data.datetype
-        )
+
+        if self.data.start_date is not None:
+            yield ("start_date", self.data.start_date),
+
+        if self.data.end_date is not None:
+            yield ("end_date", self.data.end_date),
+
         if self.data.codingjobs:
             yield (("sets", [j.articleset.id for j in self.data.codingjobs]),)
         else:
             yield (("sets", [a.id for a in self.data.articlesets]),)
         yield (("ids", self.data.article_ids or None),)
+
+        if self.data.filters:
+            for filter in self.data.filters:
+                yield from filter.get_filter_kwargs()
 
     @cached
     def get_filters(self):

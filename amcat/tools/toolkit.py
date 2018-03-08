@@ -183,7 +183,7 @@ def strip_accents(s):
 read_date = amcat.tools.dateparsing.read_date
 
 def to_datetime(date):
-    """Convert datetime.date object to datetime.datetime"""
+    """Convert datetime.date object to datetime.datetime or truncate datetime.datetime to a whole day"""
     return datetime.datetime(year=date.year, month=date.month, day=date.day)
 
 

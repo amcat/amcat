@@ -118,9 +118,10 @@
                 </div>
                 <br/>
                 <div class="row mediums">
-                    <div class="col-md-3"><label>Media</label></div>
+                    <div class="col-md-3"><label>Filters</label></div>
                     <div class="col-md-9">
-                        {{ form.mediums }}
+                        <textarea id="id_filters" name="filters"
+                                  placeholder='{"field": "value",...}, JSON only (temporarily). Also this is case sensitive.'></textarea>
                     </div>
 
                     <script>

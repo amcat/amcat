@@ -1,10 +1,39 @@
 import datetime
 import unittest
+from contextlib import contextmanager
 
-from amcat.models import Language
+from amcat.models import Language, ArticleSet
 from amcat.scripts.forms.selection import DAY_DELTA, SelectionForm
 from amcat.tools import amcattest
 from amcat.tools.toolkit import to_datetime
+
+
+@contextmanager
+def mock_datetime_now(dt):
+    """
+    Mock datetime.now and date.today so it always returns the given date.
+    """
+    import datetime
+    originaldt = datetime.datetime
+    originald = datetime.date
+
+    class MockDateTimeToday(datetime.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return dt
+
+    class MockDateToday(datetime.date):
+        @classmethod
+        def today(cls):
+            return dt.date()
+
+    try:
+        datetime.datetime = MockDateTimeToday
+        datetime.date = MockDateToday
+        yield
+    finally:
+        datetime.datetime = originaldt
+        datetime.date = originald
 
 
 class TestSelectionForm(amcattest.AmCATTestCase):
@@ -52,27 +81,79 @@ class TestSelectionForm(amcattest.AmCATTestCase):
 
     def test_date_formats(self):
         dates = ("2006-10-25", "2006/10/25", "25-10-2006", "25/10/2006")
-
         project = amcattest.create_test_project()
 
         for date in dates:
-            form = SelectionForm(data={"start_date":date}, project=project)
+            form = SelectionForm(data={"start_date": date, "datetype": "after"}, project=project)
             form.full_clean()
+            start_date, end_date = form.get_date_range()
             self.assertFormValid(form, "Date: {}".format(repr(date)))
-            self.assertEqual(datetime.date(2006, 10, 25), form.cleaned_data["start_date"].date())
+            self.assertEqual(datetime.date(2006, 10, 25), start_date.date())
 
         for date in dates:
-            form = SelectionForm(data={"on_date":date, "datetype": "on"}, project=project)
+            form = SelectionForm(data={"on_date": date, "datetype": "on"}, project=project)
             form.full_clean()
+            start_date, end_date = form.get_date_range()
             self.assertFormValid(form, "Date: {}".format(repr(date)))
-            self.assertEqual(datetime.date(2006, 10, 25), form.cleaned_data["start_date"].date())
-            self.assertEqual(datetime.date(2006, 10, 25), form.cleaned_data["end_date"].date())
+            self.assertEqual(datetime.date(2006, 10, 25), start_date.date())
+            self.assertEqual(datetime.date(2006, 10, 25), end_date.date())
 
         for date in dates:
-            form = SelectionForm(data={"end_date":date}, project=project)
+            form = SelectionForm(data={"end_date": date, "datetype": "before"}, project=project)
             form.full_clean()
+            start_date, end_date = form.get_date_range()
             self.assertFormValid(form, "Date: {}".format(repr(date)))
-            self.assertEqual(datetime.date(2006, 10, 25), form.cleaned_data["end_date"].date())
+            self.assertEqual(datetime.date(2006, 10, 25), end_date.date())
+
+    def test_relative_date(self):
+        aset1 = amcattest.create_test_set(2)
+        aset2 = amcattest.create_test_set(2, project=aset1.project)
+        project = aset1.project
+
+        now = datetime.datetime(2012, 12, 22)
+        then = datetime.datetime(2012, 10, 22)
+        seconds = (now - then).total_seconds()
+
+        with mock_datetime_now(now):
+            form = SelectionForm(project=project,
+                                 articlesets=ArticleSet.objects.filter(id__in=[aset1.id, aset2.id]),
+                                 data={"relative_date": -seconds, "datetype": "relative"})
+            form.full_clean()
+            self.assertFormValid(form, "Invalid form.")
+            start_date, end_date = form.get_date_range()
+
+        self.assertEqual(then, start_date)
+        self.assertEqual(now, end_date)
+
+    def test_relative_date_hash(self):
+        aset1 = amcattest.create_test_set(2)
+        aset2 = amcattest.create_test_set(2, project=aset1.project)
+        project = aset1.project
+        delta = datetime.timedelta(-9).total_seconds()
+
+        def _get_form():
+            _, _, form = self.get_form(
+                project=project,
+                articlesets=[aset1.id, aset2.id],
+                relative_date=delta
+            )
+            return form
+
+        hash1 = _get_form().get_hash()
+
+        with mock_datetime_now(datetime.datetime.now() + datetime.timedelta(1)):
+            hash2 = _get_form().get_hash()
+
+        self.assertNotEqual(hash1, hash2)
+
+        # also test the mock function just to be sure.
+        with mock_datetime_now(datetime.datetime.now()):
+            hash3 = _get_form().get_hash()
+            self.assertEqual(datetime.datetime.__name__, "MockDateTimeToday")
+        self.assertNotEqual(datetime.datetime.__name__, "MockDateTimeToday")
+
+        self.assertEqual(hash1, hash3)
+
 
     def assertFormValid(self, form, msg):
         if not form.is_valid():
@@ -102,7 +183,7 @@ class TestSelectionForm(amcattest.AmCATTestCase):
         """Test if fields are defined in correct order (imported for
         *_clean methods on form."""
         orders = (
-            ("start_date", "end_date", "datetype", "on_date"),
+            ("start_date", "end_date", "on_date", "relative_date", "datetype"),
             ("include_all", "articlesets", "query"),
             ("codebook_replacement_language", "codebook_label_language", "codebook"),
             ("articlesets", "article_ids")
@@ -119,11 +200,10 @@ class TestSelectionForm(amcattest.AmCATTestCase):
 
         self.assertTrue(form.is_valid())
 
-        start_date = form.cleaned_data["start_date"]
-        end_date = form.cleaned_data["end_date"]
+        start_date, end_date = form.get_date_range()
 
-        self.assertEquals(form.cleaned_data["datetype"], "between")
-        self.assertEquals(form.cleaned_data["start_date"], to_datetime(now))
+        self.assertEquals(form.cleaned_data["datetype"], "on")
+        self.assertEquals(start_date, to_datetime(now))
         self.assertEquals(end_date - start_date, DAY_DELTA)
         self.assertTrue(end_date != start_date)
 

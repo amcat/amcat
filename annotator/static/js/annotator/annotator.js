@@ -57,8 +57,9 @@ define([
     const self = {};
     annotator = self;
 
-    const logger = {
-        log: function (data) {
+
+    const logger = (function () {
+        function genericLog(logFn, ...args) {
             const date = new Date();
             const datetime = date.toUTCString().split(" GMT")[0];
 
@@ -70,10 +71,25 @@ define([
             }
 
             let currentDate = `[${datetime}:${millis}]`;
-            console.log(currentDate, data);
+            logFn(currentDate, ...args);
         }
-    };
 
+
+        function log(...args) {
+            genericLog((..._args) => console.log(..._args), ...args);
+        }
+
+        function warn(...args) {
+            genericLog((..._args) => console.warn(..._args), ...args);
+        }
+
+        function error(...args) {
+            genericLog((..._args) => console.error(..._args), ...args);
+        }
+
+        return {log, warn, error}
+
+    })();
 
 
     /******** STATE & CONSTANTS *******/

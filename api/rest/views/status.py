@@ -87,5 +87,7 @@ def git_status():
         "last_commit": {
             "summary": repo.head.commit.summary,
             "committed_date": date2iso(repo.head.commit.committed_date),
-            "commtter": str(repo.head.commit.committer)}}
-        
+            "commtter": str(repo.head.commit.committer),
+            "sha": repo.head.commit.hexsha[:7],
+        }
+    }

@@ -10,21 +10,26 @@
             <option value="after">After</option>
             <option value="between">Between</option>
             <option value="before">Before</option>
+            <option value="relative">Relative</option>
         </select>
         <span class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
         title="When chosing 'between', 'after' or 'before', the given 'start' date is included, the 'end' date is not."></span>
 
     </div>
-    <input disabled name="on_date" placeholder="On" class="input-sm form-control" type="text"/>
+    <input disabled name="on_date" placeholder="On" class="input-sm form-control" type="text" data-show-for="on"/>
 
     <div data-min="{{ statistics.start_date|date:'c' }}" data-max="{{ statistics.end_date|date:'c' }}" class="input-daterange input-group">
-        <input disabled name="start_date" placeholder="Start" type="text" class="input-sm form-control" />
-        <input disabled name="end_date" placeholder="End" type="text" class="input-sm form-control"/>
+        <input disabled name="start_date" placeholder="Start" type="text" class="input-sm form-control" data-show-for="after between"/>
+        <input disabled name="end_date" placeholder="End" type="text" class="input-sm form-control" data-show-for="before between"/>
     </div>
 
-    <div class="formatting-help">
+    <div class="formatting-help hidden" data-show-for="on after between before">
         For example: 20-01-1993
     </div>
+
+    <input type="hidden" name="relative_date" id="id_relative_date" data-show-for="relative">
+    <input id="id_relative_date_fake" disabled placeholder="eg. '4 days'" type="text" class="input-sm form-control"
+           data-show-for="relative" pattern="\d+ *(second|minute|hour|day|week|month|year)s?\s*" title="eg. '4 days', '1 month', '4 weeks', ..."/>
 </div>
 
 <script>

@@ -21,11 +21,11 @@
 var API = null;
 define([
     "jquery", "query/multiselect-defaults", "query/utils/serialize",
-    "query/renderers", "query/utils/poll", "query/api", "pnotify",
+    "query/renderers", "query/utils/poll", "query/api", "pnotify", "moment",
     "pnotify.nonblock", "amcat/amcat.datatables",
     "query/utils/format", "jquery.hotkeys", "jquery.depends", "bootstrap",
     "bootstrap-multiselect", "bootstrap-tooltip", "jquery.scrollTo"
-    ], function($, MULTISELECT_DEFAULTS, serializeForm, renderers, Poll, api, PNotify){
+    ], function($, MULTISELECT_DEFAULTS, serializeForm, renderers, Poll, api, PNotify, moment){
     // TODO: Make it prettier:
     $.fn.datepicker.defaults.format = "yyyy-mm-dd";
 
@@ -48,8 +48,8 @@ define([
     var SAVED_QUERY_API_URL = "/api/v4/projects/{project_id}/querys/{query_id}/";
     var CODEBOOK_LANGUAGE_API_URL = "/api/v4/projects/{project_id}/codebooks/{codebook_id}/languages/";
     var SELECTION_FORM_FIELDS = [
-        "include_all", "articlesets", "mediums", "article_ids",
-        "start_date", "end_date", "datetype", "on_date",
+        "include_all", "articlesets", "filters", "article_ids",
+        "start_date", "end_date", "datetype", "on_date", "relative_date",
         "codebook_replacement_language", "codebook_label_language",
         "codebook", "query", "download", "codingjobs",
         "codingschemafield_1", "codingschemafield_value_1", "codingschemafield_include_descendants_1",
@@ -88,7 +88,8 @@ define([
     };
 
     var datetype_input = $("#id_datetype");
-    var date_inputs = $("#dates").find("input");
+    var date_inputs = $("#dates").find("input, select:not(#id_datetype)");
+    var relative_date_input = $("#id_relative_date_fake");
     var scripts_container = $("#scripts");
     var script_form = $("#script-form");
     var loading_dialog = $("#loading-dialog");
@@ -648,16 +649,24 @@ define([
 
 
     self.datetype_changed = function(){
-        date_inputs.prop("disabled", true).addClass("hidden");
-        $.each(dates_enabling[datetype_input.val()], function(i, selector){
-            $("#dates").find("input[name=" + selector + "]").prop("disabled", false).removeClass("hidden");
-        });
+        let dates = $("#dates");
+        date_inputs.prop("disabled", true);
+        dates.find("[data-show-for]").addClass("hidden");
+        dates.find(`[data-show-for~=${datetype_input.val()}]`).prop("disabled", false).removeClass("hidden");
+    };
 
-        if (datetype_input.val() == "all"){
-            $("#dates").find(".formatting-help").hide();
-        } else {
-            $("#dates").find(".formatting-help").show();
-        }
+    self.relative_date_changed = function(e){
+        if(!e.target.reportValidity()) return;
+
+        let val = this.value.trim();
+        let now = moment();
+        let diff = parseInt(val);
+        let value_parts = val.split(/\d/);
+        let unit = value_parts[value_parts.length - 1].trim();
+        let then = now.clone().subtract(diff, unit);
+        let value = now - then;
+        if(value <= 0) return;
+        $("#id_relative_date").val(-value / 1000);
     };
 
     var post_script_loaded = {
@@ -1034,6 +1043,11 @@ define([
             .trigger("change")
             
             .multiselect("rebuild");
+
+        relative_date_input
+            .on('input', (e) => {e.target.reportValidity()})
+            .on('change', self.relative_date_changed)
+            .trigger("change")
     };
 
     self.init_scripts = function(){
