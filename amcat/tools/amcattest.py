@@ -155,7 +155,7 @@ def _parse_date(s: str):
     return date
 
 
-def create_test_article(create=True, articleset=None, deduplicate=True, properties=None, **kargs):
+def create_test_article(create=True, articleset=None, deduplicate=True, properties=None, project=None, **kargs):
     """Create a test article"""
     from amcat.models.article import Article
 
@@ -164,7 +164,8 @@ def create_test_article(create=True, articleset=None, deduplicate=True, properti
     date = kargs.pop("date", datetime.datetime.now())
     url = kargs.pop("url", "http://example.com")
     text = kargs.pop("text", "Lorum Ipsum: {}".format(_get_next_id()))
-    project = kargs.pop("project", articleset.project if articleset is not None else create_test_project())
+    if project is None:
+        project = articleset.project if articleset is not None else create_test_project()
     parent_hash = kargs.pop("parent_hash", None)
     hash = kargs.pop("hash", None)
 
