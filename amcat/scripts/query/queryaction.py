@@ -169,7 +169,7 @@ class QueryAction(object):
     ignore_cache_fields = ("output_type",)
     monitor_steps = None
 
-    def __init__(self, user, project, api_host, articlesets, codingjobs=None, data=None):
+    def __init__(self, user, project, articlesets, codingjobs=None, data=None, api_host=None):
         """
         @type project: amcat.models.Project
         @type articlesets: django.db.QuerySet
