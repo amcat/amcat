@@ -25,6 +25,7 @@ from django.http import QueryDict
 class TestArticleListAction(amcattest.AmCATTestCase):
     def setUp(self):
         self.project = amcattest.create_test_project()
+        self.articleset = amcattest.create_test_set(4, project=self.project)
 
     def get_query_action(self, query="text/html"):
         return ArticleListAction(
