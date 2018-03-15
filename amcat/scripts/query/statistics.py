@@ -61,7 +61,7 @@ class StatisticsAction(QueryAction):
     )
 
     def run(self, form):
-        selection = SelectionSearch(form)
+        selection = SelectionSearch.get_instance(form)
         queries = selection.get_queries()
         articlesets = form.cleaned_data["articlesets"]
         codingjobs = form.cleaned_data["codingjobs"]

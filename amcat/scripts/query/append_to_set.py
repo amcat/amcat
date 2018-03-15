@@ -64,7 +64,7 @@ class AppendToSetAction(QueryAction):
     
     def run(self, form):
         self.monitor.update(10, "Executing query..")
-        article_ids = list(SelectionSearch(form).get_article_ids())
+        article_ids = list(SelectionSearch.get_instance(form).get_article_ids())
         _check_read_access(self.user, article_ids)
         self.monitor.update(60, "Saving to set..")
         form.cleaned_data["articleset"].add_articles(article_ids)

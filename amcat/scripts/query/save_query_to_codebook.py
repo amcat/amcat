@@ -62,7 +62,7 @@ class SaveQueryToCodebookAction(QueryAction):
         # Get queries and their labels
         indicator_language = form.cleaned_data["indicator_language"]
         roots = {r.label: r for r in codebook.get_roots()}
-        queries = {q.label: q for q in SelectionSearch(form).get_queries()}
+        queries = {q.label: q for q in SelectionSearch.get_instance(form).get_queries()}
 
         updated, new = 0, 0
         for label, query in queries.items():

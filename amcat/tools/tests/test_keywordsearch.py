@@ -27,7 +27,7 @@ class SelectionSearchTestCase(amcattest.AmCATTestCase):
         self.articleset.refresh_index()
 
     @use_elastic
-    def _run_query(self, form_data, expected_indices=None, expected_count=None):
+    def _run_query(self, form_data, expected_indices=None, expected_count=None, msg=None):
         self._setUp()
         sets = ArticleSet.objects.filter(pk=self.articleset.pk)
         form = SelectionForm(articlesets=sets, project=self.articleset.project, data=form_data)
@@ -39,10 +39,11 @@ class SelectionSearchTestCase(amcattest.AmCATTestCase):
             article_ids = search.get_article_ids()
             articles = Article.objects.filter(id__in=article_ids)
             expected = [self.articles[i] for i in expected_indices]
-            self.assertSetEqual(set(articles), set(expected))
+            self.assertSetEqual(set(articles), set(expected), msg=msg)
 
         if expected_count:
-            self.assertEqual(search.get_count(), expected_count)
+            self.assertEqual(search.get_count(), expected_count, msg=msg)
+
 
 class TestSelectionSearchQuery(SelectionSearchTestCase):
     articles = [
@@ -110,11 +111,15 @@ class TestSelectionSearchFilters(SelectionSearchTestCase):
     ]
 
     def test_filter(self):
-        self._run_query({"filters": '{"author": ["Plutarch"]}'}, [0, 2])
+        self._run_query({"filters": '{"author": ["Suetonius"]}'}, [1], msg="Filters must be applied.")
+
+        self._run_query({"filters": '{"author": ["Plutarch"]}'}, [0, 2],
+                        msg="The whole keyword must match (no partial matches).")
+
         self._run_query({"filters": '{"edition_int": [3]}'}, [5, 6])
 
     def test_multiple_filters(self):
-        self._run_query({"filters": '{"edition_int": [3], "owner": ["Socrates"]}'}, [6])
+        self._run_query({"filters": '{"edition_int": [3], "owner": ["Socrates"]}'}, [6], msg="All filters must match.")
         self._run_query({"filters": '{"edition_int": [1, 3]}'}, [4, 5, 6])
 
 

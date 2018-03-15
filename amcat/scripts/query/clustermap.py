@@ -68,7 +68,7 @@ class ClusterMapAction(QueryAction):
     )
 
     def run(self, form):
-        selection = SelectionSearch(form)
+        selection = SelectionSearch.get_instance(form)
         queries = selection.get_article_ids_per_query()
 
         if form.cleaned_data["output_type"] == "application/json+clustermap":

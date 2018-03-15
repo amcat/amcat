@@ -69,7 +69,7 @@ class SaveAsSetAction(QueryAction):
         #provenance = form.cleaned_data["provenance"]
         project = form.cleaned_data["project"]
         self.monitor.update(10, "Executing query..")
-        article_ids = list(SelectionSearch(form).get_article_ids())
+        article_ids = list(SelectionSearch.get_instance(form).get_article_ids())
         _check_read_access(self.user, article_ids)
         self.monitor.update(60, "Saving to set..")
         aset = ArticleSet.objects.create(name=name, project=project)

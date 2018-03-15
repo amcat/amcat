@@ -96,7 +96,7 @@ class ArticleListAction(QueryAction):
     def run(self, form):
         assert isinstance(self.data, QueryDict), "Class should have been instantiated with a django QueryDict as 'data'"
 
-        selection = SelectionSearch(form)
+        selection = SelectionSearch.get_instance(form)
         data = {API_KEYWORD_MAP.get(k, k): v for k, v in self.data.lists()}
         data["q"] = ["{}#{}".format(q.label, q.query) for q in selection.get_queries()]
         data["ids"] = data.get("ids", selection.get_filters().get("ids", []))

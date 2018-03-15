@@ -131,9 +131,13 @@ class Filter:
     def get_filter_kwargs(self):
         t = field_type(self.field)
         field = self.field
+
+        # filter on .raw to match the whole keyword, rather than phrases.
+        # e.g. {"medium": "Die Presse"} must not include {"medium": "Die Presse am Sonntag"}
         if t == "default":
             field = "{}.raw".format(self.field)
-        yield (field, self.value),
+
+        yield field, self.value
 
     @classmethod
     def clean(cls, field, value, field_types):

@@ -54,7 +54,7 @@ class AssignAsCodingjobAction(QueryAction):
         job_size = form.cleaned_data["job_size"]
 
         self.monitor.update(10, "Executing query..")
-        article_ids = list(SelectionSearch(form).get_article_ids())
+        article_ids = list(SelectionSearch.get_instance(form).get_article_ids())
 
         cj = CodingJob()
         cj.project = self.project

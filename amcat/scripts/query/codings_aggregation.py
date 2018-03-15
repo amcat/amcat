@@ -17,27 +17,26 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-import logging
 import json
+import logging
 import re
-from itertools import chain
 
-from amcat.scripts.query.queryaction import NotInCacheError
 from django.core.exceptions import ValidationError
-from django.forms import ChoiceField, BooleanField, ModelChoiceField
+from django.forms import ChoiceField, BooleanField
 
-from .aggregation import AggregationEncoder, aggregation_to_matrix, aggregation_to_csv
-from amcat.models import CodedArticle
-from amcat.models import CodingSchemaField, Code, CodingValue, Coding
 from amcat.models import ArticleSet, CodingJob
-from amcat.models.coding.codingschemafield import  FIELDTYPE_IDS
+from amcat.models import CodingSchemaField, Code, Coding
+from amcat.models.coding.codingschemafield import FIELDTYPE_IDS
 from amcat.scripts.forms.selection import get_all_schemafields
 from amcat.scripts.query import QueryAction, QueryActionForm
-from amcat.scripts.query.aggregation import AGGREGATION_FIELDS, get_aggregation_choices, get_used_properties_by_articlesets
-from amcat.tools import aggregate_orm, aggregate_es
+from amcat.scripts.query.aggregation import AGGREGATION_FIELDS, get_aggregation_choices, \
+    get_used_properties_by_articlesets
+from amcat.scripts.query.queryaction import NotInCacheError
+from amcat.tools import aggregate_orm
 from amcat.tools.aggregate_orm import ORMAggregate
 from amcat.tools.aggregate_orm.categories import POSTGRES_DATE_TRUNC_VALUES
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
+from .aggregation import AggregationEncoder, aggregation_to_matrix, aggregation_to_csv
 
 log = logging.getLogger(__name__)
 
@@ -190,23 +189,6 @@ def to_sortable_tuple(key):
     return key
 
 
-def get_code_filter(codebook, codes, include_descendants):
-    code_ids = set(code.id for code in codes)
-
-    for code_id in code_ids:
-        yield code_id
-
-    if include_descendants:
-        codebook.cache()
-        flat_tree = chain.from_iterable(t.get_descendants() for t in codebook.get_tree())
-        flat_tree = chain(flat_tree, codebook.get_tree())
-        tree_items = [t for t in flat_tree if t.code_id in code_ids]
-
-        for tree_item in tree_items:
-            for descendant in tree_item.get_descendants():
-                yield descendant.code_id
-
-
 class CodingAggregationAction(QueryAction):
     output_types = (
         ("text/json+aggregation+barplot", "Bar plot"),
@@ -221,7 +203,7 @@ class CodingAggregationAction(QueryAction):
 
     def run(self, form):
         self.monitor.update(1, "Executing query..")
-        selection = SelectionSearch(form)
+        selection = SelectionSearch.get_instance(form)
         try:
             aggregation, primary, secondary, categories, values = self.get_cache()
         except NotInCacheError:
@@ -235,30 +217,10 @@ class CodingAggregationAction(QueryAction):
             value1 = form.cleaned_data['value1']
             value2 = form.cleaned_data['value2']
 
-            article_ids = selection.get_article_ids()
+            article_ids = list(selection.get_article_ids())
 
-            # This should probably happen in SelectionForm?
-            coded_articles = CodedArticle.objects.all()
-            coded_articles = coded_articles.filter(article__id__in=article_ids)
-            coded_articles = coded_articles.filter(codingjob__id__in=codingjobs)
-
-            coded_article_ids = set(coded_articles.values_list("id", flat=True))
-            for field_name in ("1", "2", "3"):
-                if not coded_article_ids:
-                    break
-
-                schemafield = form.cleaned_data["codingschemafield_{}".format(field_name)]
-                schemafield_values = form.cleaned_data["codingschemafield_value_{}".format(field_name)]
-                schemafield_include_descendants = form.cleaned_data["codingschemafield_include_descendants_{}".format(field_name)]
-
-                if schemafield and  schemafield_values:
-                    code_ids = get_code_filter(schemafield.codebook, schemafield_values, schemafield_include_descendants)
-                    coding_values = CodingValue.objects.filter(coding__coded_article__id__in=coded_article_ids)
-                    coding_values = coding_values.filter(field__id=schemafield.id)
-                    coding_values = coding_values.filter(intval__in=code_ids)
-                    coded_article_ids &= set(coding_values.values_list("coding__coded_article__id", flat=True))
-
-            codings = Coding.objects.filter(coded_article__id__in=coded_article_ids)
+            codings = Coding.objects.filter(coded_article__article__id__in=article_ids,
+                                            coded_article__codingjob__id__in=selection.data.codingjobs)
 
             terms = selection.get_article_ids_per_query()
             orm_aggregate = ORMAggregate(codings, flat=False, terms=terms)

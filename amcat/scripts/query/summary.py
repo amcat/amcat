@@ -107,7 +107,7 @@ class SummaryAction(QueryAction):
         show_aggregation = form.cleaned_data['aggregations']
 
         with Timer() as timer:
-            selection = SelectionSearch(form)
+            selection = SelectionSearch.get_instance(form)
             self.monitor.update(message="Executing query..")
             narticles = selection.get_count()
             self.monitor.update(message="Fetching articles..".format(**locals()))

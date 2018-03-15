@@ -25,16 +25,16 @@ move it to 'queryparser'?
 import logging
 import re
 from itertools import chain
+from typing import Tuple, Iterable, Any, Set, Optional
 
-from dateutil.relativedelta import relativedelta
 from django.core.exceptions import ValidationError
 
-from amcat.models import Label, ArticleSet, CodingJob, Code
+from amcat.models import Label, ArticleSet, CodingJob, Code, CodingValue, CodedArticle
+from amcat.tools import queryparser
 from amcat.tools.aggregate_es import aggregate, TermCategory
 from amcat.tools.amcates import ES
 from amcat.tools.caching import cached
 from amcat.tools.toolkit import strip_accents
-from amcat.tools import queryparser
 
 REFERENCE_RE = re.compile(r"<(?P<reference>.*?)(?P<recursive>\+?)>")
 
@@ -59,6 +59,7 @@ class SelectionData:
     def __init__(self, form):
         self.__dict__.update(form.cleaned_data)
         self.start_date, self.end_date = form.get_date_range()
+
 
 def group_by_first_value(aggr):
     current_group = None
@@ -94,7 +95,10 @@ class SelectionSearch:
         self.form = form
         self.data = SelectionData(form)
 
-    def _get_filters(self):
+    def _get_set_filters(self):
+        yield "sets", [a.id for a in self.data.articlesets]
+
+    def _get_filters(self) -> Iterable[Tuple[str, Any]]:
         """
         Get filters for dates,  articlesets and articles for given form. Yields
         iterables of tuples containing (filter_name, filter_value).
@@ -103,16 +107,14 @@ class SelectionSearch:
         """
 
         if self.data.start_date is not None:
-            yield ("start_date", self.data.start_date),
+            yield "start_date", self.data.start_date
 
         if self.data.end_date is not None:
-            yield ("end_date", self.data.end_date),
+            yield "end_date", self.data.end_date
 
-        if self.data.codingjobs:
-            yield (("sets", [j.articleset.id for j in self.data.codingjobs]),)
-        else:
-            yield (("sets", [a.id for a in self.data.articlesets]),)
-        yield (("ids", self.data.article_ids or None),)
+        yield "ids", self.data.article_ids or None
+
+        yield from self._get_set_filters()
 
         if self.data.filters:
             for filter in self.data.filters:
@@ -122,7 +124,7 @@ class SelectionSearch:
     def get_filters(self):
         """Returns dict with filter -> value, which can be passed to elastic"""
         # Remove all filters which value is None
-        return {k: v for k, v in chain(*self._get_filters()) if v is not None}
+        return {k: v for k, v in self._get_filters() if v is not None}
 
     @cached
     def get_query(self):
@@ -198,6 +200,74 @@ class SelectionSearch:
     def get_articles(self, size=None, offset=0, fields=()):
         return ES().query(self.get_query(), self.get_filters(), True, size=size, from_=offset, _source=fields)
 
+    @staticmethod
+    def get_instance(form):
+        """
+        Gets a SelectionSearch instance depending on the selection data.
+        If codingjobs are given, a CodingJobSelectionSearch is returned.
+
+        :param form: A SelectionForm
+        :return: An instance of SelectionSearch that is appropriate for the given SelectionForm.
+        """
+        data = SelectionData(form)
+        if data.codingjobs:
+            return CodingJobSelectionSearch(form)
+        if data.articlesets:
+            return SelectionSearch(form)
+
+        raise Exception("Invalid selection: no articlesets or codingjobs given.")
+
+
+class CodingJobSelectionSearch(SelectionSearch):
+
+    def get_all_sets(self):
+        return (j.articleset.id for j in self.data.codingjobs)
+
+    def _get_set_filters(self):
+        yield "sets", list(self.get_all_sets())
+
+    def _get_filters(self):
+        ids = []
+        for key, filter in super()._get_filters():
+            if key == "ids":
+                ids = set(filter or ())
+                continue
+            yield key, filter
+
+        coding_filter_ids = self._get_coding_filters()
+        if coding_filter_ids is None and ids:
+            yield "ids", ids
+        elif ids:
+            yield "ids", list(ids & coding_filter_ids)
+        elif coding_filter_ids is not None:
+            yield "ids", list(coding_filter_ids)
+
+    def _get_coding_filters(self) -> Optional[Set[int]]:
+        form = self.form
+        if not any(form.cleaned_data.get('codingschemafield_{}'.format(id)) for id in (1, 2, 3)):
+            return None
+
+        article_ids = set(ES().query_ids(filters={"sets": list(self.get_all_sets())}))
+        coded_articles = CodedArticle.objects.filter(article__id__in=article_ids).values_list('id', 'article__id')
+        id_mapping = dict(coded_articles)
+        coded_article_ids = set(id_mapping.keys())
+
+        for field_name in ("1", "2", "3"):
+                if not coded_article_ids:
+                    break
+
+                schemafield = form.cleaned_data["codingschemafield_{}".format(field_name)]
+                schemafield_values = form.cleaned_data["codingschemafield_value_{}".format(field_name)]
+                schemafield_include_descendants = form.cleaned_data["codingschemafield_include_descendants_{}".format(field_name)]
+
+                if schemafield and schemafield_values:
+                    code_ids = list(get_code_filter(schemafield.codebook, schemafield_values, schemafield_include_descendants))
+                    coding_values = CodingValue.objects.filter(coding__coded_article__id__in=coded_article_ids)
+                    coding_values = coding_values.filter(field=schemafield)
+                    coding_values = coding_values.filter(intval__in=code_ids)
+                    coded_article_ids &= set(coding_values.values_list("coding__coded_article__id", flat=True))
+
+        return {id_mapping[k] for k in coded_article_ids}
 
 class SearchQuery(object):
     """
@@ -269,33 +339,6 @@ class QueryValidationError(ValidationError):
             self.params = params
             self.message = message
             self.error_list = [self]
-
-
-def get_date_filters(start_date, end_date, on_date, datetype):
-    """
-    Yield tuples of (filter_field, filter_value) for given start_date, end_date,
-    on_date and datetype, which can be passed to elastic.
-
-    @type start_date: datetime.date
-    @type end_date: datetime.date
-    @type on_date: datetime.date
-    @type datetype: str
-    """
-    if datetype == 'on':
-        yield ('start_date', on_date.isoformat())
-        yield ('end_date', (on_date + relativedelta(days=1)).isoformat())
-
-    elif datetype == 'between':
-        yield 'start_date', start_date
-        yield 'end_date', end_date
-
-    elif datetype == 'after':
-        yield 'start_date', start_date
-
-    elif datetype == 'before':
-        yield 'end_date', end_date
-
-    # No filter given.
 
 
 def _clean(s):
@@ -422,3 +465,20 @@ def resolve_queries(queries, codebook=None, label_language=None, replacement_lan
 
     for query in queries:
         yield resolve_query(query, _queries, codebook, labels, replacement_language)
+
+
+def get_code_filter(codebook, codes, include_descendants):
+    code_ids = set(code.id for code in codes)
+
+    for code_id in code_ids:
+        yield code_id
+
+    if include_descendants:
+        codebook.cache()
+        flat_tree = chain.from_iterable(t.get_descendants() for t in codebook.get_tree())
+        flat_tree = chain(flat_tree, codebook.get_tree())
+        tree_items = [t for t in flat_tree if t.code_id in code_ids]
+
+        for tree_item in tree_items:
+            for descendant in tree_item.get_descendants():
+                yield descendant.code_id

@@ -82,7 +82,7 @@ class AssociationAction(QueryAction):
 
 
     def get_association(self, form):
-        selection = SelectionSearch(form)
+        selection = SelectionSearch.get_instance(form)
         filters = selection.get_filters()
         queries = selection.get_queries()
 
