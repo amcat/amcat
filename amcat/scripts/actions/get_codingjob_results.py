@@ -480,8 +480,10 @@ class GetCodingJobResults(Script):
             if len(codingjobs) > 3:
                 codingjobs = codingjobs[:3] + ["etc"]
 
+            jobnames = [j.name.encode("ascii", "replace") for j in codingjobs]
+
             filename = "Codingjobs {jobs} {now}.{ext}".format(
-                jobs=",".join(str(j) for j in codingjobs),
+                jobs=",".join(jobnames),
                 now=datetime.datetime.now(), ext=format.label
             )
 
