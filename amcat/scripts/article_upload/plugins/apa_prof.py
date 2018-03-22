@@ -102,6 +102,7 @@ RE_UNICHAR = re.compile(r"(?P<match>\\u(?P<ord>[0-9]+)\?)", re.UNICODE)
 # any non-word sequence.
 RE_NONWORD = re.compile(r"[^\w]+")
 
+DEFAULT_FORMAT = "{}_NOT_GIVEN"
 
 ### FIXING AND PARSING ###
 def _fix_fs20(s):
@@ -118,6 +119,8 @@ def _fix_fs20(s):
 def fix_fs20(s):
     return " ".join(_fix_fs20(s))
 
+def as_escape(ch):
+    return "\\u{:04x}?".format(ord(ch))
 
 def fix_rtf(s):
     """
@@ -135,8 +138,8 @@ def fix_rtf(s):
         separator = "\\sect"
     s = fix_fs20(s.replace(separator, '\\page'))
 
+    s = "".join(as_escape(ch) if ord(ch) >= 128 else ch for ch in s)
     s = RE_UNICHAR.sub(lambda m: "\\" + m.group(), s)
-
     return "".join(UNDECODED if ord(b) >= 128 else b for b in s)
 
 
@@ -173,6 +176,9 @@ def compartmentalize(rtf):
     """
     boundary = "\n\\par\n"
     parts = rtf.split(boundary)
+    if len(parts) < 3:  # at least 1 head, 1+ middle, 1 tail parts are needed
+        return rtf
+
     middle = "\n}}{}{{\n".format(boundary).join(parts[1:-1])
 
     return "{head}{boundary}{{{body}}}{boundary}{tail}".format(head=parts[0], boundary=boundary, body=middle,
@@ -182,20 +188,21 @@ def compartmentalize(rtf):
 def to_html(original_rtf, fixed_rtf, fallback=False):
     html = None
 
+    print(len(fixed_rtf))
     if not fallback:
         fixed_rtf2 = compartmentalize(fixed_rtf)
     else:
         fixed_rtf2 = fixed_rtf
+    print(len(fixed_rtf2))
     with NamedTemporaryFile() as rtf:
         rtf.write(fixed_rtf2.encode("ascii"))
         rtf.flush()
         html = str(unrtf(rtf.name))
-
+    print(len(html))
     for u in get_unencoded(original_rtf):
         html = html.replace(UNDECODED, u, 1)
     # Convert previously escaped RTF unicode escape sequences to HTML, \u0000? -> &#0000;
     html = RE_UNICHAR.sub(lambda m: "&#{};".format(m.group("ord")), html)
-
     return html.replace("&gt;", ">").replace("&lt;", "<")
 
 
@@ -376,19 +383,24 @@ class APA(UploadScript):
 
     def parse_file(self, file: UploadedFile, _) -> Iterable[Article]:
         data = file.read()
+        once = True
         try:
             for para in self.split_file(data):
-                yield self.parse_document(para)
+                doc = self.parse_document(para)
+                once = False
+                yield doc
         except ApaError:
+            log.warning("APA parse attempt failed.")
+            if not once:
+                raise
             # TODO: test if fallback is actually necessary.
-            log.warning("APA parse attempt failed. Using fallback method.")
+            log.warning("Using fallback method.")
             for para in self.split_file(data, fallback=True):
                 yield self.parse_document(para)
 
     def parse_document(self, paragraphs) -> Article:
         metadata, text = parse_page(paragraphs)
-        print(metadata)
-        return Article(**self.map_article(dict(metadata, text=text)))
+        return Article(**self.map_article(dict(metadata, text=text), default={"text": "NO_TEXT", "title": "NO_TITLE"}))
 
     def split_file(self, data, fallback=False):
         original_rtf, fixed_rtf = data, fix_rtf(data)
