@@ -352,6 +352,14 @@ class CodingColumn(table3.ObjectColumn):
                 return self.cache[value]
 
 
+class ArticleMetaColumn(table3.ObjectColumn):
+    def __init__(self, field):
+        self.field = field
+        super().__init__(field)
+
+    def get_cell(self, row):
+        return row.article.get_property(self.field)
+    
 class MetaColumn(table3.ObjectColumn):
     def __init__(self, field):
         self.field = field
@@ -448,6 +456,9 @@ class GetCodingJobResults(Script):
         self.progress_monitor.update(5, "Preparing columns")
 
         # Meta field columns
+        for articlemeta in self.options.get("meta_article_fields"):
+            table.add_column(ArticleMetaColumn(articlemeta))
+
         for field in _METAFIELDS:
             if self.options.get("meta_{field.object}_{field.attr}".format(**locals())):
                 if field.object == "subsentence":
