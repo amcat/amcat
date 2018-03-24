@@ -130,6 +130,7 @@ class UploadForm(forms.Form):
     field_map = JSONField(validators=[validate_field_map],
                           help_text='json dict with property names (title, date, etc.) as keys, and field settings as values. '
                                     'Field settings should have the form {"type": "field"/"literal", "value": "field_name_or_literal"}')
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if 'encoding' in kwargs.get('data', {}) and kwargs['data']['encoding'] == "binary":

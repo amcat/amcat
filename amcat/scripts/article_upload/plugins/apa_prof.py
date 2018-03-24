@@ -65,7 +65,7 @@ STOP_AT = re.compile(
     r"((Gespeicherter Anhang:)|(Der gegenst\xc3\xa4ndliche Text ist eine Abschrift)|(Gespeicherte Anh\xc3\xa4nge))")
 
 # apparently new page separators can contain RTF tags
-RE_NEWPAGE = re.compile(r"__(_|(\\[A-Za-z0-9]+\s?))+__")
+RES_NEWPAGE = (re.compile(r"_(_|(\\[A-Za-z0-9]+\s?))+_"), re.compile(r"\\sect"))
 
 # 11.05.2004
 _RE_DATE = "(?P<day>\d{2})\.(?P<month>\d{2})\.(?P<year>\d{4})"
@@ -106,6 +106,8 @@ RE_UNICHAR = re.compile(r"(?P<match>\\u(?P<ord>[0-9]+)\?)", re.UNICODE)
 # any non-word sequence.
 RE_NONWORD = re.compile(r"[^\w]+")
 
+RE_WS = re.compile(r"\s+")
+
 DEFAULT_FORMAT = "{}_NOT_GIVEN"
 
 ### FIXING AND PARSING ###
@@ -137,12 +139,10 @@ def fix_rtf(s):
     @param s: bytes containing rtf
     @return: rtf bytes
     """
-    is_underscores = RE_NEWPAGE.search(s)
-    s = RE_NEWPAGE.sub("\\page", s)
-
-    if not is_underscores:
-        separator = "\\sect"
-        s.replace(separator, "\\page")
+    for re in RES_NEWPAGE:
+        if re.search(s) is None:
+            continue
+        s = re.sub("\\page", s)
 
     s = fix_fs20(s)
 
@@ -216,6 +216,8 @@ def to_html(original_rtf, fixed_rtf, fallback=False):
 
     for u in get_unencoded(original_rtf):
         html = html.replace(UNDECODED, u, 1)
+
+    html = RE_WS.sub(" ", html)
 
     # Convert previously escaped RTF unicode escape sequences to HTML, \u0000? -> &#0000;
     html = RE_UNICHAR.sub(lambda m: "&#{};".format(m.group("ord")), html)
@@ -355,7 +357,7 @@ def parse_page(doc_elements):
 
     # Clean data and get headline
     metadata["medium"] = metadata.get("medium", "APA - Unknown").strip().strip('"')
-    medium, headline = metadata["medium"], "".join(["".join(e.itertext()) for e in headline])
+    medium, headline = metadata["medium"].strip(), "".join(["".join(e.itertext()) for e in headline]).strip()
 
     if medium in headline:
         headline = headline.split("-", medium.count("-") + 1)[-1]
@@ -412,7 +414,8 @@ class APA(UploadScript):
         metadata, text = parse_page(paragraphs)
         return Article(**self.map_article(dict(metadata, text=text), default={"text": "NO_TEXT", "title": "NO_TITLE"}))
 
-    def split_file(self, data, fallback=False):
+    @classmethod
+    def split_file(cls, data, fallback=False):
         original_rtf, fixed_rtf = data, fix_rtf(data)
         doc = parse_html(to_html(original_rtf, fixed_rtf, fallback=fallback))
 
