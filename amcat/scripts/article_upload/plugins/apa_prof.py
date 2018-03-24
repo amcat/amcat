@@ -42,7 +42,7 @@ from tempfile import NamedTemporaryFile
 from typing import Iterable
 
 from django.core.files.uploadedfile import UploadedFile
-from lxml.html import fromstring
+from lxml.html import fromstring, etree
 
 import re
 import sys
@@ -50,6 +50,7 @@ import itertools
 import lxml.html
 import logging
 
+import settings
 from amcat import models
 from amcat.models import Article
 from amcat.scripts.article_upload.upload import UploadScript, ArticleField, ParseError
@@ -62,6 +63,9 @@ FS20 = "\\fs20"
 PAGE_BREAK = "page-break"
 STOP_AT = re.compile(
     r"((Gespeicherter Anhang:)|(Der gegenst\xc3\xa4ndliche Text ist eine Abschrift)|(Gespeicherte Anh\xc3\xa4nge))")
+
+# apparently new page separators can contain RTF tags
+RE_NEWPAGE = re.compile(r"__(_|(\\[A-Za-z0-9]+\s?))+__")
 
 # 11.05.2004
 _RE_DATE = "(?P<day>\d{2})\.(?P<month>\d{2})\.(?P<year>\d{4})"
@@ -120,7 +124,7 @@ def fix_fs20(s):
     return " ".join(_fix_fs20(s))
 
 def as_escape(ch):
-    return "\\u{:04x}?".format(ord(ch))
+    return "\\\\u{:04}?".format(ord(ch))
 
 def fix_rtf(s):
     """
@@ -133,14 +137,18 @@ def fix_rtf(s):
     @param s: bytes containing rtf
     @return: rtf bytes
     """
-    separator = "_" * 67
-    if s.find(separator) < 0:
-        separator = "\\sect"
-    s = fix_fs20(s.replace(separator, '\\page'))
+    is_underscores = RE_NEWPAGE.search(s)
+    s = RE_NEWPAGE.sub("\\page", s)
 
-    s = "".join(as_escape(ch) if ord(ch) >= 128 else ch for ch in s)
+    if not is_underscores:
+        separator = "\\sect"
+        s.replace(separator, "\\page")
+
+    s = fix_fs20(s)
+
     s = RE_UNICHAR.sub(lambda m: "\\" + m.group(), s)
-    return "".join(UNDECODED if ord(b) >= 128 else b for b in s)
+    s = "".join(as_escape(ch) if ord(ch) >= 128 else ch for ch in s)
+    return s
 
 
 def get_unencoded(s):
@@ -151,8 +159,14 @@ def get_unencoded(s):
 class TooManyAttributesError(BaseException):
     pass
 
+
 class ApaError(ValueError):
     pass
+
+
+class EmptyPageError(ApaError):
+    pass
+
 
 def unrtf(name):
     from subprocess import Popen, PIPE
@@ -161,6 +175,8 @@ def unrtf(name):
     except FileNotFoundError:
         raise RuntimeError("unrtf executable not found.")
     stdout, stderr = p.communicate()
+    if settings.DEBUG:
+        open("/tmp/apa_unrtf.html", "wb").write(stdout)
     if len(stderr) > 100:
         if stderr.count(b"Too many attributes") > 10:
             raise TooManyAttributesError()
@@ -383,20 +399,14 @@ class APA(UploadScript):
 
     def parse_file(self, file: UploadedFile, _) -> Iterable[Article]:
         data = file.read()
-        once = True
         try:
             for para in self.split_file(data):
-                doc = self.parse_document(para)
-                once = False
-                yield doc
-        except ApaError:
-            log.warning("APA parse attempt failed.")
-            if not once:
-                raise
-            # TODO: test if fallback is actually necessary.
-            log.warning("Using fallback method.")
-            for para in self.split_file(data, fallback=True):
                 yield self.parse_document(para)
+        except ApaError:
+            log.error("APA parse attempt failed.")
+            if settings.DEBUG:
+                log.error("The generated HTML can be found in /tmp/apa_unrtf.html")
+            raise
 
     def parse_document(self, paragraphs) -> Article:
         metadata, text = parse_page(paragraphs)
