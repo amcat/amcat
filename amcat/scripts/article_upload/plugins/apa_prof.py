@@ -204,19 +204,19 @@ def compartmentalize(rtf):
 def to_html(original_rtf, fixed_rtf, fallback=False):
     html = None
 
-    print(len(fixed_rtf))
     if not fallback:
         fixed_rtf2 = compartmentalize(fixed_rtf)
     else:
         fixed_rtf2 = fixed_rtf
-    print(len(fixed_rtf2))
+
     with NamedTemporaryFile() as rtf:
         rtf.write(fixed_rtf2.encode("ascii"))
         rtf.flush()
         html = str(unrtf(rtf.name))
-    print(len(html))
+
     for u in get_unencoded(original_rtf):
         html = html.replace(UNDECODED, u, 1)
+
     # Convert previously escaped RTF unicode escape sequences to HTML, \u0000? -> &#0000;
     html = RE_UNICHAR.sub(lambda m: "&#{};".format(m.group("ord")), html)
     return html.replace("&gt;", ">").replace("&lt;", "<")
