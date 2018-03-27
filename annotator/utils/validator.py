@@ -38,6 +38,8 @@ def evaluate_condition(condition: dict, codingContext: Mapping[CodingSchemaField
     """
     Evaluate a rule condition, given a mapping of field-value pairs.
     """
+    if condition is None:
+        return True  # The empty condition implies truth
 
     if isinstance(condition, CodingSchemaField):
         return bool(codingContext[condition])
