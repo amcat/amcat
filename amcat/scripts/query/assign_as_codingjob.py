@@ -29,8 +29,8 @@ from amcat.tools.keywordsearch import SelectionSearch
 class AssignAsCodingjobForm(SaveAsSetForm):
     job_size = forms.IntegerField(min_value=0, initial=0, help_text="Leave zero for single batch.")
     coder = forms.ModelChoiceField(User.objects.none(), required=True)
-    unitschema = forms.ModelChoiceField(CodingSchema.objects.none(), required=True)
-    articleschema = forms.ModelChoiceField(CodingSchema.objects.none(), required=True)
+    unitschema = forms.ModelChoiceField(CodingSchema.objects.none(), required=False)
+    articleschema = forms.ModelChoiceField(CodingSchema.objects.none(), required=False)
 
     def __init__(self, *args, **kwargs):
         super(AssignAsCodingjobForm, self).__init__(*args, **kwargs)

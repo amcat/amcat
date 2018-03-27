@@ -64,3 +64,7 @@ ul.articles {padding-left: 0px}
     max-width: 36em;
 }
 
+
+select.error + div .multiselect {
+    border-color: red;
+}

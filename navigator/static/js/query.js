@@ -106,9 +106,10 @@ define([
 
     self.form_invalid = function(data){
         // Add error class to all
+        let field_labels = [];
         $.each(data, function(field_name, errors){
-            $("[name=" + field_name + "]", $("#query-form"))
-                .addClass("error")
+            let field = $("[name=" + field_name + "]", $("#query-form"));
+            field.addClass("error")
                 .prop("title", errors[0])
                 .data("toggle", "tooltip")
                 .tooltip();
@@ -119,12 +120,18 @@ define([
                     ul.append($("<li>").text(error));
                 });
             }
+            let label = field_name;
+            if(field[0].labels && field[0].labels.length > 0){
+                label = field[0].labels[0].innerText;
+            }
+            field_labels.push(label);
         });
 
         loading_dialog.modal("hide");
         progress_bar.css("width", "0%");
+        let field_lis = field_labels.map(x => `<li>${x}</li>`);
         self.show_error("Invalid form. Please change the red input fields" +
-            " to contain valid values.", true)
+            ` to contain valid values. <br>Invalid fields: <ul>${field_lis.join("")}</ul>`, true)
     };
 
 
