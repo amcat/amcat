@@ -110,7 +110,7 @@ class ExportProject(Script):
         
     def _run(self, project, output):
         if os.path.exists(output):
-            logging.error("Output {output} already exists!")
+            logging.error("Output {output} already exists!".format(**locals()))
             sys.exit(1)
 
         if output.endswith(".zip"):
@@ -131,6 +131,8 @@ class ExportProject(Script):
             self.schema_ids = self.get_schema_ids()
             self.codebook_ids = self.get_codebook_ids()
 
+            self.export_project()
+            
             self.export_users()
             self.export_articlesets()
 
@@ -191,6 +193,14 @@ class ExportProject(Script):
                 yield dict(article_id=aid, sentences=sentences)
         
 
+    def export_project(self):
+        project = dict(name=self.project.name, description=self.project.description,
+                       owner=self.project.owner.email, guest_role=self.project.guest_role.label)
+        with self._output_file("project", extension="json") as f:
+            logging.info("Writing project details to {f.name}".format(**locals()))
+            json.dump(project, f)
+
+                
     def export_codingjobs(self):
         cjs = json.loads(serializers.serialize("json", CodingJob.objects.filter(project=self.project)))
         coders = dict(User.objects.filter(pk__in={cj["fields"]["coder"] for cj in cjs}).values_list("pk", "email"))
@@ -212,7 +222,7 @@ class ExportProject(Script):
     def export_users(self):
         roles = {r.user_id: r.role.label for r in self.project.projectrole_set.all()}
         cjs = CodingJob.objects.filter(project=self.project)
-        uids = set(roles) | {self.project.insert_user.pk} | {cj.coder_id for cj in cjs}
+        uids = set(roles) | {self.project.owner.pk} | {cj.coder_id for cj in cjs}
         def get_users(uids, roles):
             for u in User.objects.filter(pk__in=uids):
                 role = roles.get(u.id)
