@@ -4,6 +4,7 @@ Useful functions for interfacing with R
 
 from rpy2 import robjects, rinterface
 from rpy2.rlike.container import OrdDict
+import datetime
 
 def to_r(values):
     """
@@ -25,6 +26,14 @@ def to_r(values):
         vtype, natype = robjects.StrVector, rinterface.NA_Character
     elif isinstance(val, float):
         vtype, natype = robjects.FloatVector, rinterface.NA_Real
+    elif isinstance(val, datetime.datetime):
+        # sorry, I don't know how to do NA_Posixct, so doing this the ugly way
+        nas = [i for (i,x) in enumerate(values) if x is None]
+        values = [datetime.datetime(1900,1,1) if x is None else x for x in values]
+        result = robjects.POSIXct(values)
+        for na in nas:
+            result[na] = robjects.NA_Real
+        return result
     else:
         raise TypeError("Don't know how to convert {} to R".format(type(val)))
 
