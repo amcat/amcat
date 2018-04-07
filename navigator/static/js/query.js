@@ -44,6 +44,7 @@ define([
 
 
     var DEFAULT_SCRIPT = "summary";
+    var FIELD_AGGREGATE_API_URL  = "/api/v4/aggregate?page_size=100000&q=*&axis1={field}";
     var TASK_API_URL = "/api/v4/tasks/?uuid={uuid}";
     var SAVED_QUERY_API_URL = "/api/v4/projects/{project_id}/querys/{query_id}/";
     var CODEBOOK_LANGUAGE_API_URL = "/api/v4/projects/{project_id}/codebooks/{codebook_id}/languages/";
@@ -96,6 +97,9 @@ define([
     var message_element = loading_dialog.find(".message");
     var progress_bar = loading_dialog.find(".progress-bar");
     var form_data = null;
+
+    const filterInputs  = $("#filter-inputs");
+    const filterCache = {};
 
     var saved_query = {
         id: query_form.data("query"),
@@ -616,6 +620,26 @@ define([
         });
     };
 
+    self.fill_filters = async function(){
+        let filters = JSON.parse(saved_query.parameters.filters);
+        let filter_arr = [];
+        filterInputs.html("");
+        for(let k in filters){
+            for(let item of filters[k]){
+                self.add_filter_row();
+                filter_arr.push([k, item]);
+            }
+        }
+        let rows = filterInputs.find(".filter-row");
+        for(let i = 0; i < filter_arr.length; i++){
+            let row = $(rows.get(i));
+            row.find(".filters-field").val(filter_arr[i][0]);
+            await self.update_filter_row(row);
+            row.find(".filters-value").val(filter_arr[i][1]);
+        }
+
+    };
+
     self.fill_form = function(){
         $.each(saved_query.parameters, function(name, value){
             var inputs = "input[name={name}]";
@@ -652,6 +676,7 @@ define([
 
             inputs.trigger("change");
         });
+        self.fill_filters();
     };
 
 
@@ -1037,6 +1062,114 @@ define([
     };
 
 
+    self.add_filter_row = function(){
+        const inputs = document.getElementById("filter-inputs");
+        const template = $("#filter-row-template");
+        const node = document.importNode(template.get(0).content, true);
+        inputs.appendChild(node);
+    };
+
+    self.add_filter_option =  function(row, value){
+        row.children('.filters-value').append($("<option>").attr("value", value).text(value));
+    };
+
+    self.get_filter_values = function (row, field) {
+        return new Promise(resolve => {
+            let sets = SETS.map(set => "sets=" + set).join("&");
+            row.children('.filters-value')[0].disabled = true;
+            $.getJSON(FIELD_AGGREGATE_API_URL.format({field: field}) + "&" + sets)
+                .success((data) => {
+                    let aggr_field = field.replace(/\./, '__');
+                    let values = [];
+                    row.children('.filters-value').html("<option value=''>");
+                    for (let r of data.results) {
+                        values.push(r[aggr_field]);
+                        self.add_filter_option(row, r[aggr_field]);
+                    }
+                    filterCache[field] = values;
+                    row.children('.filters-value')[0].disabled = false;
+                    resolve();
+                });
+        });
+    };
+
+    self.update_filter_row = function(row){
+        return new Promise(resolve => {
+            let field = row.children('.filters-field');
+            let value = row.children('.filters-value');
+            if (field.val() === "") {
+                value[0].disabled = true;
+                value.val(null);
+            }
+            else {
+
+                let fval = field.val();
+                fval = fval.indexOf("_") >= 0 ? fval : fval + ".raw";
+                let values = filterCache[fval];
+                if (values === undefined) {
+                    self.get_filter_values(row, fval).then(() => resolve())
+                }
+                else {
+                    console.log(row);
+                    row.children('.filters-value').html("<option value=''>");
+                    for (let v of values) {
+                        self.add_filter_option(row, v);
+                    }
+                    value[0].disabled = false;
+                    resolve();
+                }
+            }
+        });
+    };
+
+    self.get_row_value = function(row){
+        let field = row.children('.filters-field');
+        let value = row.children('.filters-value');
+        if(field.val() === null || value.val() === null) {
+            return null;
+        }
+        return {field: field.val(), value: value.val()};
+    };
+
+    self.on_filter_input = function(e){
+        const filters = {};
+        let row = $(e.target).closest('.filter-row');
+
+        if(e.target.classList.contains("filters-field")) {
+            self.update_filter_row(row);
+        }
+
+        for(let row of Array.from(filterInputs.find(".filter-row"))) {
+            row = $(row);
+            let row_value = self.get_row_value(row);
+
+            if (row_value === null) {
+                return;
+            }
+            let {field, value} = row_value;
+
+            if (!filters.hasOwnProperty(field))
+                filters[field] = [];
+
+            filters[field].push(value);
+        }
+        self.update_filters(filters);
+    };
+
+    self.update_filters = function(filters){
+        self.filters = filters;
+        console.log(JSON.stringify(filters));
+        $("#id_filters").val(JSON.stringify(filters));
+    };
+
+    self.on_filter_click = function(e){
+        if(e.target.getAttribute('data-click') === "remove"){
+            $(e.target).closest('.filter-row').remove();
+        }
+        self.on_filter_input(e);
+    };
+
+
     ////////////////////////////////////////////////
     //           INITIALISE FUNCTIONS             //
     ////////////////////////////////////////////////
@@ -1055,6 +1188,10 @@ define([
             .on('input', (e) => {e.target.reportValidity()})
             .on('change', self.relative_date_changed)
             .trigger("change")
+    };
+
+    self.init_filters = function(){
+        $('#id_filters').value = JSON.stringify({});
     };
 
     self.init_scripts = function(){
@@ -1094,6 +1231,11 @@ define([
         $("#change-articlesets").click(self.change_articlesets_clicked);
         $("#change-articlesets-confirm").click(self.change_articlesets_confirmed_clicked);
 
+        $("#btn-add-filter").click(self.add_filter_row);
+        $("#filter-inputs")
+            .on("input", self.on_filter_input)
+            .click(self.on_filter_click);
+
         $("#load-query").find("> button").click(function() {
             window.setTimeout(function () {
                 $("#load-query").find("input.multiselect-search").focus();
@@ -1131,6 +1273,7 @@ define([
             self.init_previous_query(uuid[1]);
         }
         self.init_dates();
+        self.init_filters();
         self.init_scripts();
         self.init_shortcuts();
     };

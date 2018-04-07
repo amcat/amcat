@@ -47,6 +47,7 @@ if DEBUG:
         "Access-Control-Request-Method", "Connection", "Host", "Origin", "User-Agent",
         "X-CSRFTOKEN", "X-HTTP-METHOD-OVERRIDE"
     ]
+    INTERNAL_IPS = ['127.0.0.1']
 
 # Database
 DATABASE_OPTIONS = {

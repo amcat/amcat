@@ -117,11 +117,25 @@
                     {% include "project/query/dates.html" %}
                 </div>
                 <br/>
-                <div class="row mediums">
+                <div class="row filters">
                     <div class="col-md-3"><label>Filters</label></div>
                     <div class="col-md-9">
-                        <textarea id="id_filters" name="filters"
-                                  placeholder='{"field": "value",...}, JSON only (temporarily). Also this is case sensitive.'></textarea>
+                            <template id="filter-row-template">
+                                <div class="filter-row form-inline">
+                                    <div class="filter-remove"><span class="glyphicon glyphicon-remove" data-click="remove"></span>
+                                    </div><select class="filters filters-field form-control">
+                                        <option value="">-</option>
+                                        {% for prop in filter_properties %}
+                                            <option value="{{ prop }}">{{ prop }}</option>
+                                        {% endfor %}
+                                    </select><select class="filters-value form-control" disabled></select>
+                                </div>
+                            </template>
+                            <textarea id="id_filters" name="filters" class="hidden"
+                                      placeholder='{"field": ["value",...],...}, JSON only (temporarily). Also this is case sensitive.'></textarea>
+                        <div id="filter-inputs">
+                        </div>
+                        <a class="btn btn-sm btn-default" id="btn-add-filter">Add filter <span class="glyphicon glyphicon-plus"></span></a>
                     </div>
 
                     <script>

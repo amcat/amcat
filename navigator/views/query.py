@@ -36,6 +36,7 @@ from django.views.generic.base import TemplateView, RedirectView, View
 from amcat.models import Query, Task
 from amcat.scripts.forms import SelectionForm
 from amcat.tools import amcates
+from amcat.tools.amcates import get_property_mapping_type
 from api.rest.datatable import Datatable
 from api.rest.viewsets import QueryViewSet, FavouriteArticleSetViewSet, CodingJobViewSet
 from navigator.views.project_views import ProjectDetailsView
@@ -227,6 +228,15 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
             return {}
         return self.task.arguments["data"]
 
+
+    def get_filter_properties(self, articlesets):
+        used_properties = set.union({"url"}, *(aset.get_used_properties() for aset in articlesets))
+        for prop in used_properties:
+            ptype = get_property_mapping_type(prop)
+            if ptype in {"default", "int", "num", "tag", "url", "id"}:
+                yield prop
+
+
     def get_context_data(self, **kwargs):
         query_id = self.request.GET.get("query", "null")
         user_id = self.request.user.id
@@ -262,6 +272,8 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
                 "articlesets": articlesets
             }
         )
+
+        filter_properties = list(self.get_filter_properties(articlesets))
 
         statistics = amcates.ES().statistics(filters={"sets": list(articleset_ids)})
         settings = conf.settings

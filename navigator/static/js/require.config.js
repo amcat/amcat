@@ -29,7 +29,7 @@ requirejs.config({
         "jquery.highlight": AMCAT_STATIC_URL + "js/annotator/jquery.highlight",
         "jquery.scrollTo": "jquery.scrollTo/jquery.scrollTo",
         "jquery-ui": "jquery-ui/ui/jquery-ui",
-        "jquery.tablednd": "TableDnD/js/jquery.tablednd.0.7.min",
+        "jquery.tablednd": "TableDnD/js/jquery.tablednd",
         "clipboard": "clipboard/dist/clipboard"
     },
     shim:{
@@ -114,3 +114,21 @@ requirejs.config({
     }
 });
 
+if (!AMCAT_DEBUG) {
+    // override with minified js
+    require.config({
+        "paths": {
+            "jquery": "jquery/dist/jquery.min",
+            "papaparse": "papaparse/papaparse.min",
+            "bootstrap": "bootstrap/dist/js/bootstrap.min",
+            "bootstrap-datepicker": "bootstrap-datepicker/dist/js/bootstrap-datepicker.min",
+            "moment": "moment/min/moment.min",
+            "datatables": "datatables/media/js/jquery.dataTables.min",
+            "datatables.tabletools": "datatables/extensions/TableTools/js/dataTables.tableTools.min",
+            "jquery.scrollTo": "jquery.scrollTo/jquery.scrollTo.min",
+            "jquery-ui": "jquery-ui/ui/jquery-ui.min",
+            "jquery.tablednd": "TableDnD/js/jquery.tablednd.min",
+            "clipboard": "clipboard/dist/clipboard.min"
+        },
+    })
+}

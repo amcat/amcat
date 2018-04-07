@@ -101,7 +101,8 @@ table.aggregation td:hover{
 
 input.error,
 select.error,
-textarea.error{
+textarea.error,
+#id_filters.error + #filter-inputs select{
     border-color: red;
 }
 
@@ -146,4 +147,23 @@ h4.name:hover{
 }
 #active-articlesets .DTTT.btn-group, #codingjobjobs .DTTT.btn-group{
     margin-top: -40px;
+}
+
+.filter-remove{
+    display: inline-block;
+    width: 0;
+    float: left;
+    padding: 6px 0 6px 0;
+    margin-left: -1.5em;
+    cursor: pointer;
+}
+
+.form-inline .form-control.filters-field{
+    width: 40%;
+    border-radius: 4px 0 0 4px;
+}
+.form-inline .form-control.filters-value{
+    width: 60%;
+    border-radius: 0 4px 4px 0;
+    border-left: none;
 }

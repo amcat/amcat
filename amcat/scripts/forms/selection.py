@@ -18,28 +18,27 @@
 ###########################################################################
 
 
-from itertools import filterfalse
 import datetime
+import hashlib
+import itertools
 import json
 import logging
-import itertools
-import hashlib
-from amcat.tools import aggregate_es, aggregate_orm
+from itertools import filterfalse
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db.models import Model
+from django.db.models.query import QuerySet
 
+from amcat.forms.forms import order_fields
 from amcat.models import Codebook, Language, Article, ArticleSet, CodingJob, CodingSchemaField, Code, \
     CodebookCode, CodingSchema
 from amcat.models.coding.codingschemafield import FIELDTYPE_IDS
-from amcat.forms.forms import order_fields
-from amcat.tools.amcates import get_property_type
-from amcat.tools.caching import cached
+from amcat.tools import aggregate_es, aggregate_orm
+from amcat.tools.amcates import get_property_mapping_type
+from amcat.tools.djangotoolkit import db_supports_distinct_on
 from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.toolkit import to_datetime
-from amcat.tools.djangotoolkit import db_supports_distinct_on
-from django.db.models import Model
-from django.db.models.query import QuerySet
 
 log = logging.getLogger(__name__)
 
@@ -119,17 +118,13 @@ class TimeDeltaSecondsField(forms.IntegerField):
             return datetime.timedelta(seconds=seconds)
 
 
-def field_type(field):
-    return (field.rsplit("_", 1)[1:] or ["default"])[0]
-
-
 class Filter:
     def __init__(self, field, value):
         self.field = field
         self.value = value
 
     def get_filter_kwargs(self):
-        t = field_type(self.field)
+        t = get_property_mapping_type(self.field)
         field = self.field
 
         # filter on .raw to match the whole keyword, rather than phrases.
@@ -141,8 +136,8 @@ class Filter:
 
     @classmethod
     def clean(cls, field, value, field_types):
-        if field_type(field) not in field_types:
-            raise ValidationError("Cannot filter on field type: {}".format(field_type(field)))
+        if get_property_mapping_type(field) not in field_types:
+            raise ValidationError("Cannot filter on field type: {}".format(get_property_mapping_type(field)))
         try:
             value = prepare(value)
         except ValueError:
@@ -166,7 +161,7 @@ class FiltersField(forms.Field):
 
     @fields.setter
     def fields(self, fields):
-        self._fields = [f for f in fields if field_type(f) in self.filterable_field_types]
+        self._fields = [f for f in fields if get_property_mapping_type(f) in self.filterable_field_types]
         self.initial = ",".join(self._fields)
 
     def validate(self, value):

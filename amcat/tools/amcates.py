@@ -89,17 +89,32 @@ def safe_identifier(unsafe: str) -> str:
     fmt = "_{}" if identifier[0].isnumeric() else "{}"
     return fmt.format(identifier)
 
-def get_property_type(name: str) -> str:
+
+def get_property_mapping_type(field):
+    """ Returns the mapping type of the property, e.g. 'int', or 'default' """
+    rootfield = field.split(".")[0]
+    t = (rootfield.rsplit("_", 1)[1:] or ["default"])[0]
+    if t not in settings.ES_MAPPING_TYPES:
+        raise ValueError("Unknown property type: {}".format(t))
+    return t
+
+
+def get_property_mapping(field):
+    t = get_property_mapping_type(field)
+    path = field.split(".")
+    mapping = settings.ES_MAPPING_TYPES[t]
     try:
-        if "_" in name:
-            return settings.ES_MAPPING_TYPES[name[name.rfind("_") + 1:]]["type"]
+        for child in path[1:]:
+            mapping = mapping["fields"][child]
     except KeyError:
-        pass
+        raise ValueError("Unknown property type: {}".format(t))
+    return mapping
 
-    if name.endswith(".raw"):
-        return "keyword"
 
-    return settings.ES_MAPPING_TYPES["default"]["type"]
+def get_property_elastic_type(name: str) -> str:
+    mapping = get_property_mapping(name)
+    return mapping["type"]
+
 
 @functools.lru_cache()
 def get_property_primitive_type(name) -> Union[int, float, str, set, datetime.datetime]:
@@ -967,7 +982,7 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
             f[singular] = filters.pop(singular)
 
     for k, v in filters.items():
-        if get_property_type(k) == "text":
+        if get_property_elastic_type(k) == "text":
             yield {'match': {k: v}}
         else:
             yield {'terms': {k: _list(v, number=False)}}
@@ -1024,3 +1039,4 @@ def build_body(query=None, filters=EMPTY_RO_DICT, query_as_filter=False):
 
 if __name__ == '__main__':
     ES().check_index()
+

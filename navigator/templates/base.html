@@ -12,7 +12,7 @@
 
     <!-- Bower dependencies -->
     <link href="{% static 'components/bootstrap-multiselect/dist/css/bootstrap-multiselect.css'%}" rel="stylesheet" type="text/css" />
-    <link href="{% static 'components/bootstrap/dist/css/bootstrap.css' %}" rel="stylesheet" type="text/css"  />
+    <link href="{% static 'components/bootstrap/dist/css/bootstrap.min.css' %}" rel="stylesheet" type="text/css"  />
     <link href="{% static 'components/datatables/media/css/jquery.dataTables.css' %}" rel="stylesheet" type="text/css"  />
     <link href="{% static 'components/pnotify/pnotify.core.css' %}" rel="stylesheet" type="text/css"  />
     <link href="{% static 'components/datatables/extensions/TableTools/css/dataTables.tableTools.css' %}" rel="stylesheet" type="text/css"  />
@@ -33,6 +33,11 @@
     <script>
         csrf_middleware_token = "{{ csrf_token }}";
         AMCAT_STATIC_URL = "{% static '' %}";
+        {% if debug %}
+            AMCAT_DEBUG = true;
+        {% else %}
+            AMCAT_DEBUG = false;
+        {% endif %}
         CACHE_BUST_TOKEN = "{{ cache_bust_token }}";
     </script>
 
