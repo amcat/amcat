@@ -74,6 +74,20 @@ ALL_FIELDS = frozenset({"id", "sets", "hash"} | ARTICLE_FIELDS)
 
 RE_PROPERTY_NAME = re.compile('[A-Za-z][A-Za-z0-9]*$')
 
+RE_UNSAFE_SUB = re.compile("\W"), "__"
+
+
+def safe_identifier(unsafe: str) -> str:
+    """
+    Return a safe Python identifier from a unsafe string that is not always a valid
+    identifier (e.g. Elastic field names), such that it can be used in namedtuple instances.
+    Any unsafe characters are substituted by a double underscore.
+    If the unsafe string starts with a number, the result is prefixed with an underscore.
+    """
+    re_unsafe, sub = RE_UNSAFE_SUB
+    identifier = re_unsafe.sub(sub, unsafe)
+    fmt = "_{}" if identifier[0].isnumeric() else "{}"
+    return fmt.format(identifier)
 
 def get_property_type(name: str) -> str:
     try:
@@ -725,7 +739,7 @@ class _ES(object):
                 result = ((get_date(stamp), aggr) for stamp, aggr in result)
 
         # Return results as namedtuples
-        ntuple = namedtuple("Aggr", [group, "buckets" if group_by else "count"])
+        ntuple = namedtuple("Aggr", [safe_identifier(group), "buckets" if group_by else "count"])
         return [ntuple(*r) for r in result]
 
     def _build_aggregate(self, group_by, date_interval, terms, sets):

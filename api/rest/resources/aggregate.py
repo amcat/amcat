@@ -3,9 +3,10 @@ import collections
 from rest_framework.exceptions import ParseError
 
 from rest_framework.fields import CharField, IntegerField
-from rest_framework.serializers import Serializer
+from rest_framework.serializers import Serializer, re
 
 from amcat.tools import amcates, keywordsearch
+from amcat.tools.amcates import safe_identifier
 
 from api.rest.resources.amcatresource import AmCATResource
 from amcat.tools.caching import cached
@@ -22,7 +23,8 @@ class AggregateES(object):
         self.filters = filters or {}
         self.es = amcates.ES()
         self.axes = axes
-        self.result_type = collections.namedtuple("Result", axes + ["count"])
+        axis_names = [safe_identifier(axis) for axis in axes]
+        self.result_type = collections.namedtuple("Result", axis_names + ["count"])
 
     @property
     def query(self):
@@ -131,4 +133,4 @@ class AggregateResource(AmCATResource):
         def __init__(self, *args, **kwargs):
             Serializer.__init__(self, *args, **kwargs)
             for x in kwargs["context"]["axes"]:
-                self.fields[x] = CharField()
+                self.fields[safe_identifier(x)] = CharField()
