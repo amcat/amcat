@@ -172,4 +172,6 @@ h4.name:hover{
     border-radius: 0 4px 4px 0;
     border-left: none;
     width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
