@@ -124,11 +124,11 @@
                                 <div class="filter-row form-inline">
                                     <div class="filter-remove"><span class="glyphicon glyphicon-remove" data-click="remove"></span>
                                     </div><select class="filters filters-field form-control">
-                                        <option value="">-</option>
+                                        <option value="">field&hellip;</option>
                                         {% for prop in filter_properties %}
                                             <option value="{{ prop }}">{{ prop }}</option>
                                         {% endfor %}
-                                    </select><select class="filters-value form-control" disabled></select>
+                                    </select><select class="filters-value form-control" disabled multiple></select>
                                 </div>
                             </template>
                             <textarea id="id_filters" name="filters" class="hidden"
@@ -275,7 +275,7 @@
             <li>
                 <div class="form-group-sm">
                     <input type="text" class="form-control" readonly id="share-result-link">
-                    <button class="btn btn-sm btn-default" data-copy="share-result-link"><span class="glyphicon glyphicon-copy"></span></button>
+                    <button class="btn btn-sm btn-default" data-copy="share-result-link"><span class="glyphicon glyphicon-copy"></span> Copy</button>
                 </div>
             </li>
         </ul>

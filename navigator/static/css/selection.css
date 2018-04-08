@@ -162,8 +162,7 @@ h4.name:hover{
     width: 40%;
     border-radius: 4px 0 0 4px;
 }
-.form-inline .form-control.filters-value{
-    width: 60%;
+.form-inline .form-control.filters-value + .btn-group > .multiselect{
     border-radius: 0 4px 4px 0;
     border-left: none;
 }

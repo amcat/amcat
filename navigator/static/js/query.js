@@ -622,22 +622,14 @@ define([
 
     self.fill_filters = async function(){
         let filters = JSON.parse(saved_query.parameters.filters);
-        let filter_arr = [];
         filterInputs.html("");
         for(let k in filters){
-            for(let item of filters[k]){
-                self.add_filter_row();
-                filter_arr.push([k, item]);
-            }
-        }
-        let rows = filterInputs.find(".filter-row");
-        for(let i = 0; i < filter_arr.length; i++){
-            let row = $(rows.get(i));
-            row.find(".filters-field").val(filter_arr[i][0]);
+            let row = $(self.add_filter_row());
+            row.find(".filters-field").val(k);
             await self.update_filter_row(row);
-            row.find(".filters-value").val(filter_arr[i][1]);
+            row.find(".filters-value").val(filters[k]).multiselect("rebuild");
+            row.trigger("input");
         }
-
     };
 
     self.fill_form = function(){
@@ -1066,69 +1058,76 @@ define([
         const inputs = document.getElementById("filter-inputs");
         const template = $("#filter-row-template");
         const node = document.importNode(template.get(0).content, true);
+        const v = node.querySelector('.filters-value');
+        $(v).multiselect({
+            enableFiltering: true,
+            includeResetOption: false,
+            onChange(){ this.$select.trigger("input"); }
+        });
+        const row = node.querySelector('.filter-row');
         inputs.appendChild(node);
+        return row;
     };
 
     self.add_filter_option =  function(row, value){
         row.children('.filters-value').append($("<option>").attr("value", value).text(value));
     };
 
-    self.get_filter_values = function (row, field) {
-        return new Promise(resolve => {
+    self.fetch_filter_values = async function (row, field) {
+        if(filterCache.hasOwnProperty(field)){
+            return filterCache[field];
+        }
+
+        return await new Promise(resolve => {
             let sets = SETS.map(set => "sets=" + set).join("&");
             row.children('.filters-value')[0].disabled = true;
             $.getJSON(FIELD_AGGREGATE_API_URL.format({field: field}) + "&" + sets)
                 .success((data) => {
                     let aggr_field = field.replace(/\./, '__');
                     let values = [];
-                    row.children('.filters-value').html("<option value=''>");
                     for (let r of data.results) {
                         values.push(r[aggr_field]);
-                        self.add_filter_option(row, r[aggr_field]);
                     }
                     filterCache[field] = values;
-                    row.children('.filters-value')[0].disabled = false;
-                    resolve();
+                    resolve(filterCache[field]);
                 });
         });
     };
 
-    self.update_filter_row = function(row){
-        return new Promise(resolve => {
-            let field = row.children('.filters-field');
-            let value = row.children('.filters-value');
-            if (field.val() === "") {
-                value[0].disabled = true;
-                value.val(null);
-            }
-            else {
+    function isEmpty(value){
+        return value === "" || value === null || value === undefined;
+    }
 
-                let fval = field.val();
-                fval = fval.indexOf("_") >= 0 ? fval : fval + ".raw";
-                let values = filterCache[fval];
-                if (values === undefined) {
-                    self.get_filter_values(row, fval).then(() => resolve())
-                }
-                else {
-                    console.log(row);
-                    row.children('.filters-value').html("<option value=''>");
-                    for (let v of values) {
-                        self.add_filter_option(row, v);
-                    }
-                    value[0].disabled = false;
-                    resolve();
-                }
-            }
-        });
+    self.update_filter_row = async function (row) {
+        let field = row.children('.filters-field');
+        let value = row.children('.filters-value');
+        if (isEmpty(field.val())) {
+            value[0].disabled = true;
+            value.val(null);
+            return;
+        }
+
+        let fval = field.val();
+        fval = fval.indexOf("_") >= 0 ? fval : fval + ".raw";
+        value.disabled = true;
+        let values = await self.fetch_filter_values(row, fval);
+
+        row.children('.filters-value').html("");
+        for (let v of values) {
+            self.add_filter_option(row, v);
+        }
+        value[0].disabled = false;
+        value.multiselect("rebuild");
+
     };
 
     self.get_row_value = function(row){
         let field = row.children('.filters-field');
         let value = row.children('.filters-value');
-        if(field.val() === null || value.val() === null) {
+        if(isEmpty(field.val()) || isEmpty(value.val())) {
             return null;
         }
-        return {field: field.val(), value: value.val()};
+        return {field: field.val(), values: value.val()};
     };
 
     self.on_filter_input = function(e){
@@ -1144,14 +1143,14 @@ define([
             let row_value = self.get_row_value(row);
 
             if (row_value === null) {
-                return;
+                continue;
             }
-            let {field, value} = row_value;
+            let {field, values} = row_value;
 
             if (!filters.hasOwnProperty(field))
                 filters[field] = [];
 
-            filters[field].push(value);
+            filters[field] = filters[field].concat(values);
         }
         self.update_filters(filters);
     };
