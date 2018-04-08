@@ -44,6 +44,8 @@ from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin,
 
 log = logging.getLogger(__name__)
 
+FILTER_PROPERTIES = {"default", "tag"}
+
 SHOW_N_RECENT_QUERIES = 5
 
 R_PLUGIN_PLACEHOLDER = (object(),object())
@@ -230,10 +232,10 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
 
 
     def get_filter_properties(self, articlesets):
-        used_properties = set.union({"url"}, *(aset.get_used_properties() for aset in articlesets))
+        used_properties = set.union(set(), *(aset.get_used_properties() for aset in articlesets))
         for prop in used_properties:
             ptype = get_property_mapping_type(prop)
-            if ptype in {"default", "int", "num", "tag", "url", "id"}:
+            if ptype in FILTER_PROPERTIES:
                 yield prop
 
 

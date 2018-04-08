@@ -1158,7 +1158,6 @@ define([
 
     self.update_filters = function(filters){
         self.filters = filters;
-        console.log(JSON.stringify(filters));
         $("#id_filters").val(JSON.stringify(filters));
     };
 
