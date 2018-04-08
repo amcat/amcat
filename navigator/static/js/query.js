@@ -1062,6 +1062,7 @@ define([
         $(v).multiselect({
             enableFiltering: true,
             includeResetOption: false,
+            maxHeight: 300,
             onChange(){ this.$select.trigger("input"); }
         });
         const row = node.querySelector('.filter-row');

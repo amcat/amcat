@@ -29,7 +29,7 @@ requirejs.config({
         "jquery.highlight": AMCAT_STATIC_URL + "js/annotator/jquery.highlight",
         "jquery.scrollTo": "jquery.scrollTo/jquery.scrollTo",
         "jquery-ui": "jquery-ui/ui/jquery-ui",
-        "jquery.tablednd": "TableDnD/js/jquery.tablednd",
+        "jquery.tablednd": "TableDnD/js/jquery.tablednd.0.7.min",
         "clipboard": "clipboard/dist/clipboard"
     },
     shim:{
@@ -126,9 +126,8 @@ if (!AMCAT_DEBUG) {
             "datatables": "datatables/media/js/jquery.dataTables.min",
             "datatables.tabletools": "datatables/extensions/TableTools/js/dataTables.tableTools.min",
             "jquery.scrollTo": "jquery.scrollTo/jquery.scrollTo.min",
-            "jquery-ui": "jquery-ui/ui/jquery-ui.min",
-            "jquery.tablednd": "TableDnD/js/jquery.tablednd.min",
+            "jquery-ui": "jquery-ui/ui/minified/jquery-ui.min",
             "clipboard": "clipboard/dist/clipboard.min"
         },
-    })
+    });
 }
