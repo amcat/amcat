@@ -621,7 +621,7 @@ define([
     };
 
     self.fill_filters = async function(){
-        let filters = JSON.parse(saved_query.parameters.filters);
+        let filters = JSON.parse(saved_query.parameters.filters || "{}");
         filterInputs.html("");
         for(let k in filters){
             let row = $(self.add_filter_row());
@@ -637,7 +637,7 @@ define([
             var inputs = "input[name={name}]";
             inputs += ",textarea[name={name}]";
             inputs += ",select[name={name}]";
-            inputs = $(inputs.format({name: name}));
+            inputs = $(inputs.format({name: name.replace('.', '\\.')}));
 
             if (inputs.length === 0 || name == "articlesets" || name == "csrfmiddlewaretoken"){
                 return;
