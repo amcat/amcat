@@ -49,6 +49,7 @@ DATE_TRUNC_JSON_SQL = 'date_trunc(\'{interval}\', T_articles.properties->>\'{fie
 
 __all__ = (
     "Category",
+    "ArticleFieldCategory",
     "IntervalCategory",
     "ArticleSetCategory",
     "TermCategory",

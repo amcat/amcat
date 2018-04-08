@@ -98,12 +98,13 @@ class CodingAggregationActionForm(QueryActionForm):
 
         sets = {cj.articleset for cj in self.codingjobs}
         props = set(get_used_properties_by_articlesets(sets))
-        meta_choices = tuple(get_aggregation_choices(props)) + (("Metadata Fields", (("year", "Year"), ("month", "Month"), ("week", "Week"))),)
+        self.prop_choices = (*get_aggregation_choices(props),)
+        self.meta_choices = (("Metadata Fields", (("year", "Year"), ("month", "Month"), ("week", "Week"))),)
         schema_choices = tuple(get_schemafield_choices(self.codingjobs))
 
 
-        self.fields["primary"].choices += schema_choices + meta_choices
-        self.fields["secondary"].choices += schema_choices + meta_choices
+        self.fields["primary"].choices += schema_choices + self.prop_choices + self.meta_choices
+        self.fields["secondary"].choices += schema_choices + self.prop_choices + self.meta_choices
 
         project_codebooks = self.project.get_codebooks()
 
@@ -120,6 +121,12 @@ class CodingAggregationActionForm(QueryActionForm):
 
         if field_value == "term":
             return aggregate_orm.TermCategory()
+
+        if field_value in [k for k, v in self.prop_choices[0][1]]:
+            if field_value.endswith("_str"):
+                # _str is added to disambiguate between fields and intervals (why, though?!)
+                field_value, _ = field_value.rsplit("_", 1)
+            return aggregate_orm.ArticleFieldCategory(True, field_value)
 
         # Test for schemafield
         match = CODINGSCHEMAFIELD_RE.match(field_value)
@@ -167,14 +174,16 @@ class CodingAggregationActionForm(QueryActionForm):
         return self._clean_value("value2", prefix="4")
 
     def clean(self):
+        if self._errors:
+            return
         output_type = self.cleaned_data["output_type"]
         primary = self.cleaned_data["primary"]
         secondary = self.cleaned_data["secondary"]
         value2 = self.cleaned_data["value2"]
 
         if primary and secondary and value2 and output_type != "text/json+aggregation+table":
-            error_msg =  "When selecting two aggregations (primary and secondary), "
-            error_msg += "you can only select one value."
+            error_msg = "When selecting two aggregations (primary and secondary), " \
+                        "you can only select one value."
             raise ValidationError(error_msg)
 
         return self.cleaned_data
