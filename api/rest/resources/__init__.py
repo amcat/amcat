@@ -29,7 +29,7 @@ from amcat.tools import classtools
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.resources.project import ProjectResource
 from api.rest.resources.user import UserResource
-from api.rest.resources.codebook import CodebookHierarchyResource, CodebookResource, LabelResource
+from api.rest.resources.codebook import CodebookHierarchyResource, CodebookResource, LabelResource, CodebookCodeResource
 from api.rest.resources.article import ArticleMetaResource
 from api.rest.resources.articleset import ArticleSetResource
 from api.rest.resources.codingjob import CodingJobResource
@@ -52,7 +52,8 @@ MODELS = ['Article', 'AmCAT',
           'Role', 'ProjectRole',
           'Language',
           'CodingSchema', 'CodingSchemaField',
-          'CodebookCode', 'CodingSchemaFieldType', 'CodedArticleStatus',
+          #'CodebookCode',
+          'CodingSchemaFieldType', 'CodedArticleStatus',
           'django.contrib.auth.models.Group', 'django.contrib.auth.models.Permission',
           "CodingRuleAction",
           "Query"]
