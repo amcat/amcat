@@ -17,11 +17,12 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.models import Codebook
+from amcat.models import Codebook, CodebookCode
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import APIException
+from rest_framework.serializers import SerializerMethodField
 
 from api.rest.resources.amcatresource import AmCATResource
 
@@ -41,6 +42,19 @@ def _walk(nodes):
         node['children'] = tuple(_walk(node['children']))
         yield node
 
+class CodebookCodeResource(AmCATResource):
+    model = CodebookCode
+    queryset = CodebookCode.objects.all().select_related("code__label")
+    class serializer_class(AmCATModelSerializer):
+        class Meta:
+            model = CodebookCode
+
+        label = SerializerMethodField()
+
+        def get_label(self, obj):
+            return obj.code.label
+
+                    
 class CodebookHierarchyResource(AmCATResource):
     """
     This resource has no direct relationship to one model. Instead, it's
