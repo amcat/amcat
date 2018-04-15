@@ -24,7 +24,7 @@
     <a class="btn btn-primary" href="{% url "navigator:query" project.id %}?sets={{ object.id }}"><i class="glyphicon glyphicon-cog"></i>Query</a>
     {% if can_edit and  object.project.id == project.id %}
         <button type="submit" class="btn btn-default confirm" form="action-form-articleset-refresh" data-confirm="You're about to refresh the index for <i>{{ object.name }}</i>. This action can take a while, and all articles in the index will be unavailable for search in the meantime." ><i class="glyphicon glyphicon-refresh"></i> Refresh Index</button>
-        <a class="btn btn-default" href="{% url "navigator:articleset-deduplicate" project.id object.id %}"><i class="glyphicon glyphicon-duplicate"></i>Deduplicate</a>
+        <a class="btn btn-default" href="{% url "navigator:articleset-deduplicate" project.id object.id %}"><i class="glyphicon glyphicon-duplicate"></i> Deduplicate</a>
     {% endif %}
         {% if can_view_text %}
     <a class="btn btn-default" href="{% url "navigator:articleset-import" project.id object.id %}"><i class="glyphicon glyphicon-share"></i> Use in another project</a>
