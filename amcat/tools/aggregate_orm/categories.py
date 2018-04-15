@@ -21,9 +21,11 @@ import logging
 
 from collections import OrderedDict, defaultdict
 from operator import itemgetter
+from typing import List, Mapping, Tuple
+from uuid import uuid4
 
 from amcat.models import ArticleSet, Code, Article
-from amcat.tools.aggregate_orm.sqlobj import SQLObject, JOINS
+from amcat.tools.aggregate_orm.sqlobj import SQLObject, JOINS, INNER_JOIN
 from amcat.tools.amcates import get_property_primitive_type
 
 log = logging.getLogger(__name__)
@@ -86,16 +88,56 @@ class Category(SQLObject):
 class ArticleFieldCategory(Category):
     joins_needed = ("codings", "coded_articles", "articles")
 
-    def __init__(self, is_json_field: bool, field_name: str, **kwargs):
+    def __init__(self, is_json_field: bool, field_name: str, groupings: Mapping[str, Tuple[str]] = None, **kwargs):
         super().__init__(**kwargs)
         self.is_json_field = is_json_field
         self.field_name = field_name
 
-    def get_selects(self):
+        self.groupings = None
+        if groupings:
+            self.groupings = groupings
+            self.group_prefix = uuid4().hex
+            # our temp table
+            self._T = "T_{group_prefix}_groups".format(group_prefix=self.group_prefix)
+            self.joins_needed += (self._T, )
+
+    def get_setup_statements(self):
+        if not self.groupings:
+            return
+
+        sql = "CREATE TEMPORARY TABLE {T} (from_field text, to_field text);"
+        yield sql.format(T=self._T)
+        insert_tuples = []
+        for k, others in self.groupings.items():
+            for other in others:
+                insert_tuples.append((other, k))
+        yield "INSERT INTO {T} VALUES {vs};".format(T=self._T, vs=",".join(str(t) for t in insert_tuples))
+        yield "CREATE INDEX {T}_from_field_index ON {T} (from_field);" .format(T=self._T)
+
+    def get_teardown_statements(self):
+        if not self.groupings:
+            return
+        yield "DROP INDEX IF EXISTS {T}_from_field_index;".format(T=self._T)
+        yield "DROP TABLE IF EXISTS  {T};".format(T=self._T)
+
+    def _get_select(self):
         if self.is_json_field:
-            yield "T_articles.properties->>\'{}\'".format(self.field_name)
+            return "T_articles.properties->>\'{}\'".format(self.field_name)
         else:
-            yield "T_articles.{}".format(self.field_name)
+            return "T_articles.{}".format(self.field_name)
+
+    def get_selects(self):
+        if self.groupings:
+            yield "coalesce({T}.to_field, {select})".format(T=self._T, select=self._get_select())
+        else:
+            yield self._get_select()
+
+
+    def get_joins(self):
+        if not self.groupings:
+            return
+        select = self._get_select()
+        yield "LEFT JOIN {T} ON ({T}.from_field = {select})".format(T=self._T, select=select)
 
     @classmethod
     def from_field_name(cls, field_name: str, **kwargs):

@@ -20,11 +20,12 @@
 import json
 import logging
 import re
+from collections import defaultdict
 
 from django.core.exceptions import ValidationError
 from django.forms import ChoiceField, BooleanField
 
-from amcat.models import ArticleSet, CodingJob
+from amcat.models import ArticleSet, CodingJob, Label
 from amcat.models import CodingSchemaField, Code, Coding
 from amcat.models.coding.codingschemafield import FIELDTYPE_IDS
 from amcat.scripts.forms.selection import get_all_schemafields
@@ -126,7 +127,21 @@ class CodingAggregationActionForm(QueryActionForm):
             if field_value.endswith("_str"):
                 # _str is added to disambiguate between fields and intervals (why, though?!)
                 field_value, _ = field_value.rsplit("_", 1)
-            return aggregate_orm.ArticleFieldCategory(True, field_value)
+            use_codebook = self.cleaned_data["{}_use_codebook".format(field_name)]
+            kwargs = {}
+            if use_codebook:
+                codebook = self.cleaned_data['codebook']
+                lang = self.cleaned_data['codebook_label_language']
+                groups = defaultdict(list)
+                for code, p in codebook.get_hierarchy():
+                    if p is None:
+                        p = code
+                    try:
+                        groups[p.get_label(lang)].append(code.get_label(lang))
+                    except Label.DoesNotExist:
+                        pass
+                kwargs['groupings'] = groups
+            return aggregate_orm.ArticleFieldCategory(True, field_value, **kwargs)
 
         # Test for schemafield
         match = CODINGSCHEMAFIELD_RE.match(field_value)

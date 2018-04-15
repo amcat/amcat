@@ -128,6 +128,19 @@ class TestAggregateORM(TransactionTestCase):
             ('NRC', 2)
         })
 
+    def test_article_field_grouping_category(self):
+        aggr = self._get_aggr(flat=True)
+        result = set(aggr.get_aggregate(
+            [ArticleFieldCategory.from_field_name("medium", groupings={"Telegraaf": ["AD"]})], # group AD into Telegraaf
+            [CountArticlesValue()]
+        ))
+
+        self.assertEqual(result, {
+            ('Telegraaf', 2),
+            ('NRC', 2)
+        })
+
+
     def test_one_coding(self):
         aggr = aggregate_orm.ORMAggregate(Coding.objects.filter(id__in=(self.c1.id,)), flat=True)
 
