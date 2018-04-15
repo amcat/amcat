@@ -89,6 +89,11 @@ class ArticleFieldCategory(Category):
     joins_needed = ("codings", "coded_articles", "articles")
 
     def __init__(self, is_json_field: bool, field_name: str, groupings: Mapping[str, Tuple[str]] = None, **kwargs):
+        """
+        Initializes the ArticleFieldCategory.
+        If groupings are given as a key:values dict, the values in the given list are grouped into the key, and treated
+        as one single value. If it is None, no grouping is performed.
+        """
         super().__init__(**kwargs)
         self.is_json_field = is_json_field
         self.field_name = field_name

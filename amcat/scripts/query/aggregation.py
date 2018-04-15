@@ -120,7 +120,7 @@ class AggregationEncoder(json.JSONEncoder):
         if isinstance(obj, (ArticleSet, CodingJob)):
             return {"id": obj.id, "label": obj.name}
         if isinstance(obj, SearchQuery):
-            return {"id": obj.label, "label": obj.query}
+            return {"label": obj.label, "query": obj.query}
         if isinstance(obj, (CodingSchemaField, Code)):
             return {"id": obj.id, "label": obj.label}
         return super(AggregationEncoder, self).default(obj)

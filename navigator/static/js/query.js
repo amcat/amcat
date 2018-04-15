@@ -111,7 +111,14 @@ define([
     self.form_invalid = function(data){
         // Add error class to all
         let field_labels = [];
+        let extra_errors = [];
         $.each(data, function(field_name, errors){
+            if(field_name === "__all__"){
+                for(let error of errors) {
+                    extra_errors.push(error);
+                }
+                return;
+            }
             let field = $("[name=" + field_name + "]", $("#query-form"));
             field.addClass("error")
                 .prop("title", errors[0])
@@ -133,9 +140,9 @@ define([
 
         loading_dialog.modal("hide");
         progress_bar.css("width", "0%");
-        let field_lis = field_labels.map(x => `<li>${x}</li>`);
+        let field_lis = field_labels.concat(extra_errors).map(x => `<li>${x}</li>`);
         self.show_error("Invalid form. Please change the red input fields" +
-            ` to contain valid values. <br>Invalid fields: <ul>${field_lis.join("")}</ul>`, true)
+            ` to contain valid values. <br>Invalid fields: <ul>${field_lis.join("")}</ul>`, true);
     };
 
 
@@ -621,7 +628,13 @@ define([
     };
 
     self.fill_filters = async function(){
-        let filters = JSON.parse(saved_query.parameters.filters || "{}");
+        let filters;
+        if(saved_query.parameters.filters === undefined){
+            filters = {}
+        }
+        else {
+            filters = JSON.parse(saved_query.parameters.filters);
+        }
         filterInputs.html("");
         for(let k in filters){
             let row = $(self.add_filter_row());
@@ -973,6 +986,7 @@ define([
             }
             catch(e){
                 loading_dialog.modal("hide");
+                console.error(e);
                 new PNotify({
                     "type": "error",
                     "text": e,
