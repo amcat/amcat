@@ -312,10 +312,51 @@ def get_metadata(metadata, element):
     return True
 
 
+def split_on_tag(tag, elements):
+    line = []
+    for element in elements:
+        if element.tag == tag:
+            yield line
+            line = []
+        else:
+            line.append(element)
+    if line:
+        yield line
+
+
+def try_alternative(elements):
+    lines = split_on_tag("br", elements)
+    metadata = {}
+    success = False
+    for line in lines:
+        field = None
+        descs = []
+        for el in line:
+            if el.tag == "b":
+                descs = list(get_descendants(el))
+                field = "".join(get_text(descs)).split(":")[0].lower()
+                break
+        value = "".join(get_text([el for el in line if el not in descs])).strip()
+        if field == "inhalt":
+            success = True
+            break
+        if field and value:
+            metadata[field] = value
+    text = "".join(get_text(elements))
+    print(metadata, text)
+    if success:
+        return metadata, text
+    return None
+
+
 def parse_page(doc_elements):
     """Parses an APA page given in a list of Etree elements."""
     doc, elements = doc_elements
     elements = [e for e in elements if not isinstance(e, lxml.html.HtmlComment)]
+
+    result = try_alternative(elements)
+    if result is not None:
+        return result
 
     headline = set(get_descendants(doc.cssselect("b"))) & set(elements)
     meta = (set(get_descendants(doc.cssselect("i"))) & set(elements)) - headline
@@ -387,17 +428,29 @@ class APA(UploadScript):
 
     @classmethod
     def get_fields(cls, upload: models.UploadedFile):
-        return [
-            ArticleField("title", "title"),
-            ArticleField("byline", "byline"),
-            ArticleField("text", "text"),
-            ArticleField("date", "date"),
-            ArticleField("medium", "medium"),
-            ArticleField("pagenr", "pagenr"),
-            ArticleField("section", "section"),
-            ArticleField("author", "author"),
-            ArticleField("length", "length_int")
-        ]
+        upload.encoding_override('binary')
+        f = next(upload.get_files())
+        if b'Inhalt' not in f.read(4000):
+            return [
+                ArticleField("title", "title"),
+                ArticleField("byline", "byline"),
+                ArticleField("text", "text"),
+                ArticleField("date", "date"),
+                ArticleField("medium", "medium"),
+                ArticleField("pagenr", "pagenr"),
+                ArticleField("section", "section"),
+                ArticleField("author", "author"),
+                ArticleField("length", "length_int")
+            ]
+        else:
+            return [
+                ArticleField("titel", "title"),
+                ArticleField("datum", "date"),
+                ArticleField("text", "text"),
+                ArticleField("publikation"),
+                ArticleField("datenbank", "database"),
+
+            ]
 
     def parse_file(self, file: UploadedFile, _) -> Iterable[Article]:
         data = file.read()
@@ -417,7 +470,9 @@ class APA(UploadScript):
     @classmethod
     def split_file(cls, data, fallback=False):
         original_rtf, fixed_rtf = data, fix_rtf(data)
-        doc = parse_html(to_html(original_rtf, fixed_rtf, fallback=fallback))
+        html = to_html(original_rtf, fixed_rtf, fallback=fallback)
+        open("/tmp/unrtf.html", "w").write(html)
+        doc = parse_html(html)
 
         for i, page in enumerate(get_pages(doc)):
             yield doc, page

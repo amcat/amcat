@@ -120,7 +120,10 @@ class UploadedFile(AmcatModel):
         @param encoding:
         @return:
         """
-        if not encoding or encoding.lower() in ("autodetect", "binary"):
+        if not encoding or encoding.lower() == "autodetect":
+            return
+        elif encoding.lower() == "binary":
+            self._encoding = "binary"
             return
         try:
             codecs.lookup(encoding)
