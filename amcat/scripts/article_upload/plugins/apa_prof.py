@@ -448,7 +448,7 @@ class APA(UploadScript):
                 ArticleField("datum", "date"),
                 ArticleField("text", "text"),
                 ArticleField("publikation"),
-                ArticleField("datenbank", "database"),
+                ArticleField("datenbank"),
 
             ]
 
