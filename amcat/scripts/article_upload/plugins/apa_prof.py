@@ -343,7 +343,6 @@ def try_alternative(elements):
         if field and value:
             metadata[field] = value
     text = "".join(get_text(elements))
-    print(metadata, text)
     if success:
         return metadata, text
     return None
