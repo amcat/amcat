@@ -110,6 +110,9 @@ RE_WS = re.compile(r"\s+")
 
 DEFAULT_FORMAT = "{}_NOT_GIVEN"
 
+LEGAL_TAGS = "(div|li|ul|ol|a|p|section|article|span|h1|h2|h3|h4|h5|h6|b|em|strong|i|script|!--)"
+LEGAL_HTML = re.compile("&lt;(?P<content>/?\s*({tags})((?!&gt;).)*)&gt;".format(tags=LEGAL_TAGS))
+
 ### FIXING AND PARSING ###
 def _fix_fs20(s):
     last = 0
@@ -201,6 +204,10 @@ def compartmentalize(rtf):
                                                                tail=parts[-1])
 
 
+def legal_html_replace(matchobj):
+    return "<{content}>".format(**matchobj.groupdict())
+
+
 def to_html(original_rtf, fixed_rtf, fallback=False):
     html = None
 
@@ -221,7 +228,9 @@ def to_html(original_rtf, fixed_rtf, fallback=False):
 
     # Convert previously escaped RTF unicode escape sequences to HTML, \u0000? -> &#0000;
     html = RE_UNICHAR.sub(lambda m: "&#{};".format(m.group("ord")), html)
-    return html.replace("&gt;", ">").replace("&lt;", "<")
+
+    html = LEGAL_HTML.sub(legal_html_replace, html)
+    return html
 
 
 def parse_html(html):
@@ -283,6 +292,8 @@ def get_text(elements):
     for element in itertools.takewhile(do_stop, elements):
         if element.tag == "br":
             yield "\n"
+        elif element.tag == "script":
+            continue
         elif element.text is not None:
             yield element.text
 
