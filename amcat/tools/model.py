@@ -17,12 +17,10 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-import binascii
-
 from django.db import models
 from django_extensions.db.fields import UUIDField
 
-__all__ = ['AmcatModel', 'PostgresNativeUUIDField', 'Hash', 'HashField']
+__all__ = ['AmcatModel', 'PostgresNativeUUIDField']
 
 
 class AmcatModel(models.Model):
@@ -61,71 +59,3 @@ class PostgresNativeUUIDField(UUIDField):
         return super(UUIDField, self).db_type(connection=connection)
 
 
-class Hash:
-    """
-    A simple class representing hashes.
-    """
-    def __init__(self, hash):
-        """
-        Initiates the hash with either a str in hex format, or the raw bytes.
-        """
-        if isinstance(hash, Hash):
-            self.bytes = hash.bytes
-        elif isinstance(hash, str):
-            self.bytes = binascii.unhexlify(hash)
-        elif isinstance(hash, bytes):
-            self.bytes = hash
-        else:
-            raise ValueError("Hash must be either a hex string or raw bytes.")
-
-
-    def __len__(self):
-        """
-        Returns the length of the hash in bytes.
-        """
-        return len(self.bytes)
-
-    def __str__(self):
-        """
-        Returns a hexadecimal str representing the hash.
-        """
-        return binascii.hexlify(self.bytes).decode("ascii")
-
-    def __repr__(self):
-        return "{}('{}')".format(self.__class__.__name__, str(self))
-
-    def __bytes__(self):
-        return self.bytes
-
-    def __eq__(self, other):
-        if isinstance(other, Hash):
-            return self.bytes == other.bytes
-        if isinstance(other, bytes):
-            return self.bytes == other
-        if isinstance(other, str):
-            return str(self) == other
-        return False
-
-class HashField(models.BinaryField):
-    description = ('HashField is related to some other field in a model and'
-                   'stores its hashed value for better indexing performance.')
-
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault('db_index', True)
-        kwargs.setdefault('editable', False)
-        super(HashField, self).__init__(*args, **kwargs)
-
-    def to_python(self, value):
-        if value:
-            return Hash(value)
-
-    def from_db_value(self, value, expression, connection, context):
-        if value:
-            hash = Hash(bytes(value))
-            return hash
-
-    def get_prep_value(self, value):
-        if value:
-            if len(value) < self.max_length:
-                value = value.rjust(self.max_length, b'\0')
-            return bytes(Hash(value))

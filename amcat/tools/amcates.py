@@ -38,7 +38,7 @@ from elasticsearch.helpers import bulk, scan
 import amcat.models
 from amcat.tools import queryparser, toolkit
 from amcat.tools.caching import cached
-from amcat.tools.model import Hash
+from amcat.tools.hashing import Digest
 from amcat.tools.progress import NullMonitor
 from amcat.tools.toolkit import multidict, splitlist
 
@@ -51,10 +51,10 @@ EMPTY_RO_DICT = MappingProxyType({})
 
 def _clean(s):
     """Remove non-printable characters and convert dates"""
-    if not isinstance(s, (datetime.date, float, int, str, set, type(None), Hash)):
+    if not isinstance(s, (datetime.date, float, int, str, set, type(None), Digest)):
         raise ValueError("Cannot convert {} to elastic field: {}".format(type(s), s))
 
-    if isinstance(s, Hash):
+    if isinstance(s, Digest):
         return str(s)
     if isinstance(s, set):
         return list(map(_clean, s))

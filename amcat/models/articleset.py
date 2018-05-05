@@ -259,7 +259,7 @@ class ArticleSet(AmcatModel):
             # new articleset, add as fav to parent project
             # (I run parent first because I guess it needs a pk to add it, but didn't test whether
             #  this is needed...)
-            self.project.favourite_articlesets.add(self)
+            ProjectArticleset.objects.update_or_create(project=self.project, articleset=self, is_favourite=True)
             self.project.save()
 
             stats_log.info(json.dumps({
@@ -325,3 +325,12 @@ class ArticleSet(AmcatModel):
 # Legacy
 ArticleSetArticle = ArticleSet.articles.through
 
+
+class ProjectArticleset(AmcatModel):
+    project = models.ForeignKey('amcat.Project', on_delete=models.CASCADE)
+    articleset = models.ForeignKey('amcat.ArticleSet', on_delete=models.PROTECT)
+    is_favourite = models.BooleanField()
+
+    class Meta:
+        db_table = "projects_articlesets"
+        unique_together = ("project", "articleset")

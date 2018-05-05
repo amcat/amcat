@@ -90,8 +90,9 @@ class Project(AmcatModel):
     # Coding fields
     codingschemas = models.ManyToManyField("amcat.CodingSchema", related_name="projects_set")
     codebooks = models.ManyToManyField("amcat.Codebook", related_name="projects_set")
-    articlesets = models.ManyToManyField("amcat.ArticleSet", related_name="projects_set")
-    favourite_articlesets = models.ManyToManyField("amcat.articleset", related_name="favourite_of_projects")
+    articlesets = models.ManyToManyField("amcat.ArticleSet", related_name="projects_set",
+                                         through='amcat.ProjectArticleset')
+
 
     def get_used_properties(self, only_favourites=False) -> Set[str]:
         all_sets = ArticleSet.objects.filter(Q(projects_set=self) | Q(project=self))
