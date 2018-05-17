@@ -481,7 +481,6 @@ class APA(UploadScript):
     def split_file(cls, data, fallback=False):
         original_rtf, fixed_rtf = data, fix_rtf(data)
         html = to_html(original_rtf, fixed_rtf, fallback=fallback)
-        open("/tmp/unrtf.html", "w").write(html)
         doc = parse_html(html)
 
         for i, page in enumerate(get_pages(doc)):
