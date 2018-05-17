@@ -126,12 +126,20 @@ class Project(AmcatModel):
         """Get a list of all users with some role in this project"""
         return (r.user for r in self.projectrole_set.all())
 
+    @property
+    def favourite_articlesets(self):
+        return ArticleSet.objects.filter(projectarticleset__project=self, projectarticleset__is_favourite=True)
+
+    @property
+    def archived_articlesets(self):
+        return ArticleSet.objects.filter(projectarticleset__project=self, projectarticleset__is_favourite=False)
+
     def all_articlesets(self, distinct=True):
         """
         Get a set of articlesets either owned by this project or
         contained in a set owned by this project
         """
-        sets = ArticleSet.objects.filter(Q(project=self)|Q(projects_set=self))
+        sets = ArticleSet.objects.filter(projects_set=self)
         if distinct: return sets.distinct()
         return sets
 

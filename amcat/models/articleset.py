@@ -283,7 +283,7 @@ class ArticleSet(AmcatModel):
         if articles:
             aset.add_articles(articles)
         if not favourite:
-            project.favourite_articlesets.remove(aset)
+            ProjectArticleset.objects.filter(project=project, articleset=aset).update(is_favourite=False)
         return aset
 
     def delete(self, purge_orphans=True):
@@ -332,5 +332,6 @@ class ProjectArticleset(AmcatModel):
     is_favourite = models.BooleanField()
 
     class Meta:
+        app_label = 'amcat'
         db_table = "projects_articlesets"
         unique_together = ("project", "articleset")
