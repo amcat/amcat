@@ -21,8 +21,10 @@ def to_r(values):
         vtype, natype = robjects.BoolVector, rinterface.NA_Integer        
     elif isinstance(val, int) or (val is None):
         vtype, natype = robjects.IntVector, rinterface.NA_Integer
-    elif isinstance(val, (str)):
+    elif isinstance(val, str):
         vtype, natype = robjects.StrVector, rinterface.NA_Character
+    elif isinstance(val, float):
+        vtype, natype = robjects.FloatVector, rinterface.NA_Real
     else:
         raise TypeError("Don't know how to convert {} to R".format(type(val)))
 
