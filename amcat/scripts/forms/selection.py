@@ -246,7 +246,7 @@ class SelectionForm(forms.Form):
 
         self.project = project
         self.articlesets = articlesets
-        self.codingjobs = codingjobs or CodingJob.objects.none()
+        self.codingjobs = codingjobs if codingjobs is not None else CodingJob.objects.none()
         self.schemafields = None
 
         self.fields['articlesets'].queryset = articlesets.order_by('-pk')
@@ -448,14 +448,13 @@ class SelectionForm(forms.Form):
         # in order to validate the query field.
         SelectionSearch(self).get_query()
         return self.cleaned_data
-        #return super().clean()
 
 
     def set_filter_fields(self):
         fields = set()
         for aset in self.articlesets:
             fields |= aset.get_used_properties()
-        for cjob in self.codingjobs:
-            fields |= cjob.articleset.get_used_properties()
+        for aset in ArticleSet.objects.filter(codingjob_set__in=self.codingjobs):
+            fields |= aset.get_used_properties()
 
         self.fields['filters'].fields = fields

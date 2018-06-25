@@ -124,7 +124,7 @@ class CodingAggregationActionForm(QueryActionForm):
         self.fields["value1"].choices = value_choices
         self.fields["value2"].choices = (("", "------"),) + value_choices
 
-        sets = {cj.articleset for cj in self.codingjobs}
+        sets = ArticleSet.objects.filter(codingjob_set__in=self.codingjobs)
         props = set(get_used_properties_by_articlesets(sets))
         self.prop_choices = (*get_aggregation_choices(props),)
         self.meta_choices = (("Metadata Fields", (("year", "Year"), ("month", "Month"), ("week", "Week"))),)

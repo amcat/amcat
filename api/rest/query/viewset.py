@@ -98,7 +98,7 @@ class QueryActionView(APIView):
         # belonging to the current project.
         codingjob_ids = chain(self.request.GET.get("jobs", "").split(","), self.request.POST.getlist('codingjobs'))
         codingjob_ids = map(int, filter(str.isdigit, codingjob_ids))
-        codingjobs = self.project.codingjob_set.filter(id__in=codingjob_ids).only("id", "name")
+        codingjobs = self.project.codingjob_set.filter(id__in=codingjob_ids)
         return codingjobs if codingjob_ids else CodingJob.objects.none()
 
     @cached
