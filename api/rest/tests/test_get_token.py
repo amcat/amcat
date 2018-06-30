@@ -89,7 +89,7 @@ class TestObtainAuthToken(ApiTestCase):
             "password": "test"
         })
 
-        self.assertEqual(response["non_field_errors"][0], "User account is disabled.")
+        self.assertEqual(response["non_field_errors"][0], "Unable to login with provided credentials.")
 
     def test_missing_fields(self):
         response = self.post("/api/v4/get_token", check_status=400, body={

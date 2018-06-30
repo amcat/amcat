@@ -1,4 +1,4 @@
-
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework import parsers
@@ -35,6 +35,7 @@ class AuthTokenSerializer(serializers.Serializer):
 
 class ObtainAuthToken(APIView):
     throttle_classes = ()
+    #authentication_classes = TokenAuthentication,
     permission_classes = ()
     parser_classes = (parsers.FormParser, parsers.MultiPartParser, parsers.JSONParser,)
     renderer_classes = (renderers.JSONRenderer,)

@@ -28,6 +28,7 @@ __all__ = ("SentenceSerializer", "SentenceViewSetMixin", "SentenceViewSet")
 class SentenceSerializer(AmCATModelSerializer):
     class Meta:
         model = Sentence
+        fields = '__all__'
 
 class SentenceViewSetMixin(AmCATViewSetMixin):
     serializer_class = SentenceSerializer

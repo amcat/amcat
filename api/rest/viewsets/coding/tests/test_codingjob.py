@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from unittest import skip
+
 from django.db.models import QuerySet
 from amcat.models import STATUS_COMPLETE, STATUS_IRRELEVANT, CodingJob
 from amcat.tools.amcattest import AmCATTestCase
@@ -79,6 +81,8 @@ class TestCodingJobSerializer(AmCATTestCase):
         self.assertEqual(10, s.get_n_articles(codingjob1))
         self.assertEqual(5, s.get_n_articles(codingjob2))
 
+    @skip("This is not a great idea. Serializers are short lived, so caching all codingjobs every time "
+          "would require a lot of resources.")
     def test_n_queries(self):
         from amcat.tools import amcattest
 

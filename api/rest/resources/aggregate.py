@@ -1,9 +1,11 @@
 import itertools
 import collections
+import re
+
 from rest_framework.exceptions import ParseError
 
 from rest_framework.fields import CharField, IntegerField
-from rest_framework.serializers import Serializer, re
+from rest_framework.serializers import Serializer
 
 from amcat.tools import amcates, keywordsearch
 from amcat.tools.amcates import safe_identifier

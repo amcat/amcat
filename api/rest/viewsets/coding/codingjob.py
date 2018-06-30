@@ -19,6 +19,8 @@
 
 from django.db.models import Count, Q
 from rest_framework import serializers
+
+from amcat.models import ArticleSet
 from amcat.models.coding.codingjob import CodingJob
 from amcat.models.article import Article
 from amcat.models.sentence import  Sentence
@@ -53,14 +55,10 @@ class CodingJobSerializer(AmCATModelSerializer):
     the values per codingjob, we ask the database to aggregate for us
     in one query.
     """
+    articleset = serializers.PrimaryKeyRelatedField(read_only=True)
     articles = serializers.SerializerMethodField('get_n_articles')
     complete = serializers.SerializerMethodField('get_n_done_jobs')
     todo = serializers.SerializerMethodField('get_n_todo_jobs')
-
-    def to_internal_value(self, data):
-        if 'insertuser' not in data:
-            data['insertuser'] = self.context['request'].user.id
-        return super().to_internal_value(data)
 
     def __init__(self, *args, **kwargs):
         """Initializes the Serializer
@@ -71,14 +69,23 @@ class CodingJobSerializer(AmCATModelSerializer):
         
         self.use_caching = kwargs.pop('use_caching', True) 
 
+    def to_internal_value(self, data):
+        if 'insertuser' not in data:
+            data['insertuser'] = self.context['request'].user.id
+        return super().to_internal_value(data)
+
     def _get_codingjobs(self):
         view = self.context["view"]
 
-        #HACK prevents caching of all codingjobs when only one is needed
+        # prevents caching of all codingjobs when only one is needed
         if hasattr(view, "kwargs") and 'pk' in view.kwargs:
             return CodingJob.objects.filter(id=view.kwargs['pk'])
-
-        return CodingJob.objects.filter(id__in=view.filter_queryset(view.get_queryset()))
+        try:
+            f = view.paginate_queryset
+        except AttributeError:
+            f = lambda x: x  # noop
+        pks = [cj.pk for cj in f(view.filter_queryset(view.get_queryset()))]
+        return CodingJob.objects.filter(id__in=pks)
 
     def _get_coded_articles(self):
         return CodedArticle.objects.filter(codingjob__in=self._get_codingjobs())
@@ -123,9 +130,12 @@ class CodingJobSerializer(AmCATModelSerializer):
         
         return self._get_n_todo_jobs().get(obj.id, 0)
 
+    def get_articleset(self, obj):
+        return obj.articleset_id
+
     class Meta:
         model = CodingJob
-
+        fields = '__all__'
 
 class CodingJobViewSetMixin(AmCATViewSetMixin):
     queryset = CodingJob.objects.all()

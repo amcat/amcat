@@ -50,6 +50,7 @@ if DEBUG:
         "X-CSRFTOKEN", "X-HTTP-METHOD-OVERRIDE"
     ]
     INTERNAL_IPS = ['127.0.0.1']
+    DEBUG_PROPAGATE_EXCEPTIONS = True
 
 # Database
 DATABASE_OPTIONS = {
@@ -197,9 +198,9 @@ TEMPLATES = [{
     ),
     'OPTIONS': {
         'context_processors': (
-            "django.core.context_processors.debug",
-            "django.core.context_processors.i18n",
-            "django.core.context_processors.media",
+            "django.template.context_processors.debug",
+            "django.template.context_processors.i18n",
+            "django.template.context_processors.media",
             "django.contrib.messages.context_processors.messages",
             "django.contrib.auth.context_processors.auth",
             "navigator.context.extra"

@@ -38,6 +38,6 @@ urlpatterns = [
 urlpatterns += [
     url(r"%s(?P<path>.*)$" % settings.MEDIA_URL[1:], serve, {
         "document_root": settings.MEDIA_ROOT,
-    }, prefix="django.views")
+    }) #, prefix="django.views")
 ]
 

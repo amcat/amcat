@@ -137,6 +137,7 @@ class ProjectSerializer(AmCATProjectModelSerializer):
 
     class Meta:
         model = Project
+        fields = '__all__'
 
 class ProjectViewSetMixin(AmCATViewSetMixin):
     permission_classes = (OptionalIsAuthenticated, ProjectPermission)

@@ -457,7 +457,10 @@ class GetCodingJobResults(Script):
 
         # Meta field columns
         for articlemeta in self.options.get("meta_article_fields"):
-            table.add_column(ArticleMetaColumn(articlemeta))
+            if articlemeta == "date":
+                table.add_column(DateColumn('date', kargs["date_format"]))
+            else:
+                table.add_column(ArticleMetaColumn(articlemeta))
 
         for field in _METAFIELDS:
             if self.options.get("meta_{field.object}_{field.attr}".format(**locals())):

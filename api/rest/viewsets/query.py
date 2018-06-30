@@ -58,6 +58,7 @@ class QuerySerializer(AmCATModelSerializer):
 
     class Meta:
         model = Query
+        fields = '__all__'
 
 
 class QueryViewSetMixin(AmCATViewSetMixin):
@@ -77,6 +78,7 @@ class QueryViewSet(ProjectViewSetMixin, QueryViewSetMixin, DatatablesMixin, Mode
         "PATCH": ROLE_PROJECT_WRITER,
         "DELETE": ROLE_PROJECT_WRITER
     }
+    ignore_filters = ('parameters',)
 
     def perform_create(self, serializer):
         return serializer.save(user=self.request.user, project=self.project)

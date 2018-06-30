@@ -29,6 +29,7 @@ __all__ = ("CodingSchemaFieldViewSetMixin", "CodingSchemaFieldSerializer", "Codi
 class CodingSchemaFieldSerializer(AmCATModelSerializer):
     class Meta:
         model = CodingSchemaField
+        fields = '__all__'
 
 class CodingSchemaFieldViewSetMixin(AmCATViewSetMixin):
     model_key = "codingschemafield"

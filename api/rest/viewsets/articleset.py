@@ -16,10 +16,12 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from collections import OrderedDict
+
 from rest_framework import serializers
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from amcat.models import ArticleSet, PROJECT_ROLES, ROLE_PROJECT_ADMIN
+from amcat.models import ArticleSet, ProjectArticleset, , PROJECT_ROLES, ROLE_PROJECT_ADMIN
 from amcat.tools.aggregate_es.aggregate import aggregate
 from amcat.tools.aggregate_es.categories import ArticlesetCategory
 from amcat.tools.caching import cached
@@ -66,7 +68,7 @@ class ArticleSetSerializer(AmCATProjectModelSerializer):
 
     class Meta:
         model = ArticleSet
-
+        fields = "__all__"
 
 class _NoProjectRequestedError(ValueError): pass
 

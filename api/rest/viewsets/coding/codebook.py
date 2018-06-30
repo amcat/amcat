@@ -52,6 +52,7 @@ class CodebookSerializer(AmCATModelSerializer):
     
     class Meta:
         model = Codebook
+        fields = '__all__'
 
     def get_codes(self, codebook):
         # Hack: we pass `codebook` to serialize_codebook_code, so it can use codebook's
@@ -80,6 +81,7 @@ class CodebookViewSet(ProjectViewSetMixin, CodebookViewSetMixin, DatatablesMixin
 class LanguageSerializer(AmCATModelSerializer):
     class Meta:
         model = Language
+        fields = '__all__'
 
 class LanguageViewSetMixin(AmCATViewSetMixin):
     model_key = "language"

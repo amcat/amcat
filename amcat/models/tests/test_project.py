@@ -22,7 +22,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.test import RequestFactory
 
 from amcat.models import ROLE_PROJECT_READER, ROLE_PROJECT_METAREADER, Role, ROLE_PROJECT_WRITER, \
-    ROLE_PROJECT_ADMIN
+    ROLE_PROJECT_ADMIN, ProjectArticleset
 from amcat.models import RecentProject, User
 from amcat.tools import amcattest
 from django.db.models.query import QuerySet
@@ -105,10 +105,45 @@ class TestProject(amcattest.AmCATTestCase):
         a2 = amcattest.create_test_set(5, project=p2)
 
         self.assertEqual({a1}, set(p1.all_articlesets()))
-        p1.articlesets.add(a2)
+        ProjectArticleset.objects.create(project=p1, articleset=a2, is_favourite=False)
         self.assertEqual({a1, a2}, set(p1.all_articlesets()))
         self.assertTrue(isinstance(p1.all_articlesets(), QuerySet))
 
+    def test_favourite_articlesets(self):
+        """Does getting all favourite articlesets work?"""
+        from django.db.models.query import QuerySet
+
+        p1, p2 = [amcattest.create_test_project() for _x in [1,2]]
+        a1 = amcattest.create_test_set(5, project=p1)
+        a2 = amcattest.create_test_set(5, project=p2)
+
+        self.assertEqual({a1}, set(p1.favourite_articlesets),
+                         msg="Newly created sets should be favourites")
+
+        # add a non-favourite
+        ProjectArticleset.objects.create(project=p1, articleset=a2, is_favourite=False)
+        self.assertEqual({a1}, set(p1.favourite_articlesets),
+                         msg="Non-favourite sets should not be returned")
+
+        self.assertTrue(isinstance(p1.favourite_articlesets, QuerySet))
+
+    def test_archived_articlesets(self):
+        """Does getting all favourite articlesets work?"""
+        from django.db.models.query import QuerySet
+
+        p1, p2 = [amcattest.create_test_project() for _x in [1,2]]
+        a1 = amcattest.create_test_set(5, project=p1)
+        a2 = amcattest.create_test_set(5, project=p2)
+
+        self.assertEqual(set(), set(p1.archived_articlesets),
+                         msg="Newly created sets should be favourites")
+
+        # add a non-favourite
+        ProjectArticleset.objects.create(project=p1, articleset=a2, is_favourite=False)
+        self.assertEqual({a2}, set(p1.archived_articlesets),
+                         msg="Favourite sets should not be returned")
+
+        self.assertTrue(isinstance(p1.archived_articlesets, QuerySet))
 
     def test_get_schemas(self):
         """Does get_schemas give the right results in the face of multiply imported schemas??"""

@@ -75,9 +75,9 @@ class SaveAsSetAction(QueryAction):
         aset = ArticleSet.objects.create(name=name, project=project)
         aset.add_articles(article_ids)
 
-        return OK_TEMPLATE.render(Context({
+        return OK_TEMPLATE.render({
             "project": project,
             "aset": aset,
             "len": len(article_ids)
-        }))
+        })
 

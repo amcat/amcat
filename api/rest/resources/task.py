@@ -30,10 +30,12 @@ class TaskResource(AmCATResource):
     model = Task
     serializer_class = TaskSerializer
     queryset = Task.objects.all()
+    ignore_filters = ("arguments",)
 
 #TODO: WvA: Isn't it redundant to have both taskresult and single_task_result?
 class TaskResultResource(AmCATResource):
     model = Task
+    ignore_filters = ("arguments",)
 
     @classmethod
     def get_model_name(cls):

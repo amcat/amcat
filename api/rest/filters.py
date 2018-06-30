@@ -24,11 +24,12 @@ activated by settings.REST_FRAMEWORK['FILTER_BACKEND']
 """
 import logging
 
-from django_filters import filterset, FilterSet
+from django_filters import filterset, FilterSet, ModelMultipleChoiceFilter
 from django_filters.filters import NumberFilter
 from django.db import models
 from django.conf import settings
-from rest_framework.filters import DjangoFilterBackend, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import OrderingFilter
 
 log = logging.getLogger(__name__)
 
@@ -39,12 +40,15 @@ filterset.FILTER_FOR_DBFIELD_DEFAULTS[models.AutoField] = dict(filter_class=Numb
 OrderingFilter.ordering_param = settings.REST_FRAMEWORK['ORDERING_PARAM']
 
 
-class InFilter(filterset.ModelMultipleChoiceFilter):
+class InFilter(ModelMultipleChoiceFilter):
     """Filter for {'pk':[1,2,3]} / pk=1&pk=2 queries"""
 
     def filter(self, qs, value):
         # Perform 'IN' query on given primary keys
-        return qs if not value else qs.filter(**{'%s__in' % self.name: value})
+        value = list(value)
+        if not all(type(v) is int for v in value):
+            value = [v.pk for v in value]
+        return super().filter(qs, value)
 
 
 class PrimaryKeyFilterSet(FilterSet):

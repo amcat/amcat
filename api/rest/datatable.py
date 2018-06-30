@@ -262,7 +262,7 @@ class Datatable(object):
         options['aoColumnDefs'] = self.get_aoColumnDefs()
         options['searching'] = bool(getattr(self.resource, "search_fields", None))
 
-        return get_template('api/datatables.js.html').render(Context({
+        return get_template('api/datatables.js.html').render({
             'id': self.name,
             'rowlink': self.rowlink,
             'rowlink_open_in': self.rowlink_open_in,
@@ -270,7 +270,7 @@ class Datatable(object):
             'allow_export_via_post': self.allow_export_via_post,
             'options': json.dumps(options),
             'checkboxes': self.checkboxes
-        }))
+        })
 
     def get_aoColumns(self):
         """Returns a list with (default) columns."""
@@ -406,13 +406,13 @@ class Datatable(object):
             t = self.set_format(fmt)
             if fmt != "api": t = t.add_arguments(page_size=999999)
             links[fmt] = t.url
-        return get_template('api/datatables.html').render(Context({
+        return get_template('api/datatables.html').render({
             'js': self.get_js(),
             'id': self.name,
             'cols': self.fields,
             'links': links,
             'allow_html_export': self.allow_html_export
-        }))
+        })
 
     def __repr__(self):
         return u"DataTable(%r)" % self.resource

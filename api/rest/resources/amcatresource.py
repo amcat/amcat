@@ -99,6 +99,7 @@ class AmCATResource(DatatablesMixin, generics.ListAPIView):
             class serializer_class(AmCATModelSerializer):
                 class Meta:
                     model = use_model
+                    fields = '__all__'
 
             model = use_model
 

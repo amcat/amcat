@@ -252,16 +252,12 @@ class ArticleSet(AmcatModel):
         self._refresh_property_cache()
 
     def save(self, *args, **kargs):
-        new = not self.pk
         super(ArticleSet, self).save(*args, **kargs)
+        pa, created = ProjectArticleset.objects.get_or_create(project=self.project,
+                                                              articleset=self,
+                                                              defaults=dict(is_favourite=True))
 
-        if new:
-            # new articleset, add as fav to parent project
-            # (I run parent first because I guess it needs a pk to add it, but didn't test whether
-            #  this is needed...)
-            ProjectArticleset.objects.update_or_create(project=self.project, articleset=self, is_favourite=True)
-            self.project.save()
-
+        if created:
             stats_log.info(json.dumps({
                 "action": "articleset_added", "id": self.id,
                 "name": self.name, "project_id": self.project_id,
@@ -328,7 +324,7 @@ ArticleSetArticle = ArticleSet.articles.through
 
 class ProjectArticleset(AmcatModel):
     project = models.ForeignKey('amcat.Project', on_delete=models.CASCADE)
-    articleset = models.ForeignKey('amcat.ArticleSet', on_delete=models.PROTECT)
+    articleset = models.ForeignKey('amcat.ArticleSet', on_delete=models.CASCADE)  # tests say this should cascade. I'm not convinced
     is_favourite = models.BooleanField()
 
     class Meta:

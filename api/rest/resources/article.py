@@ -30,12 +30,15 @@ log = logging.getLogger(__name__)
 
 
 class ArticleMetaFilter(DjangoPrimaryKeyFilterBackend.default_filter_set):
-    date_from = filters.DateFilter(name='date', lookup_type='gte')
-    date_to = filters.DateFilter(name='date', lookup_type='lt')
+    date_from = filters.DateFilter(name='date', lookup_expr='gte')
+    date_to = filters.DateFilter(name='date', lookup_expr='lt')
     articleset = InFilter(name='articlesets_set', queryset=ArticleSet.objects.all())
+    hash = filters.CharFilter(name='hash', lookup_expr='exact')
+    parent_hash = filters.CharFilter(name='hash', lookup_expr='exact')
 
     class Meta:
         model = Article
+        exclude = ('properties',)
 
 
 class ArticleMetaSerializer(AmCATModelSerializer):

@@ -40,6 +40,7 @@ class CodingSerializer(AmCATModelSerializer):
     values = serializers.SerializerMethodField('get_coding_values')
     class Meta:
         model = Coding
+        fields = '__all__'
         
     @cached
     def _get_coding_values(self):

@@ -58,7 +58,7 @@ class AmCATPageNumberPagination(pagination.PageNumberPagination):
         Paginate a queryset if required, either returning a
         page object, or `None` if pagination is not configured for this view.
         """
-        self._handle_backwards_compat(view)
+        #self._handle_backwards_compat(view) ????
 
         page_size = self.get_page_size(request)
         if not page_size:

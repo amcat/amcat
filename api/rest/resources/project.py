@@ -29,6 +29,7 @@ class ProjectResource(AmCATResource):
     ordering_fields = ("id", "name", "description", "insert_date", "active", LAST_VISITED_FIELD_NAME)
     serializer_class = ProjectSerializer
     queryset = Project.objects.all()
+    ignore_filters = ('display_columns',)
 
     def filter_queryset(self, queryset):
         qs = super(ProjectResource, self).filter_queryset(queryset)

@@ -416,6 +416,8 @@ class SelectionForm(forms.Form):
         return self.cleaned_data["articlesets"]
 
     def clean_article_ids(self):
+        if self._errors:
+            return
         article_ids = self.cleaned_data["article_ids"].split("\n")
         article_ids = list(filter(bool, map(str.strip, article_ids)))
 

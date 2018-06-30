@@ -110,6 +110,7 @@ class CodedArticleSerializer(AmCATModelSerializer):
 
     class Meta:
         model = CodedArticle
+        fields = '__all__'
 
 
 class CodedArticleViewSetMixin(AmCATViewSetMixin):

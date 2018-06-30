@@ -183,6 +183,7 @@ class ArticleSerializer(AmCATProjectModelSerializer):
         model = Article
         read_only_fields = ('id', 'insertdate', 'insertscript')
         list_serializer_class = ArticleListSerializer
+        fields = '__all__'
 
 
 class SmartParentFilter(MappingOrderingFilter):
