@@ -253,7 +253,7 @@ class ArticleSet(AmcatModel):
 
     def save(self, *args, **kargs):
         super(ArticleSet, self).save(*args, **kargs)
-        pa, created = ProjectArticleset.objects.get_or_create(project=self.project,
+        pa, created = ProjectArticleSet.objects.get_or_create(project=self.project,
                                                               articleset=self,
                                                               defaults=dict(is_favourite=True))
 
@@ -279,7 +279,7 @@ class ArticleSet(AmcatModel):
         if articles:
             aset.add_articles(articles)
         if not favourite:
-            ProjectArticleset.objects.filter(project=project, articleset=aset).update(is_favourite=False)
+            ProjectArticleSet.objects.filter(project=project, articleset=aset).update(is_favourite=False)
         return aset
 
     def delete(self, purge_orphans=True):
@@ -322,7 +322,7 @@ class ArticleSet(AmcatModel):
 ArticleSetArticle = ArticleSet.articles.through
 
 
-class ProjectArticleset(AmcatModel):
+class ProjectArticleSet(AmcatModel):
     project = models.ForeignKey('amcat.Project', on_delete=models.CASCADE)
     articleset = models.ForeignKey('amcat.ArticleSet', on_delete=models.CASCADE)  # tests say this should cascade. I'm not convinced
     is_favourite = models.BooleanField()

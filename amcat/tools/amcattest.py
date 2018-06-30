@@ -103,7 +103,7 @@ def create_test_project(**kargs):
     if "owner" not in kargs: kargs["owner"] = create_test_user()
     if "insert_user" not in kargs: kargs["insert_user"] = kargs["owner"]
     if "id" not in kargs: kargs["id"] = _get_next_id()
-    p = Project.objects.create(**kargs)
+    p = Project.objects.create(**kargs)  # type: Project
     ProjectRole.objects.create(project=p, user=p.owner, role_id=ROLE_PROJECT_ADMIN)
     return p
 

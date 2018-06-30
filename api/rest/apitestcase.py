@@ -119,4 +119,3 @@ class ApiTestCase(TestCase):
                 if x not in a:
                     msg += ["<< {x} not in a".format(**locals())]
             self.assertEqual(a,b, "\n".join(msg))
-    

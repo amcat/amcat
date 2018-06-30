@@ -192,8 +192,8 @@ class TestArticleViewSet(APITestCase):
         p4 = amcattest.create_test_project(guest_role=reader)
 
         s1 = amcattest.create_test_set(project=p1)
-        p2.articlesets.add(s1)
-        p3.articlesets.add(s1)
+        p2.add_set(s1)
+        p3.add_set(s1)
         s2 = amcattest.create_test_set(project=p2)
         nobody = amcattest.create_test_user()
 

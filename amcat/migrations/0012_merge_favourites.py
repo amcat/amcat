@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.SeparateDatabaseAndState(state_operations=[
             migrations.CreateModel(
-                name='ProjectArticleset',
+                name='ProjectArticleSet',
                 fields=[
                     ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                     ('articleset', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='amcat.ArticleSet')),
@@ -32,7 +32,7 @@ class Migration(migrations.Migration):
             migrations.AlterField(
                 model_name='project',
                 name='articlesets',
-                field=models.ManyToManyField(related_name='projects_set', through='amcat.ProjectArticleset', to='amcat.ArticleSet'),
+                field=models.ManyToManyField(related_name='projects_set', through='amcat.ProjectArticleSet', to='amcat.ArticleSet'),
             )
         ]),
         migrations.AddField(

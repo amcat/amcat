@@ -23,12 +23,12 @@ def exception_handler(exc, context):
             headers['Retry-After'] = '%d' % exc.wait
             
         if isinstance(exc, Http404):
-            data['detail'] = exc.message
+            data['detail'] = str(exc)
             status_code = 404
             
         elif isinstance(exc, PermissionDenied):
             status_code = 403
-            data['detail'] = exc.message
+            data['detail'] = str(exc)
         elif isinstance(exc, APIException):
             status_code = exc.status_code
             if isinstance(exc.detail, dict):
