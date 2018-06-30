@@ -21,8 +21,9 @@ run = function(max.words, remove.stopwords, query, limit.window=NULL, ...) {
   if (remove.stopwords != "No") 
     dfm = dfm_remove(dfm, stopwords(remove.stopwords))
   
+  dfm=dfm_select(dfm, min_nchar = 2, pattern = "\\w+", valuetype="regex" )
   png(tf1 <- tempfile(fileext = ".png"))
-  quanteda::textplot_wordcloud(dfm, max.words=max.words)
+  quanteda::textplot_wordcloud(dfm, max.words=max.words, colors=RColorBrewer::brewer.pal(9, "Set1"))
   dev.off()
   
   # Base64-encode file
@@ -31,3 +32,6 @@ run = function(max.words, remove.stopwords, query, limit.window=NULL, ...) {
   html <- sprintf('<img src="data:image/png;base64,%s">', txt)
   return(html)
 }
+
+
+#dfm=dfm("dit is een oefening ! om speciale characters 1 ( a b te oefenen")

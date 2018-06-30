@@ -245,6 +245,8 @@ class ImportProject(Script):
         def create_articles(batch):
             for a in batch:
                 a['oldid_int'] = a.pop('old_id')
+                if a['text'] == '': a['text'] = '-'
+                if a['title'] == '': a['title'] = '-'
             articles = Article.create_articles([Article(project_id=self.status.project.id, **a) for a in batch])
             self.status.articles.update({a.get_property('oldid_int'): a.id for a in articles})
             return articles
