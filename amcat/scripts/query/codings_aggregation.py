@@ -129,8 +129,8 @@ class CodingAggregationActionForm(QueryActionForm):
                 field_value, _ = field_value.rsplit("_", 1)
             use_codebook = self.cleaned_data["{}_use_codebook".format(field_name)]
             kwargs = {}
-            if use_codebook:
-                codebook = self.cleaned_data['codebook']
+            codebook = self.cleaned_data.get('codebook')
+            if use_codebook and codebook is not None:
                 lang = self.cleaned_data['codebook_label_language']
                 groups = defaultdict(list)
                 for code, p in codebook.get_hierarchy():
