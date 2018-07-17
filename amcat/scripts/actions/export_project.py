@@ -206,6 +206,7 @@ class ExportProject(Script):
         coders = dict(User.objects.filter(pk__in={cj["fields"]["coder"] for cj in cjs}).values_list("pk", "email"))
         def substitute_email(coder, **fields):
             return dict(coder=coders[coder], **fields)
+        cjs = sorted(cjs, key=lambda c:c["pk"])
         cjs = [substitute_email(pk=c["pk"], **c["fields"]) for c in cjs]
         self._write_json_lines("codingjobs", cjs)
         
@@ -265,6 +266,7 @@ class ExportProject(Script):
     def export_articlesets(self):
         self.sets = set(self.project.articlesets_set.all())
         self.sets |= {cj.articleset for cj in CodingJob.objects.filter(project=self.project)}
+        self.sets = sorted(self.sets, key=lambda s: s.id)
         favs = set(self.project.favourite_articlesets.values_list("pk", flat=True))
         dicts = (dict(old_id=aset.id, provenance=aset.provenance, name=aset.name, favourite=aset.pk in favs)
                  for aset in self.sets)        
