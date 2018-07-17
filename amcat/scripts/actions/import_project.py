@@ -214,8 +214,8 @@ class ImportProject(Script):
         for a in self._get_dicts("articlesets.jsonl"):
             aset = ArticleSet.objects.create(project=self.status.project, name=a['name'], provenance=a['provenance'])
             yield a['old_id'], aset.id
-            if a['favourite']:
-                self.status.project.favourite_articlesets.add(aset)
+            if not a['favourite']:
+                self.status.project.favourite_articlesets.remove(aset)
 
     def get_sentences(self, articles, sentences):
         for aid, sents in articles.items():
