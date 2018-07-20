@@ -47,9 +47,6 @@ R_STRING_RE = re.compile(r'^\[1\] "(?P<str>.*)"$')
 
 def source_r_file(path):
     """Executes a file in R, similar to 'include' in C or import in Python"""
-    if not os.path.isabs(path):
-        # If we got a relative path, make it absolute relative to this file
-        path = os.path.join(os.path.dirname(__file__), path)
     r('source("{path}")'.format(path=path))
 
 
@@ -58,10 +55,11 @@ def initialize_r():
     """Sets up R environment. Will be called a the end of this module."""
     # set path from which R loads packages and where R stores new packages (install
     # can be called from within R plugins)
-    pkgdir = os.path.join(os.path.dirname(__file__), 'r_plugins', 'package_library')
+    plugindir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'r_plugins'))
+    pkgdir = os.path.join(plugindir, 'package_library')
     os.makedirs(pkgdir, exist_ok=True)
     r(".libPaths('{pkgdir}')".format(pkgdir=pkgdir))
-    source_r_file('r_plugins/formfield_functions.r')
+    source_r_file(os.path.join(plugindir, 'formfield_functions.r'))
 
 try:
     initialize_r()

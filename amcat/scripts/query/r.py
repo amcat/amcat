@@ -46,7 +46,7 @@ def get_r_queryactions():
             yield cls
 
 # Get local plugins
-system_dir = os.path.join(os.path.dirname(__file__), "r_plugins")
+system_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "r_plugins"))
 for path in glob.glob(os.path.join(system_dir, "*.r")):
     if path.endswith("/formfield_functions.r"):
         continue
