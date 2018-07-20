@@ -74,6 +74,8 @@ CACHES = {
     }
 }
 
+CACHE_QUERYACTION_TIMEOUT = int(amcat_config['cache'].get("queryaction_timeout", 7200))
+
 CACHE_BUST_TOKEN = datetime.datetime.now().isoformat()
 if not DEBUG:
     CACHE_BUST_TOKEN = amcat_config["cache"].get("bust_token")

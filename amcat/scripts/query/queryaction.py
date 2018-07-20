@@ -25,6 +25,7 @@ import dateutil.parser
 import functools
 import hashlib
 
+import settings
 from amcat.models import Project, ArticleSet, TaskHandler, CodingJob
 from amcat.models.authorisation import ROLE_PROJECT_METAREADER
 from amcat.scripts.forms import SelectionForm
@@ -221,8 +222,10 @@ class QueryAction(object):
         with QueryAction.serialize_cache_value. Note that large values may not fit in
         memcached."""
         timestamp = datetime.datetime.now().isoformat()
-        cache.set("{}.timestamp".format(self.get_cache_key()), timestamp, timeout=7200+1)
-        cache.set(self.get_cache_key(), self.serialize_cache_value(value), timeout=7200)
+        key = self.get_cache_key()
+        timeout = settings.CACHE_QUERYACTION_TIMEOUT
+        cache.set("{}.timestamp".format(key), timestamp, timeout=timeout+1)
+        cache.set(key, self.serialize_cache_value(value), timeout=timeout)
 
     def get_form_kwargs(self, **kwargs):
         return dict({
