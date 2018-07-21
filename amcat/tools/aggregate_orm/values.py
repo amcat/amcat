@@ -173,7 +173,7 @@ class CountCodingsValue(CountValue):
     joins_needed = ("codings",)
 
     def get_selects(self):
-        return ['COUNT(DISTINCT(T_coded_articles.id))']
+        return ['COUNT(DISTINCT(T_codings.coding_id))']
 
     def __repr__(self):
         return "<CountCodingsValue>"
