@@ -21,15 +21,17 @@
 Utility module for keyword searches. This module is full of misnomers, maybe
 move it to 'queryparser'?
 """
-
+import collections
 import logging
 import re
+
+from collections import namedtuple
 from itertools import chain
 from typing import Tuple, Iterable, Any, Set, Optional
 
 from django.core.exceptions import ValidationError
 
-from amcat.models import Label, ArticleSet, CodingJob, Code, CodingValue, CodedArticle
+from amcat.models import Label, ArticleSet, CodingJob, Code, CodingValue, CodedArticle, Coding
 from amcat.tools import queryparser
 from amcat.tools.aggregate_es import aggregate, TermCategory
 from amcat.tools.amcates import ES
@@ -218,6 +220,9 @@ class SelectionSearch:
         raise Exception("Invalid selection: no articlesets or codingjobs given.")
 
 
+CodingFilter = namedtuple("CodingFilter", ["schemafield", "code_ids"])
+
+
 class CodingJobSelectionSearch(SelectionSearch):
 
     def get_all_sets(self):
@@ -252,22 +257,35 @@ class CodingJobSelectionSearch(SelectionSearch):
         id_mapping = dict(coded_articles)
         coded_article_ids = set(id_mapping.keys())
 
+        codingschemafield_filters = []
         for field_name in ("1", "2", "3"):
-                if not coded_article_ids:
-                    break
+            schemafield = form.cleaned_data["codingschemafield_{}".format(field_name)]
+            schemafield_values = form.cleaned_data["codingschemafield_value_{}".format(field_name)]
+            schemafield_include_descendants = form.cleaned_data["codingschemafield_include_descendants_{}".format(field_name)]
 
-                schemafield = form.cleaned_data["codingschemafield_{}".format(field_name)]
-                schemafield_values = form.cleaned_data["codingschemafield_value_{}".format(field_name)]
-                schemafield_include_descendants = form.cleaned_data["codingschemafield_include_descendants_{}".format(field_name)]
+            if schemafield and schemafield_values:
+                code_ids = set(get_code_ids(
+                    schemafield.codebook,
+                    schemafield_values,
+                    schemafield_include_descendants
+                ))
 
-                if schemafield and schemafield_values:
-                    code_ids = list(get_code_filter(schemafield.codebook, schemafield_values, schemafield_include_descendants))
-                    coding_values = CodingValue.objects.filter(coding__coded_article__id__in=coded_article_ids)
-                    coding_values = coding_values.filter(field=schemafield)
-                    coding_values = coding_values.filter(intval__in=code_ids)
-                    coded_article_ids &= set(coding_values.values_list("coding__coded_article__id", flat=True))
+                codingschemafield_filters.append(CodingFilter(schemafield, code_ids))
 
-        return {id_mapping[k] for k in coded_article_ids}
+        articleschema_filters = [c for c in codingschemafield_filters if c.schemafield.codingschema.isarticleschema]
+        sentenceschema_filters = [c for c in codingschemafield_filters if not c.schemafield.codingschema.isarticleschema]
+
+        if articleschema_filters and sentenceschema_filters:
+            # AND filters if they belong to the same codingschema
+            filtered_coded_article_ids = filter_coded_article_ids(coded_article_ids, articleschema_filters)
+            filtered_coded_article_ids &= filter_coded_article_ids(coded_article_ids, sentenceschema_filters)
+        else:
+            filtered_coded_article_ids = filter_coded_article_ids(coded_article_ids, articleschema_filters + sentenceschema_filters)
+
+        return {id_mapping[cid] for cid in filtered_coded_article_ids}
+
+
+
 
 class SearchQuery(object):
     """
@@ -467,7 +485,7 @@ def resolve_queries(queries, codebook=None, label_language=None, replacement_lan
         yield resolve_query(query, _queries, codebook, labels, replacement_language)
 
 
-def get_code_filter(codebook, codes, include_descendants):
+def get_code_ids(codebook, codes, include_descendants):
     code_ids = set(code.id for code in codes)
 
     for code_id in code_ids:
@@ -482,3 +500,30 @@ def get_code_filter(codebook, codes, include_descendants):
         for tree_item in tree_items:
             for descendant in tree_item.get_descendants():
                 yield descendant.code_id
+
+
+def filter_coded_article_ids(coded_article_ids, filters):
+    if not filters:
+        return set()
+
+    # Collect all coding values belonging to filtered coded articles
+    all_code_ids = chain.from_iterable(code_ids for _, code_ids in filters)
+    all_field_ids = [schemafield.id for schemafield, _ in filters]
+    coding_values = CodingValue.objects.filter(coding__coded_article__id__in=coded_article_ids)
+    coding_values = coding_values.filter(intval__in=all_code_ids) # Reduce work we need to do at Python side
+    coding_values = coding_values.filter(field__id__in=all_field_ids) # Reduce work we need to do at Python side
+    coding_values = coding_values.only("coding_id", "field_id", "intval")
+
+    # Create mapping from (field_id, intval) -> {coding_id}
+    coding_value_dict = collections.defaultdict(set)
+    for coding_value in coding_values:
+        coding_value_dict[coding_value.field_id, coding_value.intval].add(coding_value.coding_id)
+
+    # Collect
+    coding_ids = {coding_value.coding_id for coding_value in coding_values}
+    for schemafield, code_ids in filters:
+        coding_ids &= set(chain.from_iterable(coding_value_dict[schemafield.id, code_id] for code_id in code_ids))
+
+    codings = Coding.objects.filter(id__in=coding_ids)
+    coded_article_ids &= set(codings.values_list("coded_article__id", flat=True))
+    return coded_article_ids
