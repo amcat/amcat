@@ -1,10 +1,11 @@
 amqp==1.4.9
 configargparse==0.10
 celery==3.1.18
-chardet==2.3.0
+chardet>=3.0.0,<3.1
 colorlog==2.6.0
 cssselect==0.9.1
 Django>=1.11,<1.12
+django-oauth-toolkit>=1.1.2,<1.2.0
 django-jsonfield==0.9.15
 djangorestframework>=3.8,<4
 elasticsearch>=5.4.0,<5.5.0
@@ -16,11 +17,11 @@ pyparsing>=2.2.0,<2.3.0
 PyPDF2==1.25.1
 python-dateutil==2.4.2
 Unidecode==0.04.19
-urllib3==1.13.1
+urllib3<1.24,>=1.21.1
 python-Levenshtein==0.12.0
 GitPython==1.0.1
 psycopg2>=2.6.1
-requests==2.9.1
+requests>=2.13.1
 django-celery>=3.2,<3.3
 amqplib==1.0.2
 pygments==2.1

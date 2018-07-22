@@ -72,6 +72,7 @@ class RequireLoginMiddleware(object):
             settings.MEDIA_URL,
             settings.STATIC_URL,
             settings.API_URL,
+            settings.OAUTH_URL
             )
 
     def _login_required(self, url):

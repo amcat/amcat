@@ -123,6 +123,7 @@ MEDIA_URL = '/media/'
 STATIC_URL = '/media/static/'
 ACCOUNTS_URL = "/accounts/"
 API_URL = '/api/'
+OAUTH_URL = '/o/'
 
 STATICFILES_DIRS = (
     # Explicit paths make PyCharm pick up on it.
@@ -135,6 +136,7 @@ STATICFILES_DIRS = (
 MIDDLEWARE_CLASSES = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'navigator.utils.misc.MethodOverrideMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -186,7 +188,8 @@ INSTALLED_APPS = [
     'amcat',
     "django_extensions",
     'djcelery',
-    "formtools"
+    "formtools",
+    'oauth2_provider',
 ]
 
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
@@ -247,6 +250,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'api.rest.tokenauth.ExpiringTokenAuthentication',
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
     ),
     'EXCEPTION_HANDLER': 'api.rest.exception.exception_handler',
 }
@@ -261,6 +265,7 @@ if not DEBUG:
 else:
     ALLOWED_HOSTS.append("*")
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    #CORS_ORIGIN_ALLOW_ALL = True
 
 EMAIL_DEFAULT_FROM = amcat_config["email"].get("from")
 

@@ -31,13 +31,13 @@ urlpatterns = [
     url(r'^', include('navigator.urls', namespace="navigator")),
     url(r'^api/', include('api.urls', namespace="api")),
     url(r'^', include('annotator.urls', namespace="annotator")),
-    url(r'^restframework', include('rest_framework.urls', namespace='rest_framework'))
-    ]
+    url(r'^restframework', include('rest_framework.urls', namespace='rest_framework')),
+    url(r'^o/', include('oauth2_provider.urls', namespace='oauth2_provider')),
+]
 
 # Static files (will be filtered by nginx on deployment)
 urlpatterns += [
     url(r"%s(?P<path>.*)$" % settings.MEDIA_URL[1:], serve, {
         "document_root": settings.MEDIA_ROOT,
-    }) #, prefix="django.views")
+    })
 ]
-
