@@ -257,21 +257,7 @@ class CodingJobSelectionSearch(SelectionSearch):
         id_mapping = dict(coded_articles)
         coded_article_ids = set(id_mapping.keys())
 
-        codingschemafield_filters = []
-        for field_name in ("1", "2", "3"):
-            schemafield = form.cleaned_data["codingschemafield_{}".format(field_name)]
-            schemafield_values = form.cleaned_data["codingschemafield_value_{}".format(field_name)]
-            schemafield_include_descendants = form.cleaned_data["codingschemafield_include_descendants_{}".format(field_name)]
-
-            if schemafield and schemafield_values:
-                code_ids = set(get_code_ids(
-                    schemafield.codebook,
-                    schemafield_values,
-                    schemafield_include_descendants
-                ))
-
-                codingschemafield_filters.append(CodingFilter(schemafield, code_ids))
-
+        codingschemafield_filters = list(get_coding_filters(self.form))
         articleschema_filters = [c for c in codingschemafield_filters if c.schemafield.codingschema.isarticleschema]
         sentenceschema_filters = [c for c in codingschemafield_filters if not c.schemafield.codingschema.isarticleschema]
 
@@ -483,6 +469,22 @@ def resolve_queries(queries, codebook=None, label_language=None, replacement_lan
 
     for query in queries:
         yield resolve_query(query, _queries, codebook, labels, replacement_language)
+
+
+def get_coding_filters(form):
+    for field_name in ("1", "2", "3"):
+        schemafield = form.cleaned_data["codingschemafield_{}".format(field_name)]
+        schemafield_values = form.cleaned_data["codingschemafield_value_{}".format(field_name)]
+        schemafield_include_descendants = form.cleaned_data["codingschemafield_include_descendants_{}".format(field_name)]
+
+        if schemafield and schemafield_values:
+            code_ids = set(get_code_ids(
+                schemafield.codebook,
+                schemafield_values,
+                schemafield_include_descendants
+            ))
+
+            yield CodingFilter(schemafield, code_ids)
 
 
 def get_code_ids(codebook, codes, include_descendants):

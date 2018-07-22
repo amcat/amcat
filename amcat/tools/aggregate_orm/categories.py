@@ -294,8 +294,9 @@ class TermCategory(Category):
 class SchemafieldCategory(ModelCategory):
     model = Code
 
-    def __init__(self, field, codebook=None, **kwargs):
+    def __init__(self, field, codebook=None, coding_ids=None, **kwargs):
         super(SchemafieldCategory, self).__init__(**kwargs)
+        self.coding_ids = coding_ids
         self.field = field
         self.codebook = codebook
         self.aggregation_map = {}
@@ -342,6 +343,9 @@ class SchemafieldCategory(ModelCategory):
     def get_wheres(self):
         where_sql = 'codings_values.field_id = {field.id}'
         yield where_sql.format(field=self.field)
+
+        if self.coding_ids is not None:
+            yield 'codings_values.intval IN ({})'.format(",".join(map(str, self.coding_ids)))
 
     def __repr__(self):
         return "<SchemafieldCategory: %s>" % self.field
