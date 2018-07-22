@@ -1,11 +1,13 @@
 from rest_framework.authentication import TokenAuthentication
 from rest_framework import exceptions
 from datetime import timedelta, datetime
+from settings import amcat_config
 
 # Inspired by
 # http://stackoverflow.com/questions/14567586/token-authentication-for-restful-api-should-the-token-be-periodically-changed
 
-EXPIRY_TIME = timedelta(hours=48)
+EXPIRY_TIME = timedelta(hours=amcat_config.getfloat('auth', 'token_expiry'))
+
 
 class ExpiringTokenAuthentication(TokenAuthentication):
     def authenticate_credentials(self, key):
