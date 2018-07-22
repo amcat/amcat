@@ -141,7 +141,7 @@ class ORMAggregate(object):
         for value in values:
             value._set_last_field_aggregation(last_field_category)
 
-        queries = [self._get_aggregate_sql(categories, value) for value in values]
+        queries = [list(self._get_aggregate_sql(categories, value)) for value in values]
         aggregations = list(self._execute_sqls(queries))
 
         # Aggregate further in Python code
@@ -195,5 +195,6 @@ class ORMAggregate(object):
         if self.flat and len(values) == 1:
             aggregation = ((cats, val[0]) for cats, val in aggregation)
 
-        return aggregation
+        # Filter duplicate rows
+        return iter(set(aggregation))
 

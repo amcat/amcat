@@ -25,18 +25,18 @@ from collections import defaultdict
 from django.core.exceptions import ValidationError
 from django.forms import ChoiceField, BooleanField
 
-from amcat.models import ArticleSet, CodingJob, Label
-from amcat.models import CodingSchemaField, Code, Coding
+from amcat.models import Label
+from amcat.models import CodingSchemaField, Coding
 from amcat.models.coding.codingschemafield import FIELDTYPE_IDS
 from amcat.scripts.forms.selection import get_all_schemafields
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.scripts.query.aggregation import AGGREGATION_FIELDS, get_aggregation_choices, \
-    get_used_properties_by_articlesets
+    get_used_properties_by_articlesets, clean_order_by, sorted_aggregation
 from amcat.scripts.query.queryaction import NotInCacheError
 from amcat.tools import aggregate_orm
 from amcat.tools.aggregate_orm import ORMAggregate
 from amcat.tools.aggregate_orm.categories import POSTGRES_DATE_TRUNC_VALUES
-from amcat.tools.keywordsearch import SelectionSearch, SearchQuery, get_coding_filters
+from amcat.tools.keywordsearch import SelectionSearch, get_coding_filters
 from .aggregation import AggregationEncoder, aggregation_to_matrix, aggregation_to_csv
 
 log = logging.getLogger(__name__)
@@ -44,6 +44,26 @@ log = logging.getLogger(__name__)
 
 CODINGSCHEMAFIELD_RE = re.compile("^codingschemafield\((?P<id>[0-9]+)\)$")
 AVERAGE_CODINGSCHEMAFIELD_RE = re.compile("^avg\((?P<id>[0-9]+)\)$")
+
+
+ORDER_BY_FIELDS = (
+    ("Primary", (
+        ("primary", "Ascending (primary)"),
+        ("-primary", "Descending (primary)")
+    )),
+    ("Secondary", (
+        ("secondary", "Ascending (secondary)"),
+        ("-secondary", "Descending (secondary)")
+    )),
+    ("First value", (
+        ("value1", "Ascending (first)"),
+        ("-value1", "Descending (first)")
+    )),
+    ("Second value", (
+        ("value2", "Ascending (second)"),
+        ("-value2", "Descending (second)")
+    ))
+)
 
 
 
@@ -88,6 +108,8 @@ class CodingAggregationActionForm(QueryActionForm):
 
     value1 = ChoiceField(label="First value", initial="count(articles)")
     value2 = ChoiceField(label="Second value", required=False, initial="")
+
+    order_by = ChoiceField(label="Order results by", initial="Label", choices=ORDER_BY_FIELDS)
 
     def __init__(self, *args, **kwargs):
         super(CodingAggregationActionForm, self).__init__(*args, **kwargs)
@@ -209,16 +231,9 @@ class CodingAggregationActionForm(QueryActionForm):
                         "you can only select one value."
             raise ValidationError(error_msg)
 
-        return self.cleaned_data
+        self.cleaned_data["order_by"] = clean_order_by(self)
 
-def to_sortable_tuple(key):
-    if isinstance(key, tuple):
-        return tuple(map(to_sortable_tuple, key))
-    elif isinstance(key, (ArticleSet, CodingJob)):
-        return key.name.lower()
-    elif isinstance(key, (Code, SearchQuery)):
-        return key.label.lower()
-    return key
+        return self.cleaned_data
 
 
 class CodingAggregationAction(QueryAction):
@@ -231,7 +246,6 @@ class CodingAggregationAction(QueryAction):
         ("text/csv", "CSV (Download)"),
     )
     form_class = CodingAggregationActionForm
-
 
     def run(self, form):
         self.monitor.update(1, "Executing query..")
@@ -248,6 +262,7 @@ class CodingAggregationAction(QueryAction):
             secondary = form.cleaned_data['secondary']
             value1 = form.cleaned_data['value1']
             value2 = form.cleaned_data['value2']
+            order_by = form.cleaned_data["order_by"]
 
             article_ids = list(selection.get_article_ids())
 
@@ -259,15 +274,12 @@ class CodingAggregationAction(QueryAction):
             categories = list(filter(None, [primary, secondary]))
             values = list(filter(None, [value1, value2]))
             aggregation = orm_aggregate.get_aggregate(categories, values)
-            aggregation = sorted(aggregation, key=to_sortable_tuple)
+            aggregation = sorted_aggregation(*order_by, aggregation)
 
             self.set_cache([aggregation, primary, secondary, categories, values])
         else:
             self.monitor.update(10, "Found in cache. Rendering..".format(**locals()))
 
-        if form.cleaned_data.get("primary_fill_zeroes") and hasattr(primary, 'interval'):
-            # aggregate_es does not have fill zeroes - does js handle that?
-            pass#aggregation = list(aggregate_es.fill_zeroes(aggregation, primary, secondary))
         # Matrices are very annoying to construct in javascript due to missing hashtables. If
         # the user requests a table, we thus first convert it to a different format which should
         # be easier to render.

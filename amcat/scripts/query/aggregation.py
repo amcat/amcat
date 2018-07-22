@@ -21,8 +21,6 @@ import io
 
 from typing import Iterable, Tuple
 
-import functools
-
 from amcat.models import get_used_properties_by_articlesets
 from amcat.scripts.query.queryaction import NotInCacheError
 from amcat.tools.amcates import get_property_primitive_type, ARTICLE_FIELDS
@@ -34,15 +32,31 @@ import datetime
 from itertools import chain, repeat
 
 from django.forms import ChoiceField, BooleanField
+from django.core.exceptions import ValidationError
 
 from amcat.models import ArticleSet, CodingSchemaField, Code, CodingJob
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools import aggregate_es
-from amcat.tools.aggregate_es.categories import IntervalCategory, FieldCategory
+from amcat.tools.aggregate_es.categories import FieldCategory
 from amcat.tools.aggregate_orm import CountArticlesValue
-from amcat.tools.keywordsearch import SelectionSearch, SearchQuery, to_sortable_tuple
+from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
 
 log = logging.getLogger(__name__)
+
+ORDER_BY_FIELDS = (
+    ("Primary", (
+        ("primary", "Ascending (primary)"),
+        ("-primary", "Descending (primary)")
+    )),
+    ("Secondary", (
+        ("secondary", "Ascending (secondary)"),
+        ("-secondary", "Descending (secondary)")
+    )),
+    ("Value", (
+        ("value1", "Ascending (first)"),
+        ("-value1", "Descending (first)")
+    ))
+)
 
 AGGREGATION_FIELDS = (
     ("articleset", "Articleset"),
@@ -54,6 +68,53 @@ EMPTY_MATRIX = {
     "columns": (),
     "data": ()
 }
+
+
+def nub(seq):
+    """Order preserving deduplication equivalent of list(set(seq)).
+
+    Stolen from: https://www.peterbe.com/plog/uniqifiers-benchmark"""
+    seen = {}
+    result = []
+    for item in seq:
+        marker = item
+        if marker in seen:
+            continue
+        seen[marker] = 1
+        result.append(item)
+    return result
+
+def sorted_aggregation(direction, key, aggregation):
+    # TODO: order in Postgres / Elastic?
+    if direction == "+":
+        reverse = False
+    elif direction == "-":
+        reverse = True
+    else:
+        raise ValueError("Order direction should be '+' or '-', not {}".format(direction))
+
+    if key == "primary":
+        reorder = lambda row: (row[0][0], row)
+    elif key == "secondary":
+        reorder = lambda row: (row[0][1], row)
+    elif key == "value1":
+        reorder = lambda row: (row[1][0], row)
+    elif key == "value2":
+        reorder = lambda row: (row[1][1], row)
+    else:
+        raise ValueError("Order key should be one of 'primary', 'secondary', 'value1', or 'value2'. Not: {}".format(key))
+
+    def order_by(obj):
+        if isinstance(obj, tuple):
+            return tuple(map(order_by, obj))
+        elif isinstance(obj, (ArticleSet, CodingJob)):
+            return obj.name.lower()
+        elif isinstance(obj, (Code, SearchQuery)):
+            return obj.label.lower()
+        return obj
+
+    return sorted(aggregation, key=lambda r: order_by(reorder(r)), reverse=reverse)
+
 
 def aggregation_to_matrix(aggregation, categories):
     """
@@ -80,8 +141,8 @@ def aggregation_to_matrix(aggregation, categories):
         raise ValueError("More than two categories not yet supported by aggregation_to_matrix()")
 
     # Two categories, plus an arbitrary number of values.
-    rows = sorted({cats[0] for cats, vals in aggregation}, key=to_sortable_tuple)
-    cols = sorted({cats[1] for cats, vals in aggregation}, key=to_sortable_tuple)
+    rows = nub(cats[0] for cats, vals in aggregation)
+    cols = nub(cats[1] for cats, vals in aggregation)
 
     row_positions = {r: n for n, r in enumerate(rows)}
     col_positions = {c: n for n, c in enumerate(cols)}
@@ -140,6 +201,20 @@ INTERVALS = (
     "day"
 )
 
+def clean_order_by(form, ignore_value2=False):
+    order_by = form.cleaned_data["order_by"]
+
+    if not ignore_value2:
+        if order_by in ("value2", "-value2") and form.cleaned_data["value2"] == "":
+            raise ValidationError("Cannot order by second value if no second value has been selected.")
+
+    if order_by in ("secondary", "-secondary") and not form.cleaned_data["secondary"]:
+        raise ValidationError("Cannot order by second aggregation label if no second aggregation has been selected.")
+
+    if order_by.startswith("-"):
+        return "-", order_by[1:]
+    else:
+        return "+", order_by
 
 def get_property_basename(property):
     if "_" in property:
@@ -185,6 +260,8 @@ class AggregationActionForm(QueryActionForm):
     value1 = ChoiceField(label="First value", initial="count(articles)", choices=[("count(articles)", "Article count")])
     value2 = ChoiceField(label="Second value", required=False, initial="", choices=())
 
+    order_by = ChoiceField(label="Order results by", initial="Label", choices=ORDER_BY_FIELDS)
+
     def __init__(self, *args, **kwargs):
         super(AggregationActionForm, self).__init__(*args, **kwargs)
         assert not self.codingjobs
@@ -225,6 +302,12 @@ class AggregationActionForm(QueryActionForm):
     def clean_secondary(self):
         return self._clean_aggregation("secondary")
 
+    def clean(self):
+        if self._errors:
+            return
+        self.cleaned_data["order_by"] = clean_order_by(self, ignore_value2=True)
+        return self.cleaned_data
+
 
 class AggregationAction(QueryAction):
     """
@@ -253,10 +336,12 @@ class AggregationAction(QueryAction):
             self.monitor.update(message="Found {narticles} articles. Aggregating..".format(**locals()))
 
             # Get aggregation
+            order_by = form.cleaned_data["order_by"]
             primary = form.cleaned_data["primary"]
             secondary = form.cleaned_data["secondary"]
             categories = list(filter(None, [primary, secondary]))
             aggregation = list(selection.get_aggregate(categories, flat=False))
+            aggregation = sorted_aggregation(*order_by, aggregation)
 
             self.set_cache([primary, secondary, categories, aggregation])
         else:

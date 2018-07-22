@@ -47,16 +47,6 @@ FIELD_MAP = {
     "set": "sets"
 }
 
-def to_sortable_tuple(key):
-    if isinstance(key, tuple):
-        return tuple(map(to_sortable_tuple, key))
-    elif isinstance(key, (ArticleSet, CodingJob)):
-        return key.name.lower()
-    elif isinstance(key, (Code, SearchQuery)):
-        return key.label.lower()
-    return key
-
-
 class SelectionData:
     def __init__(self, form):
         self.__dict__.update(form.cleaned_data)
@@ -183,8 +173,7 @@ class SelectionSearch:
         if not any(isinstance(c, TermCategory) for c in categories):
             query = self.get_query()
 
-        aggr = aggregate(query, self.get_filters(), categories, flat=flat, objects=objects)
-        return sorted(aggr, key=to_sortable_tuple)
+        return aggregate(query, self.get_filters(), categories, flat=flat, objects=objects)
 
     def get_nested_aggregate(self, categories):
         return to_nested(self.get_aggregate(categories))
