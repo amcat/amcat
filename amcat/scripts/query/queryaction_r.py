@@ -36,7 +36,7 @@ from rest_framework.authtoken.models import Token
 
 from rpy2 import robjects
 from rpy2.robjects import r
-from rpy2.robjects.packages import importr
+import rpy2.robjects.packages as rpackages
 
 from amcat.scripts.query import QueryActionForm, QueryAction
 from amcat.scripts.query import QueryActionHandler
@@ -66,6 +66,19 @@ try:
 except:
     logging.exception("R Initialization failed, R-based query actions might not function")
 
+
+def install_package(package, upgrade=False, force=False):
+    if not upgrade:
+        exists = r.suppressPackageStartupMessages(r.require(package))[0]
+        if exists:
+            print("SKIPPING ", package)
+            return
+    utils = rpackages.importr('utils')
+    utils.chooseCRANmirror(ind=1)
+    print("INSTALLING ", package, "; force=", force)
+    utils.install_packages(package, force=force)
+
+
 def _to_r_primitive(obj):
     if isinstance(obj, QuerySet):
         return list(obj.values_list("pk", flat=True))
@@ -82,6 +95,7 @@ def cleaned_data_to_r_primitives(cdata: dict) -> dict:
     suitable types which can be interpreted by R.
     """
     return {k: _to_r_primitive(v) for k, v in cdata.items()}
+
 
 
 class RQueryActionHandler(QueryActionHandler):
@@ -129,6 +143,14 @@ class RQueryAction(QueryAction):
         # We use a dynamic approach with type() to give the form a suitable classname
         fieldinfo = json.loads(r("formfields")[0], object_pairs_hook=OrderedDict)
         return type("{}Form".format(my_name), (RQueryActionForm,), {"fieldinfo": fieldinfo})
+
+    @classmethod
+    def get_dependencies(cls):
+        if cls.r_file is None:
+            raise ValueError("Subclasses must define class attribute r_file.")
+        source_r_file(cls.r_file)
+        return r.dependencies
+
 
     @synchronized_with(Lock())  # We only have one R interpreter
     def _run(self, cdata):
