@@ -179,12 +179,14 @@ class CSV(UploadScript):
             val = row[csvfield]
             if fieldname == 'date' and isinstance(val, datetime.datetime):
                 pass  # no need to parse
-            elif val.strip():
+            elif val and val.strip():
                 if fieldname in PARSERS:
                     val = PARSERS[fieldname](val)
             elif is_nullable(fieldname):
                 val = None
             else:
+                if val is None:
+                    raise ValueError("Field {fieldname} cannot be empty".format(**locals()))
                 val = val.strip()
 
             kargs[fieldname] = val

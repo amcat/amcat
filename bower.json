@@ -21,10 +21,6 @@
     "amcat-query-js": "git://github.com/amcat/amcat-query-js.git#~3.4.1",
     "jshashtable": "git://github.com/timdown/jshashtable.git",
     "uri.js": "",
-    "clipboard": "1.6.0"
-  },
-  "resolutions": {
-    "jquery": ">= 1.9.1",
-    "bootstrap": ">= 2.3.2"
+    "clipboard": "~1.6.0"
   }
 }
