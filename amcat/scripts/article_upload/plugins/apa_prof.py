@@ -96,7 +96,7 @@ RE_AUTHOR = re.compile("^Von (?P<author>[^0-9]+)$")
 
 # All regular expressions which can match metadata
 META_RE = (
-RE_DATE, RE_DATE2, RE_DATETIME, RE_PAGENR, RE_SECTION, RE_AUTHOR, RE_MEDIUM, RE_MEDIUM_QUOTE, RE_MEDIUM_ONLINE)
+    RE_DATE, RE_DATE2, RE_DATETIME, RE_PAGENR, RE_SECTION, RE_AUTHOR, RE_MEDIUM, RE_MEDIUM_QUOTE, RE_MEDIUM_ONLINE)
 
 UNDECODED = "NON_DECODED_CHARACTER"
 UNDECODED_UNICODE = "NON_DECODED_UNICODE_CHARACTER"
@@ -113,6 +113,7 @@ DEFAULT_FORMAT = "{}_NOT_GIVEN"
 LEGAL_TAGS = "(div|li|ul|ol|a|p|section|article|span|h1|h2|h3|h4|h5|h6|b|em|strong|i|script|!--)"
 LEGAL_HTML = re.compile("&lt;(?P<content>/?\s*({tags})((?!&gt;).)*)&gt;".format(tags=LEGAL_TAGS))
 
+
 ### FIXING AND PARSING ###
 def _fix_fs20(s):
     last = 0
@@ -128,8 +129,10 @@ def _fix_fs20(s):
 def fix_fs20(s):
     return " ".join(_fix_fs20(s))
 
+
 def as_escape(ch):
     return "\\\\u{:04}?".format(ord(ch))
+
 
 def fix_rtf(s):
     """
@@ -174,7 +177,7 @@ class EmptyPageError(ApaError):
 def unrtf(name):
     from subprocess import Popen, PIPE
     try:
-        p = Popen(["unrtf", name], stdout=PIPE, stderr=PIPE)
+        p = Popen(["unrtf", '--nopict', name], stdout=PIPE, stderr=PIPE)
     except FileNotFoundError:
         raise RuntimeError("unrtf executable not found.")
     stdout, stderr = p.communicate()
@@ -250,8 +253,10 @@ def _get_pages(elements):
 
 
 def get_pages(doc):
-    elements = doc.iterdescendants()
-    pages = len(doc.cssselect("hr")) + 1
+    body = doc.cssselect('body')
+    content = body[0] if body else doc
+    elements = content.iterdescendants()
+    pages = len(content.cssselect("hr")) + 1
     return (_get_pages(elements) for i in range(pages))
 
 
@@ -363,17 +368,28 @@ def parse_page(doc_elements):
     """Parses an APA page given in a list of Etree elements."""
     doc, elements = doc_elements
     elements = [e for e in elements if not isinstance(e, lxml.html.HtmlComment)]
-
+    element_set = set(elements)
     result = try_alternative(elements)
     if result is not None:
         return result
 
-    headline = set(get_descendants(doc.cssselect("b"))) & set(elements)
-    meta = (set(get_descendants(doc.cssselect("i"))) & set(elements)) - headline
-    text = set(elements) - (headline | meta)
+    source_tags = doc.cssselect('meta[name=author]')
+    if source_tags:
+        source = source_tags[0].get('content')
+    else:
+        source = None
+
+    headline = set(get_descendants(doc.cssselect("b"))) & element_set
+    meta = (set(get_descendants(doc.cssselect("i"))) & element_set) - headline
+    text = element_set - (headline | meta)
     headline = sorted(get_roots(headline), key=lambda e: elements.index(e))
 
-    if not headline:
+    # Some formats don't have a bold headline. Instead, the first line is the headline.
+    first_line_is_headline = False
+    if not headline and source == "AOMweb":
+        first_line_is_headline = True
+
+    if not headline and not first_line_is_headline:
         raise ApaError("No possible headlines found.")
 
     remove_tree(meta, ["b"])
@@ -381,8 +397,11 @@ def parse_page(doc_elements):
 
     # Some text in italics is no metadata. We only use text before headline elements
     # for metadata.
-    lesser_than_headline = lambda e: elements.index(e) <= elements.index(headline[0])
-    meta = get_nonempty(filter(lesser_than_headline, meta))
+    if not first_line_is_headline:
+        lesser_than_headline = lambda e: elements.index(e) <= elements.index(headline[0])
+        meta = get_nonempty(filter(lesser_than_headline, meta))
+    else:
+        meta = get_nonempty(meta)
 
     # Parse metadata
     metadata = {}
@@ -408,12 +427,14 @@ def parse_page(doc_elements):
 
     # Clean data and get headline
     metadata["medium"] = metadata.get("medium", "APA - Unknown").strip().strip('"')
-    medium, headline = metadata["medium"].strip(), "".join(["".join(e.itertext()) for e in headline]).strip()
 
-    if medium in headline:
-        headline = headline.split("-", medium.count("-") + 1)[-1]
+    if first_line_is_headline:
+        medium = metadata["medium"].strip()
+    else:
+        medium, headline = metadata["medium"].strip(), "".join(["".join(e.itertext()) for e in headline]).strip()
 
-    metadata["title"] = headline
+        if medium in headline:
+            headline = headline.split("-", medium.count("-") + 1)[-1]
 
     if "section" in metadata and metadata["section"] is None:
         del metadata["section"]
@@ -421,6 +442,10 @@ def parse_page(doc_elements):
     # Get text. Since ordering is lost in sets, restore original order of elements
     text = "".join(get_text(sorted(text, key=lambda e: elements.index(e)))).strip()
 
+    if first_line_is_headline:
+        headline, text = re.split("\n *\n", text, 1)
+
+    metadata["title"] = headline
     metadata["length"] = sum(1 for w in RE_NONWORD.split(text) if w)
 
     return metadata, text
