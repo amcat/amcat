@@ -8,6 +8,7 @@ Django>=1.11,<1.12
 django-oauth-toolkit>=1.1.2,<1.2.0
 django-jsonfield==0.9.15
 djangorestframework>=3.8,<4
+django-cors-headers>=2.4,<3
 elasticsearch>=5.4.0,<5.5.0
 html2text==2016.1.8
 jdcal==1.0.1

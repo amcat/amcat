@@ -100,6 +100,7 @@ class ProjectSerializer(AmCATProjectModelSerializer):
     """
     favourite = serializers.SerializerMethodField("is_favourite")
     last_visited_at = serializers.SerializerMethodField("project_visited_at", allow_null=True)
+    display_columns = serializers.SerializerMethodField()
 
     @property
     @cached
@@ -115,6 +116,11 @@ class ProjectSerializer(AmCATProjectModelSerializer):
     def is_favourite(self, project):
         if project is None: return
         return project.id in self.favourite_projects
+
+    def get_display_columns(self, project):
+        if project is None:
+            return
+        return project.display_columns
 
     @property
     @cached
@@ -154,7 +160,7 @@ class ProjectViewSetMixin(AmCATViewSetMixin):
     
 class ProjectViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     model = Project
-
+    ignore_filters = ('display_columns',)
     @property
     def project(self):
         if 'pk' in self.kwargs:

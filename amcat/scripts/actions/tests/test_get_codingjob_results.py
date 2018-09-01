@@ -132,7 +132,7 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
 
         data = base64.b64decode(s.run()['data']).decode('utf-8')
         table = [[cell for cell in row] for row in csv.reader(StringIO(data))]
-        self.assertEqual(table, [[s1], [s2]])
+        self.assertEqual(table, [['id', 'title', 'date', s1], [s2]])
 
         # test json
         s = self._get_results_script([job], {f: {}}, export_format='json')

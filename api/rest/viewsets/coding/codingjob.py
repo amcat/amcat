@@ -20,7 +20,7 @@
 from django.db.models import Count, Q
 from rest_framework import serializers
 
-from amcat.models import ArticleSet
+from amcat.models import ArticleSet, Coding
 from amcat.models.coding.codingjob import CodingJob
 from amcat.models.article import Article
 from amcat.models.sentence import  Sentence
@@ -56,6 +56,7 @@ class CodingJobSerializer(AmCATModelSerializer):
     in one query.
     """
     articleset = serializers.PrimaryKeyRelatedField(read_only=True)
+    codings = serializers.SerializerMethodField('get_n_codings')
     articles = serializers.SerializerMethodField('get_n_articles')
     complete = serializers.SerializerMethodField('get_n_done_jobs')
     todo = serializers.SerializerMethodField('get_n_todo_jobs')
@@ -129,6 +130,10 @@ class CodingJobSerializer(AmCATModelSerializer):
             return CodedArticle.objects.filter(codingjob=obj, status__id__in=STATUS_TODO).count() 
         
         return self._get_n_todo_jobs().get(obj.id, 0)
+
+    def get_n_codings(self, obj):
+        if not obj: return 0
+        return Coding.objects.filter(coded_article__codingjob=obj).count()
 
     def get_articleset(self, obj):
         return obj.articleset_id

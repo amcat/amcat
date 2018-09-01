@@ -151,7 +151,8 @@ class CodingAggregationActionForm(QueryActionForm):
             if field_value.endswith("_str"):
                 # _str is added to disambiguate between fields and intervals (why, though?!)
                 field_value, _ = field_value.rsplit("_", 1)
-            use_codebook = self.cleaned_data["{}_use_codebook".format(field_name)]
+            use_codebook_name = "{}_use_codebook".format(field_name)
+            use_codebook = self.cleaned_data[use_codebook_name]
             kwargs = {}
             codebook = self.cleaned_data.get('codebook')
             if use_codebook and codebook is not None:
@@ -165,6 +166,12 @@ class CodingAggregationActionForm(QueryActionForm):
                     except Label.DoesNotExist:
                         pass
                 kwargs['groupings'] = groups
+            elif use_codebook and codebook is None:
+                error_msg = ("'Group codings using codebook' is enabled, but no codebook was selected. " 
+                             "Field '{}' needs a codebook in order to group by code.".format(field_value))
+                self._errors.setdefault('codebook', [])
+                self._errors['codebook'].append(ValidationError(error_msg))
+
             return aggregate_orm.ArticleFieldCategory(True, field_value, **kwargs)
 
         # Test for schemafield

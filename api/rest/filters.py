@@ -52,7 +52,7 @@ class InFilter(ModelMultipleChoiceFilter):
 
 
 class PrimaryKeyFilterSet(FilterSet):
-    pk = InFilter(name='id', queryset=None)
+    pk = InFilter(field_name='id', queryset=None)
 
     def __init__(self, *args, **kwargs):
         super(PrimaryKeyFilterSet, self).__init__(*args, **kwargs)
