@@ -121,7 +121,7 @@ define(["jquery", "annotator/autocomplete"], function($, autocomplete){
             var parnr = parseInt(value.split(".")[0]);
             var sentnr = parseInt(value.split(".")[1]);
 
-            return $.grep(annotator.values(annotator.state.sentences), function(sentence){
+            return $.grep(Object.values(annotator.state.sentences), function(sentence){
                 return sentence.parnr == parnr && sentence.sentnr == sentnr;
             })[0];
 
