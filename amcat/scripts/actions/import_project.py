@@ -66,7 +66,8 @@ class ImportStatus:
             for aid, sents in sentences.items():
                 yield from ((aid, par, sent, sentid) for ((par, sent), sentid) in sents.items())
         status = {k: v for (k, v) in self.__dict__.items() if not k.startswith("_")}
-        status['project'] = self.project.id
+        if self.project:
+            status['project'] = self.project.id
         status['sentences'] = list(_save_sentences(status.pop('sentences')))
         json.dump(status, open(self._status_file, "w"))
         logging.info("Written status to {self._status_file}".format(**locals()))
@@ -82,11 +83,12 @@ class ImportProject(Script):
     def _run(self, file, user, status_file=None):
         self.status = ImportStatus(status_file)
         self.zipfile = ZipFile(file.file.name)
-        if not self.status.project:
-            self.status.set(project=Project.objects.create(name=file.file.name, owner_id=(user.pk if user else 1)))
         if not self.status.users:
             self.status.set(users=dict(self.import_users()))
-
+        if not self.status.project:
+            project=self.import_project()
+            self.status.set(project=project)
+        self.import_user_roles()
         if not self.status.setids:
             self.status.set(setids=dict(self.import_articlesets()))
         if not self.status.articles:
@@ -127,6 +129,7 @@ class ImportProject(Script):
                 o.object.project_id = self.status.project.id
             o.save()
             yield old_id, o.object.pk
+
 
     def import_codingjobs(self):
         old_ids, jobs = [], []
@@ -363,13 +366,21 @@ class ImportProject(Script):
                 user = create_user(u['username'], u['first_name'], u['last_name'], u['email'])
                 user.password = u['password']
                 user.save()
-            # add user to project
-            if u['role']:
-                role = Role.objects.get(label=u['role'])
-                if not ProjectRole.objects.filter(project=self.status.project, user=user).exists():
-                    ProjectRole.objects.create(project=self.status.project, user=user, role=role)
             yield u['email'], user.id
         self.check_coders()
+
+
+    def import_user_roles(self):
+        favs = set(self.status.project.favourite_users.values_list("user_id", flat=True))
+        for u in self._get_dicts("users.jsonl"):
+            user = self.status.users[u['email']]
+            # add user to project
+            role = Role.objects.get(label=u['role'])
+            if not ProjectRole.objects.filter(project=self.status.project, user_id=user).exists():
+                ProjectRole.objects.create(project=self.status.project, user_id=user, role=role)
+            if u['fav'] and not user in favs:
+                self.status.project.favourite_users.add(user)
+
 
     def check_coders(self):
         emails = {d['coder'] for d in self._get_dicts("codingjobs.jsonl")}
@@ -379,6 +390,12 @@ class ImportProject(Script):
         if emails - set(users):
             raise ValueError("Users missing in this AmCAT server: {}".format(emails - set(users)))
 
+    def import_project(self):
+        p, = self._get_dicts("project.json")
+        owner= self.status.users[p['owner']]
+        print(owner)
+        role = Role.objects.get(label=p['guest_role'])
+        return Project.objects.create(name=p['name'], description=p['description'], owner_id=owner, guest_role=role)
 
 if __name__ == '__main__':
     cli.run_cli()
