@@ -221,13 +221,14 @@ class ExportProject(Script):
         self._write_json_lines("sentences", sentences, "coded sentences")
         
     def export_users(self):
+        favs = set(self.project.favourite_users.values_list("user_id", flat=True))
         roles = {r.user_id: r.role.label for r in self.project.projectrole_set.all()}
         cjs = CodingJob.objects.filter(project=self.project)
         uids = set(roles) | {self.project.owner.pk} | {cj.coder_id for cj in cjs}
         def get_users(uids, roles):
             for u in User.objects.filter(pk__in=uids):
                 role = roles.get(u.id)
-                yield dict(username=u.username, first_name=u.first_name, last_name=u.last_name, password=u.password, role=role, email=u.email)
+                yield dict(username=u.username, first_name=u.first_name, last_name=u.last_name, password=u.password, role=role, email=u.email, fav=u.id in favs)
         self._write_json_lines("users", get_users(uids, roles))
 
 
