@@ -19,7 +19,7 @@
 from rest_framework import serializers
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from amcat.models import ArticleSet
+from amcat.models import ArticleSet, PROJECT_ROLES, ROLE_PROJECT_ADMIN
 from amcat.tools.aggregate_es.aggregate import aggregate
 from amcat.tools.aggregate_es.categories import ArticlesetCategory
 from amcat.tools.caching import cached
@@ -27,6 +27,9 @@ from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATProjectModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
+
+from rest_framework import status
+from rest_framework.response import Response
 
 __all__ = (
     "ArticleSetSerializer", "ArticleSetViewSet", "FavouriteArticleSetViewSet",
@@ -77,10 +80,26 @@ class ArticleSetViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesM
     serializer_class = ArticleSetSerializer
     model = ArticleSet
     queryset = ArticleSet.objects.all()
+    permission_map = {'POST': ROLE_PROJECT_ADMIN}
 
     def filter_queryset(self, queryset):
         queryset = super(ArticleSetViewSet, self).filter_queryset(queryset)
         return queryset.filter(id__in=self.project.all_articlesets())
+
+    def create(self, request, *args, **kwargs):
+        if "articleset" in request.data:
+            # We're adding an existing set, no need to create a new set
+            setids = request.data['articleset']
+            if isinstance(setids, int):
+                setids = [setids]
+            sets = [ArticleSet.objects.get(pk=s) for s in setids]
+            self.project.articlesets.add(*sets)
+            self.project.favourite_articlesets.add(*sets)
+            return Response({"articlesets": setids}, status=status.HTTP_201_CREATED)
+        else:
+            super().create(request, *args, **kwargs)
+
+
 
 class FavouriteArticleSetViewSetMixin(AmCATViewSetMixin):
     model_key = "favourite_articleset"
