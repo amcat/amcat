@@ -25,7 +25,7 @@ from collections import defaultdict
 from django.core.exceptions import ValidationError
 from django.forms import ChoiceField, BooleanField, IntegerField
 
-from amcat.models import Label
+from amcat.models import Label, ArticleSet
 from amcat.models import CodingSchemaField, Coding
 from amcat.models.coding.codingschemafield import FIELDTYPE_IDS
 from amcat.models.coding.codebook import get_max_tree_level
