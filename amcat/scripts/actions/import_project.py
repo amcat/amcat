@@ -364,9 +364,10 @@ class ImportProject(Script):
                 user.password = u['password']
                 user.save()
             # add user to project
-            role = Role.objects.get(label=u['role'])
-            if not ProjectRole.objects.filter(project=self.status.project, user=user).exists():
-                ProjectRole.objects.create(project=self.status.project, user=user, role=role)
+            if u['role']:
+                role = Role.objects.get(label=u['role'])
+                if not ProjectRole.objects.filter(project=self.status.project, user=user).exists():
+                    ProjectRole.objects.create(project=self.status.project, user=user, role=role)
             yield u['email'], user.id
         self.check_coders()
 
