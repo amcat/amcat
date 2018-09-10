@@ -20,16 +20,21 @@
 import copy
 import functools
 import itertools
+import operator
 import re
+from collections import defaultdict
+from functools import reduce
 from typing import Container
 
+from django.db.models import Q
 from django.http import QueryDict
 from django_filters import filters, filterset
 from rest_framework.exceptions import ParseError, NotFound, PermissionDenied
 from rest_framework.fields import CharField, IntegerField, DateTimeField
 from rest_framework.serializers import Serializer
 
-from amcat.models import Project, Article, ROLE_PROJECT_METAREADER, ArticleSet, CodedArticle, CodingJob
+from amcat.models import Project, Article, ROLE_PROJECT_METAREADER, ArticleSet, CodedArticle, CodingJob, CodingValue, \
+    CodingSchemaField, Codebook, CodebookCode
 from amcat.tools import amcates, keywordsearch
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import AmCATResource
@@ -43,7 +48,7 @@ RE_KWIC = re.compile("(?P<left>.*?)<mark>(?P<keyword>.*?)</mark>(?P<right>.*)", 
 
 
 class LazyES(object):
-    def __init__(self, user=None, model=None, queries=None, filters=None, fields=None, hits=False):
+    def __init__(self, user=None, queries=None, filters=None, fields=None, hits=False, model=None):
         self.user = user
         self.queries = queries
         self.model = model or Article
