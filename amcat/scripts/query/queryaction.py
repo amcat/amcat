@@ -205,7 +205,10 @@ class QueryAction(object):
 
     def desearialize_cache_value(self, value):
         """Decompress then depickle value"""
-        return pickle.loads(zlib.decompress(value))
+        try:
+            return pickle.loads(zlib.decompress(value))
+        except AttributeError:
+            raise NotInCacheError("Failed to deserialize cache value")
 
     def get_cache(self):
         """Get cached value for this particular form+user. Raises NotInCacheError if not cached
