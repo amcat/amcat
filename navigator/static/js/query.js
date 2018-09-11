@@ -629,7 +629,7 @@ define([
 
     self.fill_filters = async function(){
         let filters;
-        if(saved_query.parameters.filters === undefined){
+        if(saved_query.parameters.filters === undefined || saved_query.parameters.filters.length === 0){
             filters = {}
         }
         else {
