@@ -188,8 +188,8 @@ class SelectionSearch:
     def get_article_ids_per_query(self):
         return dict(self._get_article_ids_per_query())
 
-    def get_articles(self, size=None, offset=0, fields=()):
-        return ES().query(self.get_query(), self.get_filters(), True, size=size, from_=offset, _source=fields)
+    def get_articles(self, size=None, offset=0, fields=(), **kwargs):
+        return ES().query(self.get_query(), self.get_filters(), True, size=size, from_=offset, _source=fields, **kwargs)
 
     @staticmethod
     def get_instance(form):

@@ -1,7 +1,7 @@
 <script type="text/javascript">
     $(function(){
         var form_data;
-        require(["query/utils/serialize"], function(serialize){
+        require(["query/utils/serialize", "highcharts.core"], function(serialize, Highcharts){
             var form = $("#query-form");
             var jobs = form.data("jobs");
             var sets = form.data("sets");

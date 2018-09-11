@@ -22,7 +22,7 @@ import json
 import re
 
 from django import forms
-from django.forms import IntegerField, BooleanField
+from django.forms import IntegerField, BooleanField, ChoiceField
 from django.template import Context
 from django.template.loader import get_template
 from typing import Sequence
@@ -51,6 +51,8 @@ MAX_DATE_GROUPS = 500
 
 
 def get_fragments(query: str, article_ids: Sequence[int], fragment_size=150, number_of_fragments=3):
+    order_to_keep = article_ids
+
     if not query:
         query = toolkit.random_alphanum(20)
 
@@ -65,7 +67,7 @@ def get_fragments(query: str, article_ids: Sequence[int], fragment_size=150, num
             else:
                 fragment = highlights[0]
             setattr(articles[article_id], field, fragment)
-    return articles.values()
+    return [articles[id] for id in order_to_keep]
 
 @order_fields(("offset", "size", "number_of_fragments", "fragment_size", "show_fields"))
 class SummaryActionForm(QueryActionForm):
@@ -75,6 +77,9 @@ class SummaryActionForm(QueryActionForm):
     fragment_size = IntegerField(initial=150)
     show_fields = forms.MultipleChoiceField(choices=(), initial=(), required=False)
     aggregations = BooleanField(initial=True, required=False)
+
+    sort_by = ChoiceField(choices=(("", "---"), ("date", "Date")), initial="date", required=False)
+    sort_descending = BooleanField(initial=True, required=False)
 
     def __init__(self, user, *args, **kwargs):
         super().__init__(user, *args, **kwargs)
@@ -105,14 +110,20 @@ class SummaryAction(QueryAction):
         fragment_size = form.cleaned_data['fragment_size']
         show_fields = sorted(form.cleaned_data['show_fields'])
         show_aggregation = form.cleaned_data['aggregations']
+        sort_by = form.cleaned_data.get('sort_by')
+        sort_desc = "desc" if form.cleaned_data.get('sort_descending', False) else "asc"
+
+        if sort_by:
+            sort = [":".join([sort_by, sort_desc])]
+        else:
+            sort = []
 
         with Timer() as timer:
             selection = SelectionSearch.get_instance(form)
             self.monitor.update(message="Executing query..")
             narticles = selection.get_count()
             self.monitor.update(message="Fetching articles..".format(**locals()))
-
-            articles = selection.get_articles(size=size, offset=offset).as_dicts()
+            articles = selection.get_articles(size=size, offset=offset, sort=sort).as_dicts()
             articles = get_fragments(selection.get_query(), [a["id"] for a in articles], fragment_size, number_of_fragments)
 
             if show_aggregation:
