@@ -60,6 +60,11 @@ def get_fragments(query: str, article_ids: Sequence[int], fragment_size=150, num
     qs = ESQuerySet().filter(id__in=article_ids)
     fragments = qs.highlight_fragments(query, ("text", "title"), mark="em", fragment_size=fragment_size, number_of_fragments=number_of_fragments)
     for article_id, fields in fragments.items():
+        
+        if number_of_fragments == 0:
+            articles[article_id].text = ""
+            continue
+
         articles[article_id]._highlighted = True  # Disable save()
         for field, highlights in fields.items():
             if len(highlights) > 1:

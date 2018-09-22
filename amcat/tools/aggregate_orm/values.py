@@ -68,7 +68,7 @@ class Value(SQLObject):
 
 
 class AverageValue(Value):
-    joins_needed = ("codings",)
+    joins_needed = ("codings", "coded_articles", "articles")
 
     def __init__(self, field, *args, **kwargs):
         """@type field: CodingSchemaField"""
@@ -130,58 +130,62 @@ class AverageValue(Value):
         if self.field.fieldtype_id == FIELDTYPE_IDS.QUALITY:
             avg_sql += "/10.0"
         yield avg_sql
+        yield "array_agg(T_articles.article_id)"
 
     def aggregate(self, values):
         # Quick check to prevent lots of calculations if not necessary
         if len(values) == 1:
-            weight, value = values[0]
-            return [1, value]
+            weight, value, ids = values[0]
+            return [1, value, ids]
 
         average = Decimal(0)
-        for weight, value in values:
+        ids = []
+        for weight, value, article_ids in values:
             average += weight * value
+            ids.extend(article_ids)
 
         total_weight = sum(map(itemgetter(0), values))
-        return [total_weight, average / total_weight]
+        return [total_weight, average / total_weight, ids]
 
     def postprocess(self, value):
-        weight, value = value
-        return float(value)
+        weight, value, ids = value
+        return float(value), tuple(ids)
 
     def __repr__(self):
         return "<AverageValue: %s>" % self.field
 
 class CountValue(Value):
     def postprocess(self, value):
-        return int(value[0])
+        return (int(value[0]), tuple(value[1]))
 
     def aggregate(self, values):
-        return [sum(map(itemgetter(0), values))]
-
+        return [sum(map(itemgetter(0), values))] + [v[1] for v in values]
 
 class CountArticlesValue(CountValue):
     joins_needed = ("codings", "coded_articles", "articles")
 
     def get_selects(self):
-        return ['COUNT(DISTINCT(T_articles.article_id))']
+        return ['COUNT(DISTINCT(T_articles.article_id))', 'ARRAY_AGG(DISTINCT(T_articles.article_id))']
 
     def __repr__(self):
         return "<CountArticlesValue>"
 
 
 class CountCodingsValue(CountValue):
-    joins_needed = ("codings",)
+    joins_needed = ("codings", "coded_articles", "articles")
 
     def get_selects(self):
-        return ['COUNT(DISTINCT(T_codings.coding_id))']
+        return ['COUNT(DISTINCT(T_codings.coding_id))', 'ARRAY_AGG(DISTINCT(T_articles.article_id))']
 
     def __repr__(self):
         return "<CountCodingsValue>"
 
 
 class CountCodingValuesValue(CountValue):
+    joins_needed = ("codings", "coded_articles", "articles")
+
     def get_selects(self):
-        return ['COUNT(codings_values.codingvalue_id)']
+        return ['COUNT(codings_values.codingvalue_id)', 'ARRAY_AGG(DISTINCT(T_articles.article_id))']
 
     def __repr__(self):
         return "<CountCodingValuesValue>"

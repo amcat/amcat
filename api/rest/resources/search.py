@@ -320,6 +320,7 @@ class SearchResource(AmCATResource):
         # Allow for both 'ids' and 'pk' filtering
         ids = [self.params.getlist(field_name) for field_name in FILTER_ID_FIELDS]
         ids = list(itertools.chain.from_iterable(ids))
+        ids = [id for ids0 in ids for id in ids0.split(",")]
         if ids:
             queryset.filter("ids", ids)
 

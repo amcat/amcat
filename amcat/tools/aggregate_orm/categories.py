@@ -324,12 +324,15 @@ class SchemafieldCategory(ModelCategory):
 
         # Create a mapping from key -> rownrs which need to be aggregated
         to_aggregate = defaultdict(list)
+        aggregate_ids = defaultdict(list)
         for n, row in enumerate(rows):
             key = row[:self_index] + [self.aggregation_map[row[self_index]]] + row[self_index + 1:num_categories]
             to_aggregate[tuple(key)].append(n)
+            aggregate_ids[tuple(key)].extend(row[-1])
 
         for key, rownrs in to_aggregate.items():
             values = [row[num_categories:] for row in [rows[rownr] for rownr in rownrs]]
+            values[0][-1] = aggregate_ids[key]
             yield list(key) + value.aggregate(values)
 
     def aggregate(self, categories, value, rows):
