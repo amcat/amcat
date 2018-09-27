@@ -42,7 +42,7 @@ from amcat.scripts.query import QueryActionForm, QueryAction
 from amcat.scripts.query import QueryActionHandler
 from amcat.tools.toolkit import synchronized_with
 
-R_STRING_RE = re.compile(r'^\[1\] "(?P<str>.*)"$')
+R_STRING_RE = re.compile(r'^\[1\] "(?P<str>.*)"$', re.DOTALL)
 
 
 def source_r_file(path):
