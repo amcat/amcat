@@ -157,7 +157,7 @@ class RQueryAction(QueryAction):
         # Execute script using R
         cdata = {k: v for (k, v) in cdata.items() if v is not None}
         r_json_arguments = robjects.StrVector([json.dumps(cdata, indent=4)])
-        r_arguments = importr("rjson").fromJSON(r_json_arguments)
+        r_arguments = rpackages.importr("rjson").fromJSON(r_json_arguments)
         source_r_file(self.r_file)
         result = str(r['do.call']('run', r_arguments)).encode("utf-8").decode("unicode_escape")
 
