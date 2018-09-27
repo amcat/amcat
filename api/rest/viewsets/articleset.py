@@ -97,7 +97,7 @@ class ArticleSetViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesM
             self.project.favourite_articlesets.add(*sets)
             return Response({"articlesets": setids}, status=status.HTTP_201_CREATED)
         else:
-            super().create(request, *args, **kwargs)
+            return super().create(request, *args, **kwargs)
 
 
 
