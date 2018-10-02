@@ -55,7 +55,8 @@ __all__ = (
     "IntervalCategory",
     "ArticleSetCategory",
     "TermCategory",
-    "SchemafieldCategory"
+    "SchemafieldCategory",
+    "GroupedCodebookFieldCategory"
 )
 
 
@@ -299,6 +300,8 @@ class SchemafieldCategory(ModelCategory):
         self.coding_ids = coding_ids
         self.field = field
         self.codebook = codebook
+
+        # todo: pull rest of code hierarchy logic down to GroupedCodebookFieldCategory
         self.aggregation_map = {}
 
         if self.codebook is not None:
@@ -353,3 +356,39 @@ class SchemafieldCategory(ModelCategory):
     def __repr__(self):
         return "<SchemafieldCategory: %s>" % self.field
 
+
+class GroupedCodebookFieldCategory(SchemafieldCategory):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.t_hierarchy = "T_{}_hierarchy".format(self.prefix)
+
+    def get_setup_statements(self):
+        sql = """
+            CREATE TEMPORARY TABLE {T} AS 
+            (
+                WITH RECURSIVE codebook_hierarchy AS (
+                     SELECT c.codebook_id, c.code_id, c.code_id AS root_id
+                     FROM codebooks_codes c
+                     JOIN codes cd ON cd.code_id = c.code_id
+                         WHERE c.parent_id ISNULL
+                         AND c.codebook_id = {codebook_id}
+                     UNION ALL
+                     SELECT p.codebook_id, p.code_id, h.root_id
+                     FROM codebooks_codes p
+                     JOIN codebook_hierarchy as h ON h.code_id = p.parent_id AND h.codebook_id = p.codebook_id
+                )
+                SELECT code_id, root_id FROM codebook_hierarchy
+            );
+            CREATE INDEX {T}_code_id ON {T} (code_id);
+        """
+        yield sql.format(codebook_id=self.codebook.id, T=self.t_hierarchy)
+
+    def get_teardown_statements(self):
+        yield "DROP TABLE IF EXISTS {T};".format(T=self.t_hierarchy)
+
+    def get_joins(self):
+        yield "JOIN {T} as T_hierarchy ON (T_hierarchy.code_id = codings_values.intval)".format(T=self.t_hierarchy)
+
+    def get_selects(self):
+        yield "T_hierarchy.root_id"

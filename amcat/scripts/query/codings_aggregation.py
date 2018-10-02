@@ -178,9 +178,10 @@ class CodingAggregationActionForm(QueryActionForm):
                     if coding_filter.schemafield == codingschemafield:
                         coding_ids = coding_filter.code_ids
                         break
-
-            codebook = codingschemafield.codebook if use_codebook else None
-            return aggregate_orm.SchemafieldCategory(codingschemafield, coding_ids=coding_ids, codebook=codebook, prefix=prefix)
+            if use_codebook:
+                codebook = codingschemafield.codebook
+                return aggregate_orm.GroupedCodebookFieldCategory(codingschemafield, coding_ids=coding_ids, prefix=prefix, codebook=codebook)
+            return aggregate_orm.SchemafieldCategory(codingschemafield, coding_ids=coding_ids, prefix=prefix)
         raise ValidationError("Not a valid aggregation: %s." % field_value)
 
     def clean_primary(self):

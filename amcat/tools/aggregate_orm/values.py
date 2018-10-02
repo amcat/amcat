@@ -185,7 +185,7 @@ class CountCodingValuesValue(CountValue):
     joins_needed = ("codings", "coded_articles", "articles")
 
     def get_selects(self):
-        return ['COUNT(codings_values.codingvalue_id)', 'ARRAY_AGG(DISTINCT(T_articles.article_id))']
+        return ['COUNT(DISTINCT(codings_values.codingvalue_id))', 'ARRAY_AGG(DISTINCT(T_articles.article_id))']
 
     def __repr__(self):
         return "<CountCodingValuesValue>"
