@@ -22,15 +22,14 @@ Model module representing ontology Codebooks. Codebooks are hierarchical
 collections of codes that can be used as a source of objects to be coded,
 or to derive automatically generated search terms from.
 """
-
-
+import collections
 import logging
 import itertools
 
-log = logging.getLogger(__name__)
-
 from datetime import datetime
 from collections import OrderedDict
+from itertools import product, chain
+from typing import Tuple, Iterable, Optional, Dict, List
 
 from django.db import models
 from django.db.models import Q
@@ -40,9 +39,9 @@ from amcat.models.coding.code import Code, Label
 from amcat.models import Language
 from amcat.tools.djangotoolkit import distinct_args
 
-import collections
 
-from itertools import product, chain
+log = logging.getLogger(__name__)
+
 
 # Used in Codebook.get_tree()
 class TreeItem(collections.namedtuple("TreeItem", ["code_id", "codebookcode_id", "children", "hidden", "label", "ordernr"])):
@@ -51,8 +50,79 @@ class TreeItem(collections.namedtuple("TreeItem", ["code_id", "codebookcode_id",
         return self.children + tuple(itertools.chain.from_iterable(childrens_children))
 
 
+def get_tree_levels(tree: Tuple[TreeItem]) -> Iterable[Tuple[TreeItem]]:
+    """Get levels of a tree. That is, given a codebook:
+
+        A
+        - B
+        -- C
+        -- D
+        - E
+        - F
+        -- G
+        H
+
+    return a tuple where the nth item of that tuple contains:
+
+        0: A, H
+        1: B, E, F
+        2: C, D, G
+
+    """
+    if tree:
+        yield tree
+
+    childrens_levels = [get_tree_levels(child.children) for child in tree]
+
+    while True:
+        new_level = []
+
+        for child_levels in childrens_levels:
+            try:
+                child_level = next(child_levels)
+            except StopIteration:
+                pass
+            else:
+                new_level.extend(child_level)
+
+        if not new_level:
+            break
+
+        yield new_level
+
+
+def get_max_tree_depth(tree: Tuple[TreeItem]) -> int:
+    """Selects the node furthest from a root node, and counts the number of edges between it and the root. Note that
+    this is undefined for empty trees, thus throwing an error when this function is called with an empty tree"""
+    def _get_max_tree_depth(node, n):
+        if node.children:
+            return max(_get_max_tree_depth(c, n=n+1) for c in node.children)
+        else:
+            return n
+
+    if not tree:
+        raise ValueError("Depth for empty trees is undefined!")
+    else:
+        return max(_get_max_tree_depth(n, 0) for n in tree)
+
+
+def get_max_tree_level(tree: Tuple[TreeItem]) -> int:
+    """Counts the number of levels in this tree. Empty trees have zero levels."""
+    try:
+        return 1 + get_max_tree_depth(tree)
+    except ValueError:
+        return 0
+
+
 def sort_codebookcodes(ccodes):
-    ccodes.sort(key=lambda ccode: ccode.ordernr)
+    ccodes.sort(key=lambda ccode: (ccode.ordernr, ccode.code_id))
+
+
+def sort_tree(tree: Tuple[TreeItem]) -> Tuple[TreeItem]:
+    tree = sorted(tree, key=lambda ti: (ti.ordernr, ti.code_id))
+    for child in tree:
+        child.children = sort_tree(child.children)
+    return tuple(tree)
 
 
 class CodebookCycleException(ValueError):
@@ -281,7 +351,6 @@ class Codebook(AmcatModel):
                 children[parent].append(child)
 
         return self._walk(children, nodes, seen)
-
 
     def get_hierarchy(self, date=None, include_hidden=False):
         """Return a sequence of code, parent pairs that forms the hierarchy of this codebook
@@ -601,4 +670,3 @@ class CodebookCode(AmcatModel):
         ordering = ("ordernr",)
         #unique_together = ("codebook", "code", "validfrom")
         # TODO: does not really work since NULL!=NULL
-

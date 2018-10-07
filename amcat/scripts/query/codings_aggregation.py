@@ -23,11 +23,12 @@ import re
 from collections import defaultdict
 
 from django.core.exceptions import ValidationError
-from django.forms import ChoiceField, BooleanField
+from django.forms import ChoiceField, BooleanField, IntegerField
 
 from amcat.models import Label
 from amcat.models import CodingSchemaField, Coding
 from amcat.models.coding.codingschemafield import FIELDTYPE_IDS
+from amcat.models.coding.codebook import get_max_tree_level
 from amcat.scripts.forms.selection import get_all_schemafields
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.scripts.query.aggregation import AGGREGATION_FIELDS, get_aggregation_choices, \
@@ -98,11 +99,13 @@ def get_value_fields(fields):
 
 class CodingAggregationActionForm(QueryActionForm):
     primary_use_codebook = BooleanField(initial=False, required=False, label="Group codings using codebook")
+    primary_use_codebook_level = IntegerField(min_value=1, initial=1, label="Group codings on level..")
     primary_use_coding_filters = BooleanField(required=False, initial=True, label="Only show labels selected in coding filter (if applicable)")
     primary = ChoiceField(choices=AGGREGATION_FIELDS, label="Aggregate on (primary)")
     primary_fill_zeroes = BooleanField(initial=True, required=False, label="Show empty dates as 0 (if interval selected)")
 
     secondary_use_codebook = BooleanField(initial=False, required=False, label="Group codings using codebook")
+    secondary_use_codebook_level = IntegerField(min_value=1, initial=1, label="Group codings on level..")
     secondary_use_coding_filters = BooleanField(required=False, initial=True, label="Only show labels selected in coding filter (if applicable)")
     secondary = ChoiceField(choices=(("", "------"),) + AGGREGATION_FIELDS, required=False, label="Aggregate on (secondary)")
 
@@ -170,6 +173,7 @@ class CodingAggregationActionForm(QueryActionForm):
             codingschemafield_id = int(match.groupdict()["id"])
             codingschemafield = CodingSchemaField.objects.get(id=codingschemafield_id)
             use_codebook = self.cleaned_data["{}_use_codebook".format(field_name)]
+            level = self.cleaned_data["{}_use_codebook_level".format(field_name)]
             use_coding_filters = self.cleaned_data["{}_use_coding_filters".format(field_name)]
 
             coding_ids = None
@@ -180,7 +184,15 @@ class CodingAggregationActionForm(QueryActionForm):
                         break
             if use_codebook:
                 codebook = codingschemafield.codebook
-                return aggregate_orm.GroupedCodebookFieldCategory(codingschemafield, coding_ids=coding_ids, prefix=prefix, codebook=codebook)
+                codebook.cache()
+                tree = codebook.get_tree()
+                max_tree_level = get_max_tree_level(tree)
+                if level > max_tree_level:
+                    # TODO: fix bug where error message does not show up in UI if this is raised as a ValidationError
+                    raise ValueError("Cannot group codings on level {}, as {} only has {} levels!".format(
+                        level, codebook, max_tree_level
+                    ))
+                return aggregate_orm.SchemafieldCategory(codingschemafield, codebook, coding_ids, level, prefix=prefix)
             return aggregate_orm.SchemafieldCategory(codingschemafield, coding_ids=coding_ids, prefix=prefix)
         raise ValidationError("Not a valid aggregation: %s." % field_value)
 

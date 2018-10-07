@@ -17,6 +17,9 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import datetime
+
+from amcat.models.coding.codebook import get_tree_levels
+
 from amcat.models import Code, Codebook, CodebookCode, Language
 from amcat.tools import amcattest
 from django.core.exceptions import ObjectDoesNotExist
@@ -402,3 +405,38 @@ class TestCodebook(amcattest.AmCATTestCase):
         A.add_code(cc)
 
         self.assertEqual(A.get_language_ids(), {al.id, bl.id, cl.id})
+
+    def test_get_tree_levels(self):
+        a, b, c, d, e, f,g = [amcattest.create_test_code(label=l) for l in "abcdefg"]
+
+        # D: d
+        #    +e
+        #    +f
+        #    ++g
+        #    a
+        #    b
+        #    +c
+        D = amcattest.create_test_codebook(name="D")
+        D.add_code(d)
+        D.add_code(e, d)
+        D.add_code(f, d)
+        D.add_code(g, f)
+        D.add_code(a)
+        D.add_code(b)
+        D.add_code(c, b)
+
+        tree = D.get_tree()
+
+        levels = get_tree_levels(tree)
+        level0 = next(levels)
+        level1 = next(levels)
+        level2 = next(levels)
+
+        self.assertRaises(StopIteration, next, levels)
+        self.assertEqual({d.id, a.id, b.id}, {ti.code_id for ti in level0})
+        self.assertEqual({e.id, f.id, c.id}, {ti.code_id for ti in level1})
+        self.assertEqual({g.id},             {ti.code_id for ti in level2})
+
+        empty = amcattest.create_test_codebook(name="empty")
+        levels = get_tree_levels(empty.get_tree())
+        self.assertRaises(StopIteration, next, levels)
