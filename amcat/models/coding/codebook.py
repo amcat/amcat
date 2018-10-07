@@ -545,7 +545,8 @@ class Codebook(AmcatModel):
 
     def delete_code(self, code: Code):
         """Delete this code from this codebook. """
-        map(self.delete_codebookcode, self.codebookcodes.filter(code=code))
+        for codebookcode in self.codebookcodes.filter(code=code):
+            self.delete_codebookcode(codebookcode)
 
     def get_roots(self, **kwargs):
         """
