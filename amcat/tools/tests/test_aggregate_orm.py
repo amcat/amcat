@@ -37,31 +37,33 @@ class TestAggregateORM(TransactionTestCase):
 
     def setUp(self):
         self.s1 = amcattest.create_test_set(5)
-        self.a1, self.a2, self.a3, self.a4, self.a5 = self.s1.articles.all()
+        self.a = list(self.s1.articles.all().order_by('id'))
+        self.ids = [a.id for a in self.a]
+
         self.m1 = "Telegraaf"
         self.m2 = "NRC"
         self.m3 = "AD"
-        self.a1.set_property("medium", self.m1)
-        self.a2.set_property("medium", self.m2)
-        self.a3.set_property("medium", self.m2)
-        self.a4.set_property("medium", self.m3)
-        self.a5.set_property("medium", self.m3)
+        self.a[0].set_property("medium", self.m1)
+        self.a[1].set_property("medium", self.m2)
+        self.a[2].set_property("medium", self.m2)
+        self.a[3].set_property("medium", self.m3)
+        self.a[4].set_property("medium", self.m3)
 
-        self.a1.text = "aap."
-        self.a2.text = "aap. noot."
-        self.a3.text = "aap. noot. mies."
+        self.a[0].text = "aap."
+        self.a[1].text = "aap. noot."
+        self.a[2].text = "aap. noot. mies."
 
-        self.a1.date = datetime.datetime(2015, 1, 1)
-        self.a2.date = datetime.datetime(2015, 1, 1)
-        self.a3.date = datetime.datetime(2015, 2, 1)
-        self.a4.date = datetime.datetime(2016, 1, 1)
-        self.a5.date = datetime.datetime(2016, 1, 1)
-        self.a1.save()
-        self.a2.save()
-        self.a3.save()
-        self.a4.save()
-        self.a5.save()
-
+        self.a[0].date = datetime.datetime(2015, 1, 1)
+        self.a[1].date = datetime.datetime(2015, 1, 1)
+        self.a[2].date = datetime.datetime(2015, 2, 1)
+        self.a[3].date = datetime.datetime(2016, 1, 1)
+        self.a[4].date = datetime.datetime(2016, 1, 1)
+        self.a[0].save()
+        self.a[1].save()
+        self.a[2].save()
+        self.a[3].save()
+        self.a[4].save()
+        
         # Uncomment if ever using elastic :)
         # self.s1.refresh_index(full_refresh=True)
 
@@ -82,31 +84,38 @@ class TestAggregateORM(TransactionTestCase):
         self.scode_A, = [c for c in self.scodes if c.label == "A"]
         self.scode_B, = [c for c in self.scodes if c.label == "B"]
         self.scode_A1, = [c for c in self.scodes if c.label == "A1"]
+        self.scode_A1b, = [c for c in self.scodes if c.label == "A1b"]
 
         # Does not get fired in unit test?
-        for article in [self.a1, self.a2, self.a3, self.a4, self.a5]:
+        for article in [self.a[0], self.a[1], self.a[2], self.a[3], self.a[4]]:
             get_or_create_sentences(article)
 
         self.job = amcattest.create_test_job(articleset=self.s1, articleschema=self.schema, unitschema=self.sschema)
 
-        self.c1 = amcattest.create_test_coding(codingjob=self.job, article=self.a1)
+        self.c1 = amcattest.create_test_coding(codingjob=self.job, article=self.a[0])
         self.c1.update_values({self.codef: self.code_A.id, self.intf: 4, self.qualf: 4})
 
-        self.c2 = amcattest.create_test_coding(codingjob=self.job, article=self.a2)
+        self.c2 = amcattest.create_test_coding(codingjob=self.job, article=self.a[1])
         self.c2.update_values({self.codef: self.code_A.id, self.intf: 2, self.qualf: 1})
 
-        self.c3 = amcattest.create_test_coding(codingjob=self.job, article=self.a3)
+        self.c3 = amcattest.create_test_coding(codingjob=self.job, article=self.a[2])
         self.c3.update_values({self.codef: self.code_B.id, self.intf: 1, self.qualf: 2})
 
-        self.c4 = amcattest.create_test_coding(codingjob=self.job, article=self.a4)
+        self.c4 = amcattest.create_test_coding(codingjob=self.job, article=self.a[3])
         self.c4.update_values({self.codef: self.code_A1.id, self.intf: 1})
 
-        self.sentence_coding = amcattest.create_test_coding(codingjob=self.job, article=self.a1, sentence=self.a1.sentences.all()[0])
+        self.sentence_coding = amcattest.create_test_coding(codingjob=self.job, article=self.a[0], sentence=self.a[0].sentences.all()[0])
         self.sentence_coding.update_values({self.scodef: self.scode_A1.id, self.sintf: 1})
+
+        self.sentence_coding = amcattest.create_test_coding(codingjob=self.job, article=self.a[2], sentence=self.a[2].sentences.all()[0])
+        self.sentence_coding.update_values({self.scodef: self.scode_A1.id, self.sintf: 1})
+
+        self.sentence_coding = amcattest.create_test_coding(codingjob=self.job, article=self.a[2], sentence=self.a[2].sentences.all()[0])
+        self.sentence_coding.update_values({self.scodef: self.scode_A1b.id, self.sintf: 1})
 
         # Try to confuse aggregator by inserting multiple codingjobs
         job = amcattest.create_test_job(articleset=self.s1, articleschema=self.schema)
-        c4 = amcattest.create_test_coding(codingjob=job, article=self.a3)
+        c4 = amcattest.create_test_coding(codingjob=job, article=self.a[2])
         c4.update_values({self.codef: self.code_B.id, self.intf: 10, self.qualf: 8})
 
     def _get_aggr(self, **kwargs):
@@ -123,9 +132,9 @@ class TestAggregateORM(TransactionTestCase):
         ))
 
         self.assertEqual(result, {
-            ('Telegraaf', 1),
-            ('AD', 1),
-            ('NRC', 2)
+            ('Telegraaf', (1, (self.a[0].id,))),
+            ('AD', (1, (self.a[3].id,))),
+            ('NRC', (2, (self.a[1].id, self.a[2].id)))
         })
 
     def test_article_field_grouping_category(self):
@@ -136,8 +145,8 @@ class TestAggregateORM(TransactionTestCase):
         ))
 
         self.assertEqual(result, {
-            ('Telegraaf', 2),
-            ('NRC', 2)
+            ('Telegraaf', (2, (self.a[0].id, self.a[3].id))),
+            ('NRC', (2, (self.a[1].id, self.a[2].id)))
         })
 
 
@@ -145,15 +154,15 @@ class TestAggregateORM(TransactionTestCase):
         aggr = aggregate_orm.ORMAggregate(Coding.objects.filter(id__in=(self.c1.id,)), flat=True)
 
         result = set(aggr.get_aggregate([ArticleSetCategory()], [CountArticlesValue()]))
-        self.assertEqual(result, {(self.s1, 1)})
+        self.assertEqual(result, {(self.s1, (1, (self.c1.article_id,)))})
 
     def test_interval_category(self):
         aggr = self._get_aggr(flat=True)
         result = set(aggr.get_aggregate([ArticleFieldCategory.from_field_name("date", interval="day")], [CountArticlesValue()]))
         self.assertEqual(result, {
-            (datetime.datetime(2015, 1, 1), 2),
-            (datetime.datetime(2015, 2, 1), 1),
-            (datetime.datetime(2016, 1, 1), 1),
+            (datetime.datetime(2015, 1, 1), (2, (self.ids[0], self.ids[1]))),
+            (datetime.datetime(2015, 2, 1), (1, (self.ids[2],))),
+            (datetime.datetime(2016, 1, 1), (1, (self.ids[3],))),
         })
 
     def test_mixed_article_sentence_aggregation(self):
@@ -164,32 +173,34 @@ class TestAggregateORM(TransactionTestCase):
         # Aggregate on article coding, request sentence value
         aggr = self._get_aggr(flat=True)
         result = set(aggr.get_aggregate([SchemafieldCategory(self.codef, prefix="A")], [AverageValue(self.sintf, prefix="B")]))
-        self.assertEqual(result, {(self.scode_A, 1)})
+        result = {(c, av) for (c, (av, _)) in result}
+        self.assertEqual(result, {(self.scode_A, 1), (self.scode_B, 1)})
 
         # Aggregate on sentence coding, request article value
         aggr = self._get_aggr(flat=True)
         result = set(aggr.get_aggregate([SchemafieldCategory(self.scodef, prefix="A")], [AverageValue(self.intf, prefix="B")]))
-        self.assertEqual(result, {(self.code_A1, 4)})
+        result = {(c, av) for (c, (av, _)) in result}
+        self.assertEqual(result, {(self.code_A1, 2.5), (self.scode_A1b, 1)})
 
 
     def test_articleset_category(self):
         aggr = self._get_aggr(flat=True)
         result = set(aggr.get_aggregate([ArticleSetCategory()], [CountArticlesValue()]))
-        self.assertEqual(result, {(self.s1, 4)})
+        self.assertEqual(result, {(self.s1, (4, tuple(self.ids[0:4])))})
 
     def test_term_category(self):
         # Test three terms
         aggr = self._get_aggr(flat=True, terms={
-            "a": [self.a1.id, self.a2.id, self.a3.id],
-            "b": [self.a4.id, self.a5.id],
-            "c": [self.a1.id, self.a4.id]
+            "a": [self.a[0].id, self.a[1].id, self.a[2].id],
+            "b": [self.a[3].id, self.a[4].id],
+            "c": [self.a[0].id, self.a[3].id]
         })
 
         result = set(aggr.get_aggregate([TermCategory()], [CountArticlesValue()]))
         self.assertEqual(result, {
-            ('a', 3),
-            ('b', 1), # Article A5 has no coding, so won't be included!
-            ('c', 2),
+            ('a', (3, (self.a[0].id, self.a[1].id, self.a[2].id))),
+            ('b', (1, (self.a[3].id,))), # Article a[4] has no coding, so won't be included!
+            ('c', (2, (self.a[0].id, self.a[3].id))),
         })
 
         # Test empty terms
@@ -201,6 +212,32 @@ class TestAggregateORM(TransactionTestCase):
     def test_incorrect_inputs(self):
         # You need at least one value
         self.assertRaises(ValueError, self._get_aggr().get_aggregate, categories=ArticleSetCategory())
+
+    def test_codebook_levels(self):
+        # D:
+        #  +a
+        #   +a1
+        #   +a1b
+        D = amcattest.create_test_codebook(name="D")
+        D.add_code(self.scode_A)
+        D.add_code(self.scode_A1, self.scode_A)
+        D.add_code(self.scode_A1b, self.scode_A)
+
+        aggr = self._get_aggr(flat=True)
+
+        cbsf = SchemafieldCategory(self.scodef, codebook=D, level=2)
+        result = set(aggr.get_aggregate([cbsf], [CountArticlesValue()]))
+        self.assertEqual(result, {
+            (self.scode_A1, (2, (self.ids[0], self.ids[2]))),
+            (self.scode_A1b, (1, (self.ids[2],)))
+        })
+
+        # Article 3 has two sentences, one coded with A1, the other with A1b.
+        # Aggregating on A must not count the article twice.
+        cbsf = SchemafieldCategory(self.scodef, codebook=D)
+        result = set(aggr.get_aggregate([cbsf], [CountArticlesValue()]))
+        self.assertEqual(result, {(self.scode_A, (2, (1, 3)))}, msg="Articles must not be counted twice.")
+
 
     def test_codebook_avg(self):
         aggr = self._get_aggr(flat=True)
@@ -215,6 +252,7 @@ class TestAggregateORM(TransactionTestCase):
 
         cbsf = SchemafieldCategory(self.codef, codebook=D)
         result = set(aggr.get_aggregate([cbsf], [AverageValue(self.intf)]))
+        result = {(c, av) for (c, (av, _)) in result}
         self.assertEqual(result, {(self.code_A, 2.0)})
 
         # E: a
@@ -227,6 +265,7 @@ class TestAggregateORM(TransactionTestCase):
 
         cbsf = SchemafieldCategory(self.codef, codebook=E)
         result = set(aggr.get_aggregate([cbsf], [AverageValue(self.intf)]))
+        result = {(c, av) for (c, (av, _)) in result}
         self.assertEqual(result, {
             (self.code_A1, 1.0),
             (self.code_A, 7.0/3.0),
@@ -237,11 +276,13 @@ class TestAggregateORM(TransactionTestCase):
         aggr = self._get_aggr(flat=True)
 
         result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [AverageValue(self.intf)]))
+        result = {(c, av) for (c, (av, _)) in result}
         self.assertEqual(result, {(self.code_A, 3.0), (self.code_B, 1.0), (self.code_A1, 1.0)})
 
     def test_quality_field(self):
         aggr = self._get_aggr(flat=True)
         result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [AverageValue(self.qualf)]))
+        result = {(c, av) for (c, (av, _)) in result}
         self.assertEqual(result, {(self.code_A, 0.25), (self.code_B, 0.2)})
 
     def test_secondary_axis(self):
@@ -252,6 +293,7 @@ class TestAggregateORM(TransactionTestCase):
             categories=[SchemafieldCategory(self.codef)],
             values=[CountArticlesValue(), AverageValue(self.intf)]
         )))
+        result = {(c, (a[0], b[0])) for (c, (a, b)) in result}
 
         self.assertEqual(result, {(self.code_A, (2, 3.0)), (self.code_B, (1, 1.0)), (self.code_A1, (1, 1.0))})
 
@@ -264,6 +306,7 @@ class TestAggregateORM(TransactionTestCase):
             categories=[ArticleFieldCategory.from_field_name("medium"), SchemafieldCategory(self.codef)],
             values=[CountArticlesValue()]
         ))
+        result = {(c, av) for (c, (av, _)) in result}
         
         self.assertEqual(result, {
             ((self.m1, self.code_A), 1),
@@ -277,6 +320,7 @@ class TestAggregateORM(TransactionTestCase):
             categories=[ArticleFieldCategory.from_field_name("medium"), SchemafieldCategory(self.codef)],
             values=[AverageValue(self.intf)]
         ))
+        result = {(c, av) for (c, (av, _)) in result}
 
         self.assertEqual(result, {
             ((self.m1, self.code_A), 4.0),
@@ -290,6 +334,7 @@ class TestAggregateORM(TransactionTestCase):
             categories=[ArticleFieldCategory.from_field_name("medium"), SchemafieldCategory(self.codef)],
             values=[AverageValue(self.intf), CountArticlesValue()]
         ))
+        result = {(c, (x, y)) for (c, ((x, xs), (y, ys))) in result}
 
         self.assertEqual(result, {
             ((self.m1, self.code_A), (4.0, 1)),
@@ -307,6 +352,9 @@ class TestAggregateORM(TransactionTestCase):
             values=[AverageValue(self.intf), AverageValue(self.qualf)]
         ))
 
+        result = {(c, (ra[0], rb[0] if rb is not None else None))
+                  for (c, (ra, rb)) in result}
+
         self.assertEqual(result, {
             (self.code_A, (3.0, 0.25)),
             (self.code_B, (1.0, 0.2)),
@@ -320,6 +368,9 @@ class TestAggregateORM(TransactionTestCase):
             allow_empty=False
         ))
 
+        result = {(c, (ra[0], rb[0] if rb is not None else None))
+                  for (c, (ra, rb)) in result}
+
         self.assertEqual(result, {
             (self.code_A, (3.0, 0.25)),
             (self.code_B, (1.0, 0.2))
@@ -329,6 +380,7 @@ class TestAggregateORM(TransactionTestCase):
         """Tests whether count values work"""
         aggr = self._get_aggr(flat=True)
         result = set(aggr.get_aggregate([SchemafieldCategory(self.codef)], [CountArticlesValue()]))
+        result = {(c, ct) for (c, (ct, _)) in result}
         self.assertEqual(result, {(self.code_A, 2), (self.code_B, 1), (self.code_A1, 1)})
 
     def test_no_codings(self):

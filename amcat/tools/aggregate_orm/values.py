@@ -155,6 +155,8 @@ class AverageValue(Value):
         return "<AverageValue: %s>" % self.field
 
 class CountValue(Value):
+    _art_ids_agg = 'ARRAY_AGG(DISTINCT(T_articles.article_id) ORDER BY T_articles.article_id)'
+
     def postprocess(self, value):
         return (int(value[0]), tuple(value[1]))
 
@@ -165,7 +167,7 @@ class CountArticlesValue(CountValue):
     joins_needed = ("codings", "coded_articles", "articles")
 
     def get_selects(self):
-        return ['COUNT(DISTINCT(T_articles.article_id))', 'ARRAY_AGG(DISTINCT(T_articles.article_id))']
+        return ['COUNT(DISTINCT(T_articles.article_id))', self._art_ids_agg]
 
     def __repr__(self):
         return "<CountArticlesValue>"
@@ -175,7 +177,7 @@ class CountCodingsValue(CountValue):
     joins_needed = ("codings", "coded_articles", "articles")
 
     def get_selects(self):
-        return ['COUNT(DISTINCT(T_codings.coding_id))', 'ARRAY_AGG(DISTINCT(T_articles.article_id))']
+        return ['COUNT(DISTINCT(T_codings.coding_id))', self._art_ids_agg]
 
     def __repr__(self):
         return "<CountCodingsValue>"
@@ -185,7 +187,7 @@ class CountCodingValuesValue(CountValue):
     joins_needed = ("codings", "coded_articles", "articles")
 
     def get_selects(self):
-        return ['COUNT(DISTINCT(codings_values.codingvalue_id))', 'ARRAY_AGG(DISTINCT(T_articles.article_id))']
+        return ['COUNT(DISTINCT(codings_values.codingvalue_id))', self._art_ids_agg]
 
     def __repr__(self):
         return "<CountCodingValuesValue>"
