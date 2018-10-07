@@ -271,13 +271,12 @@ class Codebook(AmcatModel):
 
         return codes
 
-    def get_codebookcodes(self, code):
+    def get_codebookcodes(self, code) -> Iterable["CodebookCode"]:
         """Return a sequence of codebookcode objects for this code in the codebook"""
         if self.cached: return self._codebookcodes[code.id]
         return (co for co in self.codebookcodes if co.code_id == code.id)
 
-
-    def get_codebookcode(self, code, date=None):
+    def get_codebookcode(self, code, date=None) -> Optional["CodebookCode"]:
         """Get the (unique or first) codebookcode from *this* codebook corresponding
         to the given code with the given date, or None if not found"""
         if date is None: date = datetime.now()
@@ -287,7 +286,7 @@ class Codebook(AmcatModel):
             if co.validto and date >= co.validto: continue
             return co
 
-    def _get_hierarchy_ids(self, date=None, include_hidden=False):
+    def _get_hierarchy_ids(self, date=None, include_hidden=False) -> Dict[int, int]:
         """Return id:id/None mappings for get_hierarchy."""
         if date is None: date = datetime.now()
 
@@ -306,8 +305,7 @@ class Codebook(AmcatModel):
             return OrderedDict((co.code_id, co.parent_id) for co in codes)
         return OrderedDict((co.code_id, co.parent_id) for co in codes if not co.hide)
 
-
-    def _get_node(self, children, node, seen):
+    def _get_node(self, children, node, seen) -> TreeItem:
         """
         Return a namedtuple as described in get_tree(). Raises a CodebookCycleException
         when it detects a cycle.
@@ -325,10 +323,10 @@ class Codebook(AmcatModel):
             label=node.label
         )
 
-    def _walk(self, children, nodes, seen):
+    def _walk(self, children, nodes, seen) -> Tuple[TreeItem]:
         return tuple(self._get_node(children, n, seen) for n in nodes)
 
-    def get_tree(self, include_hidden=True, date=None, roots=None):
+    def get_tree(self, include_hidden=True, date=None, roots=None) -> Tuple[TreeItem]:
         """
         Get a tree representation of the tuples returned by get_hierarchy. For each root
         it yields a namedtuple("TreeItem", ["code_id", "children", "hidden"]) where
@@ -530,7 +528,7 @@ class Codebook(AmcatModel):
 
         return self.add_code(Code.create(label, language), parent=parent, **kargs)
 
-    def delete_codebookcode(self, codebookcode):
+    def delete_codebookcode(self, codebookcode: "CodebookCode"):
         """Delete this CodebookCode from this Codebook."""
         if self.cached:
             self._codebookcodes[codebookcode.code_id].remove(codebookcode)
@@ -545,7 +543,7 @@ class Codebook(AmcatModel):
 
         codebookcode.delete()
 
-    def delete_code(self, code):
+    def delete_code(self, code: Code):
         """Delete this code from this codebook. """
         map(self.delete_codebookcode, self.codebookcodes.filter(code=code))
 
@@ -571,7 +569,7 @@ class Codebook(AmcatModel):
         codes = {code: i for i, code in enumerate(codes)}
         return sorted(roots, key=codes.get)
 
-    def get_children(self, code, **kargs):
+    def get_children(self, code: Code, **kargs):
         """
         @return: the children of code in this codebook
         @param kargs: passed to get_hierarchy (e.g. date, include_hidden)
