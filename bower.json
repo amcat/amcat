@@ -21,6 +21,7 @@
   },
   "resolutions": {
     "jquery": ">= 1.9.1",
-    "bootstrap": ">= 2.3.2"
+    "bootstrap": ">= 2.3.2",
+    "datatables": "e-tag:3bec70999"
   }
 }
