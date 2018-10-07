@@ -12,6 +12,8 @@ import threading
 
 import pyinotify
 
+os.environ['DJANGO_SETTINGS_MODULE'] = os.environ.get('DJANGO_SETTINGS_MODULE', 'settings')
+
 if len(sys.argv) > 2:
     CELERY_BIN = sys.argv[2]
 else:
