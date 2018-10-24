@@ -1,8 +1,7 @@
 formfields = djangoFormFields(n = IntegerField(initial=50, required=T))
-
+dependencies = c("corpustools", "knitr")
 
 run = function(query, n, ...) {
-  depends("corpustools", "knitr")
   a = get_text(...)
   library(corpustools)
   tc = create_tcorpus(a, doc_column = "id")
