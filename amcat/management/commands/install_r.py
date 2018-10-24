@@ -21,33 +21,52 @@ from django.core.management import BaseCommand
 from rpy2.rinterface._rinterface import RRuntimeError
 
 from amcat.scripts.query import get_r_queryactions
+from amcat.scripts.query.queryaction_r import R_DEPENDENCIES
+
+
 
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
-        packages = set()
-        for qa in get_r_queryactions():
-            packages |= set(qa.get_dependencies())
         from rpy2.robjects import r
-
-        available = r("available.packages()[,'Version']")
-        available = dict(zip(r.names(available), available))
-
-        printrow = lambda p, i, a: print("{:30s}{:10s}{:10s}".format(p, i, a))
-        printrow("Package", "Installed", "Available")
-
-        todo = []
-        for package in packages:
+        def get_installed_version(package):
             try:
-                installed = r("as.character")(r.packageVersion(package))[0]
+                return r("as.character")(r.packageVersion(package))[0]
             except RRuntimeError as e:
+                return None
+
+        if not get_installed_version("rjson"):
+            print("Installing rjson (required before reading dependencies)")
+            r("install.packages")("rjson")
+
+        available_packages = r("available.packages()[,'Version']")
+        available_packages = dict(zip(r.names(available_packages), available_packages))
+
+        packages = {(name or dep): dep for (name, dep) in R_DEPENDENCIES.items()}
+        for qa in get_r_queryactions():
+            for name, dep in qa.get_dependencies().items():
+                packages[name or dep] = dep
+
+        def printrow(package, installed, available, src=None):
+            print("{package:30s}{installed:10s}{available:10s} {}".format(src or "", **locals()))
+        printrow("Package", "Installed", "Available", '(source)')
+
+        todo = {}
+        for package, src in packages.items():
+            installed = get_installed_version(package)
+            if not installed:
                 installed = '-'
-                todo.append(package)
-            printrow(package, installed, available.get(package))
+                todo[package] = src
+            available = "?" if "/" in src else available_packages.get(package)
+            printrow(package, installed, available, src if src != package else None)
         print("\nInstalling required packages: ", todo)
-        for package in todo:
+        for package in [pkg for (pkg, src) in todo.items() if "/" not in src]:
             print("... ", package)
             r("install.packages")(package)
+        for package, src in todo.items():
+            if "/" in src:
+                print("... ", package, " <- ", src)
+                r("githubinstall::githubinstall")(src, ask=False)
         print("\nDone!")
 
 

@@ -4,7 +4,7 @@ formfields = djangoFormFields(max.words = IntegerField(initial=50, required=T),
                               remove.stopwords = ChoiceField(choices = c("No", .STOP)),
                               limit.window = IntegerField(required=F))
 
-dependencies = c("RCurl", "quanteda", "corpustools")
+dependencies = c("RCurl", "quanteda", "corpustools", "dplyr")
 
 run = function(max.words, remove.stopwords, query, limit.window=NULL, ...) {
   library(quanteda)

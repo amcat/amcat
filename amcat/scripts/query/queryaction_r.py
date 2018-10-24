@@ -43,7 +43,10 @@ from amcat.scripts.query import QueryActionHandler
 from amcat.tools.toolkit import synchronized_with
 
 R_STRING_RE = re.compile(r'^\[1\] "(?P<str>.*)"$', re.DOTALL)
-
+R_DEPENDENCIES = {
+    "githubinstall": "",
+    "amcatr": "amcat/amcat-r",
+}
 
 def source_r_file(path):
     """Executes a file in R, similar to 'include' in C or import in Python"""
@@ -181,5 +184,3 @@ class RQueryAction(QueryAction):
         cleaned_data["api_host"] = self.api_host
         cleaned_data["project"] = self.project.id
         return self._run(cleaned_data)
-
-

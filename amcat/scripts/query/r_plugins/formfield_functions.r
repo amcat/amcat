@@ -3,37 +3,6 @@ local({r <- getOption("repos")
        options(repos=r)
 })
 
-
-.load = function(packages) {
-  sapply(packages, function(x) suppressWarnings(require(x, character.only = TRUE)))
-}
-depends = function(...) {
-  packages = as.character(list(...))
-  to_install = packages[!.load(packages)]
-  if (length(to_install) > 0) {
-    install.packages(to_install)
-    
-    #lapply(to_install, library, character.only = TRUE) #doesn't add to parent frame
-  }
-  invisible(packages)
-}
-depends_github = function(...) {
-  depends("devtools")
-  packages = list(...)
-  message(names(packages), packages)
-  to_install = packages[!.load(names(packages))]
-  print(paste("Installing ", to_install, " (required: ", packages))
-  if (length(to_install) > 0) {
-    for (package in to_install) {
-      devtools::install_github(package)
-      #library(name, character.only = T)y      
-    }
-  }
-  invisible(packages)
-}
-
-depends("rjson")
-
 djangoFieldList <- function(fieldtype, ...){
   list(type=fieldtype, arguments=list(...))
 }
@@ -95,7 +64,6 @@ ChoiceField <- function(choices, ...) {
 
 
 connect = function(api_host, api_token, ...) {
-  depends_github(amcatr="amcat/amcat-r")
   library(amcatr)
   amcat.connect(host=api_host, token = api_token)
 }
