@@ -1,14 +1,12 @@
 from django.contrib.auth.models import User
-from django.views.generic import RedirectView
-from rest_framework.mixins import RetrieveModelMixin
-from rest_framework.permissions import BasePermission, IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.serializers import ModelSerializer, reverse
-from rest_framework.viewsets import ModelViewSet, GenericViewSet
+from rest_framework.permissions import BasePermission
+from rest_framework.serializers import ModelSerializer
+from rest_framework.viewsets import ModelViewSet
 
 from amcat.models import ProjectRole, PROJECT_ROLES, ROLE_PROJECT_ADMIN
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets import ProjectViewSetMixin
+
 
 
 class UserSerializer(ModelSerializer):

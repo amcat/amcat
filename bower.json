@@ -1,7 +1,7 @@
 {
   "name": "amcat",
   "dependencies": {
-    "jquery": "~2.1.1",
+    "jquery": ">= 2.1.1",
     "bootstrap": "3.3.7",
     "datatables": "https://github.com/amcat/amcat-datatables/archive/1.10.7.tar.gz",
     "pnotify": "2.0.1",
@@ -17,6 +17,7 @@
     "bootstrap-multiselect": "0.9.13",
     "requirejs": "",
     "amcat-query-js": "git://github.com/amcat/amcat-query-js.git#~3.5.0",
+    "amcat-common": "git://github.com/amcat/amcat-query-js.git#~3.5.0",
     "clipboard": "1.6.0"
   },
   "resolutions": {

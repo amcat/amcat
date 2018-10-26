@@ -40,5 +40,5 @@ from api.rest.viewsets.user import *
 
 def get_viewsets():
     for cls in globals().values():
-        if isclass(cls) and issubclass(cls, AmCATViewSetMixin) and cls is not AmCATViewSetMixin:
+        if isclass(cls) and issubclass(cls, AmCATViewSetMixin) and not cls.__name__.endswith('Mixin'):
             yield cls

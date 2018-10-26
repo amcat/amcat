@@ -69,9 +69,9 @@ class AppendToSetAction(QueryAction):
         self.monitor.update(60, "Saving to set..")
         form.cleaned_data["articleset"].add_articles(article_ids)
 
-        return OK_TEMPLATE.render(Context({
+        return OK_TEMPLATE.render({
             "project": self.project,
             "aset": form.cleaned_data["articleset"],
             "len": len(article_ids)
-        }))
+        })
 

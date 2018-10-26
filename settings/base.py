@@ -131,9 +131,10 @@ STATICFILES_DIRS = (
 )
 
 # List of callables that know how to import templates from various sources.
-MIDDLEWARE_CLASSES = [
+MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'navigator.utils.misc.MethodOverrideMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -175,6 +176,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.admin',
     'django.contrib.staticfiles',
+    'django_filters',
     'rest_framework',
     'rest_framework.authtoken',
     'accounts',
@@ -182,9 +184,9 @@ INSTALLED_APPS = [
     'navigator',
     'api',
     'amcat',
-    "django_extensions",
+    'django_extensions',
     'djcelery',
-    "formtools"
+    'formtools',
 ]
 
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
@@ -197,9 +199,9 @@ TEMPLATES = [{
     ),
     'OPTIONS': {
         'context_processors': (
-            "django.core.context_processors.debug",
-            "django.core.context_processors.i18n",
-            "django.core.context_processors.media",
+            "django.template.context_processors.debug",
+            "django.template.context_processors.i18n",
+            "django.template.context_processors.media",
             "django.contrib.messages.context_processors.messages",
             "django.contrib.auth.context_processors.auth",
             "navigator.context.extra"
@@ -257,8 +259,12 @@ if not DEBUG:
     EMAIL_HOST_PASSWORD = amcat_config["email"].get("password")
     EMAIL_USE_TLS = amcat_config["email"].getboolean("use_tls")
 else:
-    ALLOWED_HOSTS.append("*")
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
+if DEBUG:
+    ALLOWED_HOSTS.append("*")
+    #CORS_ORIGIN_ALLOW_ALL = True
 
 EMAIL_DEFAULT_FROM = amcat_config["email"].get("from")
 

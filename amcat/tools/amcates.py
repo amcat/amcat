@@ -19,6 +19,7 @@
 import copy
 import datetime
 import functools
+import io
 import logging
 import os
 import re
@@ -38,7 +39,7 @@ from elasticsearch.helpers import bulk, scan
 import amcat.models
 from amcat.tools import queryparser, toolkit
 from amcat.tools.caching import cached
-from amcat.tools.model import Hash
+from amcat.tools.hashing import Digest
 from amcat.tools.progress import NullMonitor
 from amcat.tools.toolkit import multidict, splitlist
 
@@ -51,10 +52,10 @@ EMPTY_RO_DICT = MappingProxyType({})
 
 def _clean(s):
     """Remove non-printable characters and convert dates"""
-    if not isinstance(s, (datetime.date, float, int, str, set, type(None), Hash)):
+    if not isinstance(s, (datetime.date, float, int, str, set, type(None), Digest)):
         raise ValueError("Cannot convert {} to elastic field: {}".format(type(s), s))
 
-    if isinstance(s, Hash):
+    if isinstance(s, Digest):
         return str(s)
     if isinstance(s, set):
         return list(map(_clean, s))
@@ -107,7 +108,7 @@ def get_property_mapping(field):
         for child in path[1:]:
             mapping = mapping["fields"][child]
     except KeyError:
-        raise ValueError("Unknown property type: {}".format(t))
+        raise ValueError("Unknown property type: {} of field {}".format(t, field))
     return mapping
 
 
@@ -452,7 +453,9 @@ class _ES(object):
         """
         kargs = dict(index=self.index, doc_type=self.doc_type)
         kargs.update(options)
-        log.debug("Search with body:\n {}".format(pprint.pformat(body)))
+        if log.isEnabledFor(logging.DEBUG):
+            # pprint can be expensive
+            log.debug("Search with body:\n {}".format(pprint.pformat(body)))
         return self.es.search(body=body, **kargs)
 
     def scan(self, query, **kargs):
@@ -982,8 +985,13 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
             f[singular] = filters.pop(singular)
 
     for k, v in filters.items():
+        if "." not in k and get_property_mapping_type(k) == "default":
+            k += ".raw"
         if get_property_elastic_type(k) == "text":
-            yield {'match': {k: v}}
+            if isinstance(v, list):
+                yield {'bool': {'should': [{'match': {k: val}} for val in v], 'minimum_should_match': 1}}
+            else:
+                yield {'match': {k: v}}
         else:
             yield {'terms': {k: _list(v, number=False)}}
 

@@ -6,20 +6,20 @@
     <h2>Found {{ narticles }} articles in {{ timer.interval|floatformat:3 }} seconds.</h2>
 
     <div data-form="{{ form_data }}" class="row summary">
-        <div class="col-md-6">
+        <div class="{% if show_aggregation %}col-md-6{% else %}col-md-12{% endif %}">
             <ul class="articles">
                 {% for a in articles %}
                     <li>{% include "query/summary/summary_article.html" %}</li>
                 {% endfor %}
             </ul>
         </div>
+        {% if show_aggregation %}
         <div class="col-md-6">
-            {% if show_aggregation %}
                 <div id="date-aggregation">
                     {% include "query/summary/summary_count_chart.html" %}
                 </div>
-            {% endif %}
         </div>
+        {% endif %}
     </div>
 {% endif %}
 

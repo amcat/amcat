@@ -87,7 +87,7 @@ class TestAmCATResource(ApiTestCase):
             'insert_user': 'ModelChoiceField',
             'last_visited_at': 'SerializerMethodField',
             'favourite': 'SerializerMethodField',
-            'display_columns': 'ModelField',
+            'display_columns': 'JSONField',
             'r_plugins_enabled': 'BooleanField'
         }
 

@@ -73,6 +73,10 @@ class ArticleSet(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='articleset_id')
 
     name = models.CharField(max_length=200)
+
+    # This field only determines the Project that owns the ArticleSet. Membership is determined via the
+    # ProjectArticleSet model, and is unrelated to this field. (i.e. an ArticleSet is not necessarily part
+    # of the Project that owns it.)
     project = models.ForeignKey("amcat.Project", related_name='articlesets_set')
     articles = models.ManyToManyField("amcat.Article", related_name="articlesets_set")
 
@@ -252,16 +256,12 @@ class ArticleSet(AmcatModel):
         self._refresh_property_cache()
 
     def save(self, *args, **kargs):
-        new = not self.pk
         super(ArticleSet, self).save(*args, **kargs)
+        pa, created = ProjectArticleSet.objects.get_or_create(project=self.project,
+                                                              articleset=self,
+                                                              defaults=dict(is_favourite=True))
 
-        if new:
-            # new articleset, add as fav to parent project
-            # (I run parent first because I guess it needs a pk to add it, but didn't test whether
-            #  this is needed...)
-            self.project.favourite_articlesets.add(self)
-            self.project.save()
-
+        if created:
             stats_log.info(json.dumps({
                 "action": "articleset_added", "id": self.id,
                 "name": self.name, "project_id": self.project_id,
@@ -283,7 +283,7 @@ class ArticleSet(AmcatModel):
         if articles:
             aset.add_articles(articles)
         if not favourite:
-            project.favourite_articlesets.remove(aset)
+            ProjectArticleSet.objects.filter(project=project, articleset=aset).update(is_favourite=False)
         return aset
 
     def delete(self, purge_orphans=True):
@@ -325,3 +325,13 @@ class ArticleSet(AmcatModel):
 # Legacy
 ArticleSetArticle = ArticleSet.articles.through
 
+
+class ProjectArticleSet(AmcatModel):
+    project = models.ForeignKey('amcat.Project', on_delete=models.CASCADE)
+    articleset = models.ForeignKey('amcat.ArticleSet', on_delete=models.CASCADE)  # tests say this should cascade. I'm not convinced
+    is_favourite = models.BooleanField()
+
+    class Meta:
+        app_label = 'amcat'
+        db_table = "projects_articlesets"
+        unique_together = ("project", "articleset")

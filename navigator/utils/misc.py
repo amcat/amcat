@@ -26,6 +26,7 @@ import logging
 
 from django.conf import settings
 from django.core.cache import cache
+from django.utils.deprecation import MiddlewareMixin
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ ALLOWED_HTTP_METHODS = ['GET', 'HEAD', 'PUT', 'POST', 'DELETE', 'OPTIONS', 'PATC
 HTTP_HEADER = "HTTP_X_HTTP_METHOD_OVERRIDE"
 
 
-class MethodOverrideMiddleware(object):
+class MethodOverrideMiddleware(MiddlewareMixin):
     # https://pypi.python.org/pypi/django-method-override/0.1.0
     def process_view(self, request, callback, callback_args, callback_kwargs):
         if request.method != 'POST':

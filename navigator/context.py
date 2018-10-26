@@ -41,7 +41,7 @@ def extra(request):
     allow_register = settings.ALLOW_REGISTER
     # Set theme
     if hasattr(request, 'user'):
-        if request.user.is_anonymous():
+        if request.user.is_anonymous:
             theme = 'amcat'
         else:
             theme = getattr(request.user.userprofile, 'theme', 'amcat').lower().replace(" ", "_")

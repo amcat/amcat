@@ -28,6 +28,9 @@ from rest_framework.relations import ManyRelatedField
 from amcat.models import Project
 import logging
 
+from amcat.tools.caching import cached
+
+
 class AmCATModelSerializer(serializers.ModelSerializer):
     def get_fields(self):
         fields = super(AmCATModelSerializer, self).get_fields()
@@ -46,12 +49,14 @@ class AmCATProjectModelSerializer(AmCATModelSerializer):
         if not project_id:
             logging.warn("Could not find project in kwargs: {}".format(self.context["view"].kwargs))
         return project_id
-                         
-            
+
     @property
     def project(self):
-        if self.project_id:
-            return Project.objects.get(pk=self.project_id)
+        if self.project_id is None:
+            return None
+        if getattr(self, '_project', None) is None:
+            self._project = Project.objects.get(pk=self.project_id)
+        return self._project
 
     def to_internal_value(self, data):
         if 'project' not in data:

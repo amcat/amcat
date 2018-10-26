@@ -118,4 +118,4 @@ class ArticleListAction(QueryAction):
             for v in vs:
                 table = table.add_arguments(**{k:v})
 
-        return TABLE_TEMPLATE.render(Context({"form": form, "url": url, "table": table}))
+        return TABLE_TEMPLATE.render({"form": form, "url": url, "table": table})

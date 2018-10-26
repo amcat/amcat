@@ -20,10 +20,13 @@
 """
 Module with base class for resources in the amcat REST API
 """
+from django.contrib.postgres.fields import JSONField
 from django.core.urlresolvers import reverse, NoReverseMatch
 from django.conf.urls import url
+from django_filters.rest_framework import FilterSet, CharFilter
 from rest_framework import generics
 
+from amcat.tools.hashing import HashField
 from api.rest.mixins import DatatablesMixin
 from api.rest import tablerenderer
 from api.rest.serializer import AmCATModelSerializer
@@ -36,6 +39,7 @@ class AmCATResource(DatatablesMixin, generics.ListAPIView):
     """
     model = None
     ordering_fields = ("id",)
+    required_scopes = ['resources']
 
     def __init__(self, *args, **kwargs):
         super(AmCATResource, self).__init__(*args, **kwargs)
@@ -94,11 +98,16 @@ class AmCATResource(DatatablesMixin, generics.ListAPIView):
         be set to <Model>Resource.
         """
         class subclass(cls):
-            # DRY violated :-P
             queryset = use_model.objects.all()
             class serializer_class(AmCATModelSerializer):
                 class Meta:
                     model = use_model
+                    fields = '__all__'
+
+            class filter_class(FilterSet):
+                class Meta:
+                    model = use_model
+                    exclude = 'parameters', 'properties'
 
             model = use_model
 

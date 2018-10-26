@@ -15,6 +15,7 @@
           queryScreen.init();
       }, function(err){
           window.script_error = err;
+          console.error(err);
           document.getElementById("requirejs-error-notification").style.display = "";
       });
     </script>

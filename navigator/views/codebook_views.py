@@ -22,7 +22,7 @@ import json
 from django import forms
 from django.http import HttpResponse
 from django.views.generic.list import ListView
-from jsonfield.forms import JSONFormField
+from django.contrib.postgres.forms import JSONField
 
 from amcat.forms import widgets
 from amcat.models import Code, Codebook, CodebookCode, Label, Language, Project, PROJECT_ROLES
@@ -235,9 +235,9 @@ class CodebookChangeNameView(CodebookFormActionView):
 class CodebookSaveChangesetsView(CodebookFormActionView):
     url_fragment = "save-changesets"
     class form_class(forms.Form):
-        moves = JSONFormField(required=False)
-        hides = JSONFormField(required=False)
-        reorders = JSONFormField(required=False)
+        moves = JSONField(required=False)
+        hides = JSONField(required=False)
+        reorders = JSONField(required=False)
 
     def action(self, codebook, form):
         moves, hides, reorders = [form.cleaned_data.get(x, []) for x in ["moves", "hides", "reorders"]]
@@ -287,9 +287,9 @@ class CodebookAddCodeView(CodebookFormActionView):
     
     url_fragment = "new-code"
     class form_class(forms.Form):
-        parent = JSONFormField(required=False)
+        parent = JSONField(required=False)
         label = forms.CharField()
-        ordernr = JSONFormField(required=False)
+        ordernr = JSONField(required=False)
 
     def action(self, codebook, form):
         label = form.cleaned_data["label"]
@@ -312,10 +312,10 @@ class CodebookSaveLabelsView(CodebookFormActionView):
     """
     url_fragment = "save-labels"
     class form_class(forms.Form):
-        code = JSONFormField()
+        code = JSONField()
         label = forms.CharField()
-        labels = JSONFormField(required=False)
-        parent = JSONFormField(required=False)
+        labels = JSONField(required=False)
+        parent = JSONField(required=False)
 
     def action(self, codebook, form):
         code = Code.objects.get(id=form.cleaned_data["code"])

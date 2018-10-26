@@ -11,9 +11,12 @@ Inspired by https://pypi.python.org/pypi/django-maintenancemode (BSD License)
 import os.path
 from django.core import urlresolvers
 import logging
+
+from django.utils.deprecation import MiddlewareMixin
+
 log = logging.getLogger(__name__)
 
-class MaintenanceModeMiddleware(object):
+class MaintenanceModeMiddleware(MiddlewareMixin):
     def process_request(self, request):
         import amcat
         fn = os.path.join(os.path.dirname(amcat.__file__), "maintenance-mode")

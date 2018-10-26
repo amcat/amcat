@@ -125,3 +125,4 @@ class TestViewPermissions(ProjectPermissionsTestCase):
     def test_project_views(self):
         self._test_get_readmeta_access(reverse("navigator:project-details", args=[self.project.id]))
         self._test_post_admin_access(reverse("navigator:project-details", args=[self.project.id]))
+

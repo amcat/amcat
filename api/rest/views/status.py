@@ -1,3 +1,4 @@
+import datetime
 import functools
 import os
 import time
@@ -59,7 +60,6 @@ def queue_status():
         name, ntask, nconsumer = conn.channel().queue_declare(queue=queue, passive=True)
         return {"queue": name, "#tasks": ntask, "#consumer": nconsumer}
     
-    #amcat queue  - should read config instead of assuming localhost?
     celery_config = amcat_config['celery']
     host = "{amqp_host}:{amqp_port}".format(**celery_config)
     try:
@@ -73,8 +73,10 @@ def queue_status():
 
 @_nofail
 def git_status():
-    def date2iso(date):
-        return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(date))
+    def isodate(commit):
+        tz = datetime.timezone(-datetime.timedelta(seconds=commit.committer_tz_offset))
+        date = datetime.datetime.fromtimestamp(commit.committed_date, tz=tz)
+        return date.isoformat()
     # there is probably a better place for this!
     try:
         amcat_dir = os.path.dirname(amcat.__path__[0])
@@ -86,7 +88,7 @@ def git_status():
         "active_branch": str(repo.active_branch),
         "last_commit": {
             "summary": repo.head.commit.summary,
-            "committed_date": date2iso(repo.head.commit.committed_date),
+            "committed_date": isodate(repo.head.commit),
             "commtter": str(repo.head.commit.committer),
             "sha": repo.head.commit.hexsha[:7],
         }

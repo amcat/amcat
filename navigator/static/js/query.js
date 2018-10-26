@@ -60,6 +60,7 @@ define([
 
     var HOTKEYS = {
         "ctrl_q": function(){ $("#run-query").click(); },
+        "ctrl_return": function(){ $("#run-query").click(); },
         "ctrl_r": function(){ $("#new-query").click(); },
         "ctrl_shift_s": function(){
             $("#save-query-dialog").find(".save:visible").click();

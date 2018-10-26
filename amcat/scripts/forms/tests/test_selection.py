@@ -2,7 +2,7 @@ import datetime
 import unittest
 from contextlib import contextmanager
 
-from amcat.models import Language, ArticleSet
+from amcat.models import Language, ArticleSet, ProjectArticleSet
 from amcat.scripts.forms.selection import DAY_DELTA, SelectionForm
 from amcat.tools import amcattest
 from amcat.tools.toolkit import to_datetime
@@ -166,7 +166,7 @@ class TestSelectionForm(amcattest.AmCATTestCase):
         p, _, form = self.get_form()
         aset = amcattest.create_test_set(1)
         article = aset.articles.all()[0]
-        p.articlesets.add(aset)
+        ProjectArticleSet.objects.create(project=p, articleset=aset, is_favourite=True)
 
         self.assertTrue(form.is_valid())
         _, _, form = self.get_form(project=p, article_ids=str(article.id))

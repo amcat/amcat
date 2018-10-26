@@ -42,6 +42,7 @@ class TaskSerializer(AmCATModelSerializer):
 
     class Meta:
         model = Task
+        fields = '__all__'
 
     def __init__(self, *args, **kwargs):
         super(TaskSerializer, self).__init__(*args, **kwargs)
@@ -127,5 +128,4 @@ class TaskViewSet(AmCATViewSetMixin, UUIDLookupMixin, DatatablesMixin, ModelView
     serializer_class = TaskSerializer
     queryset = Task.objects.all()
     model_key = "task"
-
-
+    ignore_filters = ("arguments", )

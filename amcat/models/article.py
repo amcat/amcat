@@ -45,7 +45,8 @@ from amcat.models.authorisation import ROLE_PROJECT_READER
 from amcat.models.authorisation import Role
 from amcat.tools import amcates
 from amcat.tools.djangotoolkit import bulk_insert_returning_ids
-from amcat.tools.model import AmcatModel, HashField
+from amcat.tools.model import AmcatModel
+from amcat.tools.hashing import HashField
 from amcat.tools.progress import NullMonitor
 from amcat.tools.toolkit import splitlist
 

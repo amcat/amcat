@@ -28,6 +28,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from amcat.models import Project, CodingJob
+from amcat.tools.amcates import ES, get_property_mapping_type
 from amcat.tools.caching import cached
 
 
@@ -44,17 +45,33 @@ class QueryActionMetadata(SimpleMetadata):
         field_names = list(form.fields.keys())
         fields = list(map(partial(getitem, form), field_names))
 
+        articlesets = view.get_articlesets()
+        props = {prop for aset in articlesets for prop in aset.get_used_properties()}
+        aggs = ES().search({
+            'aggs': {
+                k: {
+                    'terms': {
+                        'field': '{}.raw'.format(k) if get_property_mapping_type(k) == "default" else k,
+                        'size': 999999
+                    }
+                } for k in props
+            },
+            'query': {'terms': {'sets': list(articlesets.values_list('id', flat=True))}}
+        })['aggregations']
+        
         return {
             "help_texts": OrderedDict(zip(field_names, [f.help_text.strip() or None for f in fields])),
             "form": OrderedDict(zip(field_names, [f.as_widget() for f in fields])),
             "labels": OrderedDict(zip(field_names, [f.label for f in fields])),
             "help_text": view.get_view_description(),
+            "filter_properties": {k: [v['key'] for v in vs['buckets']] for k, vs in aggs.items()}
         }
 
 
 class QueryActionView(APIView):
     query_action = None
     metadata_class = QueryActionMetadata
+    #http_method_names = "POST", "OPTIONS"
 
     def __init__(self, **kwargs):
         super(QueryActionView, self).__init__(**kwargs)
@@ -98,7 +115,7 @@ class QueryActionView(APIView):
         # belonging to the current project.
         codingjob_ids = chain(self.request.GET.get("jobs", "").split(","), self.request.POST.getlist('codingjobs'))
         codingjob_ids = map(int, filter(str.isdigit, codingjob_ids))
-        codingjobs = self.project.codingjob_set.filter(id__in=codingjob_ids).only("id", "name")
+        codingjobs = self.project.codingjob_set.filter(id__in=codingjob_ids)
         return codingjobs if codingjob_ids else CodingJob.objects.none()
 
     @cached

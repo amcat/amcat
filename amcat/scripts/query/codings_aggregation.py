@@ -25,7 +25,7 @@ from collections import defaultdict
 from django.core.exceptions import ValidationError
 from django.forms import ChoiceField, BooleanField, IntegerField
 
-from amcat.models import Label
+from amcat.models import Label, ArticleSet
 from amcat.models import CodingSchemaField, Coding
 from amcat.models.coding.codingschemafield import FIELDTYPE_IDS
 from amcat.models.coding.codebook import get_max_tree_level
@@ -124,7 +124,7 @@ class CodingAggregationActionForm(QueryActionForm):
         self.fields["value1"].choices = value_choices
         self.fields["value2"].choices = (("", "------"),) + value_choices
 
-        sets = {cj.articleset for cj in self.codingjobs}
+        sets = ArticleSet.objects.filter(codingjob_set__in=self.codingjobs)
         props = set(get_used_properties_by_articlesets(sets))
         self.prop_choices = (*get_aggregation_choices(props),)
         self.meta_choices = (("Metadata Fields", (("year", "Year"), ("month", "Month"), ("week", "Week"))),)
@@ -151,7 +151,8 @@ class CodingAggregationActionForm(QueryActionForm):
             if field_value.endswith("_str"):
                 # _str is added to disambiguate between fields and intervals (why, though?!)
                 field_value, _ = field_value.rsplit("_", 1)
-            use_codebook = self.cleaned_data["{}_use_codebook".format(field_name)]
+            use_codebook_name = "{}_use_codebook".format(field_name)
+            use_codebook = self.cleaned_data[use_codebook_name]
             kwargs = {}
             codebook = self.cleaned_data.get('codebook')
             if use_codebook and codebook is not None:
@@ -165,6 +166,12 @@ class CodingAggregationActionForm(QueryActionForm):
                     except Label.DoesNotExist:
                         pass
                 kwargs['groupings'] = groups
+            elif use_codebook and codebook is None:
+                error_msg = ("'Group codings using codebook' is enabled, but no codebook was selected. " 
+                             "Field '{}' needs a codebook in order to group by code.".format(field_value))
+                self._errors.setdefault('codebook', [])
+                self._errors['codebook'].append(ValidationError(error_msg))
+
             return aggregate_orm.ArticleFieldCategory(True, field_value, **kwargs)
 
         # Test for schemafield

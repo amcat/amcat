@@ -169,7 +169,7 @@ def get_clustermap_image(queries):
     all_article_ids = list(chain.from_iterable(queries.values()))
 
     with NamedTemporaryFile(suffix=".xml", mode="wb") as xml:
-        context = Context(locals())
+        context = locals()
         rendered = XML_TEMPLATE.render(context)
         xml.write(rendered.encode('utf-8'))
         xml.flush()

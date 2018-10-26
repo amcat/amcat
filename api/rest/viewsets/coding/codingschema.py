@@ -38,6 +38,7 @@ class CodingSchemaSerializer(AmCATModelSerializer):
 
     class Meta:
         model = CodingSchema
+        fields = '__all__'
 
 class CodingSchemaViewSetMixin(AmCATViewSetMixin):
     queryset = CodingSchema.objects.all()

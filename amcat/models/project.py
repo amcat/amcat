@@ -32,7 +32,7 @@ from django.db.models import Q
 import amcat.models
 from amcat.models import ProjectRole
 from amcat.models.article import Article
-from amcat.models.articleset import ArticleSet, ArticleSetArticle
+from amcat.models.articleset import ArticleSet, ArticleSetArticle, ProjectArticleSet
 from amcat.models.authorisation import ROLE_PROJECT_READER, Role
 from amcat.models.coding.codebook import Codebook
 from amcat.models.coding.codingschema import CodingSchema
@@ -90,8 +90,9 @@ class Project(AmcatModel):
     # Coding fields
     codingschemas = models.ManyToManyField("amcat.CodingSchema", related_name="projects_set")
     codebooks = models.ManyToManyField("amcat.Codebook", related_name="projects_set")
-    articlesets = models.ManyToManyField("amcat.ArticleSet", related_name="projects_set")
-    favourite_articlesets = models.ManyToManyField("amcat.articleset", related_name="favourite_of_projects")
+    articlesets = models.ManyToManyField("amcat.ArticleSet", related_name="projects_set",
+                                         through='amcat.ProjectArticleSet')
+
 
     def get_used_properties(self, only_favourites=False) -> Set[str]:
         all_sets = ArticleSet.objects.filter(Q(projects_set=self) | Q(project=self))
@@ -125,12 +126,20 @@ class Project(AmcatModel):
         """Get a list of all users with some role in this project"""
         return (r.user for r in self.projectrole_set.all())
 
+    @property
+    def favourite_articlesets(self):
+        return ArticleSet.objects.filter(projectarticleset__project=self, projectarticleset__is_favourite=True)
+
+    @property
+    def archived_articlesets(self):
+        return ArticleSet.objects.filter(projectarticleset__project=self, projectarticleset__is_favourite=False)
+
     def all_articlesets(self, distinct=True):
         """
         Get a set of articlesets either owned by this project or
         contained in a set owned by this project
         """
-        sets = ArticleSet.objects.filter(Q(project=self)|Q(projects_set=self))
+        sets = ArticleSet.objects.filter(projects_set=self)
         if distinct: return sets.distinct()
         return sets
 
@@ -150,6 +159,10 @@ class Project(AmcatModel):
             Article.objects.filter(project=self).values_list("id", flat=True),
             ArticleSetArticle.objects.filter(articleset__project=self).values_list("article__id", flat=True)
         )
+
+    def add_set(self, articleset: ArticleSet, is_favourite=True):
+        defaults = dict(is_favourite=is_favourite)
+        return ProjectArticleSet.objects.update_or_create(project=self, articleset=articleset, defaults=defaults)
 
     class Meta():
         db_table = 'projects'

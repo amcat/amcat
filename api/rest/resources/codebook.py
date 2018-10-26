@@ -121,12 +121,13 @@ class CodebookResource(AmCATResource):
     class serializer_class(AmCATModelSerializer):
         class Meta:
             model = Codebook
+            fields = '__all__'
 
 
 class LabelSerializer(AmCATModelSerializer):
     class Meta:
         model = Label
-
+        fields = '__all__'
 
 class LabelResource(AmCATResource):
     model = Label
