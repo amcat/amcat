@@ -11,7 +11,7 @@ virtualenv:
   system_site_packages: false
 
 before_install:
- - curl -L https://github.com/amcat/amcat-docker/archive/master.tar.gz -o /tmp/amcat-docker.tar.gz
+ - curl -L https://github.com/amcat/amcat-docker/archive/travis.tar.gz -o /tmp/amcat-docker.tar.gz
  - mkdir amcat-docker
  - tar -xzf /tmp/amcat-docker.tar.gz --strip 1 -C amcat-docker
 
