@@ -39,6 +39,7 @@ class AmCATResource(DatatablesMixin, generics.ListAPIView):
     """
     model = None
     ordering_fields = ("id",)
+    required_scopes = ['resources']
 
     def __init__(self, *args, **kwargs):
         super(AmCATResource, self).__init__(*args, **kwargs)
@@ -97,7 +98,6 @@ class AmCATResource(DatatablesMixin, generics.ListAPIView):
         be set to <Model>Resource.
         """
         class subclass(cls):
-            # DRY violated :-P
             queryset = use_model.objects.all()
             class serializer_class(AmCATModelSerializer):
                 class Meta:

@@ -189,7 +189,6 @@ INSTALLED_APPS = [
     'django_extensions',
     'djcelery',
     'formtools',
-    'oauth2_provider',
 ]
 
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
@@ -250,7 +249,6 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'api.rest.tokenauth.ExpiringTokenAuthentication',
-        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
     ),
     'EXCEPTION_HANDLER': 'api.rest.exception.exception_handler',
 }
@@ -263,8 +261,11 @@ if not DEBUG:
     EMAIL_HOST_PASSWORD = amcat_config["email"].get("password")
     EMAIL_USE_TLS = amcat_config["email"].getboolean("use_tls")
 else:
-    ALLOWED_HOSTS.append("*")
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
+if DEBUG:
+    ALLOWED_HOSTS.append("*")
     #CORS_ORIGIN_ALLOW_ALL = True
 
 EMAIL_DEFAULT_FROM = amcat_config["email"].get("from")

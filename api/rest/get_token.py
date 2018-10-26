@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.views import APIView
 from rest_framework import status
@@ -11,6 +13,8 @@ from rest_framework import serializers
 import datetime
 
 from amcat._version import __version__
+
+auth_log = logging.getLogger('amcat.auth')
 
 class AuthTokenSerializer(serializers.Serializer):
     def __init__(self, *args, **kwargs):
@@ -33,9 +37,11 @@ class AuthTokenSerializer(serializers.Serializer):
             raise serializers.ValidationError('Unable to login with provided credentials.')
         
 
+
+
 class ObtainAuthToken(APIView):
     throttle_classes = ()
-    #authentication_classes = TokenAuthentication,
+    authentication_classes = TokenAuthentication,
     permission_classes = ()
     parser_classes = (parsers.FormParser, parsers.MultiPartParser, parsers.JSONParser,)
     renderer_classes = (renderers.JSONRenderer,)
@@ -52,7 +58,6 @@ class ObtainAuthToken(APIView):
             user = serializer.user
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
         token = get_token(user)
         return Response({'token': token.key, 'version':__version__})
 
@@ -61,6 +66,9 @@ def get_token(user):
     if not created:
         token.created = datetime.datetime.now()
         token.save()
+        auth_log.info("User: {user.username} {user.id} refreshed their token".format(user=user))
+    else:
+        auth_log.info("User: {user.username} {user.id} created a token".format(user=user))
     return token
 
 obtain_auth_token = ObtainAuthToken.as_view()
