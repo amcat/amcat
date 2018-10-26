@@ -34,5 +34,8 @@ script:
  - docker-compose run amcat sh -c 'pip3 install coverage && python3 wait_services.py && cd amcat && coverage run --source=. --omit="*/migrations/*,settings/*" -m amcat.manage test && coverage report -m'
  # - coveralls
 
+after_failure:
+ - docker-compose logs
+
 notifications:
   slack: amcat:weNC9PqWkfvAXoJbad2Xmd0v
