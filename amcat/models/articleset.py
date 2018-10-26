@@ -73,6 +73,10 @@ class ArticleSet(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='articleset_id')
 
     name = models.CharField(max_length=200)
+
+    # This field only determines the Project that owns the ArticleSet. Membership is determined via the
+    # ProjectArticleSet model, and is unrelated to this field. (i.e. an ArticleSet is not necessarily part
+    # of the Project that owns it.)
     project = models.ForeignKey("amcat.Project", related_name='articlesets_set')
     articles = models.ManyToManyField("amcat.Article", related_name="articlesets_set")
 

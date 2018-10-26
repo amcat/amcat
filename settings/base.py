@@ -50,7 +50,6 @@ if DEBUG:
         "X-CSRFTOKEN", "X-HTTP-METHOD-OVERRIDE"
     ]
     INTERNAL_IPS = ['127.0.0.1']
-    DEBUG_PROPAGATE_EXCEPTIONS = True
 
 # Database
 DATABASE_OPTIONS = {
@@ -123,7 +122,6 @@ MEDIA_URL = '/media/'
 STATIC_URL = '/media/static/'
 ACCOUNTS_URL = "/accounts/"
 API_URL = '/api/'
-OAUTH_URL = '/o/'
 
 STATICFILES_DIRS = (
     # Explicit paths make PyCharm pick up on it.
