@@ -73,8 +73,7 @@ class RequireLoginMiddleware(MiddlewareMixin):
             settings.ACCOUNTS_URL,
             settings.MEDIA_URL,
             settings.STATIC_URL,
-            settings.API_URL,
-            settings.OAUTH_URL
+            settings.API_URL
             )
 
     def _login_required(self, url):

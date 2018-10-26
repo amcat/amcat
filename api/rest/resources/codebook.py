@@ -41,17 +41,23 @@ def _walk(nodes):
         node['children'] = tuple(_walk(node['children']))
         yield node
 
+
+class CodebookCodeSerializer(AmCATModelSerializer):
+    class Meta:
+        model = CodebookCode
+        fields = '__all__'
+
+    label = SerializerMethodField()
+
+    def get_label(self, obj):
+        return obj.code.label
+
+
 class CodebookCodeResource(AmCATResource):
     model = CodebookCode
     queryset = CodebookCode.objects.all().select_related("code__label")
-    class serializer_class(AmCATModelSerializer):
-        class Meta:
-            model = CodebookCode
+    serializer_class = CodebookCodeSerializer
 
-        label = SerializerMethodField()
-
-        def get_label(self, obj):
-            return obj.code.label
 
 class CodebookHierarchyResource(AmCATResource):
     """
@@ -128,6 +134,7 @@ class LabelSerializer(AmCATModelSerializer):
     class Meta:
         model = Label
         fields = '__all__'
+
 
 class LabelResource(AmCATResource):
     model = Label

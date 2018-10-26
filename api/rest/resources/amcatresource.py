@@ -20,15 +20,14 @@
 """
 Module with base class for resources in the amcat REST API
 """
-from django.contrib.postgres.fields import JSONField
-from django.core.urlresolvers import reverse, NoReverseMatch
 from django.conf.urls import url
-from django_filters.rest_framework import FilterSet, CharFilter
+from django.core.urlresolvers import reverse, NoReverseMatch
+from django_filters.rest_framework import FilterSet
+from django_filters import rest_framework as filters
 from rest_framework import generics
 
-from amcat.tools.hashing import HashField
-from api.rest.mixins import DatatablesMixin
 from api.rest import tablerenderer
+from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 
 
