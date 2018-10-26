@@ -71,6 +71,7 @@ class QueryActionMetadata(SimpleMetadata):
 class QueryActionView(APIView):
     query_action = None
     metadata_class = QueryActionMetadata
+    http_method_names = "POST", "OPTIONS"
 
     def __init__(self, **kwargs):
         super(QueryActionView, self).__init__(**kwargs)

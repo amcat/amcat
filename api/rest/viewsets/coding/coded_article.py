@@ -77,17 +77,31 @@ class CodedArticleSerializer(AmCATModelSerializer):
         except ValueError:
             return prop, "default"
 
+    @cached
+    def _get_display_properties(self):
+        props = set()
+        try:
+            view = self.context["view"]
+            proj = Project.objects.get(pk=view.kwargs["project"])
+            codingjob = CodingJob.objects.get(pk=view.kwargs["codingjob"])
+            for prop in [x for x in proj.get_display_columns() if x in codingjob.articleset.get_used_properties()]:
+                props.add(prop)
+        except KeyError:
+            pass
+        return props
+
+
     def _get_properties(self):
-        view = self.context["view"]
-        proj = Project.objects.get(pk=view.kwargs["project"])
-        codingjob = CodingJob.objects.get(pk=view.kwargs["codingjob"])
-        for prop in [x for x in proj.get_display_columns() if x in codingjob.articleset.get_used_properties()]:
+        for prop in self._get_display_properties():
             name, _ = self._split_property_name(prop)
             yield name, get_property_field_cls(prop)()
 
     def get_fields(self):
         fields = super().get_fields()
-        fields.update(self._get_properties())
+        try:
+            fields.update(self._get_properties())
+        except KeyError:
+            pass
 
         # hide these two fields in the annotator. Nobody really needs them anywhere else anyway.
         fields.pop("codingjob", None)
@@ -97,7 +111,8 @@ class CodedArticleSerializer(AmCATModelSerializer):
 
     def _get_coded_articles(self):
         view = self.context["view"]
-        return CodedArticle.objects.filter(id__in=view.filter_queryset(view.get_queryset()))
+        ids = [ca.id for ca in view.paginate_queryset(view.filter_queryset(view.get_queryset()))]
+        return CodedArticle.objects.filter(id__in=ids)
 
     @cached
     def _get_articles(self):

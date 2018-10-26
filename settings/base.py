@@ -133,7 +133,7 @@ STATICFILES_DIRS = (
 )
 
 # List of callables that know how to import templates from various sources.
-MIDDLEWARE_CLASSES = [
+MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'navigator.utils.misc.MethodOverrideMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -186,9 +186,9 @@ INSTALLED_APPS = [
     'navigator',
     'api',
     'amcat',
-    "django_extensions",
+    'django_extensions',
     'djcelery',
-    "formtools",
+    'formtools',
     'oauth2_provider',
 ]
 

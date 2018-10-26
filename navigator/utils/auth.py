@@ -25,6 +25,7 @@ import threading
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
+from django.utils.deprecation import MiddlewareMixin
 
 import amcat.tools.toolkit
 import settings.tools
@@ -62,11 +63,12 @@ def create_user(username, first_name, last_name, email,  password=None):
     return u
 
 
-class RequireLoginMiddleware(object):
+class RequireLoginMiddleware(MiddlewareMixin):
     """
     This middleware forces a login_required decorator for all views
     """
-    def __init__(self):
+    def __init__(self, get_response):
+        super().__init__(get_response)
         self.no_login = (
             settings.ACCOUNTS_URL,
             settings.MEDIA_URL,
@@ -83,10 +85,10 @@ class RequireLoginMiddleware(object):
         return (settings.REQUIRE_LOGON) and not any([url.startswith(u) for u in self.no_login])
 
     def process_view(self, request, view_func, view_args, view_kwargs):
-        if not request.user.is_authenticated() and self._login_required(request.path):
+        if not request.user.is_authenticated and self._login_required(request.path):
             return login_required(view_func)(request, *view_args, **view_kwargs)
 
-class NginxRequestMethodFixMiddleware(object):
+class NginxRequestMethodFixMiddleware(MiddlewareMixin):
     """
     nginx ignores the content written to the output buffer when:
 
@@ -100,14 +102,14 @@ class NginxRequestMethodFixMiddleware(object):
     def process_request(self, request):
         request.POST
 
-class SetRequestContextMiddleware(object):
+class SetRequestContextMiddleware(MiddlewareMixin):
     """
     This middleware installs `request` in the local thread storage
     """
     def process_request(self, request):
         threading.current_thread().request = request
 
-class HTTPAccessControl(object):
+class HTTPAccessControl(MiddlewareMixin):
     def process_response(self, request, response):
         if settings.DEBUG:
             response["Access-Control-Allow-Origin"] = ",".join(settings.ACCESS_CONTROL_ORIGINS)

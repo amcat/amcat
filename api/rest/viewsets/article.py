@@ -42,12 +42,13 @@ import re
 from typing import List, Dict, Any, Union
 
 from django.forms import ModelChoiceField
+from django_filters import rest_framework as filters
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.settings import api_settings
 from rest_framework.viewsets import ModelViewSet
 
-from amcat.models import Article, ArticleSet, ROLE_PROJECT_READER
+from amcat.models import Article, ArticleSet, ROLE_PROJECT_READER, HashField
 from amcat.models import Project, PropertyMapping
 from amcat.models.article import _check_read_access
 from amcat.tools.caching import cached
@@ -227,6 +228,9 @@ def parents_first_order(articles):
 
 class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMixin,
                      DatatablesMixin, ModelViewSet):
+    """
+    Article resource. An article is immutable.
+    """
     model = Article
     model_key = "article"
     serializer_class = ArticleSerializer
@@ -236,7 +240,7 @@ class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSet
     filter_backends = (SmartParentFilter,)
 
     def check_permissions(self, request):
-        # make sure that the requested set is available in the projec, raise 404 otherwiset
+        # make sure that the requested set is available in the project, raise 404 otherwise
         # sets linked_set to indicate whether the current set is owned by the project
         if self.articleset.project_id == self.project.id:
             pass

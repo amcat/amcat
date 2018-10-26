@@ -23,14 +23,13 @@ You can 'register' a resource by adding the model name in the MODELS list
 If you want to customize the model, create it in this package and import it here
 """
 
-
 import sys
 from amcat.tools import classtools
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.resources.project import ProjectResource
 from api.rest.resources.user import UserResource
 from api.rest.resources.codebook import CodebookHierarchyResource, CodebookResource, LabelResource
-from api.rest.resources.article import ArticleMetaResource
+from api.rest.resources.article import ArticleMetaResource, ArticleResource
 from api.rest.resources.articleset import ArticleSetResource
 from api.rest.resources.codingjob import CodingJobResource
 from api.rest.resources.codingrule import CodingRuleResource
@@ -48,7 +47,7 @@ from logging import getLogger
 
 log = getLogger(__name__)
 
-MODELS = ['Article', 'AmCAT',
+MODELS = ['AmCAT',
           'Role', 'ProjectRole',
           'Language',
           'CodingSchema', 'CodingSchemaField',
@@ -64,15 +63,15 @@ for modelname in MODELS:
     else:
         package, modelname = "amcat.models", modelname
     model = classtools.import_attribute(package, modelname)
-    resource =  AmCATResource.create_subclass(model)
+    resource = AmCATResource.create_subclass(model)
     setattr(sys.modules[__name__], resource.__name__, resource)
+
 
 def all_resources():
     for r in globals().values():
-        if (isinstance(r, type)
-            and issubclass(r, AmCATResource)
-            and r != AmCATResource):
+        if isinstance(r, type) and issubclass(r, AmCATResource) and r != AmCATResource:
             yield r
+
 
 def get_resource_for_model(model):
     for resource in all_resources():
@@ -81,10 +80,12 @@ def get_resource_for_model(model):
     log.debug("No resource registered for model {model}".format(**locals()))
     return None
 
+
 def get_all_resource_views(request):
     for r in all_resources():
         if hasattr(r, "get_model_name"):
             yield (r.get_model_name(), reverse("api:" + r.get_view_name(), request=request))
+
 
 @api_view(['GET'])
 def api_root(request, format=None):
@@ -92,5 +93,5 @@ def api_root(request, format=None):
     Overview of API resources
     """
     return Response(OrderedDict(sorted(
-        get_all_resource_views(request), key=lambda r:r[0])
+        get_all_resource_views(request), key=lambda r: r[0])
     ))

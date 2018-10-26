@@ -19,9 +19,10 @@
 
 import logging
 
-from django_filters import filters
+from django_filters import rest_framework as filters
 
 from amcat.models import Article, ArticleSet
+from amcat.tools.hashing import HashField
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.filters import InFilter, DjangoPrimaryKeyFilterBackend
@@ -29,16 +30,17 @@ from api.rest.filters import InFilter, DjangoPrimaryKeyFilterBackend
 log = logging.getLogger(__name__)
 
 
-class ArticleMetaFilter(DjangoPrimaryKeyFilterBackend.default_filter_set):
-    date_from = filters.DateFilter(name='date', lookup_expr='gte')
-    date_to = filters.DateFilter(name='date', lookup_expr='lt')
-    articleset = InFilter(name='articlesets_set', queryset=ArticleSet.objects.all())
-    hash = filters.CharFilter(name='hash', lookup_expr='exact')
-    parent_hash = filters.CharFilter(name='hash', lookup_expr='exact')
+class ArticleFilter(filters.FilterSet):
+    date_from = filters.DateFilter(field_name='date', lookup_expr='gte')
+    date_to = filters.DateFilter(field_name='date', lookup_expr='lt')
+    articleset = InFilter(field_name='articlesets_set', queryset=ArticleSet.objects.all())
 
     class Meta:
         model = Article
         exclude = ('properties',)
+        filter_overrides = {
+            HashField: {'filter_class': filters.CharFilter}
+        }
 
 
 class ArticleMetaSerializer(AmCATModelSerializer):
@@ -53,9 +55,26 @@ class ArticleMetaResource(AmCATResource):
     model = Article
     queryset = Article.objects.all()
     serializer_class = ArticleMetaSerializer
-    filter_class = ArticleMetaFilter
+    filter_class = ArticleFilter
 
     @classmethod
     def get_model_name(cls):
         return "ArticleMeta".lower()
+
+
+class ArticleSerializer(AmCATModelSerializer):
+    class Meta:
+        model = Article
+        fields = '__all__'
+
+
+class ArticleResource(AmCATResource):
+    model = Article
+    queryset = Article.objects.all()
+    serializer_class = ArticleSerializer
+    filter_class = ArticleFilter
+
+    @classmethod
+    def get_model_name(cls):
+        return "Article".lower()
 
