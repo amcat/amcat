@@ -23,19 +23,16 @@ before_install:
 install:
  - cd amcat-docker
  - docker-compose pull
- - docker build --build-arg COMMIT=$TRAVIS_COMMIT -t amcat/amcat-docker amcat
+ - docker build -q --build-arg COMMIT=$TRAVIS_COMMIT -t amcat/amcat-docker amcat
 
 before_script:
  - sudo sysctl -w vm.max_map_count=262144
- - docker-compose up -d
+ - docker-compose up -d # start amcat once to run migrations
  - docker-compose stop amcat
 
 script:
  - docker-compose run amcat sh -c 'pip3 install coverage && python3 wait_services.py && cd amcat && coverage run --source=. --omit="*/migrations/*,settings/*" -m amcat.manage test && coverage report -m'
  # - coveralls
-
-after_failure:
- - docker-compose logs
 
 notifications:
   slack: amcat:weNC9PqWkfvAXoJbad2Xmd0v
