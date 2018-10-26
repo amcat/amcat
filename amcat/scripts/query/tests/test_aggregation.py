@@ -40,7 +40,7 @@ class TestAggregationQueryAction(amcattest.AmCATTestCase):
         aa_form = aa.get_form()
         aa_form.full_clean()
         self.assertTrue(aa_form.is_bound)
-        self.assertTrue(aa_form.is_valid())
+        self.assertTrue(aa_form.is_valid(), aa_form.errors)
 
         if is_json:
             return json.loads(aa.run(aa_form))

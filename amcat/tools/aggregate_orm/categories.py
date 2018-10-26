@@ -56,7 +56,8 @@ __all__ = (
     "IntervalCategory",
     "ArticleSetCategory",
     "TermCategory",
-    "SchemafieldCategory"
+    "SchemafieldCategory",
+    "GroupedCodebookFieldCategory",
 )
 
 
@@ -298,68 +299,7 @@ class SchemafieldCategory(ModelCategory):
     def __init__(self, field, codebook=None, coding_ids=None, level=1, **kwargs):
         super(SchemafieldCategory, self).__init__(**kwargs)
         self.coding_ids = coding_ids
-        self.level = level
         self.field = field
-        self.codebook = codebook
-
-        # TODO: Implement preferably in Postgres. Christian had written a version, but that one only worked for
-        # TODO: equivalence of this code with level=1. See:
-        # TODO:
-        # TODO:    https://github.com/amcat/amcat/commit/bb31793ed722f39018752d31f911aedeb87cf6b8
-        # TODO:
-        # TODO: I couldn't convince Postgres to account for `level` so I reverted to Python logic instead.
-        self.aggregation_map = {}
-
-        if self.codebook is not None:
-            self.codebook.cache()
-
-            levels = list(get_tree_levels(self.codebook.get_tree()))
-            aggregated_level = levels[self.level - 1]
-
-            # Make descendant refer to "root" node
-            seen_ids = set()
-            for tree_item in aggregated_level:
-                for descendant in tree_item.get_descendants():
-                    seen_ids.add(descendant.code_id)
-                    self.aggregation_map[descendant.code_id] = tree_item.code_id
-
-            # Let rest of nodes refer to themselves
-            for code_id in self.codebook.get_code_ids(include_hidden=True):
-                if code_id not in seen_ids:
-                    self.aggregation_map[code_id] = code_id
-
-
-    def _aggregate(self, categories, value, rows):
-        num_categories = len(categories)
-        self_index = categories.index(self)
-
-        # First do a sanity check. If a coding specifies a code which is
-        # NOT present in the given codebook, raise an error.
-        coded_codes = set(map(itemgetter(self_index), rows))
-        codebook_codes = set(self.codebook.get_code_ids())
-        invalid_codes = coded_codes - codebook_codes
-
-        if invalid_codes:
-            error_message = "Codes with ids {} were used in {}, but are not present in {}."
-            raise ValueError(error_message.format(invalid_codes, self.field, self.codebook))
-
-        # Create a mapping from key -> rownrs which need to be aggregated
-        to_aggregate = defaultdict(list)
-        aggregate_ids = defaultdict(list)
-        for n, row in enumerate(rows):
-            key = row[:self_index] + [self.aggregation_map[row[self_index]]] + row[self_index + 1:num_categories]
-            to_aggregate[tuple(key)].append(n)
-            aggregate_ids[tuple(key)].extend(row[-1])
-
-        for key, rownrs in to_aggregate.items():
-            values = [row[num_categories:] for row in [rows[rownr] for rownr in rownrs]]
-            values[0][-1] = aggregate_ids[key]
-            yield list(key) + value.aggregate(values)
-
-    def aggregate(self, categories, value, rows):
-        if self.codebook is None:
-            return super(SchemafieldCategory, self).aggregate(categories, value, rows)
-        return self._aggregate(categories, value, rows)
 
     def get_selects(self):
         return ['codings_values.intval']
@@ -372,4 +312,46 @@ class SchemafieldCategory(ModelCategory):
             yield 'codings_values.intval IN ({})'.format(",".join(map(str, self.coding_ids)))
 
     def __repr__(self):
-        return "<SchemafieldCategory: %s>" % self.field
+        return "<%s: %s>" % (self.__class__.__name__, self.field)
+
+
+class GroupedCodebookFieldCategory(SchemafieldCategory):
+    def __init__(self, *args, codebook, level, **kwargs):
+        self.codebook = codebook
+        self.level = level
+        super().__init__(*args, **kwargs)
+        self.t_hierarchy = "T_{}_hierarchy".format(self.prefix)
+
+    def get_setup_statements(self):
+        sql = """
+            CREATE TEMPORARY TABLE {T} AS 
+            (
+                WITH RECURSIVE codebook_hierarchy AS (
+                     SELECT roots.codebook_id, roots.code_id, ARRAY[roots.code_id] as hierarchy, Array[cd.label] as labels  -- select root elements
+                     FROM codebooks_codes roots
+                     JOIN codes cd ON cd.code_id = roots.code_id
+                         WHERE roots.parent_id ISNULL
+                         AND roots.codebook_id = {codebook_id}
+                     UNION ALL    -- recursively union with children, building an array of ancestors
+                     SELECT child.codebook_id, child.code_id, parent.hierarchy || child.code_id, parent.labels || cd2.label
+                     FROM codebooks_codes child
+                     JOIN codes cd2 ON cd2.code_id = child.code_id
+                     JOIN codebook_hierarchy as parent ON parent.code_id = child.parent_id AND parent.codebook_id = child.codebook_id
+                )
+                SELECT code_id, hierarchy[least(array_upper(hierarchy, 1), {level})] as root_id, hierarchy, labels FROM codebook_hierarchy
+            );
+            CREATE INDEX {T}_code_id ON {T} (code_id);
+        """
+        yield sql.format(codebook_id=int(self.codebook.id), level=int(self.level), T=self.t_hierarchy)
+
+    def get_teardown_statements(self):
+        yield "DROP TABLE IF EXISTS {T};".format(T=self.t_hierarchy)
+
+    def get_joins(self):
+        yield "JOIN {T} as T_hierarchy ON (T_hierarchy.code_id = codings_values.intval)".format(T=self.t_hierarchy)
+
+    def get_selects(self):
+        yield "T_hierarchy.root_id"
+
+    def get_order_by(self):
+        yield "T_hierarchy.labels"

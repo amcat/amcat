@@ -50,7 +50,8 @@ AVERAGE_CODINGSCHEMAFIELD_RE = re.compile("^avg\((?P<id>[0-9]+)\)$")
 ORDER_BY_FIELDS = (
     ("Primary", (
         ("primary", "Ascending (primary)"),
-        ("-primary", "Descending (primary)")
+        ("-primary", "Descending (primary)"),
+        ("topology", "Grouped by codebook (primary)")
     )),
     ("Secondary", (
         ("secondary", "Ascending (secondary)"),
@@ -199,7 +200,8 @@ class CodingAggregationActionForm(QueryActionForm):
                     raise ValueError("Cannot group codings on level {}, as {} only has {} levels!".format(
                         level, codebook, max_tree_level
                     ))
-                return aggregate_orm.SchemafieldCategory(codingschemafield, codebook, coding_ids, level, prefix=prefix)
+                return aggregate_orm.GroupedCodebookFieldCategory(codingschemafield, coding_ids,
+                                                                  codebook=codebook, level=level, prefix=prefix)
             return aggregate_orm.SchemafieldCategory(codingschemafield, coding_ids=coding_ids, prefix=prefix)
         raise ValidationError("Not a valid aggregation: %s." % field_value)
 
