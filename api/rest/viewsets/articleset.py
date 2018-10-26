@@ -21,7 +21,7 @@ from collections import OrderedDict
 from rest_framework import serializers
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from amcat.models import ArticleSet, ProjectArticleset, PROJECT_ROLES, ROLE_PROJECT_ADMIN
+from amcat.models import ArticleSet, ProjectArticleSet, PROJECT_ROLES, ROLE_PROJECT_ADMIN
 from amcat.tools.aggregate_es.aggregate import aggregate
 from amcat.tools.aggregate_es.categories import ArticlesetCategory
 from amcat.tools.caching import cached
@@ -95,8 +95,8 @@ class ArticleSetViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesM
             if isinstance(setids, int):
                 setids = [setids]
             sets = [ArticleSet.objects.get(pk=s) for s in setids]
-            self.project.articlesets.add(*sets)
-            self.project.favourite_articlesets.add(*sets)
+            ProjectArticleSet.objects.bulk_create(ProjectArticleSet(articleset=s, project=self.project, is_favourite=True)
+                                                  for s in sets)
             return Response({"articlesets": setids}, status=status.HTTP_201_CREATED)
         else:
             return super().create(request, *args, **kwargs)
