@@ -40,6 +40,8 @@ def wrap_query_action(qaction):
 
 
 class QueryActionMetadata(SimpleMetadata):
+    bucket_count_limit = 500
+
     def determine_metadata(self, request, view):
         form = view.get_form()
         field_names = list(form.fields.keys())
@@ -47,24 +49,27 @@ class QueryActionMetadata(SimpleMetadata):
 
         articlesets = view.get_articlesets()
         props = {prop for aset in articlesets for prop in aset.get_used_properties()}
+
         aggs = ES().search({
             'aggs': {
                 k: {
                     'terms': {
                         'field': '{}.raw'.format(k) if get_property_mapping_type(k) == "default" else k,
-                        'size': 999999
+                        'size': self.bucket_count_limit
                     }
                 } for k in props
             },
             'query': {'terms': {'sets': list(articlesets.values_list('id', flat=True))}}
         })['aggregations']
-        
+
+        filter_props = {k: [v['key'] for v in vs['buckets']] for k, vs in aggs.items()}
+
         return {
             "help_texts": OrderedDict(zip(field_names, [f.help_text.strip() or None for f in fields])),
             "form": OrderedDict(zip(field_names, [f.as_widget() for f in fields])),
             "labels": OrderedDict(zip(field_names, [f.label for f in fields])),
             "help_text": view.get_view_description(),
-            "filter_properties": {k: [v['key'] for v in vs['buckets']] for k, vs in aggs.items()}
+            "filter_properties": filter_props  # TODO: filter_properties should be moved to a different view.
         }
 
 
