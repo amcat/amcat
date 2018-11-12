@@ -348,10 +348,10 @@ class GroupedCodebookFieldCategory(SchemafieldCategory):
         yield "DROP TABLE IF EXISTS {T};".format(T=self.t_hierarchy)
 
     def get_joins(self):
-        yield "JOIN {T} as T_hierarchy ON (T_hierarchy.code_id = codings_values.intval)".format(T=self.t_hierarchy)
+        yield "JOIN {T} as T_{T} ON (T_{T}.code_id = codings_values.intval)".format(T=self.t_hierarchy)
 
     def get_selects(self):
-        yield "T_hierarchy.root_id"
+        yield "T_{T}.root_id".format(T=self.t_hierarchy)
 
     def get_order_by(self):
-        yield "T_hierarchy.labels"
+        yield "T_{T}.labels".format(T=self.t_hierarchy)

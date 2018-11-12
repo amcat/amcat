@@ -13,6 +13,7 @@ requirejs.config({
         "highcharts.data": "highcharts/modules/data",
         "highcharts.exporting": "highcharts/modules/exporting",
         "highcharts.heatmap": "highcharts/modules/heatmap",
+        "highcharts.drilldown": "highcharts/modules/drilldown",
         "jquery.depends": AMCAT_STATIC_URL + "js/jquery.depends",
         "bootstrap": "bootstrap/dist/js/bootstrap",
         "bootstrap-multiselect": "bootstrap-multiselect/dist/js/bootstrap-multiselect",

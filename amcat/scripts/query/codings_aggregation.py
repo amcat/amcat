@@ -51,7 +51,6 @@ ORDER_BY_FIELDS = (
     ("Primary", (
         ("primary", "Ascending (primary)"),
         ("-primary", "Descending (primary)"),
-        ("topology", "Grouped by codebook (primary)")
     )),
     ("Secondary", (
         ("secondary", "Ascending (secondary)"),
@@ -168,7 +167,7 @@ class CodingAggregationActionForm(QueryActionForm):
                         pass
                 kwargs['groupings'] = groups
             elif use_codebook and codebook is None:
-                error_msg = ("'Group codings using codebook' is enabled, but no codebook was selected. " 
+                error_msg = ("'Group codings using codebook' is enabled, but no codebook was selected. "
                              "Field '{}' needs a codebook in order to group by code.".format(field_value))
                 self._errors.setdefault('codebook', [])
                 self._errors['codebook'].append(ValidationError(error_msg))
