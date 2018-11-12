@@ -10,7 +10,8 @@ from django.core import serializers
 from amcat.scripts.tools import cli
 from amcat.models.authorisation import ProjectRole, Role
 from amcat.models.user import create_user
-from amcat.models import Article, ArticleSet, Project, Label, CodebookCode, CodedArticle, User, CodingJob, Sentence
+from amcat.models import Article, ArticleSet, Project, Label, CodebookCode, CodedArticle, User, CodingJob, Sentence, \
+    ProjectArticleSet
 from amcat.tools import toolkit
 from amcat.scripts.script import Script
 from amcat.tools.amcates import ES
@@ -217,8 +218,8 @@ class ImportProject(Script):
         for a in self._get_dicts("articlesets.jsonl"):
             aset = ArticleSet.objects.create(project=self.status.project, name=a['name'], provenance=a['provenance'])
             yield a['old_id'], aset.id
-            if not a['favourite']:
-                self.status.project.favourite_articlesets.remove(aset)
+            ProjectArticleSet.objects.update_or_create(project=self.status.project, articleset=aset,
+                                                       defaults={"is_favourite": a['favourite']})
 
     def get_sentences(self, articles, sentences):
         for aid, sents in articles.items():

@@ -22,6 +22,7 @@ import time
 from unittest import skipIf
 from django.core.urlresolvers import reverse
 
+from amcat.models import ProjectArticleSet
 from amcat.tools import amcattest
 from amcat.tools.amcattest import AmCATLiveServerTestCase
 
@@ -34,8 +35,10 @@ class TestQueryView(AmCATLiveServerTestCase):
         self.user = self.project.insert_user
         self.aset1 = amcattest.create_test_set(2, project=self.project)
         self.aset2 = amcattest.create_test_set(3, project=self.project)
-        self.project.favourite_articlesets.add(self.aset1)
-        self.project.favourite_articlesets.add(self.aset2)
+        ProjectArticleSet.objects.update_or_create(project=self.project, articleset=self.aset1,
+                                                   defaults={'is_favourite': True})
+        ProjectArticleSet.objects.update_or_create(project=self.project, articleset=self.aset2,
+                                                   defaults={'is_favourite': True})
 
     @amcattest.use_elastic
     @skipIf(os.environ.get("TRAVIS") == "true", "Not yet supported on Travis :(")

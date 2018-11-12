@@ -77,7 +77,7 @@ _views = [
     ArticlesSetFileUploadView, UploadListView,
     ArticleSetEditView, ArticleSetImportView, ArticleSetRefreshView,
     ArticleSetDeleteView, ArticleSetUnlinkView, ArticleSetDeduplicateView, 
-    ArticleSplitView,
+    ArticleSplitView, ArticleSetFavouriteView,
 
     CodebookListView, CodebookDetailsView, CodebookImportView, CodebookLinkView,
     ExportCodebook, CodebookUnlinkView, CodebookDeleteView, CodebookAddView,

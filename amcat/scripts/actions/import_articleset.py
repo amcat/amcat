@@ -24,7 +24,8 @@ import logging; log = logging.getLogger(__name__)
 from django import forms
 from amcat.forms.widgets import BootstrapSelect
 from amcat.scripts.script import Script
-from amcat.models import ArticleSet, Project
+from amcat.models import ArticleSet, Project, ProjectArticleSet
+
 
 class ImportSet(Script):
     """
@@ -38,8 +39,7 @@ class ImportSet(Script):
         target_project = forms.ModelChoiceField(queryset=Project.objects.all(), widget=BootstrapSelect)
 
     def _run(self, articleset, target_project):
-        target_project.articlesets.add(articleset)
-        target_project.favourite_articlesets.add(articleset)
+        ProjectArticleSet.objects.create(articleset=articleset, project=target_project, is_favourite=True)
 
         
 if __name__ == '__main__':

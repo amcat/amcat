@@ -32,7 +32,7 @@ from django.views.generic.edit import CreateView
 from django.views.generic.list import ListView
 
 from amcat.forms.fields import StaticModelChoiceField
-from amcat.models import Article, PROJECT_ROLES, Role, ProjectRole
+from amcat.models import Article, PROJECT_ROLES, Role, ProjectRole, ProjectArticleSet
 from amcat.models import Project, ArticleSet
 from amcat.models.project import LITTER_PROJECT_ID
 from amcat.scripts.actions.deduplicate_set import DeduplicateSet
@@ -59,23 +59,6 @@ class ArticleSetListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
     context_category = 'Articles'
     rowlink = './{id}'
 
-    def get(self, *args, **kargs):
-        favaction = self.request.GET.get('favaction')
-        if favaction is not None:
-            ids = {int(id) for id in self.request.GET.getlist('ids')}
-            favs = self.project.favourite_articlesets
-            favids = set(favs.values_list("pk", flat=True))
-            if favaction == "setfav":
-                ids -= favids
-                func = favs.add
-            else:
-                ids &= favids
-                func = favs.remove
-            if ids:
-                [func(id) for id in ids]
-
-        return super(ArticleSetListView, self).get(*args, **kargs)
-
     @classmethod
     def get_url_patterns(cls):
         patterns = list(super(ArticleSetListView, cls).get_url_patterns())
@@ -96,11 +79,11 @@ class ArticleSetListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         ]
         what = self.what
         if not ArticleSet.objects.filter(Q(projects_set=self.project)
-                                                 | Q(project=self.project)).exists():
+                                         | Q(project=self.project)).exists():
             no_sets = True
         if not self.project.favourite_articlesets.exists():
             no_active = True
-        favaction = "unsetfav" if what == 'active' else "setfav"
+        favaction = False if what == 'active' else True
 
         context.update(locals())
         return context
@@ -207,21 +190,11 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
         context = super(ArticleSetDetailsView, self).get_context_data(**kwargs)
 
         if not ((self.object.project_id == self.project.id) or
-                    self.project.articlesets.filter(pk=self.object.id).exists()):
+                self.project.articlesets.filter(pk=self.object.id).exists()):
             raise Http404(
                 "ArticleSet {self.object.id}:{self.object} does not exist in project {self.project.id}: {self.project}"
-                .format(**locals()))
+                    .format(**locals()))
 
-        star = self.request.GET.get("star")
-        starred = self.project.favourite_articlesets.filter(pk=self.object.id).exists()
-        if star is not None:
-            if bool(int(star)) != starred:
-                starred = not starred
-                if starred:
-                    self.project.favourite_articlesets.add(self.object.id)
-                else:
-                    self.project.favourite_articlesets.remove(self.object.id)
-        context['starred'] = starred
         return context
 
 
@@ -415,7 +388,7 @@ class ArticleSetDeleteActionForm(ArticleSetActionForm):
             "deleted_on": datetime.datetime.now().isoformat()
         })
         articleset.save()
-        project.favourite_articlesets.remove(articleset)
+        ProjectArticleSet.objects.filter(project=project, articleset=articleset).delete()
 
 
 class ArticleSetDeleteView(ArticleSetActionFormView):
@@ -429,8 +402,7 @@ class ArticleSetUnlinkActionForm(ArticleSetActionForm):
     def run(self):
         project = self.form.cleaned_data['project']
         articleset = self.form.cleaned_data['articleset']
-        project.articlesets.remove(articleset)
-        project.favourite_articlesets.remove(articleset)
+        ProjectArticleSet.objects.filter(project=project, articleset=articleset).delete()
 
 
 class ArticleSetUnlinkView(ArticleSetActionFormView):
@@ -438,3 +410,23 @@ class ArticleSetUnlinkView(ArticleSetActionFormView):
     required_project_permission = PROJECT_ROLES.WRITER
     parent = ArticleSetDetailsView
     url_fragment = "unlink"
+
+
+class ArticleSetFavouriteActionForm(ProjectActionForm):
+    def run(self):
+        project = self.form.cleaned_data['project']
+        articlesets = self.form.cleaned_data['articlesets']
+        favourite = self.form.cleaned_data.get('favourite', False)
+        ProjectArticleSet.objects.filter(project=project, articleset__in=articlesets).update(is_favourite=favourite)
+
+    class form_class(forms.Form):
+        favourite = forms.BooleanField(required=False, initial=False)
+        articlesets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.all())
+        project = forms.ModelChoiceField(queryset=Project.objects.all())
+
+
+class ArticleSetFavouriteView(ProjectActionFormView):
+    action_form_class = ArticleSetFavouriteActionForm
+    required_project_permission = PROJECT_ROLES.WRITER
+    parent = ArticleSetListView
+    url_fragment = "setfavourite"

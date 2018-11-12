@@ -26,14 +26,15 @@
 
         {% if can_edit %}
             <form id="set-favourite"
-                  action=""
-                  data-id-field="[name=ids]" data-table="#datatable" data-require-selection="1">
+                  action="{% url "navigator:articleset-setfavourite" project.id %}"
+                  data-id-field="[name=articlesets]" data-table="#datatable" data-require-selection="1" method="post">
                 {% csrf_token %}
-                <input type="hidden" name="favaction" value="{{ favaction }}">
-                <input type="hidden" name="ids" />
+                <input type="hidden" name="favourite" value="{{ favaction }}">
+                <input type="hidden" name="articlesets" />
+                <input type="hidden" name="project" value="{{ project.id }}"/>
 
                 <input type="submit" id="favourite" class="btn btn-default"
-                       value="{% if favaction == 'setfav' %}Activate Set(s){% else %}Archive Set(s){% endif %}" />
+                       value="{% if favaction %}Activate Set(s){% else %}Archive Set(s){% endif %}" />
             </form>
         {% endif %}
 

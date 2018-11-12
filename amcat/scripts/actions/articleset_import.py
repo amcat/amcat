@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 from django import forms
 
 from amcat.scripts.script import Script
-from amcat.models import ArticleSet, Project
+from amcat.models import ArticleSet, Project, ProjectArticleSet
 
 
 class ImportSet(Script):
@@ -35,7 +35,7 @@ class ImportSet(Script):
         project = forms.ModelChoiceField(queryset=Project.objects.all())
 
     def _run(self, articleset, project):
-        project.articlesets.add(articleset)
+        ProjectArticleSet.objects.create(articleset=articleset, project=project)
 
 
 if __name__ == '__main__':
