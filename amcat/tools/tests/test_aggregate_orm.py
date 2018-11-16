@@ -20,7 +20,7 @@ import datetime
 import shutil
 import unittest
 
-from amcat.tools.aggregate_orm.categories import ArticleFieldCategory
+from amcat.tools.aggregate_orm.categories import ArticleFieldCategory, GroupedCodebookFieldCategory
 from amcat.tools.table.table2spss import get_pspp_version, PSPPVersion
 from django.test import TransactionTestCase
 
@@ -225,7 +225,7 @@ class TestAggregateORM(TransactionTestCase):
 
         aggr = self._get_aggr(flat=True)
 
-        cbsf = SchemafieldCategory(self.scodef, codebook=D, level=2)
+        cbsf = GroupedCodebookFieldCategory(self.scodef, codebook=D, level=2)
         result = set(aggr.get_aggregate([cbsf], [CountArticlesValue()]))
         self.assertEqual(result, {
             (self.scode_A1, (2, (self.ids[0], self.ids[2]))),
@@ -234,9 +234,9 @@ class TestAggregateORM(TransactionTestCase):
 
         # Article 3 has two sentences, one coded with A1, the other with A1b.
         # Aggregating on A must not count the article twice.
-        cbsf = SchemafieldCategory(self.scodef, codebook=D)
+        cbsf = GroupedCodebookFieldCategory(self.scodef, codebook=D, level=1)
         result = set(aggr.get_aggregate([cbsf], [CountArticlesValue()]))
-        self.assertEqual(result, {(self.scode_A, (2, (1, 3)))}, msg="Articles must not be counted twice.")
+        self.assertEqual(result, {(self.scode_A, (2, (self.ids[0], self.ids[2])))}, msg="Articles must not be counted twice.")
 
 
     def test_codebook_avg(self):
@@ -250,7 +250,7 @@ class TestAggregateORM(TransactionTestCase):
         D.add_code(self.code_B, self.code_A)
         D.add_code(self.code_A1, self.code_A)
 
-        cbsf = SchemafieldCategory(self.codef, codebook=D)
+        cbsf = GroupedCodebookFieldCategory(self.codef, codebook=D, level=1)
         result = set(aggr.get_aggregate([cbsf], [AverageValue(self.intf)]))
         result = {(c, av) for (c, (av, _)) in result}
         self.assertEqual(result, {(self.code_A, 2.0)})
@@ -263,7 +263,7 @@ class TestAggregateORM(TransactionTestCase):
         E.add_code(self.code_B, self.code_A)
         E.add_code(self.code_A1)
 
-        cbsf = SchemafieldCategory(self.codef, codebook=E)
+        cbsf = GroupedCodebookFieldCategory(self.codef, codebook=E, level=1)
         result = set(aggr.get_aggregate([cbsf], [AverageValue(self.intf)]))
         result = {(c, av) for (c, (av, _)) in result}
         self.assertEqual(result, {

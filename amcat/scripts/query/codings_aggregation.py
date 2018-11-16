@@ -134,18 +134,22 @@ class CodingAggregationActionForm(QueryActionForm):
         self.fields["secondary"].choices += schema_choices + self.prop_choices + self.meta_choices
 
     def _clean_aggregation(self, field_name, prefix=None):
+        is_primary = field_name == "primary"
         field_value = self.cleaned_data[field_name]
         if not field_value:
             return None
 
         if field_value in POSTGRES_DATE_TRUNC_VALUES:
-            return aggregate_orm.IntervalCategory(interval=field_value, prefix=prefix, is_json_field=False)
+            return aggregate_orm.IntervalCategory(interval=field_value,
+                                                  prefix=prefix,
+                                                  is_json_field=False,
+                                                  is_primary=is_primary)
 
         if field_value == "articleset":
-            return aggregate_orm.ArticleSetCategory(prefix=prefix)
+            return aggregate_orm.ArticleSetCategory(prefix=prefix, is_primary=is_primary)
 
         if field_value == "term":
-            return aggregate_orm.TermCategory()
+            return aggregate_orm.TermCategory(is_primary=is_primary)
 
         if field_value in [k for k, v in self.prop_choices[0][1]]:
             if field_value.endswith("_str"):
@@ -172,7 +176,7 @@ class CodingAggregationActionForm(QueryActionForm):
                 self._errors.setdefault('codebook', [])
                 self._errors['codebook'].append(ValidationError(error_msg))
 
-            return aggregate_orm.ArticleFieldCategory(True, field_value, **kwargs)
+            return aggregate_orm.ArticleFieldCategory(True, field_value, is_primary=is_primary, **kwargs)
 
         # Test for schemafield
         match = CODINGSCHEMAFIELD_RE.match(field_value)
@@ -200,8 +204,14 @@ class CodingAggregationActionForm(QueryActionForm):
                         level, codebook, max_tree_level
                     ))
                 return aggregate_orm.GroupedCodebookFieldCategory(codingschemafield, coding_ids,
-                                                                  codebook=codebook, level=level, prefix=prefix)
-            return aggregate_orm.SchemafieldCategory(codingschemafield, coding_ids=coding_ids, prefix=prefix)
+                                                                  codebook=codebook,
+                                                                  level=level,
+                                                                  prefix=prefix,
+                                                                  is_primary=is_primary)
+            return aggregate_orm.SchemafieldCategory(codingschemafield,
+                                                     coding_ids=coding_ids,
+                                                     prefix=prefix,
+                                                     is_primary=is_primary)
         raise ValidationError("Not a valid aggregation: %s." % field_value)
 
     def clean_primary(self):

@@ -62,6 +62,11 @@ __all__ = (
 
 
 class Category(SQLObject):
+
+    def __init__(self, *args, is_primary=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.is_primary = is_primary
+
     def aggregate(self, categories, value, rows):
         """
         Categories may aggregate rows further as they see fit. This can for example
@@ -296,20 +301,38 @@ class TermCategory(Category):
 class SchemafieldCategory(ModelCategory):
     model = Code
 
-    def __init__(self, field, codebook=None, coding_ids=None, level=1, **kwargs):
+    def __init__(self, field, coding_ids=None, **kwargs):
         super(SchemafieldCategory, self).__init__(**kwargs)
         self.coding_ids = coding_ids
         self.field = field
 
     def get_selects(self):
-        return ['codings_values.intval']
+        return ['{T}.intval'.format(T=self.table_name)]
+
+    @property
+    def table_name(self):
+        if self.is_primary:
+            return "codings_values"
+        return "T{}_codings_values".format(self.prefix)
+
+    def get_joins(self):
+        if self.is_primary:
+            return
+
+        yield "INNER JOIN codings as T{prefix}_codings " \
+              "ON T{prefix}_codings.coded_article_id = T_coded_articles.id".format(prefix=self.prefix)
+        yield "INNER JOIN codings_values as T{prefix}_codings_values " \
+              "ON T{prefix}_codings.coding_id = T{prefix}_codings_values.coding_id".format(prefix=self.prefix)
 
     def get_wheres(self):
-        where_sql = 'codings_values.field_id = {field.id}'
-        yield where_sql.format(field=self.field)
+        where_sql = '{T}.field_id = {field.id}'
+        yield where_sql.format(T=self.table_name, field=self.field)
+
+        if self.prefix != "1":
+            yield '{T}.coding_id IN (SELECT * from codings_queryset)'.format(T=self.table_name)
 
         if self.coding_ids is not None:
-            yield 'codings_values.intval IN ({})'.format(",".join(map(str, self.coding_ids)))
+            yield '{T}.intval IN ({vs})'.format(T=self.table_name, vs=",".join(map(str, self.coding_ids)))
 
     def __repr__(self):
         return "<%s: %s>" % (self.__class__.__name__, self.field)
@@ -323,6 +346,8 @@ class GroupedCodebookFieldCategory(SchemafieldCategory):
         self.t_hierarchy = "T_{}_hierarchy".format(self.prefix)
 
     def get_setup_statements(self):
+
+        # builds a table of (code_id, ancestor_id) for the lowest ancestor at the given level or higher.
         sql = """
             CREATE TEMPORARY TABLE {T} AS 
             (
@@ -348,7 +373,11 @@ class GroupedCodebookFieldCategory(SchemafieldCategory):
         yield "DROP TABLE IF EXISTS {T};".format(T=self.t_hierarchy)
 
     def get_joins(self):
-        yield "JOIN {T} as T_{T} ON (T_{T}.code_id = codings_values.intval)".format(T=self.t_hierarchy)
+        yield from super().get_joins()
+        yield "JOIN {THierarchy} as T_{THierarchy} " \
+              "ON (T_{THierarchy}.code_id = {TValue}.intval)".format(
+            THierarchy=self.t_hierarchy,
+            TValue=self.table_name)
 
     def get_selects(self):
         yield "T_{T}.root_id".format(T=self.t_hierarchy)

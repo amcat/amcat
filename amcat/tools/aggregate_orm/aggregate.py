@@ -68,9 +68,9 @@ class ORMAggregate(object):
 
     def _get_aggregate_sql(self, categories, value):
         # Build SQL template
-        sql = 'SELECT {selects} FROM "codings_values" {joins} WHERE {wheres}'
+        sql = 'SELECT {selects}\nFROM "codings_values"\n{joins}\nWHERE {wheres}'
         if categories:
-            sql += " GROUP BY {groups};"
+            sql += "\nGROUP BY {groups};"
         else:
             sql += ";"
 
@@ -101,13 +101,20 @@ class ORMAggregate(object):
                 joins.insert(0, getattr(JOINS, join).format(prefix=""))
                 seen.add(join)
 
+        setups.insert(0, "CREATE TEMPORARY TABLE codings_queryset AS ("
+                         "  SELECT coding_id "
+                         "  FROM codings "
+                         "  WHERE coding_id IN {}"
+                         ")".format(codings_ids))
+        teardowns.append('DROP TABLE codings_queryset')
+
         for setup_statement in setups:
             yield False, setup_statement
 
         # Build sql statement
         yield True, sql.format(
             selects=",".join(filter(None, selects)),
-            joins=" ".join(filter(None, joins)),
+            joins="\n".join(filter(None, joins)),
             wheres="({})".format(") AND (".join(filter(None, wheres))),
             groups=",".join(filter(None, groups))
         )
