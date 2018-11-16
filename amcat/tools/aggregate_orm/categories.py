@@ -328,7 +328,7 @@ class SchemafieldCategory(ModelCategory):
         where_sql = '{T}.field_id = {field.id}'
         yield where_sql.format(T=self.table_name, field=self.field)
 
-        if self.prefix != "1":
+        if not self.is_primary:
             yield '{T}.coding_id IN (SELECT * from codings_queryset)'.format(T=self.table_name)
 
         if self.coding_ids is not None:
