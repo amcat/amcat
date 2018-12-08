@@ -104,7 +104,9 @@ class CodingJobDetailsView(ProjectDetailView, DatatableMixin):
 
     def get_datatable_kwargs(self):
         fields = [("col", prop) for prop in ("title", "date", "url")]
-        props = [("col", prop) for prop in self.project.get_display_columns() if prop in self.object.articleset.get_used_properties()]
+        used_props = self.object.articleset.get_used_properties()
+        display_cols = self.project.get_display_columns()
+        props = [("col", prop) for prop in display_cols if prop in used_props]
         return {"extra_args": fields + props}
 
 class CodingJobEditView(ProjectEditView):
