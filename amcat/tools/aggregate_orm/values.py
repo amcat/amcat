@@ -33,9 +33,9 @@ __all__ = (
 class Value(SQLObject):
     def __init__(self, **kwargs):
         super(Value, self).__init__(**kwargs)
-        self._last_field_hack = None
+        self._first_field_hack = None
 
-    def _set_last_field_aggregation(self, field):
+    def _set_first_field_aggregation(self, field):
         """HACK: the caller may set the last field aggregation (SchemafieldCategory). This is
         currently used in AverageValue, to determine which JOINS are needed. For example, a user
         might aggregate on an article schema, and still expect sentence field value aggregations
@@ -43,7 +43,7 @@ class Value(SQLObject):
         join is needed. On the other hand, aggregating on a sentence field AND aggregating on a
         sentence value should not yield the same join.
         """
-        self._last_field_hack = field
+        self._first_field_hack = field
 
     def aggregate(self, values):
         """
@@ -79,10 +79,10 @@ class AverageValue(Value):
 
     @property
     def need_extra_joins(self):
-        if self._last_field_hack is None:
+        if self._first_field_hack is None:
             return False
         field_schema = self.field.codingschema
-        last_field_schema = self._last_field_hack.field.codingschema
+        last_field_schema = self._first_field_hack.field.codingschema
         return field_schema.isarticleschema is not last_field_schema.isarticleschema
 
     def get_joins(self):

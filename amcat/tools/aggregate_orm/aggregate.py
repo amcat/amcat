@@ -27,13 +27,14 @@ import itertools
 
 from django.db import connection
 
-from amcat.models import Coding
+from amcat.models import Coding, CodingSchemaField
 from amcat.tools.aggregate_orm.categories import TermCategory, SchemafieldCategory
 from amcat.tools.aggregate_orm.sqlobj import JOINS
 
 log = logging.getLogger(__name__)
 
 __all__ = ("ORMAggregate",)
+
 
 def merge_aggregations(results):
     results = [{tuple(row[:-1]): row[-1] for row in aggr} for aggr in results]
@@ -144,9 +145,9 @@ class ORMAggregate(object):
 
     def _get_aggregate(self, categories, values):
         # HACK: Determine last field category. See _set_last_field_aggregation() for info.
-        last_field_category = ([None] + [c for c in categories if isinstance(c, SchemafieldCategory)])[-1]
+        first_field_category = ([c for c in categories if isinstance(c, SchemafieldCategory)] + [None])[0]
         for value in values:
-            value._set_last_field_aggregation(last_field_category)
+            value._set_first_field_aggregation(first_field_category)
 
         queries = [list(self._get_aggregate_sql(categories, value)) for value in values]
         aggregations = list(self._execute_sqls(queries))
