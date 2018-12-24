@@ -157,17 +157,7 @@ def aggregation_to_matrix(aggregation, categories):
         "columns": cols
     }
 
-
-def flattenValues(row, values):
-    return tuple(r[0] if isinstance(v, (CountValue, AverageValue)) else r for r, v in zip(row, values))
-
-
 def aggregation_to_csv(aggregation, categories, values):
-    print(len(aggregation))
-    aggregation = list(aggregation)
-    for i, row in enumerate(aggregation):
-        aggregation[i] = row[:len(categories)] + flattenValues(row[len(categories):], values)
-
     aggregation = map(chain.from_iterable, aggregation)
 
     csvio = io.StringIO()

@@ -151,6 +151,12 @@ class AverageValue(Value):
         weight, value, ids = value
         return float(value), tuple(ids)
 
+    def get_column_names(self):
+        return "Average {}".format(self.field.label),
+
+    def get_column_values(self, obj):
+        yield obj[0]
+
     def __repr__(self):
         return "<AverageValue: %s>" % self.field
 
@@ -160,14 +166,21 @@ class CountValue(Value):
     def postprocess(self, value):
         return (int(value[0]), tuple(value[1]))
 
+
     def aggregate(self, values):
         return [sum(map(itemgetter(0), values))] + [v[1] for v in values]
+
+    def get_column_values(self, obj):
+        yield obj[0]
 
 class CountArticlesValue(CountValue):
     joins_needed = ("codings", "coded_articles", "articles")
 
     def get_selects(self):
         return ['COUNT(DISTINCT(T_articles.article_id))', self._art_ids_agg]
+
+    def get_column_names(self):
+        return "Article Count",
 
     def __repr__(self):
         return "<CountArticlesValue>"
@@ -179,6 +192,9 @@ class CountCodingsValue(CountValue):
     def get_selects(self):
         return ['COUNT(DISTINCT(T_codings.coding_id))', self._art_ids_agg]
 
+    def get_column_names(self):
+        return "Distinct Codings",
+
     def __repr__(self):
         return "<CountCodingsValue>"
 
@@ -188,6 +204,9 @@ class CountCodingValuesValue(CountValue):
 
     def get_selects(self):
         return ['COUNT(DISTINCT(codings_values.codingvalue_id))', self._art_ids_agg]
+
+    def get_column_names(self):
+        return "Distinct Coding Values",
 
     def __repr__(self):
         return "<CountCodingValuesValue>"
