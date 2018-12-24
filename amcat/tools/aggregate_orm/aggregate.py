@@ -19,15 +19,15 @@
 """
 Contains logic to aggregate using Postgres / Django ORM, similar to amcates.py.
 """
-import datetime
+
+import itertools
+import logging
 from collections import OrderedDict
 from multiprocessing.pool import ThreadPool
-import logging
-import itertools
 
 from django.db import connection
 
-from amcat.models import Coding, CodingSchemaField
+from amcat.models import Coding
 from amcat.tools.aggregate_orm.categories import TermCategory, SchemafieldCategory
 from amcat.tools.aggregate_orm.sqlobj import JOINS
 
@@ -151,12 +151,6 @@ class ORMAggregate(object):
 
         queries = [list(self._get_aggregate_sql(categories, value)) for value in values]
         aggregations = list(self._execute_sqls(queries))
-
-        # Aggregate further in Python code
-        for n, (value, rows) in enumerate(zip(values, aggregations)):
-            for category in reversed(categories):
-                rows = list(category.aggregate(categories, value, rows))
-            aggregations[n] = rows
 
         # Convert to single value / Python type
         for n, (value, rows) in enumerate(zip(values, aggregations)):
