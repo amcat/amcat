@@ -38,7 +38,7 @@ from amcat.models import ArticleSet, CodingSchemaField, Code, CodingJob
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools import aggregate_es
 from amcat.tools.aggregate_es.categories import FieldCategory
-from amcat.tools.aggregate_orm import CountArticlesValue
+from amcat.tools.aggregate_orm import CountArticlesValue, AverageValue, CountValue
 from amcat.tools.keywordsearch import SelectionSearch, SearchQuery
 
 log = logging.getLogger(__name__)
@@ -157,7 +157,17 @@ def aggregation_to_matrix(aggregation, categories):
         "columns": cols
     }
 
+
+def flattenValues(row, values):
+    return tuple(r[0] if isinstance(v, (CountValue, AverageValue)) else r for r, v in zip(row, values))
+
+
 def aggregation_to_csv(aggregation, categories, values):
+    print(len(aggregation))
+    aggregation = list(aggregation)
+    for i, row in enumerate(aggregation):
+        aggregation[i] = row[:len(categories)] + flattenValues(row[len(categories):], values)
+
     aggregation = map(chain.from_iterable, aggregation)
 
     csvio = io.StringIO()

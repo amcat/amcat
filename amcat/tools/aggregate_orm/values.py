@@ -130,7 +130,7 @@ class AverageValue(Value):
         if self.field.fieldtype_id == FIELDTYPE_IDS.QUALITY:
             avg_sql += "/10.0"
         yield avg_sql
-        yield "array_agg(T_articles.article_id)"
+        yield 'ARRAY_AGG(DISTINCT(T_articles.article_id) ORDER BY T_articles.article_id)'
 
     def aggregate(self, values):
         # Quick check to prevent lots of calculations if not necessary
