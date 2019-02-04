@@ -25,7 +25,7 @@ from collections import defaultdict
 from django.core.exceptions import ValidationError
 from django.forms import ChoiceField, BooleanField, IntegerField
 
-from amcat.models import Label, ArticleSet
+from amcat.models import Label, ArticleSet, STATUS_COMPLETE
 from amcat.models import CodingSchemaField, Coding
 from amcat.models.coding.codingschemafield import FIELDTYPE_IDS
 from amcat.models.coding.codebook import get_max_tree_level
@@ -298,7 +298,8 @@ class CodingAggregationAction(QueryAction):
             article_ids = list(selection.get_article_ids())
 
             codings = Coding.objects.filter(coded_article__article__id__in=article_ids,
-                                            coded_article__codingjob__id__in=selection.data.codingjobs)
+                                            coded_article__codingjob__id__in=selection.data.codingjobs,
+                                            coded_article__status=STATUS_COMPLETE)
 
             terms = selection.get_article_ids_per_query()
             orm_aggregate = ORMAggregate(codings, flat=False, terms=terms)

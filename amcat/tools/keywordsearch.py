@@ -24,14 +24,13 @@ move it to 'queryparser'?
 import collections
 import logging
 import re
-
 from collections import namedtuple
 from itertools import chain
 from typing import Tuple, Iterable, Any, Set, Optional
 
 from django.core.exceptions import ValidationError
 
-from amcat.models import Label, ArticleSet, CodingJob, Code, CodingValue, CodedArticle, Coding
+from amcat.models import Label, CodingValue, CodedArticle, Coding
 from amcat.tools import queryparser
 from amcat.tools.aggregate_es import aggregate, TermCategory
 from amcat.tools.amcates import ES
@@ -46,6 +45,7 @@ FIELD_MAP = {
     "term": "terms",
     "set": "sets"
 }
+
 
 class SelectionData:
     def __init__(self, form):
@@ -69,6 +69,7 @@ def group_by_first_value(aggr):
 
     if nested_aggr:
         yield current_group, nested_aggr
+
 
 def to_nested(aggr):
     for row in aggr:
@@ -140,7 +141,7 @@ class SelectionSearch:
             codebook.cache_labels()
 
         queries = map(str.strip, self.data.query.split("\n"))
-        #filter empty lines
+        # filter empty lines
         queries = filter(lambda x: x, queries)
         queries = map(SearchQuery.from_string, queries)
 
@@ -159,7 +160,7 @@ class SelectionSearch:
         except queryparser.QueryParseError:
             # try queries one by one
             for i, q in enumerate(self.get_queries()):
-                queryparser.parse_to_terms(q.query, context=(q.declared_label or i+1))
+                queryparser.parse_to_terms(q.query, context=(q.declared_label or i + 1))
             # if error wasn't raised yet, re-raise original
             raise
 
@@ -248,18 +249,18 @@ class CodingJobSelectionSearch(SelectionSearch):
 
         codingschemafield_filters = list(get_coding_filters(self.form))
         articleschema_filters = [c for c in codingschemafield_filters if c.schemafield.codingschema.isarticleschema]
-        sentenceschema_filters = [c for c in codingschemafield_filters if not c.schemafield.codingschema.isarticleschema]
+        sentenceschema_filters = [c for c in codingschemafield_filters if
+                                  not c.schemafield.codingschema.isarticleschema]
 
         if articleschema_filters and sentenceschema_filters:
             # AND filters if they belong to the same codingschema
             filtered_coded_article_ids = filter_coded_article_ids(coded_article_ids, articleschema_filters)
             filtered_coded_article_ids &= filter_coded_article_ids(coded_article_ids, sentenceschema_filters)
         else:
-            filtered_coded_article_ids = filter_coded_article_ids(coded_article_ids, articleschema_filters + sentenceschema_filters)
+            filtered_coded_article_ids = filter_coded_article_ids(coded_article_ids,
+                                                                  articleschema_filters + sentenceschema_filters)
 
         return {id_mapping[cid] for cid in filtered_coded_article_ids}
-
-
 
 
 class SearchQuery(object):
@@ -387,12 +388,12 @@ def resolve_reference(reference, recursive, queries, codebook=None, labels=None,
     except Label.DoesNotExist:
         raise QueryValidationError(
             "Code with label '{reference}' has no label in replacement-language."
-            .format(**locals()), code="invalid"
+                .format(**locals()), code="invalid"
         )
     except KeyError:
         raise QueryValidationError(
             "No code with label '{reference}' found in {codebook}"
-            .format(**locals()), code="invalid"
+                .format(**locals()), code="invalid"
         )
     except TypeError as e:
         log.warn(reference)
@@ -422,17 +423,20 @@ def resolve_query(query, queries, codebook=None, labels=None, rlanguage=None):
             codebook, labels, rlanguage
         )
         if not replacement:
-            raise QueryValidationError("Empty replacement: {query.label}: {query.query} -> {replacement!r}".format(**locals()))
+            raise QueryValidationError(
+                "Empty replacement: {query.label}: {query.query} -> {replacement!r}".format(**locals()))
 
         query.query = query.query.replace(mo.group(0), "(%s)" % replacement, 1)
 
     return query
+
 
 def try_get_label(code, label_language):
     try:
         return code.get_label(label_language)
     except Label.DoesNotExist:
         return None
+
 
 def resolve_queries(queries, codebook=None, label_language=None, replacement_language=None):
     log.warn("Resolving queries {queries}, {codebook}:{label_language} -> {replacement_language}".format(**locals()))
@@ -454,7 +458,8 @@ def resolve_queries(queries, codebook=None, label_language=None, replacement_lan
     labels = None
 
     if codebook is not None:
-        labels = {label: c for label, c in ((try_get_label(c, label_language), c) for c in codebook.get_codes()) if label is not None}
+        labels = {label: c for label, c in ((try_get_label(c, label_language), c) for c in codebook.get_codes()) if
+                  label is not None}
 
     for query in queries:
         yield resolve_query(query, _queries, codebook, labels, replacement_language)
@@ -464,7 +469,8 @@ def get_coding_filters(form):
     for field_name in ("1", "2", "3"):
         schemafield = form.cleaned_data["codingschemafield_{}".format(field_name)]
         schemafield_values = form.cleaned_data["codingschemafield_value_{}".format(field_name)]
-        schemafield_include_descendants = form.cleaned_data["codingschemafield_include_descendants_{}".format(field_name)]
+        schemafield_include_descendants = form.cleaned_data[
+            "codingschemafield_include_descendants_{}".format(field_name)]
 
         if schemafield and schemafield_values:
             code_ids = set(get_code_ids(
@@ -501,8 +507,8 @@ def filter_coded_article_ids(coded_article_ids, filters):
     all_code_ids = chain.from_iterable(code_ids for _, code_ids in filters)
     all_field_ids = [schemafield.id for schemafield, _ in filters]
     coding_values = CodingValue.objects.filter(coding__coded_article__id__in=coded_article_ids)
-    coding_values = coding_values.filter(intval__in=all_code_ids) # Reduce work we need to do at Python side
-    coding_values = coding_values.filter(field__id__in=all_field_ids) # Reduce work we need to do at Python side
+    coding_values = coding_values.filter(intval__in=all_code_ids)  # Reduce work we need to do at Python side
+    coding_values = coding_values.filter(field__id__in=all_field_ids)  # Reduce work we need to do at Python side
     coding_values = coding_values.only("coding_id", "field_id", "intval")
 
     # Create mapping from (field_id, intval) -> {coding_id}
