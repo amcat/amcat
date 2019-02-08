@@ -208,12 +208,27 @@
                                 $.extend({}, MULTISELECT_DEFAULTS, {
                                     disableIfEmpty: true,
                                     nonSelectedText: 'Code',
-                                    buttonWidth: "100%"
+                                    buttonWidth: "100%",
+                                    includeSelectAllOption: true
                                 })
                             ).depends({
+                                onChange: function(options, elements, event){
+                                    for(const el of elements.dependsOnElements){
+                                        if(el.val() == null || el.val() === ""){
+                                            elements.select.html("").multiselect("setOptions", {
+                                                nonSelectedText: "None"
+                                            }).multiselect("rebuild");
+                                            return;
+                                        }
+                                    }
+                                    this(options, elements, event);
+                                },
                                 getFormatter: function(options, elements, callback){
                                     options.defaults.getFormatter(options, elements, function(formatter){
-                                        if (!formatter["codingschemafield"]) return;
+                                        const schemafield_name = elements.dependsOn.filter(
+                                            dep => dep.startsWith("codingschemafield"))[0];
+
+                                        formatter["codingschemafield"] = formatter[schemafield_name];
 
                                         var url = "/api/v4/projects/{project}/codingschemafields/{codingschemafield}/";
                                         $.getJSON(url.format(formatter), function(data){
@@ -227,8 +242,52 @@
                                         data["results"] = data["codes"];
                                         this(options, elements, data);
                                     }).bind(this))(options, elements, url);
+                                },
+                                toOptions: function(data, options, elements){
+                                    const children = {};
+                                    for(const code of data.results){
+                                        if(children[code.parent] == null){
+                                            children[code.parent] = []
+                                        }
+                                        children[code.parent].push(code);
+                                    }
+                                    const stack = children[null].map(code => [code.code, code.code, depth]);
+                                    const subtree_kvs = children[null].map(code => ({[code.code]: [code]}));
+                                    const subtrees = Object.assign({}, ...subtree_kvs);
+                                    let flat = true;
+                                    while(stack.length > 0){
+                                        const [node, root] = stack.pop();
+                                        if(children[node] == null) continue;
+                                        for(let child of children[node]){
+                                            flat = false;
+                                            stack.push([child.code, root]);
+                                            subtrees[root].push(child);
+                                        }
+                                    }
+
+                                    function toOption(option){
+                                        const el = $("<option>");
+                                        el.attr("value", elements.value.format(option));
+                                        el.text(elements.label.format(option));
+                                        return el;
+                                    }
+                                    function toOptGroup(options){
+                                        const el = $("<optgroup>");
+                                        el.attr("label", elements.label.format(options[0]));
+                                        el.html(options.map(toOption));
+                                        return el;
+                                    }
+
+                                    if(flat){
+                                        return Object.values(subtrees).map(codes => toOption(codes[0]));
+                                    }
+                                    else{
+                                        return Object.values(subtrees).map(toOptGroup);
+                                    }
+
                                 }
                             });
+
                         });
                     </script>
 

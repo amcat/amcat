@@ -60,19 +60,19 @@ define(["jquery"], ($) =>{
         }
         let targetrow = $(target_input).closest("tr");
         let targetcol = $(target_input).closest("td");
-        let j = targetrow.parent().children().index(targetrow);
-        let imin = targetrow.children().index(targetcol);
-        expandTable(form_table, lines.length + j + 1);
+        let currentRowIdx = targetrow.parent().children().index(targetrow);
+        let startColIdx = targetrow.children().index(targetcol);
+        expandTable(form_table, lines.length + currentRowIdx + 1);
         for(let line of lines){
-            let i = imin;
+            let colIdx = startColIdx;
             for(let cell of line.split("\t")){
-                let c = getCell(form_table, i, j);
+                let c = getCell(form_table, colIdx, currentRowIdx);
                 c.find("input").val(cell.trim());
-                i++;
+                colIdx++;
             }
-            j++;
+            currentRowIdx++;
         }
-        return j;
+        return currentRowIdx;
     }
 
     exports.bindTablePasteEvent = bindTablePasteEvent;

@@ -270,7 +270,6 @@ class SelectionForm(forms.Form):
 
             for field_name in ("1", "2", "3"):
                 self.fields["codingschemafield_{}".format(field_name)].queryset = schemafields_codebooks
-                self.fields["codingschemafield_value_{}".format(field_name)].queryset = codes
                 self.fields["codingschemafield_value_{}".format(field_name)].widget.attrs = {
                     "class": "depends",
                     "data-depends-on": json.dumps(["codingschemafield_{}".format(field_name), "project"]),
@@ -278,6 +277,18 @@ class SelectionForm(forms.Form):
                     "data-depends-value": "{code}",
                     "data-depends-label": "{code} - {label}",
                 }
+
+            if data is not None:
+                for field_name in ("1", "2", "3"):
+                    if data.get("codingschemafield_{}".format(field_name)) is not None:
+                        try:
+                            field_id = int(data["codingschemafield_{}".format(field_name)])
+                            field = CodingSchemaField.objects.get(pk=field_id)
+                        except ValueError:
+                            continue
+                        self.fields["codingschemafield_value_{}".format(field_name)].queryset = field.codebook.codes
+
+
         if data is not None:
             self.data = self.get_data()
 

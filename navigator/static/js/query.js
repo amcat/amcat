@@ -653,7 +653,7 @@ define([
             inputs += ",select[name={name}]";
             inputs = $(inputs.format({name: name.replace('.', '\\.')}));
 
-            if (inputs.length === 0 || name == "articlesets" || name == "csrfmiddlewaretoken"){
+            if (inputs.length === 0 || name === "articlesets" || name === "csrfmiddlewaretoken"){
                 return;
             }
 
@@ -673,7 +673,7 @@ define([
 
                 inputs.data('initial', value);
                 inputs.multiselect("rebuild");
-            } else if (tagName === "INPUT" && inputs.attr("type") == "checkbox"){
+            } else if (tagName === "INPUT" && inputs.attr("type") === "checkbox"){
                 // Boolean fields
                 inputs.prop("checked", value);
             } else {
