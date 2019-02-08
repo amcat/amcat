@@ -133,6 +133,7 @@ String.prototype.format = function(args){
                 }
 
                 select.data("initial", null);
+                select.trigger("depends-load");
             },
 
             /**
@@ -165,6 +166,7 @@ String.prototype.format = function(args){
             };
 
             var dependsOn = function(event){
+                console.log("Dependency changed", elements.select[0].id, event.target.id);
                 options.onChange.bind(defaults.onChange)(options, elements, event);
             };
 

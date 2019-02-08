@@ -676,11 +676,11 @@ define([
             } else if (tagName === "INPUT" && inputs.attr("type") === "checkbox"){
                 // Boolean fields
                 inputs.prop("checked", value);
+                inputs.trigger("change");
             } else {
                 inputs.val(value);
+                inputs.trigger("change");
             }
-
-            inputs.trigger("change");
         });
         self.fill_filters();
     };

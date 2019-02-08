@@ -251,7 +251,7 @@
                                         }
                                         children[code.parent].push(code);
                                     }
-                                    const stack = children[null].map(code => [code.code, code.code, depth]);
+                                    const stack = children[null].map(code => [code.code, code.code]);
                                     const subtree_kvs = children[null].map(code => ({[code.code]: [code]}));
                                     const subtrees = Object.assign({}, ...subtree_kvs);
                                     let flat = true;
