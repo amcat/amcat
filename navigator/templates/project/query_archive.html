@@ -1,0 +1,93 @@
+{% extends "project/base.html" %}
+{% load static %}
+
+{% block javascript %}
+    <script type="text/javascript" src="{% static 'js/jquery.exportids.js' %}"></script>
+{% endblock %}
+
+{% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
+
+{% block actions %}
+    {% if view.can_edit %}
+    <button class="btn btn-primary" data-toggle="dropdown"><i class="glyphicon glyphicon-plus"></i> Add article set <span class="caret"></span></button>
+    <ul class="dropdown-menu">
+        <li><a href="{% url 'navigator:uploadedfile-add' project.id %}" ><i class="glyphicon glyphicon-upload"></i> Upload articles</a></li>
+        <li><a href="{% url 'navigator:articleset-create' project.id %}"><i class="glyphicon glyphicon-file"></i> New Empty Set</a></li>
+        <li><a href="{% url 'navigator:articleset-remote-import' project.id %}"><i class="glyphicon glyphicon-transfer"></i> Import from other AmCAT instance</a></li>
+    </ul>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    <div id="{{ table.get_name }}-actions">
+        <a id="use-in-query" class="btn btn-primary">
+            <i class="glyphicon glyphicon-search"></i> Use in query
+        </a>
+
+        {% if can_edit %}
+            <form id="set-favourite"
+                  action="{% url "navigator:articleset-setfavourite" project.id %}"
+                  data-id-field="[name=articlesets]" data-table="#datatable" data-require-selection="1" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="favourite" value="{{ favaction }}">
+                <input type="hidden" name="articlesets" />
+                <input type="hidden" name="project" value="{{ project.id }}"/>
+
+                <input type="submit" id="favourite" class="btn btn-default"
+                       value="{% if favaction %}Activate Set(s){% else %}Archive Set(s){% endif %}" />
+            </form>
+        {% endif %}
+
+    </div>
+
+
+    {% if deleted %}
+        <div class="alert alert-success">Successfully deleted an articleset. If this wasn't your intention, please contact your system administrator as it may still reside in the litter bin.</div>
+    {% endif %}
+    {% if unlinked %}
+        <div class="alert alert-success">Successfully unlinked an articleset.</div>
+    {% endif %}
+    <ul class="nav nav-tabs nav-justified" style="margin-bottom: 1em">
+        <li {% if what == 'active' %}class="active"{% endif %}><a href='{% url "navigator:articleset-list" project.id "active"%}'>
+            <i class="glyphicon glyphicon-star"></i>Active Sets
+        </a></li>
+        <li {% if what == 'archived' %}class="active"{% endif %}><a  href='{% url "navigator:articleset-list" project.id "archived"%}'>Archived Sets</a></li>
+        <li {% if what == 'coding' %}class="active"{% endif %}><a  href='{% url "navigator:articleset-list" project.id "coding"%}'>Coding Job Sets</a></li>
+    </ul>
+
+    <div id="datatable">
+        {{ table }}
+    </div>
+
+    {% if no_sets %}
+        <div class="alert alert-info">
+            This project is empty! Use the 'upload articles' button above to add some articles to this
+            project, or navigate to an articleset in another project and select
+            'use in another project' to link that set to this project.
+        </div>
+    {% elif no_active %}
+        <div class="alert alert-info">
+            No active sets? Use the 'activate set' button to add sets to the favourite list!
+        </div>
+    {% endif %}
+
+    </div>
+
+
+    <script type="text/javascript">
+        require(["jquery"], function($){
+            exportids($("#set-favourite"));
+        });
+    </script>
+
+    <script type="text/javascript">
+        require(["jquery"], function($){
+            $("#use-in-query").click(function(event){
+                var wrapper = $(event.currentTarget).closest(".dataTables_wrapper");
+                var api = wrapper.find(".dataTables_scrollBody > .dataTable").DataTable();
+                var ids = $.map(api.rows('.active').data(), function(r){ return r.id; });
+                window.location = "{% url 'navigator:query' project.id %}?sets=" + ids.join(",");
+            });
+        })
+    </script>
+{% endblock %}
