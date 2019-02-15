@@ -75,18 +75,23 @@ class CodingJobSerializer(AmCATModelSerializer):
             data['insertuser'] = self.context['request'].user.id
         return super().to_internal_value(data)
 
-    def _get_codingjobs(self):
+    @cached
+    def _get_codingjob_ids(self):
         view = self.context["view"]
-
-        # prevents caching of all codingjobs when only one is needed
         if hasattr(view, "kwargs") and 'pk' in view.kwargs:
-            return CodingJob.objects.filter(id=view.kwargs['pk'])
-        try:
-            f = view.paginate_queryset
-        except AttributeError:
-            f = lambda x: x  # noop
-        pks = [cj.pk for cj in f(view.filter_queryset(view.get_queryset()))]
-        return CodingJob.objects.filter(id__in=pks)
+            return [int(view.kwargs['pk'])]
+
+        else:
+            try:
+                f = view.paginate_queryset
+            except AttributeError:
+                f = lambda x: x  # noop
+            pks = [cj.pk for cj in f(view.filter_queryset(view.get_queryset().order_by('id')))]
+            return pks
+
+    def _get_codingjobs(self):
+        ids = self._get_codingjob_ids()
+        return CodingJob.objects.filter(id__in=ids)
 
     def _get_coded_articles(self):
         return CodedArticle.objects.filter(codingjob__in=self._get_codingjobs())
@@ -102,6 +107,12 @@ class CodingJobSerializer(AmCATModelSerializer):
         return dict(self._get_coded_articles().filter(status__id__in=STATUS_TODO)
                     .values("codingjob").annotate(n=Count("codingjob"))
                     .values_list("codingjob__id", "n"))
+
+    @cached
+    def _get_n_codings(self):
+        return dict(Coding.objects.filter(coded_article__codingjob_id__in=self._get_codingjob_ids())
+                    .values('coded_article__codingjob_id').annotate(n=Count("id"))
+                    .values_list('coded_article__codingjob_id', 'n'))
 
     @cached
     def _get_n_articles(self):
@@ -133,7 +144,7 @@ class CodingJobSerializer(AmCATModelSerializer):
 
     def get_n_codings(self, obj):
         if not obj: return 0
-        return Coding.objects.filter(coded_article__codingjob=obj).count()
+        return self._get_n_codings().get(obj.id, 0)
 
     def get_articleset(self, obj):
         return obj.articleset_id
