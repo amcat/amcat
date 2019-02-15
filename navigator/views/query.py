@@ -19,23 +19,25 @@
 
 import json
 import logging
+from uuid import uuid4
 
-from django.shortcuts import redirect
-from django.views.generic import ListView
-
-import settings
-from amcat.scripts import query
-from amcat.scripts.query import get_r_queryactions
-from amcat.scripts.query.queryaction import is_valid_cache_key, QueryAction
 from django import conf, forms
+from django.contrib.sessions.backends.base import SessionBase
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.db.models.query_utils import Q
 from django.http import HttpResponseBadRequest, HttpResponse, Http404
+from django.shortcuts import redirect
+from django.views.generic import ListView, FormView
 from django.views.generic.base import TemplateView, RedirectView, View
 
-from amcat.models import Query, Task, Project
+import settings
+from amcat.models import Query, Task, Project, CodingJob, ArticleSet
+from amcat.scripts import query
 from amcat.scripts.forms import SelectionForm
+from amcat.scripts.query import get_r_queryactions
+from amcat.scripts.query.queryaction import is_valid_cache_key, QueryAction
 from amcat.tools import amcates
 from amcat.tools.amcates import get_property_mapping_type
 from api.rest.datatable import Datatable
@@ -51,7 +53,7 @@ FILTER_PROPERTIES = {"default", "tag"}
 
 SHOW_N_RECENT_QUERIES = 5
 
-R_PLUGIN_PLACEHOLDER = (object(),object())
+R_PLUGIN_PLACEHOLDER = (object(), object())
 
 CODINGJOB_AGGREGATION_ACTION = ("Graph/Table (Codings)", query.CodingAggregationAction)
 
@@ -72,7 +74,6 @@ QUERY_ACTIONS = (
     R_PLUGIN_PLACEHOLDER
 )
 
-
 if settings.DEBUG:
     QUERY_ACTIONS += (
         ("Debug", (
@@ -82,8 +83,10 @@ if settings.DEBUG:
 
 # get all class paths from the above QUERY_ACTIONS dict
 QUERY_ACTION_CLASSES = ["{cls.__module__}.{cls.__name__}".format(cls=cls)
-    for classes in ([x] if not isinstance(x, tuple) else list(dict(x).values()) for x in dict(QUERY_ACTIONS).values())
-    for cls in classes if isinstance(cls, type) and issubclass(cls, QueryAction)]
+                        for classes in ([x] if not isinstance(x, tuple) else list(dict(x).values()) for x in
+                                        dict(QUERY_ACTIONS).values())
+                        for cls in classes if isinstance(cls, type) and issubclass(cls, QueryAction)]
+
 
 class ClearQueryCacheView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, View):
     context_category = 'Query'
@@ -102,6 +105,7 @@ class ClearQueryCacheView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMix
         cache.set(cache_key, None)
         return HttpResponse("OK")
 
+
 class SavedQueryRedirectView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, RedirectView):
     model = Query
     parent = ProjectDetailsView
@@ -113,26 +117,56 @@ class SavedQueryRedirectView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumb
         query_id = int(self.kwargs["query"])
         query = Query.objects.get(id=query_id)
         script_name = query.parameters["script"]
-        sets = ",".join(map(str, query.get_articleset_ids()))
-        codingjobs = ",".join(map(str, query.get_codingjob_ids()))
+        sets = list(query.get_articleset_ids())
+        codingjobs = list(query.get_codingjob_ids())
         url = reverse("navigator:query", args=[self.project.id])
 
+        query_session, query_session_id = QuerySessionStore.createNew(self.request.session)
+
         if codingjobs:
-            url += "?query={query_id}&jobs={codingjobs}#{script_name}".format(**locals())
+            query_session.setJobs(codingjobs)
         else:
-            url += "?query={query_id}&sets={sets}#{script_name}".format(**locals())
+            query_session.setSets(sets)
+
+        url += "?query={query_id}&query_session_id={query_session_id}#{script_name}".format(**locals())
 
         return url
 
 
-class QuerySetSelectionView(BaseMixin, TemplateView):
+class QuerySetSelectionForm(forms.Form):
+    articlesets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), required=False)
+    codingjobs = forms.ModelMultipleChoiceField(queryset=CodingJob.objects.none(), required=False)
+
+    def clean_codingjobs(self):
+        if bool(self.cleaned_data.get('articlesets')) == bool(self.cleaned_data.get('codingjobs')):
+            raise ValidationError("Pick either articlesets, or codingjobs")
+        return self.cleaned_data['codingjobs']
+
+
+class QuerySetSelectionView(BaseMixin, FormView):
     view_name = "query_select"
     url_fragment = "queryselect"
     parent = ProjectDetailsView
+    form_class = QuerySetSelectionForm
 
     def get_query_url(self, suffix=""):
         return reverse("navigator:query", args=[self.project.id]) + suffix
 
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class=form_class)
+        form.fields['articlesets'].queryset = ArticleSet.objects.filter(projectarticleset__project=self.project)
+        form.fields['codingjobs'].queryset = CodingJob.objects.filter(project=self.project)
+        return form
+
+    def form_valid(self, form):
+        store, query_session_id = QuerySessionStore.createNew(self.request.session)
+        if form.cleaned_data.get('articlesets'):
+            store.setSets([aset.id for aset in form.cleaned_data['articlesets']])
+        else:
+            store.setJobs([cjob.id for cjob in form.cleaned_data['codingjobs']])
+
+        return redirect(
+            reverse('navigator:query', args=[self.project.id]) + "?query_session_id={}".format(query_session_id))
 
     def get_saved_queries_table(self):
         table = Datatable(
@@ -213,7 +247,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
     def get_url_patterns(cls):
         patterns = super().get_url_patterns()
         comps = list(super()._get_url_components())
-        comps.append("(?P<uuid>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})") #task UUID
+        comps.append("(?P<uuid>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})")  # task UUID
         patterns += ["^" + "/".join(comps) + "/$"]
         return patterns
 
@@ -235,7 +269,6 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
             return {}
         return self.task.arguments["data"]
 
-
     def get_filter_properties(self, articlesets):
         used_properties = set.union(set(), *(aset.get_used_properties() for aset in articlesets))
         for prop in used_properties:
@@ -243,24 +276,34 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
             if ptype in FILTER_PROPERTIES:
                 yield prop
 
-
     def get_context_data(self, **kwargs):
+        query_session_id = self.request.GET.get("query_session_id", None)
+
         query_id = self.request.GET.get("query", "null")
         user_id = self.request.user.id
 
         article_ids = self._get_ids("articles")
         article_ids_lines = "\n".join(str(id) for id in article_ids)
-        articleset_ids = self._get_ids("sets")
-        codingjob_ids = self._get_ids("jobs")
+
+        if query_session_id:
+            session_store = QuerySessionStore.getStore(self.request.session, query_session_id)
+            articleset_ids = session_store.getSets()
+            codingjob_ids = session_store.getJobs()
+        else:
+            articleset_ids = self._get_ids("sets")
+            codingjob_ids = self._get_ids("jobs")
+
         codingjob_ids_json = json.dumps(list(codingjob_ids))
 
         if codingjob_ids:
             all_articlesets = self.project.all_articlesets().all().only("id", "name")
             all_articlesets = all_articlesets.filter(codingjob_set__id__in=codingjob_ids)
             articleset_ids = all_articlesets.values_list("id", flat=True)
-            all_codingjobs = self.project.codingjob_set.all().filter(id__in=codingjob_ids)
+            all_codingjobs = CodingJob.objects.filter(project=self.project)
+            codingjobs = all_codingjobs.filter(id__in=codingjob_ids)
         else:
             all_codingjobs = None
+            codingjobs = None
             all_articlesets = self.project.favourite_articlesets.all().only("id", "name")
             all_articlesets = all_articlesets.filter(codingjob_set__id__isnull=True)
 
@@ -272,7 +315,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         form = SelectionForm(
             project=self.project,
             articlesets=articlesets,
-            codingjobs=all_codingjobs,
+            codingjobs=codingjobs,
             data=dict(self.request.GET, **self.get_task_form_data()),
             initial={
                 "datetype": "all",
@@ -297,13 +340,55 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         return dict(super(QueryView, self).get_context_data(), **locals())
 
 
+class QuerySessionStore:
+    query_sessions_key = 'querysessions'
+
+    def __init__(self, session: SessionBase, query_session_id):
+        self.session = session
+        self.query_session_id = str(query_session_id)
+
+        self.session.setdefault(self.query_sessions_key, {})
+
+        self.session[self.query_sessions_key].setdefault(self.query_session_id, {})
+        self.query_session = self.session[self.query_sessions_key][self.query_session_id]
+
+    def save(self):
+        self.session.save()
+
+    def setSets(self, articlesets, commit=True):
+        self.query_session['codingjobs'] = []
+        self.query_session['articlesets'] = list(articlesets)
+        if commit:
+            self.save()
+
+    def setJobs(self, codingjobs, commit=True):
+        self.query_session['articlesets'] = []
+        self.query_session['codingjobs'] = list(codingjobs)
+        if commit:
+            self.save()
+
+    def getSets(self):
+        return self.query_session['articlesets']
+
+    def getJobs(self):
+        return self.query_session['codingjobs']
+
+    @classmethod
+    def createNew(cls, session):
+        query_session_id = uuid4()
+        return QuerySessionStore(session, query_session_id), query_session_id
+
+    @classmethod
+    def getStore(cls, session, query_session_id):
+        return QuerySessionStore(session, query_session_id)
+
+
 class QueryListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = Query
     parent = QueryView
     context_category = 'Query'
     rowlink = './{id}'
     url_fragment = "archive"
-
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

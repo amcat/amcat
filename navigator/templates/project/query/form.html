@@ -75,19 +75,23 @@
         <div class="panel panel-default">
             <div class="panel-heading">Filters</div>
             <div class="panel-body">
-                {% if all_codingjobs %}
+                {% if codingjobs %}
                     <div class="row">
                         <div class="col-md-3"><label>Codingjobs</label></div>
                         <div class="col-md-9">
                             <select multiple="multiple" id="id_codingjobs" name="codingjobs">
                                 {% for cj in all_codingjobs %}
-                                    <option value="{{ cj.id }}">{{ cj.name }}</option>
+                                    <option value="{{ cj.id }}" {% if cj.id in codingjob_ids %} selected {% endif %}>{{ cj.name }}</option>
                                 {% endfor %}
                             </select>
+
+                            <button id="id_codingjobs_placeholder" class="btn btn-default" style="width: 100%; text-overflow:ellipsis; overflow: hidden;" disabled>
+                                {{ codingjobs|length }} selected
+                            </button>
                         </div>
                     </div>
                 {% endif %}
-                <div style="{% if all_codingjobs %}display:none;{% endif %}" class="row">
+                <div style="{% if codingjobs %}display:none;{% endif %}" class="row">
                     <div class="col-md-3"><label>Sets</label></div>
                     <div class="col-md-9">
                         <select multiple="multiple" id="id_articlesets" name="articlesets">
@@ -149,22 +153,13 @@
                                 }));
                             });
 
-
-                            $("#id_mediums,#id_codingjobs").multiselect(
-                                    $.extend({}, MULTISELECT_DEFAULTS, {
-                                        nonSelectedText: 'All selected',
-                                        buttonWidth: "100%"
-                                    })
-                            );
-
-
-
-                            {% if all_codingjobs %}
-                                $("#id_codingjobs")
-                                        .multiselect("deselectAll")
-                                        .multiselect("select", {{ codingjob_ids_json }})
-                                        .multiselect("disable");
-                            {% endif %}
+                            $('#id_codingjobs').hide().one('before_update', function(){
+                                $('#id_codingjobs_placeholder').remove();
+                                $(this).multiselect($.extend({}, MULTISELECT_DEFAULTS, {
+                                    nonSelectedText: 'All selected',
+                                    buttonWidth: "100%"
+                                }));
+                            });
                         });
                     </script>
                 </div>

@@ -24,7 +24,7 @@ define([
     "query/renderers", "query/utils/poll", "query/api", "pnotify", "moment",
     "pnotify.nonblock", "amcat/amcat.datatables",
     "query/utils/format", "jquery.hotkeys", "jquery.depends", "bootstrap",
-    "bootstrap-multiselect", "bootstrap-tooltip", "jquery.scrollTo"
+    "bootstrap-multiselect", "bootstrap-tooltip", "bootstrap-datepicker", "jquery.scrollTo"
     ], function($, MULTISELECT_DEFAULTS, serializeForm, renderers, Poll, api, PNotify, moment){
     // TODO: Make it prettier:
     $.fn.datepicker.defaults.format = "yyyy-mm-dd";

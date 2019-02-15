@@ -1,11 +1,18 @@
 <div class="row">
+    <div class="hidden">
+        <form method="post" id="selection_form">
+            {% csrf_token %}
+            {{ form }}
+            <button>button</button>
+        </form>
+    </div>
     <div id="active-articlesets" class="col-md-6">
         <h2>Active articlesets</h2>
         {{ articlesets_table|safe }}
 
         <div id="{{ articlesets_table.get_name }}-actions" style="clear: both">
             <a id="use-in-query" class="btn btn-success">
-                <i class="glyphicon glyphicon-search"></i> Use in query
+                <i class="glyphicon glyphicon-search"></i> Use in queryconst
             </a>
         </div>
     </div>
@@ -13,10 +20,12 @@
     <script type="text/javascript">
         require(["jquery", "amcat/amcat.datatables"], function($){
             $("#use-in-query").click(function(event){
-                var wrapper = $(event.currentTarget).closest(".dataTables_wrapper");
-                var api = wrapper.find(".dataTables_scrollBody > .dataTable").DataTable();
-                var ids = $.map(api.rows('.active').data(), function(r){ return r.id; });
-                window.location = "{% url 'navigator:query' project.id %}?sets=" + ids.join(",");
+                const form = $("#selection_form");
+                const wrapper = $(event.currentTarget).closest(".dataTables_wrapper");
+                const api = wrapper.find(".dataTables_scrollBody > .dataTable").DataTable();
+                const ids = $.map(api.rows('.active').data(), function(r){ return r.id; });
+                $(form[0]['articlesets']).val(ids);
+                form.submit()
             });
         });
     </script>
@@ -51,10 +60,12 @@
     <script type="text/javascript">
         require(["jquery", "amcat/amcat.datatables"], function($){
             $("#use-in-query-codingjobs").click(function(event){
-                var wrapper = $(event.currentTarget).closest(".dataTables_wrapper");
-                var api = wrapper.find(".dataTables_scrollBody > .dataTable").DataTable();
-                var ids = $.map(api.rows('.active').data(), function(r){ return r.id; });
-                window.location = "{% url 'navigator:query' project.id %}?jobs=" + ids.join(",");
+                const form = $("#selection_form");
+                const wrapper = $(event.currentTarget).closest(".dataTables_wrapper");
+                const api = wrapper.find(".dataTables_scrollBody > .dataTable").DataTable();
+                const ids = $.map(api.rows('.active').data(), function(r){ return r.id; });
+                $(form[0]['codingjobs']).val(ids);
+                form.submit();
             });
         });
     </script>
