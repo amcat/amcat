@@ -358,10 +358,10 @@ class SearchResource(AmCATResource):
 
     class filter_class(filterset.FilterSet):
         sets = filters.NumberFilter()
-        def __init__(self, data=None, queryset=None, prefix=None):
+        def __init__(self, data=None, queryset=None, prefix=None, request=None):
             if queryset is None:
                 queryset = LazyES()
-            filterset.FilterSet.__init__(self, data, queryset, prefix=prefix)
+            filterset.FilterSet.__init__(self, data, queryset, prefix=prefix, request=request)
 
         class Meta:
             order_by = True

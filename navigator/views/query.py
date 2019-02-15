@@ -141,7 +141,7 @@ class QuerySetSelectionView(BaseMixin, TemplateView):
             rowlink=self.get_query_url("{id}")
         )
         table = table.filter(archived=False)
-        table = table.hide("last_saved", "parameters", "project")
+        table = table.hide("archived", "last_saved", "parameters", "project")
         return table
 
     def get_articlesets_table(self):
