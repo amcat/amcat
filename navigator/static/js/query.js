@@ -673,6 +673,9 @@ define([
 
                 inputs.data('initial', value);
                 inputs.multiselect("rebuild");
+                if(!name.match(/^codingschemafield_\d+$/)){
+                    inputs.trigger("change");
+                }
             } else if (tagName === "INPUT" && inputs.attr("type") === "checkbox"){
                 // Boolean fields
                 inputs.prop("checked", value);
