@@ -259,9 +259,15 @@ define([
         window.history.replaceState(null, null, '#' + name);
 
         var url = API.getActionUrl(name, PROJECT, JOBS, SETS);
+        const [path, data] = url.split("?");
 
         $.ajax({
-            "type": "OPTIONS", url: url, dateType: "json"
+            type: "POST",
+            url: path + `?project=${PROJECT}`,
+            dataType: "json",
+            headers: {"X-HTTP-METHOD-OVERRIDE": "OPTIONS"},
+            data: data,
+            contentType: "application/x-www-form-urlencoded"
         }).done(self.script_form_loaded).error(function(){
             self.show_error("Could not load form due to unkown server error. Try again after " +
             "refreshing this page (F5).");

@@ -108,7 +108,12 @@ class QueryActionView(APIView):
     def get_articlesets(self):
         # Articlesets are given by GET parameter `sets` and separated by commas
         # TODO: GET['sets'] and POST['articlesets'] are redundant, possibly there's a better solution
-        articleset_ids = chain(self.request.GET.get("sets", "").split(","), self.request.POST.getlist('articlesets'))
+        articleset_ids = chain(
+            getattr(self.request, "OPTIONS", {}).get("sets", "").split(","),
+            self.request.GET.get("sets", "").split(","),
+            self.request.POST.getlist('articlesets')
+        )
+
         articleset_ids = map(int, filter(str.isdigit, articleset_ids))
         articlesets = self.project.all_articlesets().filter(id__in=articleset_ids)
         return articlesets.only("id", "name")
@@ -118,7 +123,12 @@ class QueryActionView(APIView):
         # Codingjobs are given by GET parameter `jobs` and separated by commas. If *no* jobs are
         # given, we also return no jobs, in contrast to get_articlesets which yields all articlesets
         # belonging to the current project.
-        codingjob_ids = chain(self.request.GET.get("jobs", "").split(","), self.request.POST.getlist('codingjobs'))
+        codingjob_ids = chain(
+            getattr(self.request, "OPTIONS", {}).get("jobs", "").split(","),
+            self.request.GET.get("jobs", "").split(","),
+            self.request.POST.getlist('codingjobs')
+        )
+
         codingjob_ids = map(int, filter(str.isdigit, codingjob_ids))
         codingjobs = self.project.codingjob_set.filter(id__in=codingjob_ids)
         return codingjobs if codingjob_ids else CodingJob.objects.none()
