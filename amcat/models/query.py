@@ -38,6 +38,7 @@ class Query(AmcatModel):
 
     project = models.ForeignKey("amcat.Project")
     user = models.ForeignKey(User)
+    archived = models.BooleanField(default=False)
 
     last_saved = models.DateTimeField(auto_now=True, db_index=True)
 

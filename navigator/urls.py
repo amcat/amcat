@@ -72,7 +72,8 @@ urlpatterns = [
 _views = [
     ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView, ArticleSetCreateView,
     ArticleSetArticleDetailsView, ProjectArticleDetailsView, ArticleRemoveFromSetView,
-    ArticleSetUploadView, ArticlesetUploadOptionsView, ClearQueryCacheView, QuerySetSelectionView, QueryView,
+    ArticleSetUploadView, ArticlesetUploadOptionsView,
+    ClearQueryCacheView, QuerySetSelectionView, QueryView,  QueryListView, QuerySetArchivedView,
     SavedQueryRedirectView, ArticleSetSampleView,
     ArticlesSetFileUploadView, UploadListView,
     ArticleSetEditView, ArticleSetImportView, ArticleSetRefreshView,

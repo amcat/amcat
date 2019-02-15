@@ -70,7 +70,7 @@ class QueryViewSetMixin(AmCATViewSetMixin):
 
 class QueryViewSet(ProjectViewSetMixin, QueryViewSetMixin, DatatablesMixin, ModelViewSet):
     serializer_class = QuerySerializer
-    queryset = QuerySerializer.Meta.model.objects.all()
+    queryset = Query.objects.all()
     http_method_names = ("get", "options", "post", "put", "patch", "delete")
     permission_classes = (ProjectPermission,)
     permission_map = {

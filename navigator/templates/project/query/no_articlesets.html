@@ -22,7 +22,14 @@
     </script>
 
     <div id="saved-queries" class="col-md-6">
-        <h2>Saved queries</h2>
+        <h2>Saved queries
+
+        <div class="btn-group pull-right">
+            <a href="{% url "navigator:query-archive" project.id %}" class="btn btn-sm btn-default">
+                Archived queries
+            </a>
+        </div>
+        </h2>
         {{ saved_queries_table|safe }}
     </div>
 

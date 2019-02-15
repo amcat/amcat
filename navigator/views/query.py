@@ -21,26 +21,29 @@ import json
 import logging
 
 from django.shortcuts import redirect
+from django.views.generic import ListView
 
 import settings
 from amcat.scripts import query
 from amcat.scripts.query import get_r_queryactions
 from amcat.scripts.query.queryaction import is_valid_cache_key, QueryAction
-from django import conf
+from django import conf, forms
 from django.core.cache import cache
 from django.core.urlresolvers import reverse
 from django.db.models.query_utils import Q
 from django.http import HttpResponseBadRequest, HttpResponse, Http404
 from django.views.generic.base import TemplateView, RedirectView, View
 
-from amcat.models import Query, Task
+from amcat.models import Query, Task, Project
 from amcat.scripts.forms import SelectionForm
 from amcat.tools import amcates
 from amcat.tools.amcates import get_property_mapping_type
 from api.rest.datatable import Datatable
 from api.rest.viewsets import QueryViewSet, FavouriteArticleSetViewSet, CodingJobViewSet
+from navigator.views.datatableview import DatatableMixin
 from navigator.views.project_views import ProjectDetailsView
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, BaseMixin
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, BaseMixin, \
+    ProjectActionForm, ProjectActionFormView
 
 log = logging.getLogger(__name__)
 
@@ -121,6 +124,7 @@ class SavedQueryRedirectView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumb
 
         return url
 
+
 class QuerySetSelectionView(BaseMixin, TemplateView):
     view_name = "query_select"
     url_fragment = "queryselect"
@@ -136,6 +140,7 @@ class QuerySetSelectionView(BaseMixin, TemplateView):
             url_kwargs={"project": self.project.id},
             rowlink=self.get_query_url("{id}")
         )
+        table = table.filter(archived=False)
         table = table.hide("last_saved", "parameters", "project")
         return table
 
@@ -290,3 +295,54 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
 
         form.fields["articlesets"].widget.attrs['disabled'] = 'disabled'
         return dict(super(QueryView, self).get_context_data(), **locals())
+
+
+class QueryListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
+    model = Query
+    parent = QueryView
+    context_category = 'Query'
+    rowlink = './{id}'
+    url_fragment = "archive"
+
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(locals())
+        return context
+
+    def get_resource(self):
+        return QueryViewSet
+
+    def filter_table(self, table):
+        table = table.rowlink_reverse('navigator:saved_query', args=[self.project.id, '{id}'])
+        table = table.hide("project")
+        table = table.hide("parameters")
+        return table
+
+    def get_datatable_kwargs(self):
+        return {
+            "url_kwargs": {
+                "project": self.project.id
+            },
+            "checkboxes": True
+        }
+
+
+class QueryArchiveActionForm(ProjectActionForm):
+
+    def run(self):
+        project = self.form.cleaned_data['project']
+        queries = self.form.cleaned_data['queries']
+        archived = self.form.cleaned_data.get('archived', False)
+        Query.objects.filter(project=project, id__in=queries).update(archived=archived)
+
+    class form_class(forms.Form):
+        archived = forms.BooleanField(required=False, initial=False)
+        queries = forms.ModelMultipleChoiceField(queryset=Query.objects.all())
+        project = forms.ModelChoiceField(queryset=Project.objects.all())
+
+
+class QuerySetArchivedView(ProjectActionFormView):
+    action_form_class = QueryArchiveActionForm
+    parent = QueryListView
+    url_fragment = "setarchived"
