@@ -235,7 +235,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
 
     def _get_query_action(self, label, action):
 
-        if action is query.AggregationAction and self._get_ids("jobs"):
+        if action is query.AggregationAction and getattr(self, 'is_codingjob_query', False):
             label, action = CODINGJOB_AGGREGATION_ACTION
 
         if isinstance(action, type) and issubclass(action, query.QueryAction):
@@ -296,6 +296,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
         codingjob_ids_json = json.dumps(list(codingjob_ids))
 
         if codingjob_ids:
+            self.is_codingjob_query = True
             all_articlesets = self.project.all_articlesets().all().only("id", "name")
             all_articlesets = all_articlesets.filter(codingjob_set__id__in=codingjob_ids)
             articleset_ids = all_articlesets.values_list("id", flat=True)
