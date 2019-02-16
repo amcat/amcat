@@ -10,15 +10,6 @@
 {% block javascript %}
     {% block base_javascript %}{% endblock %}
 
-    <script>
-      require(["amcat/query"], function(queryScreen){
-          queryScreen.init();
-      }, function(err){
-          window.script_error = err;
-          console.error(err);
-          document.getElementById("requirejs-error-notification").style.display = "";
-      });
-    </script>
 {% endblock %}
 
 {% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
@@ -68,4 +59,16 @@
     {% include "project/query/save_dialog.html" %}
     {% include "project/query/confirm_dialog.html" %}
     {% include "project/query/change_articlesets_dialog.html" %}
+
+    <script>
+
+        require(["amcat/query"], function (queryScreen) {
+            queryScreen.init()
+        }, function (err) {
+            window.script_error = err;
+            console.error(err);
+            document.getElementById("requirejs-error-notification").style.display = "";
+        })
+
+    </script>
 {% endblock %}
