@@ -49,6 +49,14 @@ class QueryActionMetadata(SimpleMetadata):
 
         articlesets = view.get_articlesets()
         props = {prop for aset in articlesets for prop in aset.get_used_properties()}
+        articleset_ids = list(articlesets.values_list('id', flat=True))
+
+        # lucene limitation
+        setsquery = {
+           'bool': {
+                'should': [ {'terms': {'sets': articleset_ids[i:i+1000]} } for i in range(0, len(articleset_ids), 1000) ]
+            }
+        }
 
         aggs = ES().search({
             'aggs': {
@@ -59,7 +67,7 @@ class QueryActionMetadata(SimpleMetadata):
                     }
                 } for k in props
             },
-            'query': {'terms': {'sets': list(articlesets.values_list('id', flat=True))}}
+            'query': setsquery
         })['aggregations']
 
         filter_props = {k: [v['key'] for v in vs['buckets']] for k, vs in aggs.items()}
