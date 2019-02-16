@@ -61,7 +61,7 @@ define([
     var HOTKEYS = {
         "ctrl_q": function(){ $("#run-query").click(); },
         "ctrl_return": function(){ $("#run-query").click(); },
-        "ctrl_r": function(){ $("#new-query").click(); },
+        //"ctrl_r": function(){ $("#new-query").click(); },
         "ctrl_shift_s": function(){
             $("#save-query-dialog").find(".save:visible").click();
             $("#save-query-as").click();
@@ -236,7 +236,7 @@ define([
 
         $.ajax({
             type: "POST", dataType: "json",
-            url: API.getActionUrl(script, PROJECT, JOBS, SETS),
+            url: API.getActionUrl(script, PROJECT),
             data: form_data,
             headers: {
                 "X-Available-Renderers": self.get_accepted_mimetypes().join(",")
@@ -258,7 +258,7 @@ define([
 
         window.history.replaceState(null, null, '#' + name);
 
-        var url = API.getActionUrl(name, PROJECT, JOBS, SETS);
+        var url = API.getActionUrl(name, PROJECT);
         const [path, data] = url.split("?");
 
         $.ajax({
@@ -266,7 +266,7 @@ define([
             url: path + `?project=${PROJECT}`,
             dataType: "json",
             headers: {"X-HTTP-METHOD-OVERRIDE": "OPTIONS"},
-            data: data,
+            data: `sets=${SETS}&jobs=${JOBS}`,
             contentType: "application/x-www-form-urlencoded"
         }).done(self.script_form_loaded).error(function(){
             self.show_error("Could not load form due to unkown server error. Try again after " +
