@@ -171,7 +171,7 @@ class CountValue(Value):
         return [sum(map(itemgetter(0), values))] + [v[1] for v in values]
 
     def get_column_values(self, obj):
-        yield obj[0]
+        yield obj if isinstance(obj, int) else obj[0]
 
 class CountArticlesValue(CountValue):
     joins_needed = ("codings", "coded_articles", "articles")

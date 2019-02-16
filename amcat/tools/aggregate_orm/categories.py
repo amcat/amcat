@@ -288,11 +288,11 @@ class TermCategory(Category):
         return self.__class__(terms)
 
     def get_column_names(self):
-        yield "term"
+        return "term", "query"
 
     def get_column_values(self, obj):
         """@type obj: SearchQuery"""
-        yield obj.label
+        return obj.label, obj.query
 
     def __repr__(self):
         return "<TermCategory: {}>".format(self.terms)

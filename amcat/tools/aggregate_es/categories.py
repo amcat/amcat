@@ -202,7 +202,10 @@ class TermCategory(Category):
             yield label, result[label]
 
     def get_column_names(self):
-        return self.terms.keys()
+        return "term", "query"
+
+    def get_column_values(self, obj):
+        return obj.label, obj.query
 
     def __repr__(self):
         return "<TermCategory: {}>".format(self.terms)
