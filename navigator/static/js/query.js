@@ -665,7 +665,7 @@ define([
 
             var tagName = inputs.get(0).tagName;
 
-            if (tagName === "SELECT"){
+            if (tagName === "SELECT" && inputs.get(0).id !== 'id_codingjobs'){
                 // Bootstrap (multi)select
                 inputs.multiselect("deselectAll", false);
 
