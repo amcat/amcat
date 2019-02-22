@@ -29,6 +29,7 @@ from itertools import chain
 from typing import Tuple, Iterable, Any, Set, Optional
 
 from django.core.exceptions import ValidationError
+from django.db.models.expressions import RawSQL
 
 from amcat.models import Label, CodingValue, CodedArticle, Coding
 from amcat.tools import queryparser
@@ -243,8 +244,15 @@ class CodingJobSelectionSearch(SelectionSearch):
             return None
 
         article_ids = set(ES().query_ids(filters={"sets": list(self.get_all_sets())}))
-        coded_articles = CodedArticle.objects.filter(article__id__in=article_ids).values_list('id', 'article__id')
-        id_mapping = dict(coded_articles)
+
+        coded_articles = CodedArticle.objects.raw("""
+                                                  SELECT id, article_id FROM coded_articles
+                                                  WHERE article_id IN %s
+                                                  """,
+                                                  params=(to_int_tuple(article_ids),))
+
+        id_mapping = {c.id: c.article_id for c in coded_articles}
+
         coded_article_ids = set(id_mapping.keys())
 
         codingschemafield_filters = list(get_coding_filters(self.form))
@@ -499,17 +507,30 @@ def get_code_ids(codebook, codes, include_descendants):
                 yield descendant.code_id
 
 
+def to_int_tuple(ids):
+    return tuple(int(id) for id in ids)
+
+
 def filter_coded_article_ids(coded_article_ids, filters):
     if not filters:
         return set()
-
+    print(len(coded_article_ids))
     # Collect all coding values belonging to filtered coded articles
     all_code_ids = chain.from_iterable(code_ids for _, code_ids in filters)
     all_field_ids = [schemafield.id for schemafield, _ in filters]
-    coding_values = CodingValue.objects.filter(coding__coded_article__id__in=coded_article_ids)
-    coding_values = coding_values.filter(intval__in=all_code_ids)  # Reduce work we need to do at Python side
-    coding_values = coding_values.filter(field__id__in=all_field_ids)  # Reduce work we need to do at Python side
-    coding_values = coding_values.only("coding_id", "field_id", "intval")
+
+
+    # Django's query compiler is horribly slow with large sets of IDs.
+    coding_values = CodingValue.objects.raw(
+        """
+            SELECT c.codingvalue_id, c.coding_id, c.field_id, c.intval FROM codings_values c
+            INNER JOIN codings c2 on c.coding_id = c2.coding_id
+            WHERE c2.coded_article_id IN %s 
+            AND c.intval IN %s 
+            AND c.field_id IN %s
+        """,
+        params=(to_int_tuple(coded_article_ids), to_int_tuple(all_code_ids), to_int_tuple(all_field_ids))
+    )
 
     # Create mapping from (field_id, intval) -> {coding_id}
     coding_value_dict = collections.defaultdict(set)
