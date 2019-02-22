@@ -139,8 +139,10 @@ class SummaryAction(QueryAction):
                     delta_start_end = statistics.end_date - statistics.start_date
                     interval = next(interval for (interval, delta) in TIMEDELTAS
                                     if MAX_DATE_GROUPS * delta > delta_start_end)
-                except (StopIteration, TypeError):
+                except TypeError:
                     interval = "day"
+                except StopIteration:
+                    interval = "year"
 
                 date_aggr = selection.get_aggregate([IntervalCategory(interval)], objects=False)
             else:
