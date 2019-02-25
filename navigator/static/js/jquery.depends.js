@@ -129,7 +129,8 @@ String.prototype.format = function(args){
                 var select = elements.select;
 
                 if (select.data("initial")) {
-                    select.multiselect("select", select.data("initial")[0]);
+                    const data = select[0].multiple ? select.data("initial") : select.data("initial")[0];
+                    select.multiselect("select", data);
                 }
 
                 select.data("initial", null);
