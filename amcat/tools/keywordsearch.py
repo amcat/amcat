@@ -467,6 +467,7 @@ def resolve_queries(queries, codebook=None, label_language=None, replacement_lan
 
 
 def get_coding_filters(form):
+    filters = {}
     for field_name in ("1", "2", "3"):
         schemafield = form.cleaned_data["codingschemafield_{}".format(field_name)]
         schemafield_values = form.cleaned_data["codingschemafield_value_{}".format(field_name)]
@@ -479,8 +480,10 @@ def get_coding_filters(form):
                 schemafield_values,
                 schemafield_include_descendants
             ))
+            filters.setdefault(schemafield, [])
+            filters[schemafield].extend(code_ids)
 
-            yield CodingFilter(schemafield, code_ids)
+    return [CodingFilter(schemafield, code_ids) for schemafield, code_ids in filters.items()]
 
 
 def get_code_ids(codebook, codes, include_descendants):

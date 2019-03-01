@@ -19,7 +19,7 @@
 from decimal import Decimal
 from operator import itemgetter
 from amcat.models import CodingSchemaField, FIELDTYPE_IDS, Coding, CodedArticle, CodingValue
-from amcat.tools.aggregate_orm.sqlobj import SQLObject, JOINS, INNER_JOIN
+from amcat.tools.aggregate_orm.sqlobj import SQLObject, JOINS
 
 __all__ = (
     "Value",
@@ -27,7 +27,8 @@ __all__ = (
     "CountValue",
     "CountArticlesValue",
     "CountCodingsValue",
-    "CountCodingValuesValue"
+    "CountCodingValuesValue",
+    "CountSelectedCodingsValue"
 )
 
 class Value(SQLObject):
@@ -104,7 +105,6 @@ class AverageValue(Value):
                 "T{}_{}.coding_id".format(prefix, CodingValue._meta.db_table),
             )
 
-
         yield JOINS.codings_values.format(prefix=self.prefix)
 
     def get_wheres(self):
@@ -160,18 +160,19 @@ class AverageValue(Value):
     def __repr__(self):
         return "<AverageValue: %s>" % self.field
 
+
 class CountValue(Value):
     _art_ids_agg = 'ARRAY_AGG(DISTINCT(T_articles.article_id) ORDER BY T_articles.article_id)'
 
     def postprocess(self, value):
         return (int(value[0]), tuple(value[1]))
 
-
     def aggregate(self, values):
         return [sum(map(itemgetter(0), values))] + [v[1] for v in values]
 
     def get_column_values(self, obj):
         yield obj if isinstance(obj, int) else obj[0]
+
 
 class CountArticlesValue(CountValue):
     joins_needed = ("codings", "coded_articles", "articles")
@@ -195,8 +196,43 @@ class CountCodingsValue(CountValue):
     def get_column_names(self):
         return "Distinct Codings",
 
+    def get_wheres(self):
+        yield "T_codings.sentence_id IS NOT NULL"
+
     def __repr__(self):
         return "<CountCodingsValue>"
+
+
+class CountSelectedCodingsValue(CountCodingsValue):
+    joins_needed = ("codings", "coded_articles", "articles")
+
+    def __init__(self, filters, **kwargs):
+        super().__init__(**kwargs)
+        self.filters = filters
+
+    def get_wheres(self):
+        yield from super().get_wheres()
+        in_conditions = (
+            "("
+            "SELECT {T}.coding_id "
+            "FROM codings_values as {T} "
+            "WHERE {T}.field_id = {field_id} "
+            "AND {T}.intval IN ({intvals}) "
+            ")".format(
+                T="T{}_{}_codings_values_inner".format(self.prefix, i),
+                intvals=",".join(str(int(id)) for id in code_ids),
+                field_id=field.id
+            )
+            for i, (field, code_ids) in enumerate(self.filters)
+        )
+        for in_condition in in_conditions:
+            yield "T_codings.coding_id IN {}".format(in_condition)
+
+    def get_column_names(self):
+        return "Distinct Selected Codings",
+
+    def __repr__(self):
+        return "<CountSelectedCodingsValue>"
 
 
 class CountCodingValuesValue(CountValue):

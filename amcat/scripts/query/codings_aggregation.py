@@ -93,7 +93,8 @@ def get_value_fields(fields):
     yield "Count", [
         ("count(articles)", "Number of articles"),
         ("count(codings)", "Number of codings"),
-        ("count(codingvalues)", "Number of coding values")
+        ("count(total_codings)", "Total number of coded sentences"),
+        ("count(codingvalues)", "Number of coding values"),
     ]
 
 
@@ -229,11 +230,15 @@ class CodingAggregationActionForm(QueryActionForm):
         if field_value == "count(articles)":
             return aggregate_orm.CountArticlesValue(prefix=prefix)
 
-        if field_value == "count(codings)":
+        if field_value == "count(total_codings)":
             return aggregate_orm.CountCodingsValue(prefix=prefix)
 
         if field_value == "count(codingvalues)":
             return aggregate_orm.CountCodingValuesValue(prefix=prefix)
+
+        if field_value == "count(codings)":
+            filters = get_coding_filters(self)
+            return aggregate_orm.CountSelectedCodingsValue(filters, prefix=prefix)
 
         match = AVERAGE_CODINGSCHEMAFIELD_RE.match(field_value)
         if match:

@@ -27,7 +27,7 @@ from multiprocessing.pool import ThreadPool
 
 from django.db import connection
 
-from amcat.models import Coding
+from amcat.models import Coding, CodedArticle
 from amcat.tools.aggregate_orm.categories import TermCategory, SchemafieldCategory
 from amcat.tools.aggregate_orm.sqlobj import JOINS
 

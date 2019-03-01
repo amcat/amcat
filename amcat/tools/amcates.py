@@ -481,7 +481,7 @@ class _ES(object):
 
         log.debug("query_ids with body:\n {}".format(pprint.pformat(body)))
         for i, a in enumerate(scan(self.es, query=body, index=self.index, doc_type=self.doc_type,
-                                   size=(limit or 1000), _source=())):
+                                   size=(limit or 1000), _source=False)):
             if limit and i >= limit:
                 return
             yield int(a['_id'])

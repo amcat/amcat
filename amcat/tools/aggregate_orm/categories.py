@@ -311,13 +311,9 @@ class SchemafieldCategory(ModelCategory):
 
     @property
     def table_name(self):
-        if self.is_primary:
-            return "codings_values"
         return "T{}_codings_values".format(self.prefix)
 
     def get_joins(self):
-        if self.is_primary:
-            return
 
         yield "INNER JOIN codings as T{prefix}_codings " \
               "ON T{prefix}_codings.coded_article_id = T_coded_articles.id".format(prefix=self.prefix)
@@ -328,8 +324,7 @@ class SchemafieldCategory(ModelCategory):
         where_sql = '{T}.field_id = {field.id}'
         yield where_sql.format(T=self.table_name, field=self.field)
 
-        if not self.is_primary:
-            yield '{T}.coding_id IN (SELECT * from codings_queryset)'.format(T=self.table_name)
+        yield '{T}.coding_id IN (SELECT * from codings_queryset)'.format(T=self.table_name)
 
         if self.coding_ids is not None:
             yield '{T}.intval IN ({vs})'.format(T=self.table_name, vs=",".join(map(str, self.coding_ids)))
