@@ -29,7 +29,6 @@ from itertools import chain
 from typing import Tuple, Iterable, Any, Set, Optional
 
 from django.core.exceptions import ValidationError
-from django.db.models.expressions import RawSQL
 
 from amcat.models import Label, CodingValue, CodedArticle, Coding
 from amcat.tools import queryparser
@@ -217,7 +216,7 @@ CodingFilter = namedtuple("CodingFilter", ["schemafield", "code_ids"])
 class CodingJobSelectionSearch(SelectionSearch):
 
     def get_all_sets(self):
-        return (j.articleset.id for j in self.data.codingjobs)
+        return self.data.codingjobs.values_list('articleset_id', flat=True)
 
     def _get_set_filters(self):
         yield "sets", list(self.get_all_sets())
@@ -243,13 +242,7 @@ class CodingJobSelectionSearch(SelectionSearch):
         if not any(form.cleaned_data.get('codingschemafield_{}'.format(id)) for id in (1, 2, 3)):
             return None
 
-        article_ids = set(ES().query_ids(filters={"sets": list(self.get_all_sets())}))
-
-        coded_articles = CodedArticle.objects.raw("""
-                                                  SELECT id, article_id FROM coded_articles
-                                                  WHERE article_id IN %s
-                                                  """,
-                                                  params=(to_int_tuple(article_ids),))
+        coded_articles = CodedArticle.objects.filter(article__articlesets_set__id__in=self.get_all_sets())
 
         id_mapping = {c.id: c.article_id for c in coded_articles}
 
