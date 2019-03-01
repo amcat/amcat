@@ -69,7 +69,7 @@ class CodingJob(AmcatModel):
     class Meta():
         db_table = 'codingjobs'
         app_label = 'amcat'
-        ordering = ('project', '-id')
+        ordering = ('project_id', '-id')
 
     @property
     def codings(self):
