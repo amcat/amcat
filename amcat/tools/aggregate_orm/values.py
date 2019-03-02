@@ -31,6 +31,7 @@ __all__ = (
     "CountSelectedCodingsValue"
 )
 
+
 class Value(SQLObject):
     def __init__(self, **kwargs):
         super(Value, self).__init__(**kwargs)
@@ -224,6 +225,7 @@ class CountSelectedCodingsValue(CountCodingsValue):
                 field_id=field.id
             )
             for i, (field, code_ids) in enumerate(self.filters)
+            if not field.codingschema.isarticleschema
         )
         for in_condition in in_conditions:
             yield "T_codings.coding_id IN {}".format(in_condition)
