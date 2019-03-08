@@ -26,6 +26,7 @@ import logging
 from itertools import filterfalse
 
 from django import forms
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import ValidationError
 from django.db.models import Model
 from django.db.models.query import QuerySet
@@ -268,8 +269,17 @@ class SelectionForm(forms.Form):
             codebookcodes = CodebookCode.objects.filter(codebook__id__in=schemafield_codebook_ids)
             codes = Code.objects.filter(id__in=codebookcodes.values_list("code_id", flat=True)).order_by("id")
 
+            fields = {field.id: field for field in self.schemafields}
+            choices = [(None, "------")]
+            for schema in CodingSchema.objects.filter(fields__in=self.schemafields).values('name').annotate(fields=ArrayAgg('fields')):
+                choice_ids = (fields[id] for id in schema['fields'])
+                group_choices = tuple((obj.id, "%s - %s" % (obj.id, obj)) for obj in choice_ids)
+                choices.append((schema['name'], group_choices))
+
             for field_name in ("1", "2", "3"):
                 self.fields["codingschemafield_{}".format(field_name)].queryset = schemafields_codebooks
+                self.fields["codingschemafield_{}".format(field_name)].choices = choices
+
                 self.fields["codingschemafield_value_{}".format(field_name)].widget.attrs = {
                     "class": "depends",
                     "data-depends-on": json.dumps(["codingschemafield_{}".format(field_name), "project"]),
