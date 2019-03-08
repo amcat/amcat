@@ -21,7 +21,6 @@
 Utility module for keyword searches. This module is full of misnomers, maybe
 move it to 'queryparser'?
 """
-import collections
 import logging
 import re
 from collections import namedtuple
@@ -29,8 +28,9 @@ from itertools import chain
 from typing import Tuple, Iterable, Any, Set, Optional
 
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 
-from amcat.models import Label, CodingValue, CodedArticle, Coding
+from amcat.models import Label, CodingValue, CodedArticle, Coding, CodingSchemaField
 from amcat.tools import queryparser
 from amcat.tools.aggregate_es import aggregate, TermCategory
 from amcat.tools.amcates import ES
@@ -210,7 +210,9 @@ class SelectionSearch:
         raise Exception("Invalid selection: no articlesets or codingjobs given.")
 
 
-CodingFilter = namedtuple("CodingFilter", ["schemafield", "code_ids"])
+class CodingFilter(namedtuple("CodingFilter", ["schemafield", "code_ids"])):
+    def as_q(self):
+        return Q(values__in=CodingValue.objects.filter(field=self.schemafield, intval__in=self.code_ids))
 
 
 class CodingJobSelectionSearch(SelectionSearch):
@@ -241,27 +243,16 @@ class CodingJobSelectionSearch(SelectionSearch):
         form = self.form
         if not any(form.cleaned_data.get('codingschemafield_{}'.format(id)) for id in (1, 2, 3)):
             return None
+        queryset = Coding.objects.filter(coded_article__codingjob_id__in=self.data.codingjobs)
 
-        coded_articles = CodedArticle.objects.filter(article__articlesets_set__id__in=self.get_all_sets())
+        article_codings = apply_coding_filters(queryset, form).filter(sentence=None)
+        sentence_codings = apply_coding_filters(queryset, form).exclude(sentence=None)
 
-        id_mapping = {c.id: c.article_id for c in coded_articles}
+        coded_articles = CodedArticle.objects.filter(codingjob_id__in=self.data.codingjobs)\
+            .filter(pk__in=CodedArticle.objects.filter(codings__in=article_codings))\
+            .filter(pk__in=CodedArticle.objects.filter(codings__in=sentence_codings))
 
-        coded_article_ids = set(id_mapping.keys())
-
-        codingschemafield_filters = list(get_coding_filters(self.form))
-        articleschema_filters = [c for c in codingschemafield_filters if c.schemafield.codingschema.isarticleschema]
-        sentenceschema_filters = [c for c in codingschemafield_filters if
-                                  not c.schemafield.codingschema.isarticleschema]
-
-        if articleschema_filters and sentenceschema_filters:
-            # AND filters if they belong to the same codingschema
-            filtered_coded_article_ids = filter_coded_article_ids(coded_article_ids, articleschema_filters)
-            filtered_coded_article_ids &= filter_coded_article_ids(coded_article_ids, sentenceschema_filters)
-        else:
-            filtered_coded_article_ids = filter_coded_article_ids(coded_article_ids,
-                                                                  articleschema_filters + sentenceschema_filters)
-
-        return {id_mapping[cid] for cid in filtered_coded_article_ids}
+        return set(coded_articles.values_list('article_id', flat=True).distinct())
 
 
 class SearchQuery(object):
@@ -503,41 +494,17 @@ def get_code_ids(codebook, codes, include_descendants):
                 yield descendant.code_id
 
 
-def to_int_tuple(ids):
-    return tuple(int(id) for id in ids)
+def apply_coding_filters(queryset, form):
+    filters = get_coding_filters(form)
+    q = Q()
+
+    for filter in filters:
+        is_sentence_field = not filter.schemafield.codingschema.isarticleschema
+        if is_sentence_field:
+            q &= Q(sentence=None) | filter.as_q()
+        else:
+            q &= (~Q(sentence=None)) | filter.as_q()
+
+    return queryset.filter(q)
 
 
-def filter_coded_article_ids(coded_article_ids, filters):
-    if not filters:
-        return set()
-    print(len(coded_article_ids))
-    # Collect all coding values belonging to filtered coded articles
-    all_code_ids = chain.from_iterable(code_ids for _, code_ids in filters)
-    all_field_ids = [schemafield.id for schemafield, _ in filters]
-
-
-    # Django's query compiler is horribly slow with large sets of IDs.
-    coding_values = CodingValue.objects.raw(
-        """
-            SELECT c.codingvalue_id, c.coding_id, c.field_id, c.intval FROM codings_values c
-            INNER JOIN codings c2 on c.coding_id = c2.coding_id
-            WHERE c2.coded_article_id IN %s 
-            AND c.intval IN %s 
-            AND c.field_id IN %s
-        """,
-        params=(to_int_tuple(coded_article_ids), to_int_tuple(all_code_ids), to_int_tuple(all_field_ids))
-    )
-
-    # Create mapping from (field_id, intval) -> {coding_id}
-    coding_value_dict = collections.defaultdict(set)
-    for coding_value in coding_values:
-        coding_value_dict[coding_value.field_id, coding_value.intval].add(coding_value.coding_id)
-
-    # Collect
-    coding_ids = {coding_value.coding_id for coding_value in coding_values}
-    for schemafield, code_ids in filters:
-        coding_ids &= set(chain.from_iterable(coding_value_dict[schemafield.id, code_id] for code_id in code_ids))
-
-    codings = Coding.objects.filter(id__in=coding_ids)
-    coded_article_ids &= set(codings.values_list("coded_article__id", flat=True))
-    return coded_article_ids
