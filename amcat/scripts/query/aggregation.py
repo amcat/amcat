@@ -111,6 +111,8 @@ def sorted_aggregation(direction, key, aggregation):
             return obj.name.lower()
         elif isinstance(obj, (Code, SearchQuery)):
             return obj.label.lower()
+        elif isinstance(obj, str):
+            return obj.lower()
         return obj
 
     return sorted(aggregation, key=lambda r: order_by(reorder(r)), reverse=reverse)
