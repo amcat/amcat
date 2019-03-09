@@ -248,16 +248,16 @@ class CodingJobSelectionSearch(SelectionSearch):
 
         coded_articles = CodedArticle.objects.filter(codingjob_id__in=self.data.codingjobs)
 
+        article_codings = apply_coding_filters(queryset, form).filter(sentence=None)
+
         if form.cleaned_data.get('codingschemafield_match_condition') == "ANY":
-            codings = apply_coding_filters_union(queryset, form)
-            coded_articles = coded_articles.filter(codings__in=codings)
+            sentence_codings = apply_coding_filters_union(queryset, form).exclude(sentence=None)
         else:
-            article_codings = apply_coding_filters(queryset, form).filter(sentence=None)
             sentence_codings = apply_coding_filters(queryset, form).exclude(sentence=None)
 
-            coded_articles = coded_articles.filter(pk__in=CodedArticle.objects
-                                                        .filter(codings__in=article_codings)
-                                                        .filter(codings__in=sentence_codings))
+        coded_articles = coded_articles.filter(pk__in=CodedArticle.objects
+                                                    .filter(codings__in=article_codings)
+                                                    .filter(codings__in=sentence_codings))
 
         return set(coded_articles.values_list('article_id', flat=True).distinct())
 
