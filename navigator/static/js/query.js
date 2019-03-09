@@ -55,7 +55,8 @@ define([
         "codebook", "query", "download", "codingjobs",
         "codingschemafield_1", "codingschemafield_value_1", "codingschemafield_include_descendants_1",
         "codingschemafield_2", "codingschemafield_value_2", "codingschemafield_include_descendants_2",
-        "codingschemafield_3", "codingschemafield_value_3", "codingschemafield_include_descendants_3"
+        "codingschemafield_3", "codingschemafield_value_3", "codingschemafield_include_descendants_3",
+        "codingschemafield_match_one"
     ];
 
     var HOTKEYS = {

@@ -23,6 +23,7 @@ move it to 'queryparser'?
 """
 import logging
 import re
+import operator
 from collections import namedtuple
 from itertools import chain
 from typing import Tuple, Iterable, Any, Set, Optional
@@ -245,12 +246,18 @@ class CodingJobSelectionSearch(SelectionSearch):
             return None
         queryset = Coding.objects.filter(coded_article__codingjob_id__in=self.data.codingjobs)
 
-        article_codings = apply_coding_filters(queryset, form).filter(sentence=None)
-        sentence_codings = apply_coding_filters(queryset, form).exclude(sentence=None)
+        coded_articles = CodedArticle.objects.filter(codingjob_id__in=self.data.codingjobs)
 
-        coded_articles = CodedArticle.objects.filter(codingjob_id__in=self.data.codingjobs)\
-            .filter(pk__in=CodedArticle.objects.filter(codings__in=article_codings))\
-            .filter(pk__in=CodedArticle.objects.filter(codings__in=sentence_codings))
+        if form.cleaned_data.get('codingschemafield_match_one', False):
+            codings = apply_coding_filters_union(queryset, form)
+            coded_articles = coded_articles.filter(codings__in=codings)
+        else:
+            article_codings = apply_coding_filters(queryset, form).filter(sentence=None)
+            sentence_codings = apply_coding_filters(queryset, form).exclude(sentence=None)
+
+            coded_articles = coded_articles.filter(pk__in=CodedArticle.objects
+                                                        .filter(codings__in=article_codings)
+                                                        .filter(codings__in=sentence_codings))
 
         return set(coded_articles.values_list('article_id', flat=True).distinct())
 
@@ -508,3 +515,9 @@ def apply_coding_filters(queryset, form):
     return queryset.filter(q)
 
 
+def apply_coding_filters_union(queryset, form):
+    filters = get_coding_filters(form)
+    q = ~Q()
+    for filter in filters:
+        q |= filter.as_q()
+    return queryset.filter(q)
