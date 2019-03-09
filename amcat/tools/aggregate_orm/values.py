@@ -207,9 +207,10 @@ class CountCodingsValue(CountValue):
 class CountSelectedCodingsValue(CountCodingsValue):
     joins_needed = ("codings", "coded_articles", "articles")
 
-    def __init__(self, filters, **kwargs):
+    def __init__(self, filters, use_or=False, **kwargs):
         super().__init__(**kwargs)
         self.filters = filters
+        self.use_or = use_or
 
     def get_wheres(self):
         yield from super().get_wheres()
@@ -227,6 +228,9 @@ class CountSelectedCodingsValue(CountCodingsValue):
             for i, (field, code_ids) in enumerate(self.filters)
             if not field.codingschema.isarticleschema
         )
+        if self.use_or:
+            return " OR ".join("(T_codings.coding_id IN {})".format(in_condition) for in_condition in in_conditions)
+
         for in_condition in in_conditions:
             yield "T_codings.coding_id IN {}".format(in_condition)
 

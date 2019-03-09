@@ -223,7 +223,6 @@ class CodingAggregationActionForm(QueryActionForm):
 
     def _clean_value(self, field_name, prefix=None):
         field_value = self.cleaned_data[field_name]
-
         if not field_value:
             return None
 
@@ -238,7 +237,8 @@ class CodingAggregationActionForm(QueryActionForm):
 
         if field_value == "count(codings)":
             filters = get_coding_filters(self)
-            return aggregate_orm.CountSelectedCodingsValue(filters, prefix=prefix)
+            use_or = self.cleaned_data['codingschemafield_match_condition'] == "ANY"
+            return aggregate_orm.CountSelectedCodingsValue(filters, use_or=use_or, prefix=prefix)
 
         match = AVERAGE_CODINGSCHEMAFIELD_RE.match(field_value)
         if match:

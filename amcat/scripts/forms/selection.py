@@ -229,7 +229,12 @@ class SelectionForm(forms.Form):
     codingschemafield_value_3 = ModelMultipleChoiceFieldWithIdLabel(queryset=Code.objects.none(), required=False)
     codingschemafield_include_descendants_3 = forms.BooleanField(required=False)
 
-    codingschemafield_match_one = forms.BooleanField(label="Must match filters", required=False, widget=forms.RadioSelect(choices=((True, "Match at least one"), (False, "Match all"))))
+    codingschemafield_match_condition = forms.ChoiceField(
+        label="Must match filters",
+        required=True,
+        initial="ALL",
+        choices=(("ANY", "Any"), ("ALL", "All"))
+    )
 
     def __init__(self, project=None, articlesets=None, codingjobs=None, data=None, *args, **kwargs):
         """

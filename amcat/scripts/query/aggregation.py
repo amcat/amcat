@@ -104,16 +104,18 @@ def sorted_aggregation(direction, key, aggregation):
     else:
         raise ValueError("Order key should be one of 'primary', 'secondary', 'value1', or 'value2'. Not: {}".format(key))
 
-    def order_by(obj):
+    def order_by(obj) -> tuple:
         if isinstance(obj, tuple):
-            return tuple(map(order_by, obj))
+            return tuple(el for item in obj for el in order_by(item))
         elif isinstance(obj, (ArticleSet, CodingJob)):
-            return obj.name.lower()
+            return (obj.name.lower(),)
         elif isinstance(obj, (Code, SearchQuery)):
-            return obj.label.lower()
+            return (obj.label.lower(),)
         elif isinstance(obj, str):
-            return obj.lower()
-        return obj
+            return (obj.lower(),)
+        elif obj is None:
+            return ()
+        return (obj,)
 
     return sorted(aggregation, key=lambda r: order_by(reorder(r)), reverse=reverse)
 

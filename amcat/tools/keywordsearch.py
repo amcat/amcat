@@ -248,7 +248,7 @@ class CodingJobSelectionSearch(SelectionSearch):
 
         coded_articles = CodedArticle.objects.filter(codingjob_id__in=self.data.codingjobs)
 
-        if form.cleaned_data.get('codingschemafield_match_one', False):
+        if form.cleaned_data.get('codingschemafield_match_condition') == "ANY":
             codings = apply_coding_filters_union(queryset, form)
             coded_articles = coded_articles.filter(codings__in=codings)
         else:
