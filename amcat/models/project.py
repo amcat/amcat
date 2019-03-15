@@ -143,6 +143,12 @@ class Project(AmcatModel):
         if distinct: return sets.distinct()
         return sets
 
+    def all_articlesets_and_coding_sets(self, distinct=True):
+        sets = ArticleSet.objects.filter(Q(projects_set=self) | Q(codingjob_set__linked_projects=self))
+        if distinct: return sets.distinct()
+        return sets
+
+
     def all_articles(self):
         """
         Get a set of articles either owned by this project

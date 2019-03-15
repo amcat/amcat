@@ -21,13 +21,14 @@ from itertools import chain
 from operator import getitem, attrgetter
 from collections import OrderedDict
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 
 from rest_framework.exceptions import APIException
 from rest_framework.metadata import SimpleMetadata
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from amcat.models import Project, CodingJob
+from amcat.models import Project, CodingJob, ArticleSet
 from amcat.tools.amcates import ES, get_property_mapping_type
 from amcat.tools.caching import cached
 
@@ -48,6 +49,7 @@ class QueryActionMetadata(SimpleMetadata):
         fields = list(map(partial(getitem, form), field_names))
 
         articlesets = view.get_articlesets()
+
         props = {prop for aset in articlesets for prop in aset.get_used_properties()}
         articleset_ids = list(articlesets.values_list('id', flat=True))
 
@@ -123,7 +125,12 @@ class QueryActionView(APIView):
         )
 
         articleset_ids = map(int, filter(str.isdigit, articleset_ids))
-        articlesets = self.project.all_articlesets().filter(id__in=articleset_ids)
+
+        articlesets = self.project.all_articlesets()
+        if self.get_codingjobs().exists():
+            articlesets = self.project.all_articlesets_and_coding_sets()
+
+        articlesets = articlesets.filter(id__in=articleset_ids)
         return articlesets.only("id", "name")
 
     @cached
@@ -138,7 +145,8 @@ class QueryActionView(APIView):
         )
 
         codingjob_ids = map(int, filter(str.isdigit, codingjob_ids))
-        codingjobs = self.project.codingjob_set.filter(id__in=codingjob_ids)
+        codingjobs = CodingJob.objects.filter(Q(project=self.project) | Q(linked_projects=self.project))
+        codingjobs = codingjobs.filter(id__in=codingjob_ids)
         return codingjobs if codingjob_ids else CodingJob.objects.none()
 
     @cached

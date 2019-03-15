@@ -116,7 +116,7 @@ class CodingAggregationActionForm(QueryActionForm):
     order_by = ChoiceField(label="Order results by", initial="Label", choices=ORDER_BY_FIELDS)
 
     def __init__(self, *args, **kwargs):
-        super(CodingAggregationActionForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         assert self.codingjobs
         assert self.schemafields is not None

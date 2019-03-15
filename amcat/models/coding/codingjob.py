@@ -66,6 +66,8 @@ class CodingJob(AmcatModel):
 
     archived = models.BooleanField(default=False)
 
+    linked_projects = models.ManyToManyField("amcat.Project", related_name="linked_codingjobs")
+
     class Meta():
         db_table = 'codingjobs'
         app_label = 'amcat'

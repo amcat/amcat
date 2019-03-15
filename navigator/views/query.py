@@ -155,7 +155,7 @@ class QuerySetSelectionView(BaseMixin, FormView):
     def get_form(self, form_class=None):
         form = super().get_form(form_class=form_class)
         form.fields['articlesets'].queryset = ArticleSet.objects.filter(projectarticleset__project=self.project)
-        form.fields['codingjobs'].queryset = CodingJob.objects.filter(project=self.project)
+        form.fields['codingjobs'].queryset = CodingJob.objects.filter(Q(project=self.project) | Q(linked_projects=self.project))
         return form
 
     def form_valid(self, form):
@@ -297,10 +297,10 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
 
         if codingjob_ids:
             self.is_codingjob_query = True
-            all_articlesets = self.project.all_articlesets().all().only("id", "name")
+            all_articlesets = self.project.all_articlesets_and_coding_sets().all().only("id", "name")
             all_articlesets = all_articlesets.filter(codingjob_set__id__in=codingjob_ids)
             articleset_ids = all_articlesets.values_list("id", flat=True)
-            all_codingjobs = CodingJob.objects.filter(project=self.project)
+            all_codingjobs = CodingJob.objects.filter(Q(project=self.project) | Q(linked_projects=self.project))
             codingjobs = all_codingjobs.filter(id__in=codingjob_ids)
         else:
             all_codingjobs = None

@@ -33,7 +33,7 @@ from django.db.models.query import QuerySet
 
 from amcat.forms.forms import order_fields
 from amcat.models import Codebook, Language, Article, ArticleSet, CodingJob, CodingSchemaField, Code, \
-    CodebookCode, CodingSchema
+    CodebookCode, CodingSchema, Q
 from amcat.models.coding.codingschemafield import FIELDTYPE_IDS
 from amcat.tools import aggregate_es, aggregate_orm
 from amcat.tools.amcates import get_property_mapping_type
@@ -238,7 +238,7 @@ class SelectionForm(forms.Form):
 
     def __init__(self, project=None, articlesets=None, codingjobs=None, data=None, *args, **kwargs):
         """
-        @param codingojobs: when specified,
+        @param codingjobs: when specified,
 
         @param project: project to generate this form for
         @type project: amcat.models.Project
@@ -258,7 +258,7 @@ class SelectionForm(forms.Form):
 
         self.fields['articlesets'].queryset = articlesets.order_by('-pk')
         self.fields['codebook'].queryset = project.get_codebooks()
-        self.fields['codingjobs'].queryset = project.codingjob_set.filter(id__in=self.codingjobs)
+        self.fields['codingjobs'].queryset = self.codingjobs.filter(Q(project=project) | Q(linked_projects=project))
         self.fields['codebook_label_language'].queryset = self.fields['codebook_replacement_language'].queryset = (
             Language.objects.filter(labels__code__codebook_codes__codebook__in=project.get_codebooks()).distinct()
         )

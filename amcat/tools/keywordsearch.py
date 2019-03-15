@@ -23,7 +23,6 @@ move it to 'queryparser'?
 """
 import logging
 import re
-import operator
 from collections import namedtuple
 from itertools import chain
 from typing import Tuple, Iterable, Any, Set, Optional
@@ -31,7 +30,7 @@ from typing import Tuple, Iterable, Any, Set, Optional
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
-from amcat.models import Label, CodingValue, CodedArticle, Coding, CodingSchemaField
+from amcat.models import Label, CodingValue, CodedArticle, Coding
 from amcat.tools import queryparser
 from amcat.tools.aggregate_es import aggregate, TermCategory
 from amcat.tools.amcates import ES
@@ -248,12 +247,12 @@ class CodingJobSelectionSearch(SelectionSearch):
 
         coded_articles = CodedArticle.objects.filter(codingjob_id__in=self.data.codingjobs)
 
-        article_codings = apply_coding_filters(queryset, form).filter(sentence=None)
+        article_codings = apply_coding_filters_intersect(queryset, form).filter(sentence=None)
 
         if form.cleaned_data.get('codingschemafield_match_condition') == "ANY":
             sentence_codings = apply_coding_filters_union(queryset, form).exclude(sentence=None)
         else:
-            sentence_codings = apply_coding_filters(queryset, form).exclude(sentence=None)
+            sentence_codings = apply_coding_filters_intersect(queryset, form).exclude(sentence=None)
 
         coded_articles = coded_articles.filter(pk__in=CodedArticle.objects
                                                     .filter(codings__in=article_codings)
@@ -501,7 +500,11 @@ def get_code_ids(codebook, codes, include_descendants):
                 yield descendant.code_id
 
 
-def apply_coding_filters(queryset, form):
+def apply_coding_filters_intersect(queryset, form):
+    """
+    Applies the form's filters to the given queryset of codings,
+     returning the intersection of all matching codings.
+    """
     filters = get_coding_filters(form)
     q = Q()
 
@@ -516,6 +519,10 @@ def apply_coding_filters(queryset, form):
 
 
 def apply_coding_filters_union(queryset, form):
+    """
+    Applies the form's filters to the given queryset of codings,
+     returning the union of all matching codings.
+    """
     filters = get_coding_filters(form)
     q = ~Q()
     for filter in filters:

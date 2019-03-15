@@ -27,7 +27,7 @@ from amcat.forms.fields import StaticModelChoiceField
 from api.rest.viewsets import CodingJobViewSet
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectActionRedirectView, ProjectEditView, ProjectDetailView, ProjectFormView
 from navigator.views.datatableview import DatatableMixin
-from amcat.models import CodingJob
+from amcat.models import CodingJob, Q
 from navigator.utils.misc import session_pop
 from navigator.views.project_views import ProjectDetailsView
 from api.rest.resources import SearchResource
@@ -68,6 +68,8 @@ class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin,
         return patterns
 
     def get_datatable(self, **kwargs):
+        jobs = CodingJob.objects.filter(Q(project=self.project)|Q(linked_projects=self.project))
+        url_kwargs = dict(ids=set(jobs.values_list('pk')))
         url_kwargs = dict(project=self.project.id)
         return super(CodingJobListView, self).get_datatable(url_kwargs=url_kwargs, **kwargs)
 
