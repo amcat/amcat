@@ -15,6 +15,23 @@
 
 {% block content %}
     <div id="{{ table.get_name }}-actions">
+
+        <div class="modal" id="link-form">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title">Link Codingjobs</h4>
+                    </div>
+                    <form class="modal-body" id="link-project" data-table="#all-codingjobs" data-id-field="[name=codingjobs]"  method="post" action="{% url "navigator:codingjob-link-codingjob" project.id %}">
+                        {% csrf_token %}
+                        {{ link_form.target_project }}
+                        <input type=hidden name="codingjobs" id="codingjob">
+                        <input type="submit">
+                    </form>
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-default" data-toggle="modal" data-target="#link-form">Link To Other Project</button>
         <form id="set-favourite" action=""
               data-id-field="[name=ids]" data-table="#all-codingjobs" data-require-selection="1">
             {% csrf_token %}
@@ -47,7 +64,6 @@
             </ul>
         </form>
     </div>
-
     <!-- Set inputfield 'submit' when clicking on one of the dropdown options,
          according to their 'name' attribute. -->
     <script type="text/javascript">
@@ -94,6 +110,7 @@
 requirejs(["jquery"], function($){
   exportids($("#export-codingjobs"));
   exportids($("#set-favourite"));
+  exportids($("#link-project"));
 });
 </script>
 

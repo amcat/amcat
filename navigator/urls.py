@@ -88,7 +88,7 @@ _views = [
     CodingSchemaEditView,CodingSchemaEditFieldsView,CodingSchemaEditRulesView, CodingSchemaNameView,
     CodingSchemaCopyView,CodingSchemaLinkView,CodingSchemaUnlinkView, CodingJobListView,
     CodingJobAddView, CodingJobDetailsView,CodingJobDeleteView, CodingJobEditView,
-    CodingJobExportSelectView, CodingJobExportView,
+    CodingJobExportSelectView, CodingJobExportView, CodingJobLinkActionFormView,
 
     ProjectUserListView, ProjectUserAddView, ProjectUserInviteView,
 

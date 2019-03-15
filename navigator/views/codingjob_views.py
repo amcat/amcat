@@ -19,15 +19,19 @@
 import json
 from collections import OrderedDict
 
+from django.contrib.postgres.aggregates import ArrayAgg
+from django.shortcuts import redirect
 from django.views.generic.list import ListView
 from django import forms
 from django.core.urlresolvers import reverse
 
 from amcat.forms.fields import StaticModelChoiceField
 from api.rest.viewsets import CodingJobViewSet
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectActionRedirectView, ProjectEditView, ProjectDetailView, ProjectFormView
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, \
+    ProjectActionRedirectView, ProjectEditView, ProjectDetailView, ProjectFormView, ProjectActionFormView, \
+    ProjectActionForm
 from navigator.views.datatableview import DatatableMixin
-from amcat.models import CodingJob, Q
+from amcat.models import CodingJob, Q, Project
 from navigator.utils.misc import session_pop
 from navigator.views.project_views import ProjectDetailsView
 from api.rest.resources import SearchResource
@@ -89,6 +93,7 @@ class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin,
             added = [CodingJob.objects.get(pk=i) for i in added]
         what = self.what
         favaction = "unsetfav" if what == 'active' else "setfav"
+        link_form = CodingJobLinkActionForm.get_form_class()(origin_project=self.project)
         ctx.update(**locals())
         return ctx
 
@@ -159,6 +164,47 @@ class CodingJobDeleteView(ProjectActionRedirectView):
 
     def get_success_url(self, **kargs):
         return reverse(CodingJobListView.get_view_name(), args=[self.project.id])
+
+
+class CodingJobLinkActionForm(ProjectActionForm):
+
+    class form_class(forms.Form):
+        target_project = forms.ModelChoiceField(Project.objects.all())
+        codingjobs = forms.ModelMultipleChoiceField(CodingJob.objects.all())
+
+        def __init__(self, *args, origin_project=None, **kwargs):
+            super().__init__(*args, **kwargs)
+            if origin_project:
+                jobs = CodingJob.objects.all()
+                self.fields['codingjobs'].queryset = jobs.filter(Q(project=origin_project) | Q(linked_projects=origin_project))
+
+    def run(self):
+        codingjobs = self.form.cleaned_data['codingjobs']
+        target_project = self.form.cleaned_data['target_project']
+        model = CodingJob.linked_projects.through
+        vals = codingjobs.values_list('id', 'project').annotate(linked_ids=ArrayAgg('linked_projects'))
+        objs = (model(codingjob_id=codingjob_id, project=target_project)
+                for codingjob_id, project_id, linked_ids in vals
+                if project_id != target_project.id
+                if target_project.id not in linked_ids)
+        model.objects.bulk_create(objs)
+
+
+class CodingJobLinkActionFormView(ProjectActionFormView):
+    action_form_class = CodingJobLinkActionForm
+    parent = CodingJobListView
+    url_fragment = "link-codingjob"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['origin_project'] = self.kwargs['project']
+        return kwargs
+
+    def form_valid(self, form):
+        super().form_valid(form)
+        project = form.cleaned_data['target_project'].id
+        return redirect(reverse("navigator:" + CodingJobListView.get_view_name(), args=[project]))
+
 
 class CodingJobExportSelectView(ProjectFormView):
     form_class = CodingjobListForm
