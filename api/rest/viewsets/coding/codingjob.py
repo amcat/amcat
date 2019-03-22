@@ -173,7 +173,7 @@ class CodingJobViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, DatatablesMix
         
     def filter_queryset(self, jobs):
         jobs = super(CodingJobViewSet, self).filter_queryset(jobs)
-        return jobs.filter(Q(project=self.project) | Q(linked_projects=self.project))
+        return jobs.all_in_project(self.project)
     
 
 class CodingJobArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, ArticleViewSetMixin,

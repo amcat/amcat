@@ -300,7 +300,7 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
             all_articlesets = self.project.all_articlesets_and_coding_sets().all().only("id", "name")
             all_articlesets = all_articlesets.filter(codingjob_set__id__in=codingjob_ids)
             articleset_ids = all_articlesets.values_list("id", flat=True)
-            all_codingjobs = CodingJob.objects.filter(Q(project=self.project) | Q(linked_projects=self.project))
+            all_codingjobs = CodingJob.objects.all_in_project(self.project)
             codingjobs = all_codingjobs.filter(id__in=codingjob_ids)
         else:
             all_codingjobs = None

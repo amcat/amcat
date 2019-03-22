@@ -23,6 +23,7 @@ Model module containing Codingjobs
 Coding Jobs are sets of articles assigned to users for manual coding.
 Each codingjob has codingschemas for articles and/or sentences.
 """
+from collections import namedtuple
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -42,6 +43,24 @@ import logging;
 from amcat.tools.toolkit import splitlist
 
 log = logging.getLogger(__name__)
+
+
+class CodingJobQuerySet(models.QuerySet):
+    def all_in_project(self, project, archived=None):
+        jobs = models.Q(project=project)
+        if archived is not None:
+            jobs &= models.Q(archived=archived)
+
+        if archived is False or archived is None:
+            jobs |= models.Q(linked_projects=project)
+
+        return self.filter(jobs)
+
+
+class CodingJobManager(models.Manager.from_queryset(CodingJobQuerySet)):
+    def all_in_project(self, project, archived=None):
+        return super().all_in_project(project, archived=archived)
+
 
 class CodingJob(AmcatModel):
     """
@@ -68,7 +87,10 @@ class CodingJob(AmcatModel):
 
     linked_projects = models.ManyToManyField("amcat.Project", related_name="linked_codingjobs")
 
+    objects = CodingJobManager()
+
     class Meta():
+
         db_table = 'codingjobs'
         app_label = 'amcat'
         ordering = ('project_id', '-id')

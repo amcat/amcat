@@ -20,6 +20,7 @@ import json
 from collections import OrderedDict
 
 from django.contrib.postgres.aggregates import ArrayAgg
+from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.views.generic.list import ListView
 from django import forms
@@ -31,7 +32,7 @@ from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin,
     ProjectActionRedirectView, ProjectEditView, ProjectDetailView, ProjectFormView, ProjectActionFormView, \
     ProjectActionForm
 from navigator.views.datatableview import DatatableMixin
-from amcat.models import CodingJob, Q, Project
+from amcat.models import CodingJob, Q, Project, ROLE_PROJECT_WRITER
 from navigator.utils.misc import session_pop
 from navigator.views.project_views import ProjectDetailsView
 from api.rest.resources import SearchResource
@@ -54,6 +55,7 @@ class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin,
     rowlink = './{id}'
 
     def get(self, *args, **kargs):
+        # TODO: doing this via GET is a *bad* idea. Use a ProjectActionFormView instead.
         favaction = self.request.GET.get('favaction')
         if (favaction is not None):
             ids = {int(id) for id in self.request.GET.getlist('ids')}
@@ -68,17 +70,19 @@ class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin,
     @classmethod
     def get_url_patterns(cls):
         patterns = list(super(CodingJobListView, cls).get_url_patterns())
-        patterns.append(patterns[0][:-1] + "(?P<what>|active|archived)?/?$")
+        patterns.append(patterns[0][:-1] + "(?P<what>|active|linked|archived)?/?$")
         return patterns
 
     def get_datatable(self, **kwargs):
-        jobs = CodingJob.objects.filter(Q(project=self.project)|Q(linked_projects=self.project))
-        url_kwargs = dict(ids=set(jobs.values_list('pk')))
         url_kwargs = dict(project=self.project.id)
         return super(CodingJobListView, self).get_datatable(url_kwargs=url_kwargs, **kwargs)
 
     def filter_table(self, table):
-        table = table.filter(archived=(self.what != "active"))
+        if self.what == "linked":
+            table = table.filter(linked_projects=self.project)
+        else:
+            table = table.filter(project=self.project, archived=(self.what == "archived"))
+
         return table.hide("project", "articleset", "favourite")
 
     def get_datatable_kwargs(self):
@@ -172,11 +176,13 @@ class CodingJobLinkActionForm(ProjectActionForm):
         target_project = forms.ModelChoiceField(Project.objects.all())
         codingjobs = forms.ModelMultipleChoiceField(CodingJob.objects.all())
 
-        def __init__(self, *args, origin_project=None, **kwargs):
+        def __init__(self, *args, origin_project, user, **kwargs):
             super().__init__(*args, **kwargs)
-            if origin_project:
-                jobs = CodingJob.objects.all()
-                self.fields['codingjobs'].queryset = jobs.filter(Q(project=origin_project) | Q(linked_projects=origin_project))
+            jobs = CodingJob.objects.all()
+            self.fields['codingjobs'].queryset = jobs.all_in_project(origin_project)
+            self.fields['target_project'].queryset = Project.objects.filter(
+                Q(projectrole__user=user, projectrole__role_id__gte=ROLE_PROJECT_WRITER) | Q(guest_role_id__gte=ROLE_PROJECT_WRITER)
+            )
 
     def run(self):
         codingjobs = self.form.cleaned_data['codingjobs']
@@ -198,12 +204,45 @@ class CodingJobLinkActionFormView(ProjectActionFormView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['origin_project'] = self.kwargs['project']
+        kwargs['user'] = self.request.user
         return kwargs
 
     def form_valid(self, form):
         super().form_valid(form)
         project = form.cleaned_data['target_project'].id
-        return redirect(reverse("navigator:" + CodingJobListView.get_view_name(), args=[project]))
+        return redirect(reverse("navigator:" + CodingJobListView.get_view_name(), args=[project, 'linked']))
+
+
+class CodingJobUnlinkActionForm(ProjectActionForm):
+
+    class form_class(forms.Form):
+        codingjobs = forms.ModelMultipleChoiceField(CodingJob.objects.all())
+
+        def __init__(self, *args, project, **kwargs):
+            super().__init__(*args, **kwargs)
+            jobs = CodingJob.objects.all()
+            self.fields['codingjobs'].queryset = jobs.all_in_project(project)
+            self.project = project
+
+    def run(self):
+        codingjobs = self.form.cleaned_data['codingjobs']
+        self.form.project.linked_codingjobs.filter(pk__in=codingjobs).delete()
+
+
+class CodingJobUnlinkActionFormView(ProjectActionFormView):
+    action_form_class = CodingJobUnlinkActionForm
+    parent = CodingJobListView
+    url_fragment = "unlink-codingjob"
+    required_project_permission = ROLE_PROJECT_WRITER
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['project'] = self.project
+        return kwargs
+
+    def form_valid(self, form):
+        super().form_valid(form)
+        return redirect(reverse("navigator:" + CodingJobListView.get_view_name(), args=[self.project.id, 'linked']))
 
 
 class CodingJobExportSelectView(ProjectFormView):

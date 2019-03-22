@@ -24,14 +24,32 @@
                     </div>
                     <form class="modal-body" id="link-project" data-table="#all-codingjobs" data-id-field="[name=codingjobs]"  method="post" action="{% url "navigator:codingjob-link-codingjob" project.id %}">
                         {% csrf_token %}
-                        {{ link_form.target_project }}
                         <input type=hidden name="codingjobs" id="codingjob">
-                        <input type="submit">
+                        {{ link_form.target_project }}
+                        <input type="submit" class="btn btn-primary"> <button type="button" class="btn btn-default" data-toggle="modal" data-target="#link-form">Cancel</button>
                     </form>
                 </div>
             </div>
         </div>
         <button class="btn btn-default" data-toggle="modal" data-target="#link-form">Link To Other Project</button>
+        {% if what == "linked" %}
+        <div class="modal" id="unlink-form">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title">Link Codingjobs</h4>
+                    </div>
+                    <form class="modal-body" id="unlink-project" data-table="#all-codingjobs" data-id-field="[name=codingjobs]"  method="post" action="{% url "navigator:codingjob-unlink-codingjob" project.id %}">
+                        {% csrf_token %}
+                        <input type=hidden name="codingjobs" id="codingjob">
+                        <p>This will unlink the codingjobs from this project. They will have to be linked from the original project in order to be used again. Are you sure? </p>
+                        <input type="submit" class="btn btn-warning" value="Unlink"> <button type="button" class="btn btn-default" data-toggle="modal" data-target="#unlink-form">Cancel</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-default" data-toggle="modal" data-target="#unlink-form">Unlink</button>
+        {% else %}
         <form id="set-favourite" action=""
               data-id-field="[name=ids]" data-table="#all-codingjobs" data-require-selection="1">
             {% csrf_token %}
@@ -40,6 +58,7 @@
             <input type="submit" id="favourite" class="btn btn-default"
                    value="{% if favaction == 'setfav' %}Activate Job(s){% else %}Archive Job(s){% endif %}" />
         </form>
+        {% endif %}
 
         <!-- Because GET can only handle so much ids, we need to use POST. -->
         <form id="export-codingjobs" method="post"
@@ -99,6 +118,7 @@
   <li {% if what == 'active' %}class="active"{% endif %}><a href='{% url "navigator:codingjob-list" project.id "active"%}'>
     <i class="glyphicon glyphicon-star"></i>Active Jobs
   </a></li>
+  <li {% if what == 'linked' %}class="active"{% endif %}><a  href='{% url "navigator:codingjob-list" project.id "linked"%}'>Linked Jobs</a></li>
   <li {% if what == 'archived' %}class="active"{% endif %}><a  href='{% url "navigator:codingjob-list" project.id "archived"%}'>Archived Jobs</a></li>
 </ul>
 
@@ -111,6 +131,7 @@ requirejs(["jquery"], function($){
   exportids($("#export-codingjobs"));
   exportids($("#set-favourite"));
   exportids($("#link-project"));
+  exportids($("#unlink-project"));
 });
 </script>
 
