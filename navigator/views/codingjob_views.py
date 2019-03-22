@@ -97,7 +97,7 @@ class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin,
             added = [CodingJob.objects.get(pk=i) for i in added]
         what = self.what
         favaction = "unsetfav" if what == 'active' else "setfav"
-        link_form = CodingJobLinkActionForm.get_form_class()(origin_project=self.project)
+        link_form = CodingJobLinkActionForm.get_form_class()(origin_project=self.project, user=self.request.user)
         ctx.update(**locals())
         return ctx
 
