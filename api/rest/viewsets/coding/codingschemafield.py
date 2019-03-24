@@ -42,5 +42,5 @@ class CodingSchemaFieldViewSet(ProjectViewSetMixin, CodingSchemaFieldViewSetMixi
     ordering_fields = ("id", "fieldnr", "name")
     def filter_queryset(self, fields):
         fields = super(CodingSchemaFieldViewSet, self).filter_queryset(fields)
-        return fields.filter(codingschema__in=self.project.get_codingschemas())
+        return fields.filter(codingschema__in=self.project.get_codingschemas(True))
 

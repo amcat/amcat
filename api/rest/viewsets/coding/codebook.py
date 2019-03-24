@@ -76,7 +76,7 @@ class CodebookViewSet(ProjectViewSetMixin, CodebookViewSetMixin, DatatablesMixin
 
     def filter_queryset(self, queryset):
         qs = super(CodebookViewSet, self).filter_queryset(queryset)
-        return qs.filter(Q(project=self.project)|Q(projects_set=self.project)).distinct()
+        return qs.filter(pk__in=self.project.get_codebooks(True)).distinct()
 
 class LanguageSerializer(AmCATModelSerializer):
     class Meta:

@@ -58,7 +58,7 @@ class CodingJobQuerySet(models.QuerySet):
 
 
 class CodingJobManager(models.Manager.from_queryset(CodingJobQuerySet)):
-    def all_in_project(self, project, archived=None):
+    def all_in_project(self, project, archived=None) -> CodingJobQuerySet:
         return super().all_in_project(project, archived=archived)
 
 

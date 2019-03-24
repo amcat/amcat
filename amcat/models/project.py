@@ -107,19 +107,29 @@ class Project(AmcatModel):
         cols = list(self.display_columns)
         return cols if cols else list(self.get_used_properties())
 
-    def get_codingschemas(self):
+    def get_codingschemas(self, include_linked_job_schemas=False):
         """
         Return all codingschemas connected to this project. This returns codingschemas
         owned by it and linked to it.
         """
-        return CodingSchema.objects.filter(Q(projects_set=self)|Q(project=self)).distinct()
+        q = Q(projects_set=self) | Q(project=self)
+        if include_linked_job_schemas:
+            linked_jobs = self.linked_codingjobs.all()
+            q |= Q(codingjobs_unit__in=linked_jobs) | Q(codingjobs_article__in=linked_jobs)
+        return CodingSchema.objects.filter(q).distinct()
 
-    def get_codebooks(self):
+    def get_codebooks(self, include_linked_job_schemas=False):
         """
         Return all codebooks connected to this project. This returns codebooks
         owned by it and linked to it.
         """
-        return Codebook.objects.filter(Q(projects_set=self)|Q(project=self)).distinct()
+        q = Q(projects_set=self) | Q(project=self)
+        if include_linked_job_schemas:
+            linked_jobs = self.linked_codingjobs.all()
+            schemaq = q | Q(codingjobs_unit__in=linked_jobs) | Q(codingjobs_article__in=linked_jobs)
+            schemas = CodingSchema.objects.filter(schemaq)
+            q |= Q(codingschema__in=schemas)
+        return Codebook.objects.filter().distinct()
 
     @property
     def users(self):
