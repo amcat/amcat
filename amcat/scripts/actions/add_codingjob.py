@@ -39,7 +39,7 @@ class AddCodingJob(Script):
         
         class Meta:
             model = CodingJob
-            exclude = ("archived", "insertdate")
+            exclude = ("archived", "insertdate", "linked_projects")
             
         def __init__(self, *args, **kargs):
             project = kargs.pop("project", None)
