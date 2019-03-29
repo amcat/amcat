@@ -9,9 +9,9 @@ from amcat.models import Article
 from amcat.scripts.article_upload.upload import ArticleField, UploadScript
 from amcat.scripts.article_upload.upload_plugins import UploadPlugin
 
-# At least this many fields have to match in order to detect it as that language. Set to 3,
-# because EN and NL share 2 values: 'url' and 'type'
-LANG_MATCH_THRESHOLD = 3
+# At least this many fields have to match in order to detect it as that language. Set to 4,
+# because EN and NL share 3 values: 'url', 'type', and 'sentiment'
+LANG_MATCH_THRESHOLD = 4
 
 
 class Language:
@@ -56,7 +56,7 @@ class Lang_NL(Language):
     sentiment = "sentiment"
     type = "type"
     discussion_length = "discussielengte"
-    reach = "bereik"
+    reach = "views"
     author = "auteur"
     followers = "volgers"
     influence = "invloed"
@@ -140,6 +140,8 @@ class CoostoUpload(UploadScript):
     def _scrape_unit(self, row):
         self.queries.add(row[self.lang.query])
         art = self.map_article(row)
+        if not art['title']: art['title'] = "-"
+        if not art['text']: art['text'] = "-"
         a = Article(**art)
         return a
 
