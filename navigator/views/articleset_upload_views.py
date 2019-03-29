@@ -333,6 +333,7 @@ class ArticlesetUploadOptionsView(UploadViewMixin, FormView):
         for f in self.script_fields:
             # HACK: use initial['values'] to pass values to the respective form.__init__.
             values = [abbrev_and_quote(x, 20) for x in f.values if x] if f.values else []
+            if len(values) > 10: values = values[:10]
             data = {'label': f.label, 'values': values}
 
             existing_fields = self.project.get_used_properties(only_favourites=True)
