@@ -60,19 +60,22 @@ class QueryActionMetadata(SimpleMetadata):
             }
         }
 
-        aggs = ES().search({
-            'aggs': {
-                k: {
-                    'terms': {
-                        'field': '{}.raw'.format(k) if get_property_mapping_type(k) == "default" else k,
-                        'size': self.bucket_count_limit
-                    }
-                } for k in props
-            },
-            'query': setsquery
-        })['aggregations']
+        if props:
+            aggs = ES().search({
+                'aggs': {
+                    k: {
+                        'terms': {
+                            'field': '{}.raw'.format(k) if get_property_mapping_type(k) == "default" else k,
+                            'size': self.bucket_count_limit
+                        }
+                    } for k in props
+                },
+                'query': setsquery
+            })['aggregations']
 
-        filter_props = {k: [v['key'] for v in vs['buckets']] for k, vs in aggs.items()}
+            filter_props = {k: [v['key'] for v in vs['buckets']] for k, vs in aggs.items()}
+        else:
+            filter_props = {}
 
         return {
             "help_texts": OrderedDict(zip(field_names, [f.help_text.strip() or None for f in fields])),
