@@ -14,7 +14,7 @@
 <div class="article-meta">
     {{ a.date|date:"d-m-Y" }} |
     {{ a.length }} words |
-    {{ a.medium.id }} - {{ a.medium.name }}
+    {{ a.medium }}
     {% if a.section %} | {{ a.section }} {% endif %}
     {% if a.author %} | Author: {{ a.author }} {% endif %}
 </div>
