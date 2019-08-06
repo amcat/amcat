@@ -138,14 +138,14 @@ class ArticleFieldCategory(Category):
         else:
             return "T_articles.{}".format(self.field_name)
 
-    def get_selects(self):
+    def get_selects(self, seen_categories=None):
         if self.groupings:
             yield "coalesce({T}.to_field, {select})".format(T=self._T, select=self._get_select())
         else:
             yield self._get_select()
 
 
-    def get_joins(self):
+    def get_joins(self, seen_categories=None):
         if not self.groupings:
             return
         select = self._get_select()
@@ -187,7 +187,7 @@ class IntervalCategory(ArticleFieldCategory):
 
         self.interval = interval
 
-    def get_selects(self):
+    def get_selects(self, seen_categories=None):
         if self.is_json_field:
             return [DATE_TRUNC_JSON_SQL.format(interval=self.interval, field_name=self.field_name)]
         else:
@@ -233,7 +233,7 @@ class ArticleSetCategory(ModelCategory):
     model = ArticleSet
     joins_needed = ("codings", "coded_articles", "codingjobs")
 
-    def get_selects(self):
+    def get_selects(self, seen_categories=None):
         yield "T_codingjobs.articleset_id"
 
 
@@ -271,10 +271,10 @@ class TermCategory(Category):
         yield "DROP INDEX IF EXISTS T_{prefix}_article_id_index;".format(prefix=self.prefix)
         yield "DROP TABLE IF EXISTS T_{prefix}_terms;".format(prefix=self.prefix)
 
-    def get_joins(self):
+    def get_joins(self, seen_categories=None):
         yield JOINS.terms.format(prefix="").format(table="T_{prefix}_terms".format(prefix=self.prefix))
 
-    def get_selects(self):
+    def get_selects(self, seen_categories=None):
         yield 'T_T_{prefix}_terms.term'.format(prefix=self.prefix)
 
     def get_objects(self, ids):
@@ -306,19 +306,28 @@ class SchemafieldCategory(ModelCategory):
         self.coding_ids = coding_ids
         self.field = field
 
-    def get_selects(self):
+    def get_selects(self, seen_categories=None):
         return ['{T}.intval'.format(T=self.table_name)]
 
     @property
     def table_name(self):
         return "T{}_codings_values".format(self.prefix)
 
-    def get_joins(self):
+    @property
+    def codings_table_name(self):
+        return 'T{prefix}_codings'.format(prefix=self.prefix)
+    
+    def get_joins(self, seen_categories=None):
 
-        yield "INNER JOIN codings as T{prefix}_codings " \
-              "ON T{prefix}_codings.coded_article_id = T_coded_articles.id".format(prefix=self.prefix)
+        if seen_categories and isinstance(seen_categories[0], SchemafieldCategory):
+            codings_table = seen_categories[0].codings_table_name
+        else:
+            yield "INNER JOIN codings as T{prefix}_codings " \
+                "ON T{prefix}_codings.coded_article_id = T_coded_articles.id".format(prefix=self.prefix)
+            codings_table = self.codings_table_name
+            
         yield "INNER JOIN codings_values as T{prefix}_codings_values " \
-              "ON T{prefix}_codings.coding_id = T{prefix}_codings_values.coding_id".format(prefix=self.prefix)
+              "ON {codings_table}.coding_id = T{prefix}_codings_values.coding_id".format(prefix=self.prefix, codings_table=codings_table)
 
     def get_wheres(self):
         where_sql = '{T}.field_id = {field.id}'
@@ -367,14 +376,14 @@ class GroupedCodebookFieldCategory(SchemafieldCategory):
     def get_teardown_statements(self):
         yield "DROP TABLE IF EXISTS {T};".format(T=self.t_hierarchy)
 
-    def get_joins(self):
-        yield from super().get_joins()
+    def get_joins(self, seen_categories=None):
+        yield from super().get_joins(seen_categories=seen_categories)
         yield "JOIN {THierarchy} as T_{THierarchy} " \
               "ON (T_{THierarchy}.code_id = {TValue}.intval)".format(
             THierarchy=self.t_hierarchy,
             TValue=self.table_name)
 
-    def get_selects(self):
+    def get_selects(self, seen_categories=None):
         yield "T_{T}.root_id".format(T=self.t_hierarchy)
 
     def get_order_by(self):

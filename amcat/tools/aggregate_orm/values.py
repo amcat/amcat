@@ -20,6 +20,7 @@ from decimal import Decimal
 from operator import itemgetter
 from amcat.models import CodingSchemaField, FIELDTYPE_IDS, Coding, CodedArticle, CodingValue
 from amcat.tools.aggregate_orm.sqlobj import SQLObject, JOINS
+from amcat.tools.aggregate_orm.categories import SchemafieldCategory
 
 __all__ = (
     "Value",
@@ -87,7 +88,7 @@ class AverageValue(Value):
         last_field_schema = self._first_field_hack.field.codingschema
         return field_schema.isarticleschema is not last_field_schema.isarticleschema
 
-    def get_joins(self):
+    def get_joins(self, seen_categories=None):
         prefix = "{}_2".format(self.prefix)
 
         if self.need_extra_joins:
@@ -119,7 +120,7 @@ class AverageValue(Value):
             else:
                 yield "T{}_{}.sentence_id IS NOT NULL".format(prefix, Coding._meta.db_table)
 
-    def get_selects(self):
+    def get_selects(self, seen_categories=None):
         prefix = "{}_2".format(self.prefix) if self.need_extra_joins else self.prefix
         sql = '{{method}}(T{prefix}_codings_values.intval)'.format(prefix=prefix)
 
@@ -178,7 +179,7 @@ class CountValue(Value):
 class CountArticlesValue(CountValue):
     joins_needed = ("codings", "coded_articles", "articles")
 
-    def get_selects(self):
+    def get_selects(self, seen_categories=None):
         return ['COUNT(DISTINCT(T_articles.article_id))', self._art_ids_agg]
 
     def get_column_names(self):
@@ -191,8 +192,16 @@ class CountArticlesValue(CountValue):
 class CountCodingsValue(CountValue):
     joins_needed = ("codings", "coded_articles", "articles")
 
-    def get_selects(self):
-        return ['COUNT(DISTINCT(T_codings.coding_id))', self._art_ids_agg]
+    def get_selects(self, seen_categories=None):
+        codings_table = "T_codings"
+        # IF one of the aggregations is on a coding, use that table instead
+        if seen_categories:
+            schemacats = [c for c in seen_categories if isinstance(c, SchemafieldCategory)]
+            if schemacats:
+                codings_table = schemacats[0].codings_table_name
+
+        return ['COUNT(DISTINCT({codings_table}.coding_id))'.format(codings_table=codings_table),
+                self._art_ids_agg]
 
     def get_column_names(self):
         return "Distinct Codings",
@@ -244,7 +253,7 @@ class CountSelectedCodingsValue(CountCodingsValue):
 class CountCodingValuesValue(CountValue):
     joins_needed = ("codings", "coded_articles", "articles")
 
-    def get_selects(self):
+    def get_selects(self, seen_categories=None):
         return ['COUNT(DISTINCT(codings_values.codingvalue_id))', self._art_ids_agg]
 
     def get_column_names(self):

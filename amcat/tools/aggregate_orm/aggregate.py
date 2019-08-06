@@ -87,14 +87,16 @@ class ORMAggregate(object):
         # Gather all separate sql statements
         joins_needed = set()
         setups, selects, joins, groups, teardowns = [], [], [], [], []
+        seen_categories = []
         for sqlobj in itertools.chain(categories, [value]):
             joins_needed.update(sqlobj.joins_needed)
             setups.extend(sqlobj.get_setup_statements())
             groups.append(sqlobj.get_group_by())
-            selects.extend(sqlobj.get_selects())
-            joins.extend(sqlobj.get_joins())
+            selects.extend(sqlobj.get_selects(seen_categories=seen_categories))
+            joins.extend(sqlobj.get_joins(seen_categories=seen_categories))
             wheres.extend(sqlobj.get_wheres())
             teardowns.extend(sqlobj.get_teardown_statements())
+            seen_categories.append(sqlobj)
 
         seen = set()
         for join in reversed(("codings", "coded_articles", "articles", "codingjobs")):
@@ -151,7 +153,7 @@ class ORMAggregate(object):
 
         queries = [list(self._get_aggregate_sql(categories, value)) for value in values]
         aggregations = list(self._execute_sqls(queries))
-
+        
         # Convert to single value / Python type
         for n, (value, rows) in enumerate(zip(values, aggregations)):
             for row in rows:

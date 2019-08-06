@@ -39,7 +39,7 @@ class SQLObject(object):
     def get_selects(self):
         raise NotImplementedError("Subclasses should implement get_selects().")
 
-    def get_joins(self):
+    def get_joins(self, seen_categories=None):
         return ()
 
     def get_wheres(self):
