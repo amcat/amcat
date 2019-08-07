@@ -25,7 +25,7 @@ To install stable releases, please use the link above.
 Most of the (python) prerequisites for AmCAT are automatically installed using pip (see below). To install the non-python requirements, you can use the following (on Ubuntu 15.10 or 16.04):
 
 ```sh
-sudo apt-get install antiword unrtf rabbitmq-server python3-pip postgresql postgresql-contrib python3-venv git postgresql-server-dev-9.5 python3-dev libxml2-dev libxslt-dev graphviz pspp redis-server r-base python3-lxml python3-amqplib python3-psycopg2 python3-requests python3-pygments docker.io nodejs
+sudo apt-get install antiword unrtf rabbitmq-server python3-pip postgresql postgresql-contrib python3-venv git postgresql-server-dev-9.5 python3-dev libxml2-dev libxslt-dev graphviz pspp redis-server r-base python3-lxml python3-amqplib python3-psycopg2 python3-requests python3-pygments docker.io 
 ```
 
 ### Installing AmCAT 
@@ -81,7 +81,7 @@ env/bin/python -m amcat.manage createsuperuser
 
 ### Collecting static files
 
-AmCAT uses [bower](http://bower.io/) to install javascript/CSS libraries. Install bower by using `npm`, and then run `bower install` from the amcat folder:
+AmCAT uses [bower](http://bower.io/) to install javascript/CSS libraries. First, install npm following the instructions at https://www.digitalocean.com/community/tutorials/how-to-install-node-js-on-ubuntu-18-04. Then, install bower by using `npm`, and then run `bower install` from the amcat folder:
 
 ```sh
 sudo npm install -g bower
