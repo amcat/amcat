@@ -247,19 +247,18 @@ class CodingJobSelectionSearch(SelectionSearch):
 
         coded_articles = CodedArticle.objects.filter(codingjob_id__in=self.data.codingjobs)
 
-        article_codings = apply_coding_filters_intersect(queryset, form).filter(sentence=None)
+        articles = None
+        for filter in get_coding_filters(form):
+            arts = set(coded_articles.filter(codings__in=queryset.filter(filter.as_q()))
+                       .values_list('article_id', flat=True).distinct())
 
-        if form.cleaned_data.get('codingschemafield_match_condition') == "ANY":
-            sentence_codings = apply_coding_filters_union(queryset, form).exclude(sentence=None)
-        else:
-            sentence_codings = apply_coding_filters_intersect(queryset, form).exclude(sentence=None)
-
-        coded_articles = coded_articles.filter(pk__in=CodedArticle.objects
-                                                    .filter(codings__in=article_codings)
-                                                    .filter(codings__in=sentence_codings))
-
-        return set(coded_articles.values_list('article_id', flat=True).distinct())
-
+            if articles is None:
+                articles = arts
+            elif form.cleaned_data.get('codingschemafield_match_condition') == "ANY":
+                articles |= arts
+            else:
+                articles &= arts
+        return articles
 
 class SearchQuery(object):
     """
@@ -500,31 +499,3 @@ def get_code_ids(codebook, codes, include_descendants):
                 yield descendant.code_id
 
 
-def apply_coding_filters_intersect(queryset, form):
-    """
-    Applies the form's filters to the given queryset of codings,
-     returning the intersection of all matching codings.
-    """
-    filters = get_coding_filters(form)
-    q = Q()
-
-    for filter in filters:
-        is_sentence_field = not filter.schemafield.codingschema.isarticleschema
-        if is_sentence_field:
-            q &= Q(sentence=None) | filter.as_q()
-        else:
-            q &= (~Q(sentence=None)) | filter.as_q()
-
-    return queryset.filter(q)
-
-
-def apply_coding_filters_union(queryset, form):
-    """
-    Applies the form's filters to the given queryset of codings,
-     returning the union of all matching codings.
-    """
-    filters = get_coding_filters(form)
-    q = ~Q()
-    for filter in filters:
-        q |= filter.as_q()
-    return queryset.filter(q)
