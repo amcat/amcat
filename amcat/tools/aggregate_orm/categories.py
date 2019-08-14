@@ -306,6 +306,7 @@ class SchemafieldCategory(ModelCategory):
         self.coding_ids = coding_ids
         self.field = field
         self.isarticleschemafield = self.field.codingschema.isarticleschema
+        self.codings_table = 'T{prefix}_codings'.format(prefix=self.prefix)        
 
     def get_selects(self, seen_categories=None):
         return ['{T}.intval'.format(T=self.table_name)]
@@ -314,22 +315,17 @@ class SchemafieldCategory(ModelCategory):
     def table_name(self):
         return "T{}_codings_values".format(self.prefix)
 
-    @property
-    def codings_table_name(self):
-        return 'T{prefix}_codings'.format(prefix=self.prefix)
-    
     def get_joins(self, seen_categories=None):
         if (seen_categories
             and isinstance(seen_categories[0], SchemafieldCategory)
             and seen_categories[0].isarticleschemafield == self.isarticleschemafield):
-            codings_table = seen_categories[0].codings_table_name
+            self.codings_table = seen_categories[0].codings_table
         else:
-            yield "INNER JOIN codings as T{prefix}_codings " \
-                "ON T{prefix}_codings.coded_article_id = T_coded_articles.id".format(prefix=self.prefix)
-            codings_table = self.codings_table_name
+            yield "INNER JOIN codings as {codings_table} " \
+                "ON {codings_table}.coded_article_id = T_coded_articles.id".format(codings_table = self.codings_table)
             
         yield "INNER JOIN codings_values as T{prefix}_codings_values " \
-              "ON {codings_table}.coding_id = T{prefix}_codings_values.coding_id".format(prefix=self.prefix, codings_table=codings_table)
+              "ON {codings_table}.coding_id = T{prefix}_codings_values.coding_id".format(prefix=self.prefix, codings_table=self.codings_table)
 
     def get_wheres(self):
         where_sql = '{T}.field_id = {field.id}'

@@ -198,9 +198,9 @@ class CountCodingsValue(CountValue):
         if seen_categories:
             schemacats = {c.isarticleschemafield: c for c in seen_categories if isinstance(c, SchemafieldCategory)}
             if False in schemacats: # prefer a unit schema field
-                codings_table = schemacats[False].codings_table_name
+                codings_table = schemacats[False].codings_table
             elif True in schemacats: # otherwise, try an article schema field
-                codings_table = schemacats[True].codings_table_name
+                codings_table = schemacats[True].codings_table
 
         return ['COUNT(DISTINCT({codings_table}.coding_id))'.format(codings_table=codings_table),
                 self._art_ids_agg]
