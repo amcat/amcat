@@ -305,6 +305,7 @@ class SchemafieldCategory(ModelCategory):
         super(SchemafieldCategory, self).__init__(**kwargs)
         self.coding_ids = coding_ids
         self.field = field
+        self.isarticleschemafield = self.field.codingschema.isarticleschema
 
     def get_selects(self, seen_categories=None):
         return ['{T}.intval'.format(T=self.table_name)]
@@ -318,8 +319,9 @@ class SchemafieldCategory(ModelCategory):
         return 'T{prefix}_codings'.format(prefix=self.prefix)
     
     def get_joins(self, seen_categories=None):
-
-        if seen_categories and isinstance(seen_categories[0], SchemafieldCategory):
+        if (seen_categories
+            and isinstance(seen_categories[0], SchemafieldCategory)
+            and seen_categories[0].isarticleschemafield == self.isarticleschemafield):
             codings_table = seen_categories[0].codings_table_name
         else:
             yield "INNER JOIN codings as T{prefix}_codings " \
