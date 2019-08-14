@@ -196,9 +196,11 @@ class CountCodingsValue(CountValue):
         codings_table = "T_codings"
         # IF one of the aggregations is on a coding, use that table instead
         if seen_categories:
-            schemacats = [c for c in seen_categories if isinstance(c, SchemafieldCategory)]
-            if schemacats:
-                codings_table = schemacats[0].codings_table_name
+            schemacats = {c.isarticleschemafield: c for c in seen_categories if isinstance(c, SchemafieldCategory)}
+            if False in schemacats: # prefer a unit schema field
+                codings_table = schemacats[False].codings_table_name
+            elif True in schemacats: # otherwise, try an article schema field
+                codings_table = schemacats[True].codings_table_name
 
         return ['COUNT(DISTINCT({codings_table}.coding_id))'.format(codings_table=codings_table),
                 self._art_ids_agg]
