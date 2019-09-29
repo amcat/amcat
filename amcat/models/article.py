@@ -107,7 +107,7 @@ class PropertyMappingJSONEncoder(json.JSONEncoder):
         elif isinstance(o, datetime.date):
             return datetime.datetime(o.year, o.month, o.day).isoformat()
         elif isinstance(o, set):
-            return self.encode(list(o))
+            return list(o)
         return json.JSONEncoder.default(self, o)
 
 
@@ -134,13 +134,15 @@ class PropertyMapping(dict):
 
         # Property types are determined by their name. As a result, we expect that type.
         expected_type = get_property_primitive_type(key)
-
         # Implicitly convert ints to floats (but not the other way around)
         if expected_type is float and isinstance(value, int):
             value = float(value)
         # Implicitly convert ints and floats into str
         if expected_type is str and isinstance(value, (int, float)):
             value = str(value)
+        # Implicitly convert list to set
+        if expected_type is set and isinstance(value, list):
+            value = set(value)
 
         if not isinstance(value, expected_type):
             raise ValueError("Expected type {} for key {}. Got {} with type {} instead.".format(
