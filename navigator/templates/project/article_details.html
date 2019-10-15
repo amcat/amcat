@@ -47,7 +47,7 @@
         </tr>
         <tr>
           <td>Date:</td>
-          <td>{{article.date|date:"d-m-Y H:i"}}</td>
+          <td>{{article.date|date:"Y-m-d H:i"}}</td>
         </tr>
         <tr>
           <td>Project:</td>
@@ -78,7 +78,11 @@
             <td>{{k}}:</td>
             <td>
               {% if "_url" in k %}
-                <a href="{{v}}">{{ v|truncatechars:60 }}</a>
+                {{ v|urlizetrunc:20 }}
+              {% elif "_date" in k %}
+                {{v|date:"Y-m-d H:i"}}
+              {% elif "_html" in k %}
+                {{v|truncatechars:10}}
               {% else %}
                 {{v}}
               {% endif %}

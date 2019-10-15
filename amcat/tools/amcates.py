@@ -58,7 +58,7 @@ def _clean(s):
     if isinstance(s, Digest):
         return str(s)
     if isinstance(s, set):
-        return list(map(_clean, s))
+        return sorted(map(_clean, s))
     if isinstance(s, str):
         # Convert non-printable characters to spaces
         return _clean_re.sub(' ', s)
@@ -115,6 +115,14 @@ def get_property_mapping(field):
 def get_property_elastic_type(name: str) -> str:
     mapping = get_property_mapping(name)
     return mapping["type"]
+
+
+@functools.lru_cache()
+def is_property_filter(name: str) -> bool:
+    if "_" in name:
+        ftype = name[name.rfind("_") + 1:]
+        return ftype not in {"text", "html"}
+    return True
 
 
 @functools.lru_cache()

@@ -107,7 +107,7 @@ class PropertyMappingJSONEncoder(json.JSONEncoder):
         elif isinstance(o, datetime.date):
             return datetime.datetime(o.year, o.month, o.day).isoformat()
         elif isinstance(o, set):
-            return list(o)
+            return sorted(o)
         return json.JSONEncoder.default(self, o)
 
 
@@ -134,6 +134,9 @@ class PropertyMapping(dict):
 
         # Property types are determined by their name. As a result, we expect that type.
         expected_type = get_property_primitive_type(key)
+        # Implicitly convert string to date
+        if expected_type is datetime.datetime and isinstance(value, str):
+            value = datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
         # Implicitly convert ints to floats (but not the other way around)
         if expected_type is float and isinstance(value, int):
             value = float(value)

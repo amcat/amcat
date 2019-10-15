@@ -29,7 +29,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from amcat.models import Project, CodingJob, ArticleSet
-from amcat.tools.amcates import ES, get_property_mapping_type
+from amcat.tools.amcates import ES, get_property_mapping_type, is_property_filter
 from amcat.tools.caching import cached
 
 
@@ -38,7 +38,6 @@ def wrap_query_action(qaction):
         help_text = qaction.__doc__
         query_action = qaction
     return AutoQueryActionViewSet
-
 
 class QueryActionMetadata(SimpleMetadata):
     bucket_count_limit = 500
@@ -50,7 +49,9 @@ class QueryActionMetadata(SimpleMetadata):
 
         articlesets = view.get_articlesets()
 
-        props = {prop for aset in articlesets for prop in aset.get_used_properties()}
+        props = {prop for aset in articlesets for prop in aset.get_used_properties()
+                 if is_property_filter(prop)}
+
         articleset_ids = list(articlesets.values_list('id', flat=True))
 
         # lucene limitation
