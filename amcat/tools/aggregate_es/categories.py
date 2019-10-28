@@ -113,6 +113,8 @@ class FieldCategory(Category):
             return NumFieldCategory(fieldname)
         elif ptype == str:
             return StringFieldCategory(fieldname)
+        elif ptype == set:
+            return SetFieldCategory(fieldname)
         else:
             raise ValueError("Did not recognize type {} of field {}.".format(ptype, fieldname))
 
@@ -125,6 +127,11 @@ class NumFieldCategory(FieldCategory):
 class IntegerFieldCategory(FieldCategory):
     def postprocess(self, value):
         return int(value)
+
+
+class SetFieldCategory(FieldCategory):
+    def postprocess(self, value):
+        return value
 
 
 class StringFieldCategory(FieldCategory):
