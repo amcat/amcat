@@ -320,7 +320,10 @@ class SearchResource(AmCATResource):
 
     def get_filter_properties(self):
         articlesets = ArticleSet.objects.filter(id__in=self.get_articlesets())
-        return {prop for articleset in articlesets for prop in articleset.get_used_properties()}
+        props = {prop for articleset in articlesets for prop in articleset.get_used_properties()}
+        #HACK: Disallow filtering on page as it clashes with selecting the response page
+        props -= {"page"}
+        return props
 
     def filter_queryset(self, queryset):
         # Allow for both 'ids' and 'pk' filtering
