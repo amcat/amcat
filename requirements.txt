@@ -48,7 +48,7 @@ six
 pytz
 KafNafParserPy
 nlpipe==0.30
-rpy2>=2.8,<2.9
+rpy2>=3.2,<3.3
 iso8601
 
 django-formtools
