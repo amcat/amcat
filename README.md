@@ -25,7 +25,7 @@ To install stable releases, please use the link above.
 Most of the (python) prerequisites for AmCAT are automatically installed using pip (see below). To install the non-python requirements, you can use the following (on Ubuntu 15.10 or 16.04):
 
 ```sh
-sudo apt-get install antiword unrtf rabbitmq-server python3-pip postgresql postgresql-contrib python3-venv git postgresql-server-dev-9.5 python3-dev libxml2-dev libxslt-dev graphviz pspp redis-server r-base python3-lxml python3-amqplib python3-psycopg2 python3-requests python3-pygments docker.io 
+sudo apt-get install antiword unrtf rabbitmq-server python3-pip postgresql postgresql-contrib python3-venv git postgresql-server-dev-10 python3-dev libxml2-dev libxslt-dev graphviz pspp redis-server r-base python3-lxml python3-amqplib python3-psycopg2 python3-requests python3-pygments docker.io 
 ```
 
 ### Installing AmCAT 
@@ -38,7 +38,8 @@ Clone the project from github and pip install the requirements.
 git clone https://github.com/amcat/amcat.git
 cd amcat
 python3 -m venv env
-env/bin/pip install wheel -r requirements.txt
+env/bin/pip install wheel
+env/bin/pip install -r requirements.txt
 ```
 
 ### Elastic

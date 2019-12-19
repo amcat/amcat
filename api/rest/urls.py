@@ -28,8 +28,7 @@ from api.rest.viewsets import get_viewsets, UserViewSet
 
 router = DefaultRouter()
 for vs in get_viewsets():
-    router.register(vs.get_url_pattern(), vs, base_name=vs.get_basename())
-
+    router.register(vs.get_url_pattern(), vs, basename=vs.get_basename())
 
 urlpatterns = [
     url(r'^query/', include("api.rest.query.urls")),
