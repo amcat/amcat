@@ -124,7 +124,7 @@ class ProjectUserListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixi
         return context
 
     def filter_table(self, table):
-        return table.filter(project=self.project).hide('project', 'id')
+        return table.filter(project=self.project.id).hide('project', 'id')
 
 
 class ProjectUserAddView(ProjectViewMixin, HierarchicalViewMixin, RedirectView):
