@@ -1,3 +1,7 @@
+import json
+
+from requests import request
+
 from amcat.tools import amcates
 from api.rest.scrollingpaginator import ScrollingPaginator
 
@@ -9,6 +13,7 @@ from rest_framework import serializers
 class MetaSerializer(serializers.BaseSerializer):
     def to_representation(self, obj):
         return obj
+
 
 def _get_ids(param):
     for id in param:
@@ -36,6 +41,8 @@ class ArticleMetaView(ListAPIView):
             filter = {'id': ids}
         else:
             raise Exception("Meta API needs either articleset or id paramter")
+        if 'filters' in self.request.query_params:
+            filter.update(json.loads(self.request.query_params['filters']))
         body = amcates.build_body(filters=filter)
         return {'body': body,
                 '_source_include': columns, 'size': page_size}
