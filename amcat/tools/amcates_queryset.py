@@ -602,7 +602,7 @@ class ESQuerySet:
         articles = collections.OrderedDict()
         for hit in new._do_query(dsl)["hits"]["hits"]:
             articles[hit["_source"]["id"]] = {
-                field: hit["highlight"][field] for field in fields
+                field: hit["highlight"].get(field,[""]) for field in fields
             }
 
         # HACK: Elastic does not escape html tags *in the article*. We therefore pass a random
