@@ -72,15 +72,18 @@ class BZK(UploadScript):
                     "failed HTML parsing. Are you sure you've inserted the right file?\n{e}".format(**locals()))
 
         title = etree.cssselect("title")
-        if title:
+        h1 = etree.cssselect("title")
+        if title and not (h1 and "Knipselkrant" in h1[0].text):
             title_text = title[0].text.lower().strip()
-            if "intranet/rss" in title_text or "werkmap" in title_text:
-                for article in cls.scrape_1(etree, title_text):
-                    yield article
+            logging.info("Using scrape1")
+            for article in cls.scrape_1(etree, title_text):
+                yield article
         elif etree.cssselect("h1"):
+            logging.info("Using scrape2")
             for article in cls.scrape_2(etree):
                 yield article
         else:
+            logging.info("Using scrape3")
             for article in cls.scrape_3(etree):
                 yield article
 
@@ -114,11 +117,12 @@ class BZK(UploadScript):
                 yield article
 
     @classmethod
-    def scrape_2(cls, _html):
+    def scrape_2(cls, _html, title_override=None):
         """New format as of 2014 and a few days before"""
         title = _html.cssselect("h1")[0]
         if not title.text:
             title = title.cssselect("span")[0]
+        logging.info(f"Title.text: {title.text}")
         docdate = read_date(title.text.split("-")[1])
 
         # split body by <hr>
