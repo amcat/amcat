@@ -63,6 +63,12 @@ LOGGING = {
     }
 }
 
+LOGGING['loggers']['celery.worker'] = {
+    'level': 'DEBUG',
+    'handlers': ['console'],
+    'propagate': False,
+}
+
 if use_colorlog:
     LOGGING["formatters"]["color"] = {
         '()': 'colorlog.ColoredFormatter',

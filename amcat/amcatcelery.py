@@ -1,4 +1,3 @@
-
 import os
 import resource
 import socket
@@ -8,6 +7,7 @@ from celery import Celery
 from celery.loaders.base import BaseLoader
 from django.conf import settings
 
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
 
 class FileLimitingLoader(BaseLoader):
     """Reduces the open file limit on celery child processes."""
