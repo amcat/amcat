@@ -185,7 +185,6 @@ INSTALLED_APPS = [
     'api',
     'amcat',
     'django_extensions',
-    'djcelery',
     'formtools',
 ]
 

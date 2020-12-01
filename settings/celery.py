@@ -22,21 +22,20 @@ from settings import get_amcat_config
 
 amcat_config = get_amcat_config()
 
-BROKER_URL = 'amqp://{amqp_user}:{amqp_passwd}@{amqp_host}:{amqp_port}//'.format(**amcat_config["celery"])
-
-CELERY_RESULT_BACKEND = 'amqp'
-CELERY_TASK_RESULT_EXPIRES = 3600
+broker_url = 'pyamqp://'
+result_backend = 'rpc://'
 
 _qname = amcat_config["celery"].get('queue')
-CELERY_QUEUES = (
+task_queues = (
     Queue(_qname, Exchange('default'), routing_key=_qname),
 )
-CELERY_DEFAULT_QUEUE = _qname
-CELERY_DEFAULT_EXCHANGE_TYPE = 'direct'
-CELERY_DEFAULT_ROUTING_KEY = _qname
+task_default_queue = _qname
+task_default_exchange_type= 'direct'
+task_default_routing_key = _qname
 
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_ACCEPT_CONTENT = ['json']
 
-CELERY_IGNORE_RESULT = False
+task_serializer = 'json'
+result_serializer = 'json'
+accept_content = ['json']
+
+task_ignore_result = False

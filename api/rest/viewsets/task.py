@@ -49,8 +49,8 @@ class TaskSerializer(AmCATModelSerializer):
         self._tasks = {}
 
     def set_status_ready(self, task):
-        async = task.get_async_result()
-        self._tasks[task] = (async.ready(), async.result, async.status)
+        async_ = task.get_async_result()
+        self._tasks[task] = (async_.ready(), async_.result, async_.status)
 
     def get_status_ready(self, task):
         """Returns tuple with (status, ready) => (str, bool)"""
