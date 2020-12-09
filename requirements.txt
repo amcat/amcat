@@ -12,7 +12,7 @@ django-cors-headers>=2.4,<3
 elasticsearch>=5.4.0,<5.5.0
 html2text==2016.1.8
 jdcal==1.0.1
-kombu==3.0.33
+kombu==5.0.2
 openpyxl==2.3.0
 pyparsing>=2.2.0,<2.3.0
 PyPDF2==1.25.1
@@ -42,7 +42,7 @@ ruamel.yaml==0.16.12
 dateparser==0.7,<0.8
 
 anyjson
-billiard==3.3.0.23
+billiard==3.6.3.0
 six
 pytz
 KafNafParserPy
