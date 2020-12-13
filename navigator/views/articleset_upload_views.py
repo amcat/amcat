@@ -184,6 +184,8 @@ class UploadViewMixin(BaseMixin):
     def dispatch(self, request, *args, **kwargs):
         try:
             self.upload = UploadedFile.objects.get(pk=kwargs[self.get_model_key()])
+            self.upload.encoding_override(self.request.GET.get('encoding'))
+
         except ObjectDoesNotExist as e:
             raise Http404(*e.args)
 
