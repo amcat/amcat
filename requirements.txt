@@ -1,4 +1,4 @@
-amqp==1.4.9
+amqp==5.0.2
 configargparse==0.10
 celery==5.0.2
 chardet>=3.0.0,<3.1
