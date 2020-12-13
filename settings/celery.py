@@ -23,7 +23,7 @@ from settings import get_amcat_config
 amcat_config = get_amcat_config()
 
 broker_url = 'pyamqp://'
-result_backend = 'rpc://'
+result_backend = 'redis://'
 
 _qname = amcat_config["celery"].get('queue')
 task_queues = (
