@@ -25,7 +25,7 @@ psycopg2-binary>=2.6.1
 requests>=2.13.1
 amqplib==1.0.2
 pygments==2.1
-lxml==4.6.1
+lxml==4.6.2
 django-extensions==1.5.9
 django-filter==2.2.0
 markdown==3.1.1
