@@ -20,6 +20,7 @@
 import datetime
 import json
 import re
+import logging
 
 from django import forms
 from django.forms import IntegerField, BooleanField, ChoiceField
@@ -128,7 +129,11 @@ class SummaryAction(QueryAction):
             self.monitor.update(message="Executing query..")
             narticles = selection.get_count()
             self.monitor.update(message="Fetching articles..".format(**locals()))
-            articles = selection.get_articles(size=size, offset=offset, sort=sort).as_dicts()
+            try:
+                articles = selection.get_articles(size=size, offset=offset, sort=sort).as_dicts()
+            except Exception:
+                logging.exception("Error on get_articles")
+                raise
             articles = get_fragments(selection.get_query(), [a["id"] for a in articles], fragment_size, number_of_fragments)
 
             if show_aggregation:

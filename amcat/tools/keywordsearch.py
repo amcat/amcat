@@ -190,6 +190,7 @@ class SelectionSearch:
         return dict(self._get_article_ids_per_query())
 
     def get_articles(self, size=None, offset=0, fields=(), **kwargs):
+        log.debug(f"Querying ES: q: {self.get_query()}, f:{self.get_filters()}")
         return ES().query(self.get_query(), self.get_filters(), True, size=size, from_=offset, _source=fields, **kwargs)
 
     @staticmethod

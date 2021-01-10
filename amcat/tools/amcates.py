@@ -269,7 +269,7 @@ class Result(object):
                         # elastic 1.0 always returns arrays, we only want
                         # sets in a list, the rest should be 'scalarized'
                         if isinstance(v, list):
-                            v = v[0]
+                            v = v[0] if v else None
                     field_dict[k] = v
         field_dict['id'] = int(row['_id'])
         result = Result(_searchresult=searchresult, **field_dict)
