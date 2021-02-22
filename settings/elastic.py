@@ -21,6 +21,7 @@
 Configuration options to change how AmCAT uses elastic
 """
 import datetime
+import json
 import os
 import sys
 
@@ -51,6 +52,7 @@ ES_MAPPING_TYPE_PRIMITIVES = {
     "default": str,
     "tag": set,
     "html": str,
+    "json": str,
 }
 
 
@@ -65,6 +67,7 @@ ES_MAPPING_TYPES = {
     'default': {"type": "text",
                 "fields": {"raw":   {"type": "keyword", "ignore_above": 256}}},
     'html': {"type": "text", "index": "false"},
+    'json': {"type": "object", "enabled": "false"}
     }
 
 ES_MAPPING = {
