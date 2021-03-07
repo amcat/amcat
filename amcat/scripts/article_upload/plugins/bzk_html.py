@@ -23,6 +23,7 @@ Plugin for uploading html files of a certain markup, provided by BZK
 
 import logging
 import re
+import csv
 from collections import defaultdict
 
 from lxml import html
@@ -106,7 +107,8 @@ class BZK(UploadScript):
             if articlepage:
                 article["pagenr"], article["section"] = cls.get_pagenum(articlepage[0].text_content())
 
-            article["medium"] = cls.get_medium(div.cssselect("#sourceTitle")[0].text_content())
+            article['medium'] = cls.get_medium(div.cssselect("#sourceTitle")[0].text_content())
+            article['mediumdetail'] = cls.get_mediumdetail(div.cssselect("#sourceTitle")[0].text_content())
             date_str = div.cssselect("#articleDate")[0].text_content()
 
             try:
@@ -184,11 +186,14 @@ class BZK(UploadScript):
         if "-" in bits[-1]:
             article["date"] = read_date(bits[-1])
             article["medium"] = cls.get_medium(" ".join(bits[:-1]))
+            article["mediumdetail"] = cls.get_mediumdetail(" ".join(bits[:-1]))
         elif bits[-1].isdigit() and bits[-3].isdigit():
             article["date"] = read_date(" ".join(bits[-3:]))
             article["medium"] = cls.get_medium(" ".join(bits[:-3]))
+            article["mediumdetail"] = cls.get_mediumdetail(" ".join(bits[:-3]))
         else:
             article["medium"] = cls.get_medium(" ".join(bits))
+            article["mediumdetail"] = cls.get_mediumdetail(" ".join(bits))
             article["date"] = None
         return article
 
@@ -223,7 +228,18 @@ class BZK(UploadScript):
         if not text:
             text = "unknown"
         if text in MEDIUM_ALIASES.keys():
-            return MEDIUM_ALIASES[text]
+            medium, mediumdetail = MEDIUM_ALIASES[text]
+            return medium
+        else:
+            return text
+
+    @staticmethod
+    def get_mediumdetail(text):
+        if not text:
+            text = "unknown"
+        if text in MEDIUM_ALIASES.keys():
+            medium, mediumdetail = MEDIUM_ALIASES[text]
+            return mediumdetail
         else:
             return text
 
