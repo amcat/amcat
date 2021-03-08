@@ -18,7 +18,7 @@
 ###########################################################################
 
 from django.core.management import BaseCommand
-from rpy2.rinterface._rinterface import RRuntimeError
+from rpy2.rinterface_lib.embedded import RRuntimeError
 
 from amcat.scripts.query import get_r_queryactions
 from amcat.scripts.query.queryaction_r import R_DEPENDENCIES
