@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import logging
+
 from rest_framework import serializers
 
 from amcat.models.task import IN_PROGRESS, FAILED
@@ -95,6 +97,8 @@ class TaskSerializer(AmCATModelSerializer):
     def get_error(self, task):
         _, result, status = self.get_status_ready(task)
         if status == FAILED:
+            if isinstance(result, Exception):
+                return {"expcetion": result.__class__.__name__, "detail": str(result)}
             return result
 
 

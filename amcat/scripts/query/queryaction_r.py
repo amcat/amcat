@@ -20,6 +20,8 @@
 This module holds classes which enable R query actions within AmCAT. As of
 now 
 """
+from json import JSONEncoder
+
 import functools
 import json
 import os
@@ -38,13 +40,13 @@ from rpy2 import robjects
 from rpy2.robjects import r
 import rpy2.robjects.packages as rpackages
 
+from amcat.scripts.forms.selection import Filter
 from amcat.scripts.query import QueryActionForm, QueryAction
 from amcat.scripts.query import QueryActionHandler
 from amcat.tools.toolkit import synchronized_with
 
 R_STRING_RE = re.compile(r'^\[1\] "(?P<str>.*)"$', re.DOTALL)
 R_DEPENDENCIES = {
-    "githubinstall": "",
     "amcatr": "amcat/amcat-r",
 }
 
@@ -118,6 +120,11 @@ class RQueryActionForm(QueryActionForm):
             fieldclass = getattr(forms, field['type'])
             self.fields[label] = fieldclass(**field['arguments'])
 
+class RJsonEncoder(JSONEncoder):
+    def default(self, o):
+        if isinstance(o, Filter):
+            return o.__dict__
+
 
 class RQueryAction(QueryAction):
     """
@@ -159,7 +166,9 @@ class RQueryAction(QueryAction):
     def _run(self, cdata):
         # Execute script using R
         cdata = {k: v for (k, v) in cdata.items() if v is not None}
-        r_json_arguments = robjects.StrVector([json.dumps(cdata, indent=4)])
+        json_dump = json.dumps(cdata, indent=4, cls=RJsonEncoder)
+        open("/tmp/test.json", "w").write(json_dump)
+        r_json_arguments = robjects.StrVector([json_dump])
         r_arguments = rpackages.importr("rjson").fromJSON(r_json_arguments)
         source_r_file(self.r_file)
         result = str(r['do.call']('run', r_arguments)).encode("utf-8").decode("unicode_escape")
@@ -169,6 +178,7 @@ class RQueryAction(QueryAction):
         if not match:
             err_msg = "Expected a string as return value from R script. Got: {}"
             raise ValueError(err_msg.format(result))
+
         return match.groupdict()["str"]
 
     def run(self, form):
