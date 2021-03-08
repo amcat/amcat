@@ -782,7 +782,7 @@ BZK_ALIASES = {
   'HP De Tijd': ('Tijdschriften', 'HP/De Tijd'),
   'HP/De Tijd': ('Tijdschriften', 'HP/De Tijd'),
   'hpdetijd.nl': ('Tijdschriften', 'HP/De Tijd'),
-  'Katholiek Nieuwsblad': ('Tijdschriften', 'Katholiek Nieuwsblad'),`
+  'Katholiek Nieuwsblad': ('Tijdschriften', 'Katholiek Nieuwsblad'),
   'Opiniebladen': ('Tijdschriften', 'Opiniebladen'),
   'Opiniebladenoverzicht week 37': ('Tijdschriften', 'Opiniebladen'),
   'Opiniebladenoverzicht week 38': ('Tijdschriften', 'Opiniebladen'),
