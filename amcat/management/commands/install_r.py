@@ -27,6 +27,10 @@ from amcat.scripts.query.queryaction_r import R_DEPENDENCIES
 
 
 class Command(BaseCommand):
+    def add_arguments(self, parser):
+        parser.add_argument('--update', '-U', action='store_true')
+
+
     def handle(self, *args, **options):
         from rpy2.robjects import r
         def get_installed_version(package):
@@ -34,13 +38,15 @@ class Command(BaseCommand):
                 return r("as.character")(r.packageVersion(package))[0]
             except RRuntimeError as e:
                 return None
-
-        if not get_installed_version("rjson"):
-            print("Installing rjson (required before reading dependencies)")
-            r("install.packages")("rjson")
-
         available_packages = r("available.packages()[,'Version']")
         available_packages = dict(zip(r.names(available_packages), available_packages))
+
+        for package in ["rjson", "remotes"]:
+            available = available_packages.get(package)
+            installed = get_installed_version(package)
+            if (not installed) or (options['update'] and installed != available):
+                print(f"Installing {package} (required before reading dependencies)")
+                r("install.packages")(package)
 
         packages = {(name or dep): dep for (name, dep) in R_DEPENDENCIES.items()}
         for qa in get_r_queryactions():
@@ -54,10 +60,13 @@ class Command(BaseCommand):
         todo = {}
         for package, src in packages.items():
             installed = get_installed_version(package)
+            available = "?" if "/" in src else available_packages.get(package)
+
             if not installed:
                 installed = '-'
                 todo[package] = src
-            available = "?" if "/" in src else available_packages.get(package)
+            elif options['update'] and installed != available:
+                todo[package] = src
             printrow(package, installed, available, src if src != package else None)
         print("\nInstalling required packages: ", todo)
         for package in [pkg for (pkg, src) in todo.items() if "/" not in src]:
@@ -66,7 +75,7 @@ class Command(BaseCommand):
         for package, src in todo.items():
             if "/" in src:
                 print("... ", package, " <- ", src)
-                r("githubinstall::githubinstall")(src, ask=False)
+                r("remotes::install_github")(src, upgrade='always')
         print("\nDone!")
 
 
