@@ -361,7 +361,7 @@ class SelectionForm(forms.Form):
                 start_date = self.cleaned_data["on_date"]
                 end_date = self.cleaned_data["on_date"] + DAY_DELTA
             elif datetype == "relative":
-                start_date, end_date = self.cleaned_data["relative_date"]
+                start_date = self.cleaned_data["relative_date"]
 
         except (KeyError, TypeError) as e:
             raise ValidationError("Expected datetype: {}".format(datetype))
@@ -435,7 +435,7 @@ class SelectionForm(forms.Form):
             today = to_datetime(datetime.datetime.now())
             delta = self.cleaned_data['relative_date']
             from_date = today + delta
-            return to_datetime(from_date), today
+            return to_datetime(from_date)
 
     def clean_articlesets(self):
         if not self.cleaned_data["articlesets"]:
