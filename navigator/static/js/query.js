@@ -659,7 +659,6 @@ define([
             inputs += ",textarea[name={name}]";
             inputs += ",select[name={name}]";
             inputs = $(inputs.format({name: name.replace('.', '\\.')}));
-
             if (inputs.length === 0 || name === "articlesets" || name === "csrfmiddlewaretoken"){
                 return;
             }
@@ -692,6 +691,12 @@ define([
                 inputs.trigger("change");
             }
         });
+        if ("relative_date" in saved_query.parameters) {
+            var days = saved_query.parameters.relative_date / (-24 * 60 * 60);
+            if (Number.isInteger(days)) {
+                relative_date_input.val(days + " days");
+            } else {console.log("Days not integral, not setting relative date field: "+days);}
+        }
         self.fill_filters();
     };
 

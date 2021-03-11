@@ -6,9 +6,9 @@ formfields = djangoFormFields(max.words = IntegerField(initial=50, required=T),
 
 dependencies = c("RCurl", "quanteda", "corpustools", "dplyr")
 
-run = function(max.words, remove.stopwords, query, limit.window=NULL, ...) {
+run = function(max.words, remove.stopwords, query, limit.window=NULL, filters=NULL, ...) {
   library(quanteda)
-  a = get_text(query=query, ...)
+  a = get_text(query=query, filters=filters, ...)
   print(limit.window)
   if (!is.null(limit.window)) {
     library(corpustools)

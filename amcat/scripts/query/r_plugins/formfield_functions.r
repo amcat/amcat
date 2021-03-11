@@ -68,11 +68,36 @@ connect = function(api_host, api_token, ...) {
   amcat.connect(host=api_host, token = api_token)
 }
 
-get_text = function(api_host, api_token, project, articlesets, query=NULL, ...) {
+get_text = function(api_host, api_token, project, articlesets, query=NULL, filters=NULL, ...) {
   conn = connect(api_host, api_token)
-  if (is.null(query) || query == "") {
-    amcat.articles(conn, project=project, articleset=articlesets, columns = c("title", "text"))
+
+  # Convert filters from [{"key": key, "value": value}, ...] into {key: value, ...}
+  if (is.null(filters)) {
+    filters2 = NULL
   } else {
-    amcat.hits(conn, queries=query, project=project, sets = articlesets, col=c("title" ,"text"))
+  print(paste("!!!", filters))
+    filters2 = list()
+    for (filter in filters) {
+       filters2[[filter$field]] = filter$value
+    }
   }
+
+  args = list(conn=conn, project=project)
+  if (is.null(query) || query == "") {
+    func = amcat.articles 
+    args$articleset = articlesets
+    args$columns = c("title", "text")
+    if (!is.null(filters2)) {
+      args$filters = rjson::toJSON(filters2)
+    }
+  } else {
+    func = amcat.hits
+    args$sets = articlesets
+    args$col= c("title", "text")
+    args$queries = query
+    args = c(args, filters2)
+  }
+  result = do.call(func, args)
+  print(paste0("get_text(query=", query, ", filters=", rjson::toJSON(filters2), "): ", nrow(result), " results"))
+  result
 }

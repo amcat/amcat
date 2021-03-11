@@ -361,11 +361,10 @@ class SelectionForm(forms.Form):
                 start_date = self.cleaned_data["on_date"]
                 end_date = self.cleaned_data["on_date"] + DAY_DELTA
             elif datetype == "relative":
-                start_date, end_date = self.cleaned_data["relative_date"]
+                start_date = self.cleaned_data["relative_date"]
 
         except (KeyError, TypeError) as e:
             raise ValidationError("Expected datetype: {}".format(datetype))
-
         return start_date, end_date
 
     def clean_codebook_label_language(self):
@@ -432,10 +431,11 @@ class SelectionForm(forms.Form):
         from (today + N seconds) to today.
         """
         if self.cleaned_data['relative_date']:
-            today = to_datetime(datetime.datetime.now())
+            # set 'today' to tomorrow 0:00, then subtract relative delta
+            today = to_datetime(datetime.datetime.now()) + datetime.timedelta(days=1)
             delta = self.cleaned_data['relative_date']
             from_date = today + delta
-            return to_datetime(from_date), today
+            return to_datetime(from_date)
 
     def clean_articlesets(self):
         if not self.cleaned_data["articlesets"]:
