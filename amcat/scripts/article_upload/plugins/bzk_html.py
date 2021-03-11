@@ -125,7 +125,9 @@ class BZK(UploadScript):
         if not title.text:
             title = title.cssselect("span")[0]
         logging.info(f"Title.text: {title.text}")
-        docdate = read_date(title.text.split("-")[1])
+        docdate = title.text_content().split("-")[1]
+        #docdate = read_date(title.text.split("-")[1])
+
 
         # split body by <hr>
         items = []
@@ -210,7 +212,7 @@ class BZK(UploadScript):
         headline_found = False
         dateline_found = False
         for tag in item:
-            if tag.tag == "h2" and not headline_found:
+            if tag.tag == "h2" or tag.tag=="h1" and not headline_found:
                 if tag.text:
                     article["title"] = tag.text
                 else:
@@ -220,6 +222,7 @@ class BZK(UploadScript):
                 article = cls.parse_dateline(tag.text_content(), article)
                 dateline_found = True
         if not article.get("title"):
+            print(article)
             raise Exception("Article has no headline")
         return article
 
