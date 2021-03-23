@@ -96,7 +96,7 @@ class ArticleSet(AmcatModel):
         from amcat.tools.amcates import ES
         return ES().count(filters={"sets": self.id})
 
-    def add_articles(self, article_ids, add_to_index=True, monitor=NullMonitor()):
+    def add_articles(self, article_ids, add_to_index=True, add_to_codingjobs=True, monitor=NullMonitor()):
         """
         Add the given articles to this articleset. Implementation is exists of three parts:
 
@@ -124,12 +124,14 @@ class ArticleSet(AmcatModel):
             batch_size=100,
         )
 
-        monitor.update(message="{n} articleset articles added to database, adding to codingjobs..".format(n=len(to_add)))
-        cjarts = [CodedArticle(codingjob=c, article_id=a) for c, a in itertools.product(self.codingjob_set.all(), to_add)]
-        CodedArticle.objects.bulk_create(cjarts)
+        if add_to_codingjobs:
+            monitor.update(message="{n} articleset articles added to database, adding to codingjobs..".format(n=len(to_add)))
+            cjarts = [CodedArticle(codingjob=c, article_id=a) for c, a in itertools.product(self.codingjob_set.all(), to_add)]
+            CodedArticle.objects.bulk_create(cjarts)
+            monitor.update(message="{n} articles added to codingjobs".format(n=len(cjarts)))
 
         if add_to_index:
-            monitor.update(message="{n} articles added to codingjobs, adding to index".format(n=len(cjarts)))
+            monitor.update(message="Adding {n} articles to index".format(n=len(to_add)))
             es = ES()
             es.add_to_set(self.id, to_add, monitor=monitor)
             es.refresh()  # We need to flush, or setting cache will fail
