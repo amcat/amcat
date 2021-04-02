@@ -42,7 +42,6 @@ from amcat.tools.model import AmcatModel
 from amcat.tools.progress import NullMonitor
 
 log = logging.getLogger(__name__)
-stats_log = logging.getLogger("statistics:" + __name__)
 
 
 @functools.lru_cache()
@@ -263,12 +262,6 @@ class ArticleSet(AmcatModel):
                                                               articleset=self,
                                                               defaults=dict(is_favourite=True))
 
-        if created:
-            stats_log.info(json.dumps({
-                "action": "articleset_added", "id": self.id,
-                "name": self.name, "project_id": self.project_id,
-                "project__name": self.project.name
-            }))
 
     @classmethod
     def get_unique_name(cls, project, name):

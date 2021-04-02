@@ -415,7 +415,8 @@ class Article(AmcatModel):
                 yield aid
 
     @classmethod
-    def create_articles(cls, articles, articleset=None, articlesets=None, deduplicate=True, monitor=NullMonitor()):
+    def create_articles(cls, articles, articleset=None, articlesets=None, deduplicate=True,
+                        monitor=NullMonitor(), add_to_index=True):
         """
         Add the given articles to the database, the index, and the given set
 
@@ -469,8 +470,9 @@ class Article(AmcatModel):
             result = bulk_insert_returning_ids(to_insert)
             for a, inserted in zip(to_insert, result):
                 a.id = inserted.id
-            dicts = [a.get_article_dict(sets=[aset.id for aset in articlesets]) for a in to_insert]
-            amcates.ES().bulk_insert(dicts, batch_size=100, monitor=monitor)
+            if add_to_index:
+                dicts = [a.get_article_dict(sets=[aset.id for aset in articlesets]) for a in to_insert]
+                amcates.ES().bulk_insert(dicts, batch_size=100, monitor=monitor)
         else:
             monitor.update()
 
