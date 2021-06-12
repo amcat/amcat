@@ -18,6 +18,7 @@
 ###########################################################################
 
 import copy
+import datetime
 import functools
 import itertools
 import operator
@@ -336,6 +337,16 @@ class SearchResource(AmCATResource):
         # Force filtering of correct sets by overriding user values (if necessary)
         params = copy.copy(self.params)
         params.setlist("sets", map(str, self.get_articlesets()))
+
+        # Merge relative_date and start_date fields
+        if "relative_date" in params:
+            reldate = datetime.datetime.now() + datetime.timedelta(seconds=int(params['relative_date']))
+            if "start_date" in params:
+                startdate = datetime.datetime.fromisoformat(params['start_date'].rstrip("Z"))
+                if reldate > startdate:
+                    params["start_date"] = reldate.isoformat()
+            else:
+                params["start_date"] = reldate.isoformat()
 
         for k in FILTER_FIELDS:
             if k in params:
