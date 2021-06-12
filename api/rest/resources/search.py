@@ -345,11 +345,11 @@ class SearchResource(AmCATResource):
                     queryset.filter(k, params.getlist(k))
 
         for k in self.get_filter_properties():
-            if k in params:
-                queryset.filter(k, params.getlist(k))
-            elif k + "_str" in params:
+            if k + "_str" in params:
                 k_par = k + "_str"
                 queryset.filter(k, params.getlist(k_par))
+            elif k in params:
+                queryset.filter(k, params.getlist(k))
         return queryset
 
     @classmethod
