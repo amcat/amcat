@@ -342,7 +342,7 @@ class SearchResource(AmCATResource):
         if "relative_date" in params:
             reldate = datetime.datetime.now() + datetime.timedelta(seconds=int(params['relative_date']))
             if "start_date" in params:
-                startdate = datetime.datetime.fromisoformat(params['start_date'].rstrip("Z"))
+                startdate = datetime.datetime.strptime(params['start_date'], "%Y-%m-%dT%H:%M:%S.%fZ")
                 if reldate > startdate:
                     params["start_date"] = reldate.isoformat()
             else:
