@@ -18,6 +18,7 @@
 ###########################################################################
 
 import copy
+import datetime
 import functools
 import itertools
 import operator
@@ -337,6 +338,16 @@ class SearchResource(AmCATResource):
         params = copy.copy(self.params)
         params.setlist("sets", map(str, self.get_articlesets()))
 
+        # Merge relative_date and start_date fields
+        if "relative_date" in params:
+            reldate = datetime.datetime.now() + datetime.timedelta(seconds=int(params['relative_date']))
+            if "start_date" in params:
+                startdate = datetime.datetime.strptime(params['start_date'], "%Y-%m-%dT%H:%M:%S.%fZ")
+                if reldate > startdate:
+                    params["start_date"] = reldate.isoformat()
+            else:
+                params["start_date"] = reldate.isoformat()
+
         for k in FILTER_FIELDS:
             if k in params:
                 if k in FILTER_SINGLE_FIELDS:
@@ -345,11 +356,11 @@ class SearchResource(AmCATResource):
                     queryset.filter(k, params.getlist(k))
 
         for k in self.get_filter_properties():
-            if k in params:
-                queryset.filter(k, params.getlist(k))
-            elif k + "_str" in params:
+            if k + "_str" in params:
                 k_par = k + "_str"
                 queryset.filter(k, params.getlist(k_par))
+            elif k in params:
+                queryset.filter(k, params.getlist(k))
         return queryset
 
     @classmethod
