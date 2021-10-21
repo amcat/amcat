@@ -75,7 +75,6 @@ get_text = function(api_host, api_token, project, articlesets, query=NULL, filte
   if (is.null(filters)) {
     filters2 = NULL
   } else {
-  print(paste("!!!", filters))
     filters2 = list()
     for (filter in filters) {
        filters2[[filter$field]] = filter$value
