@@ -82,11 +82,13 @@ class SubMonitor(ProgressMonitor):
         super(SubMonitor, self).update(units, message)
 
         if self.worked > self.total:
-            raise ValueError("Steps worked ({}) exceeds total ({}). Did you set the numer of steps correctly?".format(self.worked, self.total))
+            logging.warning("Steps worked ({}) exceeds total ({}). Did you set the numer of steps correctly?".format(self.worked, self.total))
+            self.worked = self.total
 
         if self.worked == self.total:
             # We're done. We can deregister ourselves from supermonitor.
-            self.super_monitor.sub_monitors.remove(self)
+            if self in self.super_monitor.sub_monitors:
+                self.super_monitor.sub_monitors.remove(self)
             self.super_monitor.update(self.weight, message)
         else:
             # We're not done; inform super monitor of progress
