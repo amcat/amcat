@@ -212,7 +212,7 @@ class BZK(UploadScript):
         headline_found = False
         dateline_found = False
         for tag in item:
-            if tag.tag == "h2" or tag.tag=="h1" and not headline_found:
+            if (tag.tag == "h2" or tag.tag=="h1") and not headline_found:
                 if tag.text:
                     article["title"] = tag.text
                 else:
