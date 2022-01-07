@@ -32,6 +32,8 @@ class ArticleMetaView(ListAPIView):
         # TODO: should check permission!
         columns = self.request.query_params.get('columns') or 'date'
         page_size = int(self.request.query_params.get("page_size", 10))
+        if self.request.query_params.get('columns') == "__ALL__":
+            columns = None
 
         if 'articleset_id' in self.kwargs:
             setid = self.kwargs['articleset_id']
@@ -45,4 +47,5 @@ class ArticleMetaView(ListAPIView):
             filter.update(json.loads(self.request.query_params['filters']))
         body = amcates.build_body(filters=filter)
         return {'body': body,
-                '_source_include': columns, 'size': page_size}
+                '_source_include': columns,
+                'size': page_size}
