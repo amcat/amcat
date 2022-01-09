@@ -12,10 +12,11 @@ class ScrollingPaginator(pagination.BasePagination):
         es = amcates.ES()
 
         scroll_id = request.query_params.get("scroll_id")
+        scroll = request.query_params.get("scroll", "1m")
         if scroll_id:
-            res = es.es.scroll(scroll_id, scroll="1m")
+            res = es.es.scroll(scroll_id, scroll=scroll)
         else:
-            res = es.search(scroll="1m", **queryset)
+            res = es.search(scroll=scroll, **queryset)
         self.total = res['hits']['total']
         self.scroll_id = res['_scroll_id']
         self.done = not res['hits']['hits']
